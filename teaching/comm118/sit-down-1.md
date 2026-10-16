@@ -98,6 +98,49 @@ The line above each hint rotates through his four, one per table-mate:
 consider:", "An example of why this relationship matters:" (`HINT_LEADS`
 in SitdownPage.jsx, `hint.lead` through `hint.lead.4` in the words).
 
+## The look, late on October 15
+
+"Make the sit down page and the scouting report page look more like the
+skylight view." Two Skylights live in the repo: the features page's type and
+hairlines (`src/FeaturesPage.jsx`) and the dashboard's August pass aimed at
+the Skylight calendar (colour that stands for one thing, filled number chips,
+a chore chart that ticks off, rounder and chunkier). A first pass took only
+the first and he said "i was hoping you'd make it look more visually
+interesting", so the pages now carry both:
+
+- A colour per seat (`seatOf` in `SitdownPage.jsx`, eight slots in CSS on
+  `.pc[data-c]`), and the same colour on the ring round a face, the name
+  chip, the row in the group's reports, the hint card and the Open button.
+  `Face` takes an `accent` prop for this; a `var(--pc)` accent is mixed with
+  `color-mix` rather than given a hex alpha. Day values read at 4.5:1 on the
+  sunk surface with white inside; night values read on the night card with
+  the night ink inside (`scratchpad/hues.mjs` picked them).
+- The when and where in a filled seaglass band, with a Today / Tomorrow /
+  In N days chip computed from the session's given day and time (`whenMs`,
+  `countdown`).
+- How the sit-down works as a chore chart: filled number, ticked and struck
+  through when the link is in, a ring on the step that comes next. Step two
+  is reading, which nothing can see, so that row only says Opens or Open now.
+- The Scouting Report's document as page tiles, number chips on the
+  questions, hint cards in the other person's colour, three FAQ cards.
+- Fraunces for headings, Outfit for the rest, cards at 18 and rows at 12,
+  seaglass `#27756a` (the features page's `#2f8576` sits at 4.2:1 as text),
+  night by the same tokens under `[data-mode="night"]` and the dark media
+  query. The student themes (Snapchat, Crashing Out) no longer restyle these
+  two pages; the top bar still follows them.
+- The smoke reads his count as "2 of 25" and "turned in" separately, since
+  the band sets the number large.
+
+The morning of October 16, five notes on that pass: the dates lead each step
+of How the sit-down works, with the step's button inside its row; step two
+says "Read your group's Scouting Reports" (`head.docs` and `step.2.go` in
+the words); the jobs on the hint cards are large and in each person's
+colour; the band is half the height with the room as large as the date and
+bolder; and an **Every group** card at the foot of the student page
+(`head.all`, `all.show`, `all.hide` in the words) opens every table with its
+day, time, names and roles, so a student can see the whole class. Deployed
+that morning on his "make all these changes and deploy."
+
 ## Where things live
 
 - **The student page**: `/comm118/sitdown`, `src/engine/SitdownPage.jsx`.

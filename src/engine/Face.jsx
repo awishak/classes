@@ -24,9 +24,13 @@ export function Avatar({ profile, name, accent, size = 44, ring = true }) {
   // address in the class-photos bucket. Either draws.
   const photo = profile?.avatar && /^(data:|https?:\/\/)/.test(String(profile.avatar)) ? profile.avatar : null;
   const a = accent || TOKENS.TEXT.primary;
+  // A hex gets its alpha appended; a CSS variable (the sit-down pages hand in
+  // one colour per seat) is mixed instead, since a variable cannot take a
+  // suffix.
+  const tint = (pct, hex) => (a.startsWith("var(") ? "color-mix(in srgb, " + a + " " + pct + "%, transparent)" : a + hex);
   return (
     <div style={{ width: size, height: size, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
-      background: a + "22", border: ring ? "2px solid " + a + "55" : "none",
+      background: tint(13, "22"), border: ring ? "2px solid " + tint(33, "55") : "none",
       display: "flex", alignItems: "center", justifyContent: "center",
       fontSize: Math.round(size * 0.36), fontWeight: 700, color: a }}>
       {photo ? <img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : initialsOf(name)}
@@ -39,13 +43,14 @@ export function Avatar({ profile, name, accent, size = 44, ring = true }) {
  * it finds the person. `instructor` draws Andrew, whose picture is on his own
  * card in the shared store rather than on a class roster.
  */
-export function Face({ config, data, name, size = 36, instructor = false }) {
+export function Face({ config, data, name, size = 36, instructor = false, accent }) {
   // His picture: the config's, or the one on his card in the plan row
   // (`instructorCard.photo`), which is where the class page's editor put it.
   // Andrew, 2026-10-15: "I have an avatar in the class page. use it."
+  // `accent` overrides the class colour for a screen that colours people.
   const profile = instructor ? { avatar: config?.instructor?.photo || data?.instructorCard?.photo || "" } : profileOf(data, name);
   const shown = instructor ? (config?.instructor?.name || "Dr. Ishak") : nameShown(data, name);
-  return <Avatar profile={profile} name={shown} accent={config?.accent} size={size} />;
+  return <Avatar profile={profile} name={shown} accent={accent || config?.accent} size={size} />;
 }
 
 /** A face and the name beside it, which is most of what a row of a list is. */

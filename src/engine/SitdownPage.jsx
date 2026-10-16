@@ -35,7 +35,6 @@ import { genId } from "../utils.jsx";
 import { useCopy, Words } from "./visualstory/pre.jsx";
 import { SESSIONS, SITDOWN, released, sessionOf, tableOf, promptFor, sitdownAssignment, linkOf, withLink, looksLikeLink } from "./worktopia/sitdown.js";
 import { WORDS, WORDS_ROW, AI_PAGE_URL } from "./worktopia/sitdownWords.js";
-import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
@@ -45,6 +44,15 @@ import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
 const SHEETS = {
   comm118: () => import("../readouts/comm118-sitdown-1.json"),
 };
+
+// The Skylight look, the same tokens as the features page and
+// drewi.sh/teaching: Fraunces for headings, Outfit for everything else,
+// seaglass accent, off-white page, hairlines instead of cards. Andrew,
+// 2026-10-15: "making the sit down page and the scouting report page look
+// more like the skylight view." The seaglass is a shade darker here than on
+// the features page, because it is text and a button here and the lighter
+// one sits at 4.2:1 on the page.
+const FONTS = <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Outfit:wght@400;500;600&display=swap" />;
 
 const first = (name) => String(name || "").split(" ")[0];
 const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
@@ -87,22 +95,23 @@ export default function SitdownPage({ config, page = "home" }) {
   const next = typeof window !== "undefined" ? window.location.pathname : config.path;
   let gate = null;
   if (!session) gate = (<>
-    <p style={{ fontSize: 17, margin: "0 0 12px" }}>This page runs on your email sign-in.</p>
-    <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next)} style={{ fontSize: 17, fontWeight: 600, color: config.accent }}>Sign in</a>
+    <p className="p">This page runs on your email sign-in.</p>
+    <a className="dl" href={"/login?next=" + encodeURIComponent(next)}>Sign in</a>
   </>);
-  else if (data === null) gate = <p style={{ fontSize: 17, margin: 0 }}>Loading the class.</p>;
-  else if (!allowed) gate = <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
+  else if (data === null) gate = <p className="p">Loading the class.</p>;
+  else if (!allowed) gate = <p className="p">{email} is not on the roster for {config.code} yet.</p>;
 
   const viewer = instructor && !as ? { instructor: true } : { name: as || me?.name || "" };
 
   return (
-    <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: TOKENS.SURFACE.page, color: TOKENS.TEXT.primary, fontFamily: TOKENS.FONT.body, "--accent": config.accent }}>
+    <div className="sd-root" data-theme={theme} data-mode={mode}>
       <ThemeStyle theme={theme} />
+      {FONTS}
       <style>{CSS}</style>
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
-      {gate ? <div style={{ padding: 32 }}>{gate}</div> : (
+      {gate ? <div className="sd gate">{gate}</div> : (
         <SitdownBody config={config} data={data} update={update} viewer={viewer} copy={copy} editing={editing} page={page}
           instructor={!!instructor} onEdit={instructor ? () => setEditing(e => !e) : null} onAs={instructor ? pickAs : null} as={as} />
       )}
@@ -166,53 +175,114 @@ export function SitdownBody({ config, data, update, viewer, copy, editing = fals
 
 // ─── the sit-down page, one student's view ───
 
+// Skylight gives everyone in the house a colour and never changes it. Each
+// person at a table gets one here, by their seat, and the same colour follows
+// them: the ring on their face, their name, their row in the group's reports,
+// their hint on the Scouting Report page. Eight slots, in CSS on `.pc`; every
+// one checked at 4.5:1 as text on the sunk surface and with white inside.
+const seatOf = (p) => {
+  const s = sessionOf(p?.name || p?.roster);
+  const i = s ? s.names.indexOf(p.name) : -1;
+  if (i >= 0) return i % 8;
+  let h = 0;
+  for (const ch of String(p?.name || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return h % 8;
+};
+
+// A session's moment, from its given day and time, so the page can count down.
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const whenMs = (s) => {
+  const m = /([A-Z][a-z]+) (\d+)/.exec(s.day);
+  const t = /(\d+):(\d+)/.exec(s.time);
+  if (!m || !t) return 0;
+  return new Date(new Date(SITDOWN.release).getFullYear(), MONTHS.indexOf(m[1]), Number(m[2]), Number(t[1]), Number(t[2])).getTime();
+};
+const dayStart = (ms) => { const d = new Date(ms); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+const countdown = (now, ms) => {
+  if (!ms || ms < now) return "";
+  const days = Math.round((dayStart(ms) - dayStart(now)) / 86400000);
+  return days <= 0 ? "Today" : days === 1 ? "Tomorrow" : "In " + days + " days";
+};
+const fmtDay = (ms) => new Date(ms).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
 function Mine({ config, data, update, name, saved, asg, copy, editing, now, suffix }) {
   const session = sessionOf(name);
   const table = tableOf(session, saved);
   const me = table.find(p => same(p.roster, name) || same(p.name, name)) || null;
   const others = table.filter(p => p !== me);
   const open = released(now);
+  const mine = me ? linkOf(data, me.roster, asg) : null;
+  const at = session ? whenMs(session) : 0;
+  const count = countdown(now, at);
+  const late = now > SITDOWN.prepDue;
+  // The chore chart: step one ticks when the link is in, step three when the
+  // sit-down is behind them. Step two is reading, which nothing here can see,
+  // so that row only says whether the reports are open.
+  const done = [!!mine, false, at > 0 && now > at];
+  const [showAll, setShowAll] = useState(false);
+  const next = done.findIndex(d => !d);
+  const rowClass = (i, extra = "") => "step" + (done[i] ? " done" : "") + (i === next ? " next" : "") + extra;
   return (<>
-    <section className="sec when" id="when">
-      <div className="eyebrow">Your sit-down</div>
-      {session ? (<>
-        <div className="big">{whenOf(session)}</div>
-        <div className="where">{SITDOWN.room + ", Dr. Ishak's office"}</div>
+    <section className="sec snap" id="when">
+      <div className="band">
+        <div className="bk">
+          <span className="eyebrow">Your sit-down</span>
+          {count ? <span className="count">{count}</span> : null}
+        </div>
+        {session ? (<>
+          <div className="big">{whenOf(session)}</div>
+          <div className="where">{SITDOWN.room + ", Dr. Ishak's office"}</div>
+        </>) : <p className="p">You're not in a group yet. Message Dr. Ishak and we'll place you.</p>}
+      </div>
+      {session ? (
         <ul className="faces">
           {table.map(p => (
-            <li key={p.name} className={"face" + (p === me ? " me" : "")}>
-              <Face config={config} data={data} name={p.roster} size={72} />
+            <li key={p.name} className={"face pc" + (p === me ? " me" : "")} data-c={seatOf(p)}>
+              <Face config={config} data={data} name={p.roster} size={76} accent="var(--pc)" />
               <div className="fn">{p === me ? "You" : first(p.name)}</div>
               <div className="fr">{p.role ? p.role.role : "Role to come"}</div>
             </li>
           ))}
           <li className="face host">
-            <Face config={config} data={data} name="" size={72} instructor />
-            <div className="fn">{config.instructor?.name || "Dr. Ishak"}</div>
+            <Face config={config} data={data} name="" size={76} instructor accent="var(--accent)" />
+            <div className="fn"><span>{config.instructor?.name || "Dr. Ishak"}</span></div>
             <div className="fr"><Words k="director" copy={copy} editing={editing} as="span" /></div>
           </li>
         </ul>
-      </>) : <p className="p">You're not in a group yet. Message Dr. Ishak and we'll place you.</p>}
+      ) : null}
     </section>
 
-    <section className="sec">
+    <section className="sec" id="steps">
       <Words k="head.steps" copy={copy} editing={editing} as="h2" className="h2" />
       <ol className="steps">
-        <li><div>
-          <Words k="step.1" copy={copy} editing={editing} as="span" />
-          {" "}<a className="dl" href={prepPath(config) + suffix}>{copy.say("step.1.link")}</a>
-        </div></li>
-        <li><div><Words k="step.2" copy={copy} editing={editing} as="span" /></div></li>
-        <li><div>
-          <Words k="step.3" copy={copy} editing={editing} as="span" />
-          <span>{session ? " " + whenOf(session) + ", in " + SITDOWN.room + "." : " In " + SITDOWN.room + "."}</span>
-        </div></li>
+        <li className={rowClass(0)}>
+          <span className="num" aria-hidden="true">{done[0] ? "✓" : "1"}</span>
+          <div className="sw">
+            <div className={"sdt" + (done[0] ? " ok" : late ? " late" : "")}>{done[0] ? "Turned in " + fmtWhen(mine.at) : (late ? "Was due " : "Due ") + SITDOWN.prepDueText}</div>
+            <div className="sws">
+              <Words k="step.1" copy={copy} editing={editing} as="span" />
+              {" "}<a className="dl" href={prepPath(config) + suffix}>{copy.say("step.1.link")}</a>
+            </div>
+            <a className="btn" href={"#turnin"}>{copy.say("step.1.go")}</a>
+          </div>
+        </li>
+        <li className={rowClass(1, open ? " ready" : "")}>
+          <span className="num" aria-hidden="true">2</span>
+          <div className="sw">
+            <div className={"sdt" + (open ? " ok" : "")}>{open ? "Open now" : "Opens " + SITDOWN.releaseText}</div>
+            <div className="sws"><Words k="step.2" copy={copy} editing={editing} as="span" /></div>
+            {session ? <a className="btn" href={"#docs"}>{copy.say("step.2.go")}</a> : null}
+          </div>
+        </li>
+        <li className={rowClass(2)}>
+          <span className="num" aria-hidden="true">{done[2] ? "✓" : "3"}</span>
+          <div className="sw">
+            <div className="sdt">{(session ? whenOf(session) + ", " : "") + SITDOWN.room}</div>
+            <div className="sws"><Words k="step.3" copy={copy} editing={editing} as="span" /></div>
+            {session ? <a className="btn" href={"#when"}>{copy.say("step.3.go")}</a> : null}
+          </div>
+        </li>
       </ol>
-      <div className="goes">
-        <a className="btn" href={"#turnin"}>{copy.say("step.1.go")}</a>
-        {session ? <a className="btn" href={"#docs"}>{copy.say("step.2.go")}</a> : null}
-        {session ? <a className="btn" href={"#when"}>{copy.say("step.3.go")}</a> : null}
-      </div>
     </section>
 
     <section className="sec">
@@ -226,16 +296,19 @@ function Mine({ config, data, update, name, saved, asg, copy, editing, now, suff
 
     {session ? (
       <section className="sec" id="docs">
-        <div className="eyebrow">Step 2</div>
+        <div className="tag"><span className="num" aria-hidden="true">2</span><span className="eyebrow">Step 2</span></div>
         <Words k="head.docs" copy={copy} editing={editing} as="h2" className="h2" />
         <Words k={open ? "docs.after" : "docs.before"} copy={copy} editing={editing} as="p" className="p" />
         <ul className="docs">
           {others.map(p => {
             const l = linkOf(data, p.roster, asg);
             return (
-              <li key={p.name} className="doc">
-                <div className="dn"><Face config={config} data={data} name={p.roster} size={32} /><span>{p.name}<span className="dr">{p.role ? ", " + p.role.role : ""}</span></span></div>
-                {open && l ? <a className="dl" href={l.link} target="_blank" rel="noopener noreferrer">{"Open " + first(p.name) + "'s prep"}<span className="dh">{hostOf(l.link)}</span></a>
+              <li key={p.name} className="doc pc" data-c={seatOf(p)}>
+                <div className="dn">
+                  <Face config={config} data={data} name={p.roster} size={44} accent="var(--pc)" />
+                  <span className="dnw"><b>{p.name}</b><span className="dr">{p.role ? p.role.role : ""}</span></span>
+                </div>
+                {open && l ? <a className="open" href={l.link} target="_blank" rel="noopener noreferrer">{"Open " + first(p.name) + "'s report"}<span className="dh">{hostOf(l.link)}</span></a>
                   : l ? <span className="ds ok">Turned in</span>
                   : <span className="ds">Not turned in yet</span>}
               </li>
@@ -244,6 +317,30 @@ function Mine({ config, data, update, name, saved, asg, copy, editing, now, suff
         </ul>
       </section>
     ) : null}
+
+    <section className="sec" id="all">
+      <div className="sh">
+        <Words k="head.all" copy={copy} editing={editing} as="h2" className="h2" />
+        <button type="button" className="btn" aria-expanded={showAll} aria-controls="sd-groups" onClick={() => setShowAll(v => !v)}>{copy.say(showAll ? "all.hide" : "all.show")}</button>
+      </div>
+      {showAll ? (
+        <div className="groups" id="sd-groups">
+          {SESSIONS.map(s => (
+            <div key={s.key} className={"group" + (s === session ? " mine" : "")}>
+              <h3 className="h3">{whenOf(s)}</h3>
+              <ul className="people">
+                {tableOf(s, saved).map(p => (
+                  <li key={p.name} className="person pc" data-c={seatOf(p)}>
+                    <Face config={config} data={data} name={p.roster} size={40} accent="var(--pc)" />
+                    <span className="pw"><b>{p === me || (me && same(p.roster, me.roster)) ? "You" : p.name}</b><span className="pj">{p.role ? p.role.role : "Role to come"}</span></span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </section>
   </>);
 }
 
@@ -262,15 +359,14 @@ function TurnIn({ config, data, update, name, asg, copy, editing, now, suffix })
   const late = now > SITDOWN.prepDue;
   return (
     <section className="sec" id="turnin">
-      <div className="eyebrow">Step 1</div>
+      <div className="tag"><span className={"num" + (mine ? " ok" : "")} aria-hidden="true">{mine ? "✓" : "1"}</span><span className="eyebrow">Step 1</span></div>
       <Words k="head.turnin" copy={copy} editing={editing} as="h2" className="h2" />
-      <div className="due">{"Due " + SITDOWN.prepDueText}</div>
+      <div className={"due" + (mine ? " ok" : late ? " late" : "")}>{mine ? "Turned in " + fmtWhen(mine.at) : "Due " + SITDOWN.prepDueText}</div>
       <Words k="prep.turnin" copy={copy} editing={editing} as="p" className="p" />
       <a className="dl" href={prepPath(config) + suffix}>{copy.say("step.1.link")}</a>
       {mine && !changing ? (
         <div className="in">
-          <div className="ds ok">{"Turned in " + fmtWhen(mine.at)}</div>
-          <a className="dl" href={mine.link} target="_blank" rel="noopener noreferrer">Open your document<span className="dh">{hostOf(mine.link)}</span></a>
+          <a className="open" href={mine.link} target="_blank" rel="noopener noreferrer">Open your document<span className="dh">{hostOf(mine.link)}</span></a>
           <button type="button" className="lnk" onClick={() => setChanging(true)}>Change the link</button>
           {said ? <p className="meta" aria-live="polite">{said}</p> : null}
         </div>
@@ -294,44 +390,72 @@ function TurnIn({ config, data, update, name, asg, copy, editing, now, suffix })
 // The line above each hint, one per table-mate in turn. His four, 2026-10-15.
 const HINT_LEADS = ["hint.lead", "hint.lead.2", "hint.lead.3", "hint.lead.4"];
 
+// A heading of his split at its colon, so "Page one: your job" can sit on a
+// page tile as a label and a line. A heading with no colon is the label.
+const splitHead = (s) => { const i = String(s || "").indexOf(":"); return i < 0 ? [s, ""] : [s.slice(0, i), s.slice(i + 1).trim()]; };
+
 function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
   const mine = table ? table.find(p => same(p.roster, me) || same(p.name, me)) : null;
   const others = table && mine ? table.filter(p => p !== mine) : [];
   const W = (k, as = "p", className = "p") => <Words k={k} copy={copy} editing={editing} as={as} className={className} />;
+  const [p1, p1line] = splitHead(copy.say("head.page1"));
+  const [p23, p23line] = splitHead(copy.say("head.others"));
   return (<>
     <section className="sec">
       {W("prep.shape")}
+      <div className="pages" aria-hidden="true">
+        <a className="page" href="#page1">
+          <span className="num">1</span>
+          <span className="pgl">{p1}</span>
+          <span className="pgw">{p1line}</span>
+        </a>
+        <a className="page wide" href="#others">
+          <span className="num">2</span><span className="num">3</span>
+          <span className="pgl">{p23}</span>
+          <span className="pgw">{p23line}</span>
+          {others.length ? (
+            <span className="pgf">{others.map(p => <span key={p.name} className="pc" data-c={seatOf(p)}><Face config={config} data={data} name={p.roster} size={36} accent="var(--pc)" /></span>)}</span>
+          ) : null}
+        </a>
+      </div>
       <a className="dl" href={homePath(config) + suffix}>Back to the Sit-Down page</a>
     </section>
 
-    <section className="sec">
+    <section className="sec" id="page1">
       {W("head.page1", "h2", "h2")}
       {W("page1.intro")}
       <ol className="qlist">
-        {["page1.q1", "page1.q2", "page1.q3", "page1.q4", "page1.q5", "page1.q6"].map(k => <li key={k}><Words k={k} copy={copy} editing={editing} as="span" /></li>)}
+        {["page1.q1", "page1.q2", "page1.q3", "page1.q4", "page1.q5", "page1.q6"].map((k, i) => <li key={k}><span className="num" aria-hidden="true">{i + 1}</span><Words k={k} copy={copy} editing={editing} as="span" /></li>)}
       </ol>
-      {W("page1.open")}
+      {W("page1.open", "p", "p callout")}
     </section>
 
-    <section className="sec">
+    <section className="sec" id="others">
       {W("head.others", "h2", "h2")}
       {W("others.intro")}
       <ol className="qlist">
-        {["others.q1", "others.q2", "others.q3"].map(k => <li key={k}><Words k={k} copy={copy} editing={editing} as="span" /></li>)}
+        {["others.q1", "others.q2", "others.q3"].map((k, i) => <li key={k}><span className="num" aria-hidden="true">{i + 1}</span><Words k={k} copy={copy} editing={editing} as="span" /></li>)}
       </ol>
-      {W("others.disagree", "p", "p strong")}
+      {W("others.disagree", "p", "p callout strong")}
       {mine && others.length ? (
         <ul className="prompts">
           {others.map((p, i) => {
             const { same: sameField, line, link } = promptFor(mine, p);
             const lead = HINT_LEADS[i % HINT_LEADS.length];
             return (
-              <li key={p.name} className="prompt">
+              <li key={p.name} className="prompt pc" data-c={seatOf(p)}>
                 <div className="pair">
-                  <span className="two"><Face config={config} data={data} name={mine.roster} size={44} /><Face config={config} data={data} name={p.roster} size={44} /></span>
+                  <span className="two">
+                    <span className="pc" data-c={seatOf(mine)}><Face config={config} data={data} name={mine.roster} size={48} accent="var(--pc)" /></span>
+                    <Face config={config} data={data} name={p.roster} size={48} accent="var(--pc)" />
+                  </span>
                   <div>
                     <div className="pp">{"You and " + first(p.name)}</div>
-                    <div className="pr2">{(mine.role ? mine.role.role : "Your job") + " and " + (p.role ? p.role.role.toLowerCase() : "their job")}</div>
+                    <div className="pr2">
+                      <span className="job pc" data-c={seatOf(mine)}>{mine.role ? mine.role.role : "Your job"}</span>
+                      {" and "}
+                      <span className="job">{p.role ? p.role.role : "Their job"}</span>
+                    </div>
                   </div>
                 </div>
                 <div className="hint">
@@ -353,14 +477,13 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
       </>) : <p className="meta">You're not in a group yet, so there are no hints to show. Message Dr. Ishak and we'll place you.</p>}
     </section>
 
-    <section className="sec">
-      {W("faq.q1", "h3", "h3")}
-      {W("faq.a1")}
-      {W("faq.q2", "h3", "h3")}
-      {W("faq.a2")}
-      {W("faq.q3", "h3", "h3")}
-      {W("faq.a3")}
-      <a className="dl" href={AI_PAGE_URL} target="_blank" rel="noopener noreferrer">{copy.say("faq.a3.link")}<span className="dh">{hostOf(AI_PAGE_URL)}</span></a>
+    <section className="sec faq">
+      <div className="qa">{W("faq.q1", "h3", "h3")}{W("faq.a1")}</div>
+      <div className="qa">{W("faq.q2", "h3", "h3")}{W("faq.a2")}</div>
+      <div className="qa">
+        {W("faq.q3", "h3", "h3")}{W("faq.a3")}
+        <a className="dl" href={AI_PAGE_URL} target="_blank" rel="noopener noreferrer">{copy.say("faq.a3.link")}<span className="dh">{hostOf(AI_PAGE_URL)}</span></a>
+      </div>
     </section>
   </>);
 }
@@ -371,9 +494,13 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
   const all = SESSIONS.flatMap(s => tableOf(s, saved));
   const inCount = all.filter(p => linkOf(data, p.roster, asg)).length;
   return (<>
-    <section className="sec">
+    <section className="sec snap">
+      <div className="band">
+        <div className="bk"><span className="eyebrow">Every table</span>{released(now) ? <span className="count">Reports open</span> : null}</div>
+        <div className="big">{inCount + " of " + all.length}</div>
+        <div className="where">turned in</div>
+      </div>
       <div className="facts">
-        <span className="meta">{inCount + " of " + all.length + " turned in"}</span>
         <span className="meta">{asg ? "Hand-ins also land on " + asg.title + " in My Work." : "No assignment on My Work points at this page yet. Links are kept here; add one with its Details link set to this address and new hand-ins land on the grade view too."}</span>
         <span className="meta">{"Documents open to the tables at " + SITDOWN.releaseText + (released(now) ? ", which has passed." : ".")}</span>
         <a className="dl" href={prepPath(config)}>Open the prep page</a>
@@ -382,19 +509,29 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
     {SESSIONS.map(s => {
       const table = tableOf(s, saved);
       const tableSheet = sheet?.tables?.[s.key]?.people?.length ? sheet.tables[s.key] : null;
+      const got = table.filter(p => linkOf(data, p.roster, asg)).length;
       return (
         <section key={s.key} className="sec">
-          <header className="sh"><h2 className="h2">{whenOf(s)}</h2><span className="meta">{table.filter(p => linkOf(data, p.roster, asg)).length + " of " + table.length + " in"}</span></header>
+          <header className="sh">
+            <h2 className="h2">{whenOf(s)}</h2>
+            <span className={"tally" + (got === table.length ? " ok" : "")}><i><em style={{ width: Math.round(100 * got / Math.max(1, table.length)) + "%" }} /></i><b>{got + " of " + table.length + " in"}</b></span>
+          </header>
           <ul className="docs">
             {table.map(p => {
               const l = linkOf(data, p.roster, asg);
+              const lateIn = l && l.at > SITDOWN.prepDue;
               return (
-                <li key={p.name} className="doc">
-                  <div className="dn"><Face config={config} data={data} name={p.roster} size={32} /><span>{p.name}<span className="dr">{p.role ? ", " + p.role.role : ", no role yet"}</span></span></div>
-                  {l ? (<>
-                    <a className="dl" href={l.link} target="_blank" rel="noopener noreferrer">{"Open " + first(p.name) + "'s prep"}<span className="dh">{hostOf(l.link)}</span></a>
-                    <span className={"ds" + (l.at > SITDOWN.prepDue ? " late" : " ok")}>{fmtWhen(l.at) + (l.at > SITDOWN.prepDue ? ", after the deadline" : "")}</span>
-                  </>) : <span className="ds">Not turned in yet</span>}
+                <li key={p.name} className="doc pc" data-c={seatOf(p)}>
+                  <div className="dn">
+                    <Face config={config} data={data} name={p.roster} size={44} accent="var(--pc)" />
+                    <span className="dnw"><b>{p.name}</b><span className="dr">{p.role ? p.role.role : "no role yet"}</span></span>
+                  </div>
+                  {l ? (
+                    <div className="dright">
+                      <a className="open" href={l.link} target="_blank" rel="noopener noreferrer">{"Open " + first(p.name) + "'s report"}<span className="dh">{hostOf(l.link)}</span></a>
+                      <span className={"ds" + (lateIn ? " late" : " ok")}>{fmtWhen(l.at) + (lateIn ? ", after the deadline" : "")}</span>
+                    </div>
+                  ) : <span className="ds">Not turned in yet</span>}
                 </li>
               );
             })}
@@ -432,85 +569,167 @@ function Sheet({ table }) {
   );
 }
 
-const CSS = `
-.sd{max-width:820px;margin:0 auto;padding:24px 16px 80px;display:grid;gap:20px}
-.sd .top{display:grid;gap:10px}
-.sd .eyebrow{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
-.sd .crumb{color:var(--accent);text-decoration:none}
-.sd .h1{margin:0;font-family:var(--font-display);font-size:32px;font-weight:700;letter-spacing:-.02em;color:var(--text-primary)}
-.sd .intro{margin:0;font-size:17px;line-height:1.55;color:var(--text-secondary);max-width:68ch}
-.sd .bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.sd .meta{font-size:13px;color:var(--text-muted);font-variant-numeric:tabular-nums;max-width:72ch}
-.sd .facts{display:grid;gap:6px;justify-items:start}
-.sd .btn{font:inherit;font-size:14px;font-weight:600;color:var(--accent);background:transparent;border:1px solid var(--accent);border-radius:999px;padding:6px 14px;min-height:44px;cursor:pointer}
-.sd .btn[aria-pressed="true"]{background:var(--accent);color:#fff}
-.sd a.btn{display:inline-flex;align-items:center;text-decoration:none;padding:6px 16px}
-.sd .goes{display:flex;flex-wrap:wrap;gap:10px;width:100%}
-.sd .sec{scroll-margin-top:16px}
-.sd .lnk{font:inherit;font-size:15px;font-weight:600;color:var(--accent);background:transparent;border:0;padding:0;cursor:pointer;min-height:44px;display:inline-flex;align-items:center;text-align:left;text-decoration:none}
-.sd .as{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--text-secondary)}
-.sd .as select{font:inherit;font-size:16px;min-height:44px;padding:0 10px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface-card);color:var(--text-primary)}
-.sd .sec{background:var(--surface-card);border:1px solid var(--line-soft);border-radius:16px;padding:20px;display:grid;gap:12px;min-width:0;justify-items:start}
+export const CSS = `
+.sd-root{--page:#f3f4f1;--card:#ffffff;--sunk:#eef2f0;--ink:#22302f;--ink2:#586864;--line:#dfe6e3;--accent:#27756a;--accent-tint:#e2f0ec;--on-accent:#ffffff;--ok:#0f766e;--warn:#b45309;--late:#c81e1e;--serif:'Fraunces',Georgia,serif;--sans:'Outfit',system-ui,sans-serif;--r:18px;--rr:12px}
+.sd-root[data-mode="night"]{--page:#121716;--card:#1e2624;--sunk:#252e2c;--ink:#edf2f0;--ink2:#a3b1ad;--line:#2c3634;--accent:#7fd0c0;--accent-tint:#1f3531;--on-accent:#161c1b;--ok:#5fd3c1;--warn:#f0b35a;--late:#ff8a8a}
+@media (prefers-color-scheme:dark){.sd-root:not([data-mode="day"]){--page:#121716;--card:#1e2624;--sunk:#252e2c;--ink:#edf2f0;--ink2:#a3b1ad;--line:#2c3634;--accent:#7fd0c0;--accent-tint:#1f3531;--on-accent:#161c1b;--ok:#5fd3c1;--warn:#f0b35a;--late:#ff8a8a}}
+.sd-root{min-height:100vh;background:var(--page);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.sd{max-width:920px;margin:0 auto;padding:32px 16px 96px;display:grid;gap:16px}
+.sd.gate{padding-top:48px;gap:12px;justify-items:start}
+.sd .top{display:grid;gap:12px;padding:8px 8px 20px}
+.sd .eyebrow{font-size:13px;font-weight:600;line-height:1.4;letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.sd .crumb{color:var(--accent);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px;min-height:44px;display:inline-flex;align-items:center}
+.sd .h1{margin:0;font-family:var(--serif);font-size:clamp(40px,6.5vw,60px);font-weight:500;line-height:1.02;letter-spacing:-.02em;color:var(--ink);text-wrap:balance}
+.sd .intro{margin:0;font-family:var(--serif);font-size:21px;line-height:1.45;color:var(--ink2);max-width:62ch;text-wrap:pretty}
+.sd .bar{display:flex;gap:12px 20px;align-items:center;flex-wrap:wrap;padding-top:6px}
+.sd .meta{font-size:15px;line-height:1.45;color:var(--ink2);font-variant-numeric:tabular-nums;max-width:72ch}
+.sd .facts{display:grid;gap:8px;justify-items:start;padding:20px 24px 24px}
+.sd .btn{font-family:var(--sans);font-size:16px;font-weight:500;line-height:1.2;color:var(--accent);background:var(--accent-tint);border:0;border-radius:999px;padding:10px 18px;min-height:44px;cursor:pointer}
+.sd .btn:hover{background:var(--accent);color:var(--on-accent)}
+.sd .btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.sd a.btn{display:inline-flex;align-items:center;text-decoration:none}
+.sd .lnk{font-family:var(--sans);font-size:16px;font-weight:500;color:var(--ink);background:transparent;border:0;padding:0;cursor:pointer;min-height:44px;display:inline-flex;align-items:center;text-align:left;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px}
+.sd .lnk:hover,.sd .dl:hover,.sd .crumb:hover{color:var(--accent)}
+.sd .as{display:inline-flex;gap:10px;align-items:center;font-size:15px;color:var(--ink2)}
+.sd .as select{font-family:var(--sans);font-size:16px;min-height:44px;padding:0 12px;border-radius:var(--rr);border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.sd .sec{scroll-margin-top:16px;background:var(--card);border-radius:var(--r);padding:24px;display:grid;gap:14px;min-width:0;justify-items:start}
 .sd .sec>*{max-width:100%}
-.sd .sh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;width:100%}
-.sd .h2{margin:0;font-size:22px;font-weight:600;color:var(--text-primary)}
-.sd .h3{margin:4px 0 0;font-size:17px;font-weight:600;color:var(--text-primary)}
-.sd .p{margin:0;font-size:17px;line-height:1.55;color:var(--text-secondary);max-width:68ch;white-space:pre-line}
-.sd .p.strong{font-weight:600;color:var(--text-primary)}
-.sd .when .big{font-size:26px;font-weight:700;letter-spacing:-.01em;color:var(--text-primary)}
-.sd .when .where{font-size:17px;color:var(--text-primary)}
-.sd .faces{list-style:none;margin:4px 0 0;padding:0;display:flex;gap:16px;flex-wrap:wrap;width:100%}
-.sd .face{display:grid;gap:4px;justify-items:center;text-align:center;width:128px}
-.sd .face.me .fn{color:var(--accent)}
-.sd .face.host{padding-left:16px;border-left:1px solid var(--line-soft)}
-.sd .fn{font-size:15px;font-weight:500;color:var(--text-secondary)}
-.sd .fr{font-size:16px;line-height:1.25;font-weight:600;color:var(--text-primary)}
-.sd .list{margin:0;padding-left:20px;display:grid;gap:6px;font-size:17px;line-height:1.5;color:var(--text-secondary)}
-.sd .list b{color:var(--text-primary);font-weight:600}
-.sd .qlist{margin:0;padding-left:24px;display:grid;gap:6px;font-size:17px;line-height:1.5;color:var(--text-primary)}
-.sd .steps{margin:0;padding:0;list-style:none;display:grid;gap:10px;counter-reset:s;width:100%}
-.sd .steps li{display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;font-size:17px;line-height:1.5;color:var(--text-secondary);counter-increment:s;max-width:68ch}
-.sd .steps li::before{content:counter(s);font-size:17px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.sd .sh{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;width:100%}
+.sd .h2{margin:0;font-family:var(--serif);font-size:28px;font-weight:500;line-height:1.15;letter-spacing:-.012em;color:var(--ink);text-wrap:balance}
+.sd .h3{margin:0;font-family:var(--serif);font-size:21px;font-weight:500;line-height:1.2;color:var(--ink)}
+.sd .p{margin:0;font-size:17px;line-height:1.55;color:var(--ink);max-width:72ch;white-space:pre-line}
+.sd .p.strong{font-weight:600}
+.sd .callout{background:var(--sunk);border-radius:var(--rr);padding:14px 18px;box-shadow:inset 4px 0 0 var(--accent);width:100%;box-sizing:border-box}
+/* The number chip: Skylight's filled number, the same wherever a step or a question is counted. */
+.sd .num{flex:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--accent);color:var(--on-accent);font-family:var(--serif);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.sd .num.ok{background:var(--ok)}
+.sd .tag{display:inline-flex;gap:10px;align-items:center}
+/* The band: the when and where, filled, readable from across a room. */
+.sd .snap{padding:0;gap:0;overflow:hidden}
+.sd .band{width:100%;box-sizing:border-box;background:var(--accent);color:var(--on-accent);padding:14px 20px 16px;display:grid;gap:2px}
+.sd .band .eyebrow,.sd .band .p{color:inherit}
+.sd .band .p{opacity:.92}
+.sd .bk{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.sd .count{font-size:15px;font-weight:600;padding:6px 14px;border-radius:999px;background:var(--on-accent);color:var(--accent);line-height:1.2}
+.sd .band .big{font-family:var(--serif);font-size:clamp(21px,3.4vw,26px);font-weight:500;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+.sd .band .where{font-family:var(--serif);font-size:clamp(21px,3.4vw,26px);font-weight:600;line-height:1.15;letter-spacing:-.01em;text-wrap:balance}
+.sd .bk{margin-bottom:2px}
+.sd .faces{list-style:none;margin:0;padding:20px 24px 24px;display:flex;gap:12px;flex-wrap:wrap;width:100%;box-sizing:border-box}
+.sd .face{display:grid;gap:6px;justify-items:center;text-align:center;width:132px;padding:14px 8px 16px;border-radius:14px;background:var(--sunk)}
+.sd .face.host{background:var(--accent-tint)}
+.sd .fn{font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--on-accent);background:var(--pc);border-radius:999px;padding:4px 12px;line-height:1.3;margin-top:4px}
+.sd .face.host .fn{background:var(--accent)}
+.sd .fr{font-family:var(--serif);font-size:17px;line-height:1.2;font-weight:500;color:var(--ink);text-wrap:balance}
+.sd .list{margin:0;padding-left:22px;display:grid;gap:8px;font-size:17px;line-height:1.55;color:var(--ink)}
+.sd .list b{font-weight:600}
+.sd .list li::marker{color:var(--accent)}
+.sd .qlist{margin:0;padding:0;list-style:none;display:grid;gap:10px;width:100%}
+.sd .qlist li{display:flex;gap:14px;align-items:center;font-size:17px;line-height:1.45;color:var(--ink);max-width:72ch}
+/* The chore chart. A done row fades and strikes through; the first row not done carries the ring. */
+.sd .steps{margin:0;padding:0;list-style:none;display:grid;gap:8px;width:100%}
+.sd .step{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px 14px;align-items:start;padding:16px 18px 18px;border-radius:var(--rr);background:var(--sunk);font-size:17px;line-height:1.5;color:var(--ink)}
+.sd .step.next{box-shadow:0 0 0 2px var(--accent)}
+.sd .step.done{opacity:.78}
+.sd .step.done .sws{text-decoration:line-through;text-decoration-thickness:1.5px;color:var(--ink2)}
+.sd .step.done .num{background:var(--ok)}
+.sd .step.ready .num{background:var(--accent)}
+.sd .step .num{margin-top:1px}
+.sd .sw{display:grid;gap:8px;max-width:64ch;justify-items:start}
+.sd .sdt{font-family:var(--serif);font-size:22px;font-weight:500;line-height:1.2;color:var(--ink);text-wrap:balance}
+.sd .sdt.ok{color:var(--ok)}
+.sd .sdt.late{color:var(--late)}
+.sd .step .btn{margin-top:4px}
 .sd .steps .dl{display:inline;min-height:0}
-.sd .due{font-size:15px;font-weight:600;color:var(--state-warn)}
-.sd .form{display:grid;gap:8px;width:100%}
-.sd .lab{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
-.sd .input{font:inherit;font-size:16px;min-height:44px;padding:0 12px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface-card);color:var(--text-primary);width:100%;box-sizing:border-box}
-.sd .row{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.sd .go{font:inherit;font-size:16px;font-weight:600;color:#fff;background:var(--accent);border:0;border-radius:12px;padding:0 20px;min-height:44px;cursor:pointer}
+.sd .due{font-size:15px;font-weight:600;color:var(--on-accent);background:var(--warn);border-radius:999px;padding:6px 14px;line-height:1.2}
+.sd .due.ok{background:var(--ok)}
+.sd .due.late{background:var(--late)}
+.sd .form{display:grid;gap:10px;width:100%}
+.sd .lab{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
+.sd .input{font-family:var(--sans);font-size:17px;min-height:50px;padding:0 16px;border-radius:var(--rr);border:1.5px solid var(--line);background:var(--card);color:var(--ink);width:100%;max-width:72ch;box-sizing:border-box}
+.sd .input::placeholder{color:var(--ink2);opacity:.8}
+.sd .row{display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.sd .go{font-family:var(--sans);font-size:17px;font-weight:600;color:var(--on-accent);background:var(--accent);border:0;border-radius:999px;padding:0 24px;min-height:50px;cursor:pointer}
 .sd .go:disabled{opacity:.5;cursor:default}
-.sd .in{display:grid;gap:6px;justify-items:start}
-.sd .docs{list-style:none;margin:0;padding:0;display:grid;gap:4px;width:100%}
-.sd .doc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 16px;align-items:center;padding:10px 0;border-top:1px solid var(--line-soft);min-height:44px}
-.sd .doc:first-child{border-top:0}
-.sd .dn{font-size:17px;font-weight:600;color:var(--text-primary);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.sd .dr{font-weight:500;color:var(--text-secondary)}
-.sd .dl{font-size:15px;font-weight:600;color:var(--accent);text-decoration:none;display:inline-flex;gap:8px;align-items:center;min-height:44px}
-.sd .dh{font-size:13px;font-weight:500;color:var(--text-muted)}
-.sd .ds{font-size:15px;color:var(--text-muted)}
-.sd .ds.ok{color:var(--state-ok);font-weight:600}
-.sd .ds.late{color:var(--state-late);font-weight:600}
-.sd .prompts{list-style:none;margin:0;padding:0;display:grid;gap:12px;width:100%}
-.sd .prompt{background:var(--surface-sunk);border-radius:12px;padding:14px 16px;display:grid;gap:10px}
-.sd .pair{display:flex;gap:12px;align-items:center}
+.sd .in{display:grid;gap:4px;justify-items:start;width:100%}
+/* The group's rows: each person in their own colour. */
+.sd .docs{list-style:none;margin:4px 0 0;padding:0;display:grid;gap:8px;width:100%}
+.sd .doc{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;align-items:center;padding:12px 16px 12px 12px;border-radius:var(--rr);background:var(--sunk);box-shadow:inset 4px 0 0 var(--pc);min-height:44px}
+.sd .dn{display:flex;gap:12px;align-items:center;min-width:0}
+.sd .dnw{display:grid;gap:1px;min-width:0}
+.sd .dnw b{font-size:17px;font-weight:600;color:var(--pc);line-height:1.3}
+.sd .dr{font-size:16px;color:var(--ink);line-height:1.3}
+/* Every group: each table with its time, names and roles, for a student who wants the whole picture. */
+.sd .groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%}
+.sd .group{background:var(--sunk);border-radius:var(--rr);padding:16px 16px 18px;display:grid;gap:12px;align-content:start}
+.sd .group.mine{box-shadow:0 0 0 2px var(--accent)}
+.sd .people{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.sd .person{display:flex;gap:10px;align-items:center;min-width:0}
+.sd .pw{display:grid;gap:1px;min-width:0}
+.sd .pw b{font-size:16px;font-weight:600;color:var(--pc);line-height:1.3}
+.sd .pj{font-size:16px;color:var(--ink);line-height:1.3}
+.sd .dright{display:grid;gap:4px;justify-items:end}
+.sd .open{font-size:15px;font-weight:600;color:var(--on-accent);background:var(--pc,var(--accent));text-decoration:none;display:inline-flex;gap:8px;align-items:baseline;min-height:44px;padding:0 16px;border-radius:999px;line-height:44px;white-space:nowrap}
+.sd .open .dh{color:inherit;opacity:.85}
+.sd .in .open{background:var(--accent)}
+.sd .dl{font-size:17px;font-weight:500;color:var(--ink);text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;display:inline-flex;gap:10px;align-items:baseline;min-height:44px;line-height:1.4;flex-wrap:wrap}
+.sd .dh{font-size:13px;font-weight:500;color:var(--ink2);text-decoration:none}
+.sd .ds{font-size:14px;font-weight:600;color:var(--ink2);background:var(--card);border-radius:999px;padding:6px 12px;line-height:1.2;white-space:nowrap}
+.sd .ds.ok{color:var(--on-accent);background:var(--ok)}
+.sd .ds.late{color:var(--on-accent);background:var(--late)}
+.sd .tally{display:inline-grid;gap:6px;justify-items:end;min-width:120px;font-size:14px;font-weight:600;color:var(--ink2);font-variant-numeric:tabular-nums}
+.sd .tally i{display:block;width:100%;height:8px;border-radius:999px;background:var(--line);overflow:hidden}
+.sd .tally em{display:block;height:100%;background:var(--accent);border-radius:999px}
+.sd .tally.ok b{color:var(--ok)}
+/* The document, as three page tiles. */
+.sd .pages{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:12px;width:100%}
+.sd .page{display:flex;flex-wrap:wrap;align-content:start;gap:8px;padding:16px;border-radius:var(--rr);background:var(--sunk);text-decoration:none;color:var(--ink);min-height:120px;box-sizing:border-box;position:relative}
+.sd .page:hover{box-shadow:0 0 0 2px var(--accent)}
+.sd .page .num{margin-right:-2px}
+.sd .page.wide{grid-column:auto}
+.sd .pgl{flex-basis:100%;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-top:6px}
+.sd .pgw{flex-basis:100%;font-family:var(--serif);font-size:21px;line-height:1.2;color:var(--ink);text-wrap:balance}
+.sd .pgf{display:inline-flex;margin-top:4px}
+.sd .pgf>*+*{margin-left:-8px}
+/* A hint per person, in that person's colour. */
+.sd .prompts{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:12px;width:100%}
+.sd .prompt{border-radius:var(--rr);background:var(--sunk);box-shadow:inset 4px 0 0 var(--pc);padding:18px 20px 20px;display:grid;gap:14px}
+.sd .pair{display:flex;gap:14px;align-items:center}
 .sd .two{display:inline-flex}
-.sd .two>*+*{margin-left:-10px}
-.sd .pp{font-size:17px;font-weight:600;color:var(--text-primary)}
-.sd .pr2{font-size:13px;color:var(--text-muted)}
-.sd .hint{display:grid;gap:4px;justify-items:start}
-.sd .hl{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
-.sd .pl{margin:0;font-size:15px;line-height:1.5;color:var(--text-primary)}
-.sd .pq{margin:0;font-size:15px;line-height:1.5;color:var(--text-secondary);font-style:italic}
-.sd .sheet{display:grid;gap:10px;padding-top:12px;border-top:1px solid var(--line-soft);width:100%}
-.sd .sp{display:grid;gap:6px;padding:12px 14px;border-radius:12px;background:var(--surface-sunk)}
-.sd .pn{font-size:17px;font-weight:600;color:var(--text-primary)}
-.sd .qs{margin:0;padding-left:20px;display:grid;gap:4px;font-size:15px;line-height:1.5;color:var(--text-secondary)}
-.sd .qs .ask{color:var(--text-primary);font-weight:600}
-.sd .vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.55;padding:4px 8px;margin:0;border:1.5px dashed var(--line-strong);border-radius:8px;background:var(--surface-card);resize:none;overflow:hidden}
-.sd .vsp-edit.h1{font-size:32px;font-weight:700}
-.sd .vsp-edit.h2{font-size:22px;font-weight:600}
-.sd .vsp-edit.h3{font-size:17px;font-weight:600}
-.sd .vsp-edit.p,.sd .vsp-edit.intro{font-size:17px}
-.sd .lnk:focus-visible,.sd .btn:focus-visible,.sd .go:focus-visible,.sd .dl:focus-visible,.sd .crumb:focus-visible,.sd .input:focus-visible,.sd .as select:focus-visible,.sd .vsp-edit:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media (max-width:640px){.sd .sec{padding:16px}.sd .doc{grid-template-columns:1fr}.sd .face{width:88px}.sd .face.host{padding-left:12px}}
+.sd .two>*+*{margin-left:-12px}
+.sd .pp{font-family:var(--serif);font-size:23px;font-weight:500;line-height:1.15;color:var(--pc)}
+.sd .pr2{font-size:18px;font-weight:600;line-height:1.3;color:var(--ink);margin-top:4px}
+.sd .job{color:var(--pc)}
+.sd .hint{display:grid;gap:6px;justify-items:start;max-width:72ch;background:var(--card);border-radius:10px;padding:14px 16px}
+.sd .hl{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--pc)}
+.sd .pl{margin:0;font-size:17px;line-height:1.55;color:var(--ink)}
+.sd .pq{margin:0;font-size:17px;line-height:1.5;color:var(--ink2);font-style:italic}
+.sd .faq{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;background:transparent;padding:0}
+.sd .qa{background:var(--card);border-radius:var(--r);padding:22px 22px 24px;display:grid;gap:10px;align-content:start;justify-items:start}
+.sd .sheet{display:grid;gap:12px;padding-top:4px;width:100%}
+.sd .sp{display:grid;gap:8px;padding:14px 16px 16px;border-radius:var(--rr);background:var(--sunk)}
+.sd .pn{font-family:var(--serif);font-size:21px;line-height:1.2;color:var(--ink)}
+.sd .qs{margin:0;padding-left:22px;display:grid;gap:6px;font-size:16px;line-height:1.5;color:var(--ink2)}
+.sd .qs .ask{color:var(--ink);font-weight:600}
+/* Eight colours, one per seat. Day values read at 4.5:1 on the sunk surface with white inside; night values read on the night card with the night ink inside. */
+.sd .pc{--pc:var(--pc-day)}
+.sd-root[data-mode="night"] .pc{--pc:var(--pc-night)}
+@media (prefers-color-scheme:dark){.sd-root:not([data-mode="day"]) .pc{--pc:var(--pc-night)}}
+.sd .pc[data-c="0"]{--pc-day:#2b6cb6;--pc-night:#518fd6}
+.sd .pc[data-c="1"]{--pc-day:#c62f61;--pc-night:#db668d}
+.sd .pc[data-c="2"]{--pc-day:#995e24;--pc-night:#c67a2f}
+.sd .pc[data-c="3"]{--pc-day:#1c7856;--pc-night:#27a577}
+.sd .pc[data-c="4"]{--pc-day:#8a49d4;--pc-night:#a777df}
+.sd .pc[data-c="5"]{--pc-day:#1f7384;--pc-night:#2a9bb2}
+.sd .pc[data-c="6"]{--pc-day:#be402d;--pc-night:#d96e5e}
+.sd .pc[data-c="7"]{--pc-day:#41781c;--pc-night:#59a527}
+.sd .vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.55;padding:4px 8px;margin:0;border:1.5px dashed var(--line);border-radius:8px;background:var(--card);resize:none;overflow:hidden}
+.sd .vsp-edit.h1{font-family:var(--serif);font-size:clamp(40px,6.5vw,60px);font-weight:500;line-height:1.1}
+.sd .vsp-edit.h2{font-family:var(--serif);font-size:28px;font-weight:500}
+.sd .vsp-edit.h3{font-family:var(--serif);font-size:21px;font-weight:500}
+.sd .vsp-edit.intro{font-family:var(--serif);font-size:21px;color:var(--ink2)}
+.sd .vsp-edit.p{font-size:17px}
+.sd .lnk:focus-visible,.sd .btn:focus-visible,.sd .go:focus-visible,.sd .dl:focus-visible,.sd .open:focus-visible,.sd .page:focus-visible,.sd .crumb:focus-visible,.sd .input:focus-visible,.sd .as select:focus-visible,.sd .vsp-edit:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+@media (max-width:720px){.sd .faq{grid-template-columns:1fr}.sd .pages{grid-template-columns:1fr}.sd .groups{grid-template-columns:1fr}}
+@media (max-width:640px){.sd{padding-top:20px;gap:12px}.sd .sec{padding:18px;border-radius:16px}.sd .band{padding:14px 16px 16px}.sd .faces{padding:14px;gap:8px}.sd .face{width:calc(50% - 4px);box-sizing:border-box}.sd .step{padding:14px}.sd .sdt{font-size:20px}.sd .doc{grid-template-columns:1fr}.sd .dright{justify-items:start}.sd .open{white-space:normal;line-height:1.3;padding:10px 16px}}
+@media (prefers-reduced-motion:reduce){.sd *{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 `;

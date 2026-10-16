@@ -5626,7 +5626,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // Oct 15, late: three matching buttons under the steps, one per part of
   // the page; "group", never "table", in front of a student; the illness
   // line is gone; his sentence about the questions is in.
-  for (const want of ['href="#turnin"', 'href="#docs"', 'href="#when"', 'id="turnin"', 'id="docs"', 'id="when"', "Step 1: Turn in your Scouting Report", "Step 2: Your group", "Step 3: Your sit-down", "most of them will be provided by you, the students"]) {
+  for (const want of ['href="#turnin"', 'href="#docs"', 'href="#when"', 'id="turnin"', 'id="docs"', 'id="when"', "Step 1: Turn in your Scouting Report", "Step 2: Read your group", "Step 3: Your sit-down", "most of them will be provided by you, the students"]) {
     if (!luke.replace(/&#x27;/g, "'").includes(want)) say("Luke's page lacks " + JSON.stringify(want));
   }
   if (luke.includes("seriously ill")) say("the illness line is still on the page");
@@ -5672,7 +5672,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!emma.includes("Friday, October 23, 9:45 AM") || !emma.includes("https://x.test/emma")) say("Vianna's page is not Emma's table with her link");
   // The instructor: every table, every link, the count.
   const all = html(<SitdownBody config={scfg} data={d2} update={() => {}} viewer={{ instructor: true }} copy={copy} instructor now={after} />);
-  for (const want of ["2 of 25 turned in", "Friday, October 23, 9:45 AM", "https://x.test/charles-prep", "Hand-ins also land on Sit-Down 1 prep", "Open the prep page"]) {
+  for (const want of ["2 of 25", ">turned in<", "Friday, October 23, 9:45 AM", "https://x.test/charles-prep", "Hand-ins also land on Sit-Down 1 prep", "Open the prep page"]) {
     if (!all.includes(want)) say("the instructor's view lacks " + JSON.stringify(want));
   }
   const none = html(<SitdownBody config={scfg} data={{ ...d2, assignments: [] }} update={() => {}} viewer={{ instructor: true }} copy={copy} instructor now={before} />);

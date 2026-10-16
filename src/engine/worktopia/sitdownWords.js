@@ -29,7 +29,7 @@ export const WORDS = {
   "step.2": "Read the Scouting Reports from everyone in your group. They open on this page on Tuesday, October 20. Make sure you're familiar with every report in your group, and know your own well.",
   "step.3": "The meeting.",
   "step.1.go": "Step 1: Turn in your Scouting Report",
-  "step.2.go": "Step 2: Your group's Scouting Reports",
+  "step.2.go": "Step 2: Read your group's Scouting Reports",
   "step.3.go": "Step 3: Your sit-down",
 
   "head.guidelines": "Guidelines",
@@ -39,7 +39,14 @@ export const WORDS = {
   "head.turnin": "Turn in your Scouting Report",
   "prep.turnin": "Your Scouting Report is a Google Doc. Set sharing so that anyone with the link can view, then paste the link here. Everyone in your group reads your report from this page, so the sharing setting matters.",
 
-  "head.docs": "Your group's Scouting Reports",
+  "head.docs": "Read your group's Scouting Reports",
+
+  // Every group, for a student who wants the whole picture. Andrew, 2026-10-16:
+  // "give the students an option to see the whole class structure, meaning
+  // what is everyone else's role and when are they presenting."
+  "head.all": "Every group",
+  "all.show": "See every group",
+  "all.hide": "Hide the other groups",
   "docs.before": "The Scouting Reports from everyone in your group show up here on Tuesday, October 20, at 12:01 AM, as soon as the reports are due.",
   "docs.after": "Read every report before your sit-down.",
 
