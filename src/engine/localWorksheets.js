@@ -33,8 +33,8 @@ import StoryReview from "./visualstory/storyreview.jsx";
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
   { key: WORKTOPIA_KEY, title: WORKTOPIA_TITLE, mount: mountWorktopia, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
-  // Closed until he opens it from the Worksheets page.
-  { key: THREE_BY_FIVE_KEY, title: THREE_BY_FIVE_TITLE, mount: mountThreeByFive, open: ["comm999"], classes: ["comm3", "comm999"] },
+  // Andrew, 2026-10-16: "i need to make 3x5 available for my comm 3 classes."
+  { key: THREE_BY_FIVE_KEY, title: THREE_BY_FIVE_TITLE, mount: mountThreeByFive, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The visual story's topic page, planned 2026-10-13. Tried in COMM 999 with
   // Marty first, then opened to COMM 3 from the Worksheets page. review is the
   // instructor's page at ?review.

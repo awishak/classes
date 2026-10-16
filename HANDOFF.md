@@ -867,7 +867,8 @@ It is listed only for COMM 3 and COMM 999 (`classes` on the entry).
 **Opening it.** The Worksheets page has an Open to students / Close to
 students switch beside any local sheet. It writes `worksheetsOpen[key]` on
 the plan row, and a value there wins over `open` in `localWorksheets.js`,
-so no deploy is needed to open or close a sheet. 3x5 ships closed to COMM 3.
+so no deploy is needed to open or close a sheet. 3x5 opened to COMM 3 in
+code on 2026-10-16, at his ask; the switch still wins if he flips it.
 
 **Storage.** Each roll (canvas) is one JSON value under `roll:a`, `roll:b`
 on the student's own worksheet sheet, saved 0.7 s after the last change and
