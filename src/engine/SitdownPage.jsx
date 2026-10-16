@@ -291,6 +291,9 @@ function TurnIn({ config, data, update, name, asg, copy, editing, now, suffix })
 
 // ─── the prep page ───
 
+// The line above each hint, one per table-mate in turn. His four, 2026-10-15.
+const HINT_LEADS = ["hint.lead", "hint.lead.2", "hint.lead.3", "hint.lead.4"];
+
 function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
   const mine = table ? table.find(p => same(p.roster, me) || same(p.name, me)) : null;
   const others = table && mine ? table.filter(p => p !== mine) : [];
@@ -319,8 +322,9 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
       {W("others.disagree", "p", "p strong")}
       {mine && others.length ? (
         <ul className="prompts">
-          {others.map(p => {
+          {others.map((p, i) => {
             const { same: sameField, line, link } = promptFor(mine, p);
+            const lead = HINT_LEADS[i % HINT_LEADS.length];
             return (
               <li key={p.name} className="prompt">
                 <div className="pair">
@@ -334,7 +338,7 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
                   <div className="hl">{copy.say("hint.label")}</div>
                   {sameField ? <p className="pl">{copy.say("hint.same")}</p>
                     : line ? (<>
-                      <p className="pl">{copy.say("hint.lead") + " " + line}</p>
+                      <p className="pl">{copy.say(lead) + " " + line}</p>
                       {link ? <a className="dl" href={link.url} target="_blank" rel="noopener noreferrer">{link.title}<span className="dh">{hostOf(link.url)}</span></a> : null}
                     </>)
                     : <p className="pl">{copy.say("hint.none")}</p>}
@@ -345,7 +349,7 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
         </ul>
       ) : table === null ? (<>
         <p className="meta">Each student sees a hint here for each person at their table: the pull between the two fields, from the roles page, with the two faces.</p>
-        {editing ? ["hint.label", "hint.lead", "hint.same", "hint.none"].map(k => <Words key={k} k={k} copy={copy} editing={editing} as="p" className="p" />) : null}
+        {editing ? ["hint.label", ...HINT_LEADS, "hint.same", "hint.none"].map(k => <Words key={k} k={k} copy={copy} editing={editing} as="p" className="p" />) : null}
       </>) : <p className="meta">You're not in a group yet, so there are no hints to show. Message Dr. Ishak and we'll place you.</p>}
     </section>
 

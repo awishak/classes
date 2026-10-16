@@ -5635,7 +5635,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // the bold line that says disagree, and the INQUIRE link.
   const prepOf = (name, data = d, extra = {}) => html(<SitdownBody config={scfg} data={data} update={() => {}} viewer={name ? { name } : { instructor: true }} copy={copy} page="prep" now={before} {...extra} />);
   const lukePrep = prepOf("Luke Baird");
-  for (const want of ["Page one: your job", "What's your job?", "You and Charles", "You and Catherine", "You and Sophia", "A hint from your instructor", "You might want to consider this:", "If you see the relationship differently", "Can I use AI?", "INQUIRE", "drewi.sh/teaching/human-centered-education", "Back to the Sit-Down page"]) {
+  for (const want of ["Page one: your job", "What's your job?", "You and Charles", "You and Catherine", "You and Sophia", "A hint from your instructor", "You might want to consider this:", "Here's one thought:", "Something to consider:", "If you see the relationship differently", "Can I use AI?", "INQUIRE", "drewi.sh/teaching/human-centered-education", "Back to the Sit-Down page"]) {
     if (!lukePrep.replace(/&#x27;/g, "'").includes(want)) say("Luke's prep page lacks " + JSON.stringify(want));
   }
   if (/\btable\b/i.test(lukePrep.replace(/&#x27;/g, "'"))) say("a student still reads the word table on the prep page");
