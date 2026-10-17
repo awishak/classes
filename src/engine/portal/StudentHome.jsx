@@ -20,6 +20,7 @@ import { QuestionsSection } from "./Questions.jsx";
 import { DrCard, DrSheet } from "./ClassPage.jsx";
 import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
+import { StoriesRow } from "../visualstory/door.jsx";
 import { assignmentsOf } from "../profileTask.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { SITDOWN_CLASSES, SITDOWN, released, sessionOf, tableOf, sitdownAssignment, linkOf } from "../worktopia/sitdown.js";
@@ -199,6 +200,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
         <Sec name={<button type="button" className="pt-focus" onClick={() => go("assignments")} style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }}>My work</button>}
           sub={owed ? "Next up" : ""} right={<Chip onClick={() => go("performance")}>My performance</Chip>} />
         <div className="pt-stack">
+          <StoriesRow config={config} />
           {owed ? <WorkRow asg={owed.asg} st={owed.st} ring onOpen={() => go("assignments/" + owed.asg.id)} />
             : <p className="pt-quiet">Nothing is waiting on you.</p>}
         </div>

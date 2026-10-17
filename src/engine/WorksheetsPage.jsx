@@ -92,7 +92,9 @@ export default function WorksheetsPage({ config }) {
   const { session, instructor } = useSession();
   // This class's worksheets, by listedFor. A sheet made for this class opens first.
   const mine = ALL_WORKSHEETS.filter(w => listedFor(w, config.id));
-  const [key, setKey] = useState((mine.find(w => w.classes && w.classes.includes(config.id)) || mine[0])?.key || "");
+  // ?w=<key> lands on one sheet, for the Tools panel's Who is done button.
+  const asked = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("w") : "";
+  const [key, setKey] = useState((mine.find(w => w.key === asked) || mine.find(w => w.classes && w.classes.includes(config.id)) || mine[0])?.key || "");
   const sheet = mine.find(w => w.key === key);
   const local = LOCAL_WORKSHEETS.find(w => w.key === key) || null;
   const isOpen = local ? openTo(local, config.id, data) : false;

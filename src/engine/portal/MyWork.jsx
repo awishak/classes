@@ -25,6 +25,7 @@ import { Sec, Row, Io, Btn, Chip, Lnk, Check, Gm, Face, DrFace, I, dcolOf, dueWo
 import { visibleAssignments, workOf, unseenOf, nextOwedOf, counts, flowOf, FLOW_FILTERS, opensWords } from "./work.js";
 import { worksheetOf } from "../worksheetSubmits.js";
 import { VISUAL_PRE_KEY } from "../visualstory/pre.jsx";
+import { StoriesRow, StoriesLink } from "../visualstory/door.jsx";
 
 // A challenge that is a worksheet on this site keeps a plain way back to the
 // sheet after it is turned in. Andrew, 2026-10-16: "students need to be
@@ -46,10 +47,24 @@ const lineOf = (asg, st) => st.state === "graded" ? "Graded " + st.letter
   : st.state === "ongoing" ? "Ongoing, all quarter"
   : "Due " + dueWords(asg.due, asg.dueTime);
 
+// Where a challenge's work is done on this site: the worksheet it links to,
+// or the visual story's builder. Andrew, 2026-10-16: "if the assignment is
+// essentially Worktopia or the assignment is a visual story creator let him
+// click the button and go straight to the visual creator. They don't need to
+// read the instructions ... I also want that ability to go straight to the
+// page from the work." The row itself still opens the challenge's page.
+export function directHref(asg) {
+  const story = String(asg?.instructionsUrl || "").trim().match(STORY_LINK);
+  if (story) return "/" + story[1] + "/worksheets/visual-story";
+  const sheet = worksheetOf(asg);
+  return sheet ? "/" + sheet.classId + "/worksheets/" + sheet.key : "";
+}
+
 export function WorkRow({ asg, st, ring, onOpen }) {
   const tint = tintOf(st);
-  const side = st.state === "open" ? <Io kind="go" onClick={onOpen}>Submit</Io>
-    : st.state === "turnedIn" && worksheetOf(asg) ? <Io kind="go" onClick={onOpen}>Reopen</Io>
+  const direct = directHref(asg);
+  const side = st.state === "open" ? (direct ? <Io kind="go" href={direct}>Open</Io> : <Io kind="go" onClick={onOpen}>Submit</Io>)
+    : st.state === "turnedIn" && direct ? <Io kind="go" href={direct}>Reopen</Io>
     : st.state === "graded" || st.state === "turnedIn" ? <Check />
     : st.state === "closed-until" ? null
     : <Io kind="go" onClick={onOpen}>Open</Io>;
@@ -170,6 +185,7 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
     return (
       <div className="pt-body" style={{ gap: 16 }}>
         {sw}
+        <StoriesRow config={config} />
         <div className="pt-chips">
           {[["all", "All", ""], ["todo", "To do", "due"], ["done", "Done", "done"]].map(([id, say, kind]) => (
             <Chip key={id} on={chip === id} kind={kind} onClick={() => setChip(id)}>{say}</Chip>
@@ -204,11 +220,12 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
         <div className="pt-chips">
           {FLOW_FILTERS.map(f => <Chip key={f.id} on={filter === f.id} kind={f.kind} onClick={() => setFilter(f.id)}>{f.label}</Chip>)}
         </div>
+        {filter === "all" || filter === "work" ? <StoriesRow config={config} /> : null}
         {owed && (filter === "all" || filter === "work") ? (
           <div className="pt-notice" style={{ boxShadow: "inset 0 0 0 2px var(--ca-accent)", background: "var(--surface-card)" }}>
             {I.pin()}
             <span className="txt">Your <b>{owed.asg.title}</b> is due {dueWords(owed.asg.due, owed.asg.dueTime)}</span>
-            <Io kind="go" onClick={() => open(owed.asg.id)}>Submit</Io>
+            {directHref(owed.asg) ? <Io kind="go" href={directHref(owed.asg)}>Open</Io> : <Io kind="go" onClick={() => open(owed.asg.id)}>Submit</Io>}
           </div>
         ) : null}
         {empty ? (
@@ -363,6 +380,9 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   // Go to story builder".
   const story = String(asg.instructionsUrl || "").trim().match(STORY_LINK);
   const sheet = story ? null : worksheetOf(asg);
+  // Once the section is reading, the same page links to the classmates'
+  // stories, above the fold, since the story is turned in by then.
+  const storiesLink = story ? <StoriesLink config={config} /> : null;
   const more = story ? <div><Lnk href={"/" + story[1] + "/worksheets/visual-story"}>Go to story builder</Lnk></div>
     : asg.instructionsUrl && !sheet ? <div><Lnk href={asg.instructionsUrl}>More instructions</Lnk></div> : null;
   // The sheet's button sits above the fold, so it is there turned in or not.
@@ -374,8 +394,9 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   ) : null;
   const instructions = (words || asg.instructionsUrl) ? (
     st.state === "open" || st.state === "missed"
-      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{sheetBtn}{more}</div>
+      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{storiesLink}{sheetBtn}{more}</div>
       : <div className="pt-stack">
+          {storiesLink}
           {sheetBtn}
           <div className="pt-acts"><Io onClick={() => setFold(v => !v)}>Instructions</Io>{st.state === "turnedIn" && canSend ? <span className="pt-quiet" style={{ padding: 0 }}>Send another link below.</span> : null}</div>
           {fold ? <>{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{more}</> : null}

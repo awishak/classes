@@ -214,6 +214,13 @@ export default async function handler(req, res) {
   if (!email) return res.status(instructor ? 400 : 401).json({ ok: false, error: instructor ? "Open the stories as a student in the practice class with ?as=<email>." : "Not signed in." });
   const me = roster.find(s => s.email === email);
   if (!me) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
+
+  // ─── where the student's section stands ───
+  // One light read for the door under My work, so the portal can say whether
+  // the classmates' stories are open without pulling the grid. Andrew,
+  // 2026-10-16: "it needs to be a link under My work when appropriate."
+  if (action === "status") return res.status(200).json({ ok: true, stage: await stageOf(groupKey, me.section) });
+
   const [stage, sheets, podRows, myRows, due] = await Promise.all([
     stageOf(groupKey, me.section),
     rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&submitted_at=not.is.null&limit=${PAGE}`),

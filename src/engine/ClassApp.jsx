@@ -52,6 +52,7 @@ import WelcomeDeck, { needsWelcome } from "./WelcomeDeck.jsx";
 import NoticeCard, { NoticeWriter } from "./NoticeCard.jsx";
 import PortalShell from "./portal/Shell.jsx";
 import { Face as PortalFace, DrFace } from "./portal/bits.jsx";
+import { ToolsPanel } from "./portal/Tools.jsx";
 import { SaveWord, useOnline } from "./SaveWord.jsx";
 import { noticeFor, markNoticeRead } from "./notice.js";
 import { isTestStudent, realStudents, sectionFor, hasSections, HOUSE, isHouse, isLurker } from "./sections.js";
@@ -1072,6 +1073,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             <InstructorProfile config={config} shared={shared} updateShared={preview ? () => {} : updateShared} />
           </div>
         ) : null}
+        {/* Andrew, 2026-10-16: "having them in the menu is OK." The tools, links only; the counts are on the home. */}
+        {view === "instructor" ? <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}><ToolsPanel config={config} data={data} counts={false} /></div> : null}
         {view === "instructor" ? <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}><RequestInbox data={data} update={write} /></div> : null}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: view === "instructor" ? 12 : 0, borderTop: view === "instructor" ? "1px solid " + BORDER : "none" }}>
           <span style={{ ...label, color: TEXT_MUTED }}>Theme</span>

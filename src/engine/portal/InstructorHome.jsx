@@ -24,6 +24,7 @@ import { deadlineOf } from "../DueCard.jsx";
 import { waitingOnInstructor } from "../YouCard.jsx";
 import { Hero } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
+import { ToolsPanel } from "./Tools.jsx";
 
 const secs = (config) => hasSections(config) ? sectionsOf(config) : [""];
 
@@ -212,6 +213,8 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
           </div>
         </div>
       ) : null}
+      {/* Andrew, 2026-10-16: the buttons for everything the class is doing, on the front page. */}
+      <ToolsPanel config={config} data={data} />
       <QuestionsSection config={config} name={config.instructor?.name || "Instructor"} profiles={data?.profiles} go={go} instructor />
     </div>
   );
@@ -263,6 +266,7 @@ export function InstructorWork({ config, data, update, go, editing }) {
         <Chip href={config.path + "/grade"}>Grade view</Chip>
         {toGrade ? <Chip href={config.path + "/grade"}>{toGrade} to grade</Chip> : null}
       </div>
+      <ToolsPanel config={config} data={data} />
       {Object.entries(months).map(([m, rows]) => (
         <div key={m} className="pt-day"><Sec name={m} /><div className="pt-stack">
           {rows.map(asg => <HisWorkRow key={asg.id} config={config} data={data} asg={asg} toGrade={toGradeOf(asg)} side={<Io kind="go" onClick={() => go("assignments/" + asg.id)}>Edit</Io>} />)}
