@@ -36,11 +36,14 @@ export const sheetsFor = (config) => [...WORKSHEETS, ...LOCAL_WORKSHEETS].filter
 export function sheetLinks(config, sheet) {
   const student = config.path + "/worksheets/" + sheet.key;
   const local = LOCAL_WORKSHEETS.find(w => w.key === sheet.key) || null;
-  const links = [
-    { say: "Who is done", href: config.path + "/worksheets?w=" + encodeURIComponent(sheet.key), main: true },
-    { say: "The sheet", href: student },
-  ];
-  if (local && local.review) links.push({ say: sheet.key === VISUAL_STORY_KEY ? "Every story, with names" : "Review", href: student + "?review" });
+  // The same buttons on every row, in the same order. Andrew, 2026-10-16:
+  // "please be consistent. just put the buttons on there in the same way."
+  // Home is the instructor's page for the sheet, with who is done and every
+  // student's completion. Review is the review where one exists. Student
+  // view is the sheet as students open it.
+  const links = [{ say: "Home", href: config.path + "/worksheets?w=" + encodeURIComponent(sheet.key), main: true }];
+  if (local && local.review) links.push({ say: "Review", href: student + "?review" });
+  links.push({ say: "Student view", href: student });
   if (hasReadout(config.id, sheet.key)) links.push({ say: "Readout", href: student + "/readout" });
   if (sheet.key === WORKTOPIA_KEY) links.push({ say: "Answers by question", href: student + "/answers" });
   return links;
@@ -51,13 +54,13 @@ export function otherTools(config) {
   const out = [];
   if (STORIES_CLASSES.includes(config.id)) out.push({
     key: "stories", title: "Classmates' stories", line: "The stage of each section is set on the page.",
-    links: [{ say: "The page", href: storiesHref(config), main: true }, { say: "Every story, with names", href: config.path + "/worksheets/" + VISUAL_STORY_KEY + "?review" }],
+    links: [{ say: "Home", href: storiesHref(config), main: true }, { say: "Review", href: config.path + "/worksheets/" + VISUAL_STORY_KEY + "?review" }],
   });
   if (SITDOWN_CLASSES.includes(config.id)) out.push({
     key: "sitdown", title: "Sit-Down 1", line: "Every table, its time and its documents.",
-    links: [{ say: "The tables", href: config.path + "/sitdown", main: true }, { say: "Roles", href: config.path + "/worksheets/worktopia/roles" }, { say: "The prep", href: config.path + "/sitdown/prep" }],
+    links: [{ say: "Home", href: config.path + "/sitdown", main: true }, { say: "The prep", href: config.path + "/sitdown/prep" }, { say: "Roles", href: config.path + "/worksheets/worktopia/roles" }],
   });
-  out.push({ key: "grade", title: "Grades", line: "Every challenge, every student, what is released.", links: [{ say: "Grade view", href: config.path + "/grade", main: true }] });
+  out.push({ key: "grade", title: "Grades", line: "Every challenge, every student, what is released.", links: [{ say: "Home", href: config.path + "/grade", main: true }] });
   return out;
 }
 

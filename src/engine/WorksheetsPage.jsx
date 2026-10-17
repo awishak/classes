@@ -15,6 +15,7 @@ import { useClassData } from "./store.js";
 import { rosterOf, idOf } from "./roster.js";
 import { INSTRUCTOR_EMAILS } from "../instructors.js";
 import { useSession, authHeaders } from "./session.js";
+import { progressOf, percentOf } from "./worksheetProgress.js";
 import { savedPin } from "../InstructorGate.jsx";
 import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
 import { LOCAL_WORKSHEETS, listedFor, openTo } from "./localWorksheets.js";
@@ -32,11 +33,12 @@ const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "nig
 // Every worksheet the class can be handed: the package's, then this repo's.
 const ALL_WORKSHEETS = [...WORKSHEETS, ...LOCAL_WORKSHEETS];
 
-// A worksheet built in this repo has no spreadsheet yet: one row per student,
-// submitted or not, and Open sheet to read their file as they saw it. The
-// submits come through /api/worksheet-submits, the same read the assignment
-// card uses, so the PIN or an instructor's session both work.
-function LocalReview({ config, sheet, people, studentUrl }) {
+// Every student on one sheet, as a graph. Andrew, 2026-10-16: "i want a
+// list of completed vs not. like give me graphs on that page. every student
+// in terms of 0 to 100 percent completion." One read of every sheet with its
+// answers through /api/worksheet-submits, measured by worksheetProgress.js,
+// then three groups: submitted, started, not started, each student a bar.
+function Completion({ config, sheet, people, studentUrl }) {
   const [sheets, setSheets] = useState(null);
   useEffect(() => {
     let alive = true;
@@ -44,45 +46,65 @@ function LocalReview({ config, sheet, people, studentUrl }) {
       try {
         const r = await fetch("/api/worksheet-submits", {
           method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-          body: JSON.stringify({ pin: savedPin(), groupKey: config.id, keys: [sheet.key] }),
+          body: JSON.stringify({ pin: savedPin(), groupKey: config.id, key: sheet.key, all: true }),
         });
         const out = r.ok ? await r.json() : null;
-        if (alive) setSheets(out?.ok ? out.sheets[sheet.key] || [] : []);
+        if (alive) setSheets(out?.ok ? out.sheets || [] : []);
       } catch { if (alive) setSheets([]); }
     })();
     return () => { alive = false; };
   }, [config.id, sheet.key]);
-  const when = new Map((sheets || []).map(s => [s.viewer_id, s.submitted_at]));
-  const rows = people.filter(s => !INSTRUCTOR_EMAILS.includes(emailOf(s))).slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
-  const submitted = rows.filter(s => when.get(emailOf(s))).length;
-  const cell = { padding: "10px 12px", borderBottom: "1px solid " + TOKENS.LINE.soft, fontSize: 15, textAlign: "left", verticalAlign: "top" };
+  const byEmail = new Map((sheets || []).map(s => [String(s.viewer_id || "").toLowerCase(), s]));
+  const progress = progressOf(sheet.key, sheets || []);
+  const rows = people.filter(s => !INSTRUCTOR_EMAILS.includes(emailOf(s))).map(s => {
+    const mine = byEmail.get(emailOf(s));
+    const pct = mine ? percentOf(progress[String(mine.viewer_id).toLowerCase()]) : 0;
+    return { s, email: emailOf(s), when: mine?.submitted_at || null, pct, state: mine?.submitted_at ? "submitted" : mine && pct > 0 ? "started" : "none" };
+  });
+  const groups = [
+    ["submitted", "Submitted", rows.filter(r => r.state === "submitted")],
+    ["started", "Started, not submitted", rows.filter(r => r.state === "started")],
+    ["none", "Not started", rows.filter(r => r.state === "none")],
+  ];
+  const sortRows = (list) => list.slice().sort((x, y) => y.pct - x.pct || String(x.s.name).localeCompare(String(y.s.name)));
+  const whenWords = (t) => new Date(t).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  const line = { display: "grid", gridTemplateColumns: "minmax(140px, 1fr) minmax(120px, 2fr) 56px auto", gap: 12, alignItems: "center", padding: "8px 16px", borderTop: "1px solid " + TOKENS.LINE.soft, fontSize: 15 };
+  const bar = (pct, done) => (
+    <div role="img" aria-label={pct + " percent"} style={{ height: 14, borderRadius: 999, background: TOKENS.SURFACE.sunk, overflow: "hidden" }}>
+      <div style={{ width: pct + "%", height: "100%", borderRadius: 999, background: done ? config.accent : TOKENS.TEXT.secondary, transition: "width .3s" }} />
+    </div>
+  );
   return (
     <div style={{ borderRadius: 16, background: TOKENS.SURFACE.card, border: "1px solid " + TOKENS.LINE.soft, overflow: "hidden" }}>
       <div style={{ padding: "14px 16px", display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap" }}>
         <b style={{ fontSize: 20, fontWeight: 600 }}>{sheet.title}</b>
-        <span style={{ fontSize: 15, color: TOKENS.TEXT.secondary }}>{sheets === null ? "Reading the submits." : submitted + " of " + rows.length + " submitted"}</span>
+        <span style={{ fontSize: 15, color: TOKENS.TEXT.secondary }}>
+          {sheets === null ? "Reading every sheet." : groups.map(([, say, list]) => list.length + " " + say.toLowerCase()).join(" · ")}
+        </span>
       </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr>
-            <th style={{ ...cell, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: TOKENS.TEXT.secondary }}>Student</th>
-            <th style={{ ...cell, fontSize: 12, textTransform: "uppercase", letterSpacing: "0.08em", color: TOKENS.TEXT.secondary }}>Submitted</th>
-            <th style={cell}></th>
-          </tr></thead>
-          <tbody>
-            {rows.map(s => (
-              <tr key={emailOf(s)}>
-                <td style={cell}>{s.name}</td>
-                <td style={{ ...cell, color: when.get(emailOf(s)) ? TOKENS.TEXT.primary : TOKENS.TEXT.secondary }}>
-                  {when.get(emailOf(s)) ? new Date(when.get(emailOf(s))).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "Not yet"}
-                </td>
-                <td style={cell}><a className="ca-focus" href={studentUrl + "?s=" + encodeURIComponent(idOf(s))} style={{ fontSize: 15, fontWeight: 600, color: config.accent }}>Open sheet</a></td>
-              </tr>
-            ))}
-            {!rows.length ? <tr><td style={cell} colSpan={3}>Nobody on the roster has an email yet.</td></tr> : null}
-          </tbody>
-        </table>
-      </div>
+      {sheets !== null && rows.length ? (
+        <div style={{ padding: "0 16px 14px" }}>
+          {bar(Math.round(rows.reduce((n, r) => n + r.pct, 0) / rows.length), true)}
+          <div style={{ fontSize: 14, color: TOKENS.TEXT.secondary, marginTop: 6 }}>{Math.round(rows.reduce((n, r) => n + r.pct, 0) / rows.length)}% across the class</div>
+        </div>
+      ) : null}
+      {sheets !== null ? groups.map(([key, say, list]) => list.length ? (
+        <div key={key}>
+          <div style={{ padding: "10px 16px 6px", fontSize: 13, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: TOKENS.TEXT.secondary, borderTop: "1px solid " + TOKENS.LINE.soft }}>{say} · {list.length}</div>
+          {sortRows(list).map(r => (
+            <div key={r.email} style={line}>
+              <span style={{ fontWeight: 600, overflowWrap: "anywhere" }}>{r.s.name}</span>
+              {bar(r.pct, r.state === "submitted")}
+              <span style={{ fontVariantNumeric: "tabular-nums", textAlign: "right", color: TOKENS.TEXT.primary }}>{r.pct}%</span>
+              <span style={{ display: "flex", gap: 12, alignItems: "center", fontSize: 14, color: TOKENS.TEXT.secondary, whiteSpace: "nowrap" }}>
+                {r.when ? whenWords(r.when) : r.state === "started" ? "Not submitted" : "Not opened"}
+                {r.state !== "none" ? <a className="ca-focus" href={studentUrl + "?s=" + encodeURIComponent(idOf(r.s))} style={{ fontSize: 15, fontWeight: 600, color: config.accent }}>Open sheet</a> : null}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null) : null}
+      {!rows.length ? <div style={{ padding: "10px 16px 16px", fontSize: 15 }}>Nobody on the roster has an email yet.</div> : null}
     </div>
   );
 }
@@ -191,10 +213,11 @@ export default function WorksheetsPage({ config }) {
           {addressBox("Students open this worksheet at", studentUrl, "Paste the address into the Details link on the assignment.")}
           {answersUrl ? addressBox("Everyone's answers, by question", answersUrl, "You see names. A student who opens the same address sees the answers with no names.") : null}
           {readoutUrl ? addressBox("What the class wrote, to share with them", readoutUrl, "") : null}
-          {local
-            ? <LocalReview key={sheet.key} config={config} sheet={sheet} people={people} studentUrl={studentUrl} />
-            : <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
-                roster={roster} hide={INSTRUCTOR_EMAILS} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
+          <Completion key={"c-" + sheet.key} config={config} sheet={sheet} people={people} studentUrl={studentUrl} />
+          {local ? null : <div style={{ marginTop: 20 }}>
+            <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
+              roster={roster} hide={INSTRUCTOR_EMAILS} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />
+          </div>}
         </>) : null}
       </div>
     </div>
