@@ -24,6 +24,7 @@ import VisualStoryInstructions from "./engine/visualstory/instructions.jsx";
 import ClassmatesStories from "./engine/visualstory/reading.jsx";
 import SampleStory from "./engine/visualstory/sample.jsx";
 import GradeView from "./engine/GradeView.jsx";
+import GradingIdeas from "./engine/portal/GradingIdeas.jsx";
 import CheckinAnswers from "./engine/CheckinAnswers.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
@@ -322,6 +323,18 @@ export default function App() {
   const ws = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/?$/);
   if (ws && ENGINE[ws[1]]) {
     return <WorksheetPage key={ws[1] + "/" + ws[2]} config={ENGINE[ws[1]]} worksheetKey={ws[2]} />;
+  }
+
+  // Grade view, round two: the grading ideas drawn in the site's own rows,
+  // on the live store, with his picks saved on the plan row. See GradingIdeas.jsx.
+  const grading = path.match(/^\/(comm\w+)\/grading\/?$/);
+  if (grading && ENGINE[grading[1]]) {
+    const cfg = ENGINE[grading[1]];
+    return (
+      <InstructorGate what={cfg.code + " grading ideas"}>
+        <InstructorBar config={cfg} always><GradingIdeas key={cfg.id} config={cfg} /></InstructorBar>
+      </InstructorGate>
+    );
   }
 
   const live = path.match(/^\/(comm\w+)\/(dashboard|today|board|game|rungame|games|grade|checkins)\/?$/)

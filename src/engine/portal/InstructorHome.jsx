@@ -265,6 +265,7 @@ export function InstructorWork({ config, data, update, go, editing }) {
         <Btn onClick={() => go("assignments/new")}>New challenge</Btn>
         <Chip href={config.path + "/grade"}>Grade view</Chip>
         {toGrade ? <Chip href={config.path + "/grade"}>{toGrade} to grade</Chip> : null}
+        <Chip href={config.path + "/grading"}>Grade view, round two</Chip>
       </div>
       <ToolsPanel config={config} data={data} />
       {Object.entries(months).map(([m, rows]) => (

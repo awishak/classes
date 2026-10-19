@@ -1160,3 +1160,24 @@ Instructions once it was turned in. Now a challenge whose details link is a
 worksheet on this site (`worksheetOf` in worksheetSubmits.js) shows an Open
 your pre-production page, or Reopen, button above the fold on the card, and
 Reopen on the row; the sheet's Submitted line says the answers can change.
+
+## Grade view, round two: /<class>/grading
+
+Andrew, 2026-10-18: grade view should become "a great dashboard that works
+for any class": assignments, students, work submitted and when, the most
+common grade, students sorted into type on a 2x2, and the same per assignment
+and per student. A first round of mockups on a page of its own got "I'd like
+to see better mockups, and in the current experience of my class site" and
+"i don't need each individual dot. just need ideas." He kept the band above
+the sorting board (4A) from that round.
+
+`src/engine/portal/GradingIdeas.jsx`, at `/<class>/grading` behind the gate
+and the instructor bar, is the second round: four pages (Class, One
+assignment, One student, The words), each with two ways to draw the thing in
+the portal's own rows, on the live store, nothing plotted per student. Under
+each page a Pick: chips and a words box, written to the plan row at
+`gradingIdeas[page] = { pick, words, at }`. The sorting board at /grade is
+untouched; once he picks, the chosen pieces move into GradeView.jsx and the
+instructor's My Work, and this page comes off. A chip on his My Work page
+("Grade view, round two") opens it. The reading behind the round is in
+`teaching/grade-view-ideas/RESEARCH.md`.

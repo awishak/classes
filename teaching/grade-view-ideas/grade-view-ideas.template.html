@@ -1,0 +1,631 @@
+<title>Grade View Ideas</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Lora:wght@500;600&display=swap">
+<style>
+/* Layout: one column of parts; each part is a few mockups drawn from real COMM 3 data, then his pick. Classes' own Clean palette. */
+:root{
+  --ink:#1c1917; --ink2:#57534e; --ink3:#6b655f; --line:#f0edea; --line2:#e3ded8; --ghost:#c9c2ba;
+  --page:#fafaf9; --card:#ffffff; --sunk:#f6f4f1;
+  --accent:#7c3aed; --ok:#0f766e; --warn:#b45309; --late:#c81e1e;
+  --sans:'Outfit',-apple-system,BlinkMacSystemFont,sans-serif; --mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace; --serif:'Lora',Georgia,serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ink:#f6f2ec; --ink2:#cdc3b9; --ink3:#a79c92; --line:#2b2622; --line2:#3a332e; --ghost:#4a423b;
+  --page:#171310; --card:#1f1a16; --sunk:#26201b; --accent:#b794f6; --ok:#5ecfa8; --warn:#f0b45c; --late:#ff9c8f; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --ink:#f6f2ec; --ink2:#cdc3b9; --ink3:#a79c92; --line:#2b2622; --line2:#3a332e; --ghost:#4a423b;
+  --page:#171310; --card:#1f1a16; --sunk:#26201b; --accent:#b794f6; --ok:#5ecfa8; --warn:#f0b45c; --late:#ff9c8f; color-scheme:dark }
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--sans);font-size:17px;line-height:1.45}
+.wrap{max-width:1120px;margin:0 auto;padding-block:24px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:var(--accent)}
+h1{font-size:32px;font-weight:600;letter-spacing:-.02em;margin:0 0 4px;text-wrap:balance}
+h2{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h3{font-size:20px;font-weight:600;margin:0}
+p{margin:0}
+.eyebrow{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
+.muted{color:var(--ink3)} .sec{color:var(--ink2)}
+.small{font-size:15px} .micro{font-size:13px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.date{font-family:var(--serif);font-size:22px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+nav.toc a{display:inline-flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid var(--line2);border-radius:999px;background:var(--card);color:var(--ink);text-decoration:none;font-size:15px;font-weight:500}
+.heard{margin-top:28px;display:grid;gap:12px}
+.heard blockquote{margin:0;padding:12px 16px;border-left:3px solid var(--line2);color:var(--ink2);font-size:17px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}
+.fact{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.fact b{display:block;font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.fact span{display:block;margin-top:6px;font-size:15px;color:var(--ink2)}
+section.part{margin-top:56px;padding-top:24px;border-top:1px solid var(--line2)}
+.part .lede{margin:8px 0 0;max-width:68ch;color:var(--ink2)}
+.option{margin-top:28px}
+.option .head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:10px}
+.option .tag{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--accent);letter-spacing:.04em}
+.option .why{margin-top:10px;max-width:68ch;color:var(--ink2);font-size:15px}
+.mock{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow-x:auto;overflow-y:hidden}
+.mock-in{padding:16px;min-width:0}
+.mock-in.wide{min-width:880px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:15px}
+.bar b{font-weight:600}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:0 10px;border-radius:999px;background:var(--sunk);font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink2)}
+.btn{display:inline-flex;align-items:center;min-height:34px;padding:0 12px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer}
+.btn.solid{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.link{border-color:transparent;color:var(--accent);padding:0 4px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tile{background:var(--sunk);border-radius:12px;padding:12px 14px;min-height:88px;display:flex;flex-direction:column;justify-content:space-between}
+.tile .n{font-size:32px;font-weight:600;letter-spacing:-.02em;line-height:1}
+.tile .l{font-size:15px;color:var(--ink2);margin-top:6px}
+.tile .go{font-size:13px;font-weight:600;color:var(--accent);margin-top:8px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.card{border:1px solid var(--line2);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;background:var(--card)}
+.card .t{font-size:17px;font-weight:600;line-height:1.2}
+.card .m{font-size:13px;color:var(--ink3)}
+.mix{display:flex;height:14px;border-radius:999px;overflow:hidden;gap:2px;background:var(--card)}
+.mix i{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--ink2);align-items:center}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.rows{display:grid}
+.row{display:grid;grid-template-columns:120px minmax(180px,1.4fr) minmax(160px,1fr) 110px 120px;gap:16px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);font-size:15px}
+.row:first-child{border-top:none}
+.row .t{font-weight:600;font-size:17px}
+.track{height:10px;border-radius:999px;background:var(--sunk);overflow:hidden}
+.track i{display:block;height:100%;background:var(--ok)}
+.grid{display:grid;font-size:13px}
+.grid .g{display:grid;grid-template-columns:200px repeat(var(--cols),44px);gap:0 4px;align-items:center;min-height:26px;padding:0 12px}
+.grid .g.h{position:sticky;top:0;background:var(--card);z-index:1;min-height:60px;align-items:end;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.grid .g.h span{font-size:13px;line-height:1.15;color:var(--ink2);writing-mode:vertical-rl;transform:rotate(180deg);height:56px;justify-self:center}
+.grid .g.h span:first-child{writing-mode:horizontal-tb;transform:none;height:auto;justify-self:start;font-weight:600;color:var(--ink)}
+.grid .g:nth-child(odd):not(.h){background:var(--sunk)}
+.grid .nm{font-size:15px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell{width:40px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:600;justify-self:center}
+.gridbox{max-height:560px;overflow:auto;border-top:1px solid var(--line)}
+.shelves{display:grid;gap:14px}
+.shelf{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start}
+.shelf .lab b{display:block;font-size:20px;font-weight:600;line-height:1.1}
+.shelf .lab span{font-size:13px;color:var(--ink3)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:999px;border:1px solid var(--line2);background:var(--card);font-size:15px;font-weight:500;white-space:nowrap}
+.chip.late{border-color:var(--late)}
+svg text{font-family:var(--sans);font-size:13px;fill:var(--ink2)}
+svg text.mono{font-family:var(--mono)}
+svg .axis{stroke:var(--line2);stroke-width:1}
+svg .due{stroke:var(--ink);stroke-width:1.5}
+svg .dot{fill:var(--ink2)} svg .dot.late{fill:var(--late)} svg .dot.crowd{fill:var(--ghost)} svg .dot.me{fill:var(--ink)}
+svg .ring{stroke:var(--card);stroke-width:2}
+.pick{margin-top:24px;background:var(--sunk);border-radius:16px;padding:16px}
+.pick .q{font-size:17px;font-weight:600;margin-bottom:10px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pills button{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer}
+.pills button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.pick label{display:block;margin-top:14px;font-size:15px;font-weight:600}
+.pick textarea{width:100%;min-height:72px;margin-top:6px;padding:10px 12px;border-radius:12px;border:1px solid var(--line2);background:var(--card);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.45;resize:vertical}
+.pick .foot{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:10px}
+.pick .saved{font-size:13px;color:var(--ink3)}
+.ideas{display:grid;gap:12px;margin-top:16px}
+.idea{display:grid;grid-template-columns:40px 1fr;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.idea .k{font-family:var(--mono);font-size:13px;color:var(--ink3);padding-top:4px}
+.idea b{font-size:17px}
+.idea p{font-size:15px;color:var(--ink2);margin-top:4px;max-width:70ch}
+.idea .feeds{font-family:var(--mono);font-size:13px;color:var(--accent);margin-top:6px}
+.tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--page);font-size:13px;padding:6px 8px;border-radius:8px;max-width:260px;display:none}
+.timeline{display:grid;gap:0}
+.ev{display:grid;grid-template-columns:120px 1fr;gap:16px;padding:10px 16px;border-top:1px solid var(--line);align-items:baseline}
+.ev:first-child{border-top:none}
+.ev .what{font-size:15px}
+.ev .what b{font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+@media (max-width:640px){
+  .shelf{grid-template-columns:1fr}
+  .row{grid-template-columns:100px 1fr;gap:6px 12px}
+  .row .hide{display:none}
+  h1{font-size:28px} h2{font-size:24px}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">COMM 3 · Oct 18, 2026</div>
+  <h1>Grade view, as a dashboard</h1>
+  <p class="sec">Options drawn from the real COMM 3 store as it stands tonight: every number below is the class, not an example.</p>
+  <nav class="toc" aria-label="Parts">
+    <a href="#p1">1 What greets me</a><a href="#p2">2 Assignments</a><a href="#p3">3 Students</a><a href="#p4">4 One assignment</a><a href="#p5">5 One student</a><a href="#p6">6 The words</a><a href="#p7">7 Where it comes from</a>
+  </nav>
+
+  <div class="heard">
+    <div class="eyebrow">How I heard you</div>
+    <blockquote>"a great dashboard that works for any class to tell me about assignments, students, work submitted, when work was submitted, what the most common grade was"</blockquote>
+    <blockquote>"sorting students into type so far: completed all work, not doing any work, high engagement, etc. maybe put them on a 2x2"</blockquote>
+    <blockquote>"when I click on an individual assignment or students, same thing in my work view. better than grade view."</blockquote>
+    <p class="small sec">So three pages: the class, one assignment, one student. Each part below shows two or three ways to draw one of them. The sorting board you have now stays; it moves under the assignment page.</p>
+  </div>
+
+  <div class="facts" id="facts"></div>
+
+  <section class="part" id="p1">
+    <div class="eyebrow">Part 1</div>
+    <h2>What greets me at /comm3/grade</h2>
+    <p class="lede">The first screen. Three ways to open: the numbers that need you, the term on one line, or the class on the 2x2.</p>
+    <div id="o1a"></div><div id="o1b"></div><div id="o1c"></div>
+    <div class="pick" data-part="p1"></div>
+  </section>
+
+  <section class="part" id="p2">
+    <div class="eyebrow">Part 2</div>
+    <h2>Assignments</h2>
+    <p class="lede">Every assignment at once: how many turned in, when they came in against the due line, the grade mix, and when it went out.</p>
+    <div id="o2a"></div><div id="o2b"></div><div id="o2c"></div>
+    <div class="pick" data-part="p2"></div>
+  </section>
+
+  <section class="part" id="p3">
+    <div class="eyebrow">Part 3</div>
+    <h2>Students</h2>
+    <p class="lede">The whole roster, sorted into type so far. Names, never avatars.</p>
+    <div id="o3a"></div><div id="o3b"></div><div id="o3c"></div>
+    <div class="pick" data-part="p3"></div>
+  </section>
+
+  <section class="part" id="p4">
+    <div class="eyebrow">Part 4</div>
+    <h2>One assignment</h2>
+    <p class="lede">What opens when you tap an assignment. The Framing Exercise is drawn, since it has the widest grade mix. The sorting columns you grade in sit under whichever of these you pick.</p>
+    <div id="o4a"></div><div id="o4b"></div><div id="o4c"></div>
+    <div class="pick" data-part="p4"></div>
+  </section>
+
+  <section class="part" id="p5">
+    <div class="eyebrow">Part 5</div>
+    <h2>One student</h2>
+    <p class="lede">What opens when you tap a name, and what their My Work could carry on your side. One real student is drawn: all three exercises in, one of them late, three messages to you.</p>
+    <div id="o5a"></div><div id="o5b"></div><div id="o5c"></div>
+    <div class="pick" data-part="p5"></div>
+  </section>
+
+  <section class="part" id="p6">
+    <div class="eyebrow">Part 6</div>
+    <h2>The words for the types</h2>
+    <p class="lede">The 2x2 needs four labels. The research is clear on one thing: name the behaviour, not the person, and let the teacher add the adjective.</p>
+    <div id="o6"></div>
+    <div class="pick" data-part="p6"></div>
+  </section>
+
+  <section class="part" id="p7">
+    <div class="eyebrow">Part 7</div>
+    <h2>Where this comes from</h2>
+    <p class="lede">Ten things worth taking from the reading, each tied to the option that uses it.</p>
+    <div class="ideas" id="ideas"></div>
+    <div class="pick" data-part="p7"></div>
+  </section>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const DATA = __DATA__;
+const A = DATA.assignments, S = DATA.students, UP = DATA.upcoming, ROSTER = DATA.cls.roster;
+const TODAY = new Date(DATA.cls.today + "T12:00:00");
+const BK = [
+  { id: "complete", label: "Complete", short: "Complete", c: "var(--ink)" },
+  { id: "revisions-c", label: "Completed with Revisions", short: "Revisions", c: "var(--ink2)" },
+  { id: "notquite", label: "Not quite", short: "Not quite", c: "var(--ink3)" },
+  { id: "incomplete-c", label: "Incomplete", short: "Incomplete", c: "var(--ghost)" },
+  { id: "notsubmitted", label: "Not submitted", short: "Not submitted", c: "var(--line2)" },
+];
+const bk = (id) => BK.find(b => b.id === id);
+const YEAR = 2026;
+const dueDate = (due) => new Date(`${due} ${YEAR} 23:59:59 GMT-0700`);
+const fmtD = (d) => new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+const fmtDT = (d) => new Date(d).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+const hrs = (h) => { const a = Math.abs(h); return a < 1 ? Math.round(a * 60) + " min" : a < 48 ? (Math.round(a * 10) / 10) + " h" : Math.round(a / 24) + " d"; };
+const rel = (h) => h == null ? "" : h < 0 ? hrs(h) + " late" : hrs(h) + " before due";
+// calendar days apart, whatever the time of day on either end
+const dayOf = (d) => { const x = new Date(d); return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+const daysBetween = (a, b) => Math.round((dayOf(b) - dayOf(a)) / 864e5);
+
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k === "class") e.className = v; else if (k === "style") e.style.cssText = v; else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else if (k === "html") e.innerHTML = v; else e.setAttribute(k, v);
+  }
+  for (const k of kids.flat(Infinity)) if (k != null) e.append(k.nodeType ? k : document.createTextNode(k));
+  return e;
+}
+const NS = "http://www.w3.org/2000/svg";
+function sv(tag, props, ...kids) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(props || {})) { if (k === "class") e.setAttribute("class", v); else if (k === "text") e.textContent = v; else e.setAttribute(k, v); }
+  for (const k of kids.flat(Infinity)) if (k != null) e.append(k);
+  return e;
+}
+const tip = document.getElementById("tip");
+function hover(el, text) {
+  el.addEventListener("pointerenter", (e) => { tip.textContent = text; tip.style.display = "block"; });
+  el.addEventListener("pointermove", (e) => { tip.style.left = Math.min(e.clientX + 12, window.innerWidth - 270) + "px"; tip.style.top = (e.clientY + 14) + "px"; });
+  el.addEventListener("pointerleave", () => { tip.style.display = "none"; });
+}
+
+// ─── derived numbers ───
+// counts over the real roster, so the three test accounts never show up in a total
+A.forEach(a => { const b = {}; S.forEach(s => { const g = s.g[a.id]; if (g) b[g] = (b[g] || 0) + 1; }); a.buckets = b; });
+const sortedOf = (a) => Object.values(a.buckets).reduce((n, x) => n + x, 0);
+const modeOf = (a) => Object.entries(a.buckets).sort((x, y) => y[1] - x[1])[0] || null;
+const engOf = (s) => s.msgs + s.cmts + s.rg + (s.ck ? 1 : 0) + (s.photo ? 1 : 0) + (s.prof >= 9 ? 1 : 0) + Object.values(s.h).filter(x => x > 24).length;
+S.forEach(s => { s.eng = engOf(s); });
+const engMedian = (() => { const v = S.map(s => s.eng).sort((a, b) => a - b); return v[Math.floor(v.length / 2)]; })();
+const totals = {
+  submitted: A.reduce((n, a) => n + a.submitted, 0), slots: A.length * ROSTER,
+  late: A.reduce((n, a) => n + a.late, 0), msgs: A.reduce((n, a) => n + a.studentMsgs, 0), regrades: A.reduce((n, a) => n + a.regrades, 0),
+  toGrade: A.reduce((n, a) => n + S.filter(s => s.h[a.id] != null && !s.g[a.id]).length, 0),
+  lastDay: A.reduce((n, a) => n + a.lastDay, 0),
+};
+const next = UP.map(u => ({ ...u, d: dueDate(u.due) })).filter(u => !isNaN(u.d) && u.d > TODAY).sort((x, y) => x.d - y.d)[0];
+const allDone = S.filter(s => s.done === A.length), allOnTime = allDone.filter(s => s.late === 0), none = S.filter(s => s.done === 0);
+
+// ─── the facts strip ───
+document.getElementById("facts").append(
+  fact(ROSTER, "students on the roster, two sittings"),
+  fact(A.length + " of " + (A.length + UP.length), "assignments graded and released"),
+  fact(Math.round(totals.lastDay / totals.submitted * 100) + "%", "of turn-ins came in the last 24 hours before due"),
+  fact(totals.late, "late turn-ins across the three"),
+  fact(allOnTime.length, "did all three, none late"),
+  fact(none.length, "have turned in nothing"),
+);
+function fact(n, l) { return h("div", { class: "fact" }, h("b", {}, String(n)), h("span", {}, l)); }
+
+// ─── shared pieces ───
+function option(id, tag, title, why, mock, wide) {
+  const box = document.getElementById(id);
+  box.className = "option";
+  box.append(h("div", { class: "head" }, h("span", { class: "tag" }, tag), h("h3", {}, title)),
+    h("div", { class: "mock" }, h("div", { class: "mock-in" + (wide ? " wide" : "") }, mock)),
+    h("p", { class: "why" }, why));
+}
+const topbar = (...kids) => h("div", { class: "bar" }, h("b", {}, "COMM 3 · Grade view"), ...kids);
+
+function mixBar(a, width) {
+  const total = ROSTER;
+  const bar = h("div", { class: "mix", style: width ? "width:" + width + "px" : "" });
+  BK.forEach(b => { const n = a.buckets[b.id] || 0; if (!n) return; const seg = h("i", { style: "flex:" + n + ";background:" + b.c }); hover(seg, b.label + ": " + n); bar.append(seg); });
+  const left = total - sortedOf(a); if (left > 0) bar.append(h("i", { style: "flex:" + left + ";background:var(--card);outline:1px dashed var(--line2);outline-offset:-1px" }));
+  return bar;
+}
+const mixLegend = () => h("div", { class: "legend" }, BK.map(b => h("span", {}, h("i", { style: "background:" + b.c }), b.short)));
+
+// signed-log scale for hours before due: due at the centre, early to the left, late to the right
+function timingStrip(a, opts = {}) {
+  const W = opts.w || 520, H = opts.h || 64, pad = 28, cx = W / 2, half = cx - pad, r = opts.r || 4, base = H - 22;
+  const LIM = 170, k = (x) => Math.log10(1 + Math.min(Math.abs(x), LIM)) / Math.log10(1 + LIM);
+  const sx = (hb) => cx - Math.sign(hb) * k(hb) * half;
+  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "When work came in against the due line" });
+  svg.append(sv("line", { x1: pad, x2: W - pad, y1: base, y2: base, class: "axis" }));
+  const ticks = [168, 72, 24, 6, 1, 0, -1, -6, -24, -72, -168];
+  const tl = { 168: "7d", 72: "3d", 24: "1d", 6: "6h", 1: "1h", 0: "due", "-1": "1h", "-6": "6h", "-24": "1d", "-72": "3d", "-168": "7d" };
+  ticks.forEach(t => {
+    const x = sx(t);
+    if (t === 0) svg.append(sv("line", { x1: x, x2: x, y1: 4, y2: base + 4, class: "due" }));
+    else svg.append(sv("line", { x1: x, x2: x, y1: base, y2: base + 3, class: "axis" }));
+    svg.append(sv("text", { x, y: H - 6, "text-anchor": "middle", class: "mono", text: tl[t] }));
+  });
+  if (!opts.noWords) { svg.append(sv("text", { x: pad, y: 12, text: "early" })); svg.append(sv("text", { x: W - pad, y: 12, "text-anchor": "end", text: "late" })); }
+  // dodge: greedy rows
+  const pts = a.timing.filter(t => t.h != null).map(t => ({ ...t, x: sx(t.h) })).sort((p, q) => p.x - q.x);
+  const rows = [];
+  pts.forEach(p => {
+    let i = rows.findIndex(last => p.x - last >= 2 * r + 1);
+    if (i < 0) { i = rows.length; rows.push(p.x); } else rows[i] = p.x;
+    p.y = base - 6 - i * (2 * r + 1);
+  });
+  pts.forEach(p => {
+    const me = opts.me && p.n === opts.me;
+    const c = sv("circle", { cx: p.x, cy: p.y, r: me ? r + 2 : r, class: "dot ring" + (opts.crowd && !me ? " crowd" : p.h < 0 ? " late" : "") + (me ? " me" : "") });
+    hover(c, p.n + " · " + rel(p.h));
+    svg.append(c);
+    if (me) svg.append(sv("text", { x: p.x + 8, y: Math.max(14, p.y - 8), text: p.n.split(" ")[0], style: "fill:var(--ink);font-weight:600" }));
+  });
+  return svg;
+}
+
+// ─── Part 1 ───
+(function part1() {
+  // 1A numbers
+  const tiles = h("div", { class: "tiles" },
+    tile(totals.toGrade, "to grade", "Walk through the pile"),
+    tile(totals.msgs, "messages on the three", "Read them"),
+    tile(totals.regrades, "regrades requested", "Open the Framing Exercise"),
+    tile(totals.late, "late turn-ins", "See who"),
+    tile(none.length, "turned in nothing yet", none.map(s => s.f).join(", ")),
+    tile(next ? daysBetween(TODAY, next.d) + " d" : "—", next ? "until " + next.title + " is due, " + next.due : "nothing due", "Open the challenge"),
+  );
+  function tile(n, l, go) { return h("div", { class: "tile" }, h("div", {}, h("div", { class: "n" }, String(n)), h("div", { class: "l" }, l)), h("div", { class: "go" }, go)); }
+  option("o1a", "1A", "The numbers that need me", "Six tiles, each a door: the count is the headline and the line under it is the press. Stephen Few's monitoring sequence, overview then launch pad. With everything released, the first tile reads zero on purpose; the page should be allowed to say there is nothing to do.", h("div", {}, topbar(h("span", { class: "pill" }, "Everyone"), h("span", { class: "pill" }, "8:00"), h("span", { class: "pill" }, "10:30")), h("div", { style: "padding:16px" }, tiles)));
+
+  // 1B the term on one line
+  const W = 960, H = 150, pad = 40, t0 = new Date("2026-09-20"), t1 = new Date("2026-12-13");
+  const sx = (d) => pad + (new Date(d) - t0) / (t1 - t0) * (W - 2 * pad);
+  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "The term as one line" });
+  const base = 96;
+  svg.append(sv("line", { x1: pad, x2: W - pad, y1: base, y2: base, class: "axis" }));
+  ["2026-10-01", "2026-11-01", "2026-12-01"].forEach(m => { const x = sx(m); svg.append(sv("line", { x1: x, x2: x, y1: base - 4, y2: base + 4, class: "axis" })); svg.append(sv("text", { x, y: base + 20, "text-anchor": "middle", class: "mono", text: new Date(m).toLocaleDateString("en-US", { month: "short" }) })); });
+  const today = sx(TODAY);
+  svg.append(sv("line", { x1: today, x2: today, y1: 14, y2: base + 28, class: "due" }));
+  svg.append(sv("text", { x: today + 6, y: base + 42, class: "mono", text: "today", style: "fill:var(--ink)" }));
+  const all = [...A.map(a => ({ ...a, graded: true })), ...UP].map(a => ({ ...a, d: dueDate(a.due) })).filter(a => !isNaN(a.d)).sort((x, y) => x.d - y.d);
+  all.forEach((a, i) => {
+    const x = sx(a.d), up = i % 2 === 0;
+    const g = sv("g", {});
+    g.append(sv("line", { x1: x, x2: x, y1: base - 8, y2: base + 8, class: a.graded ? "due" : "axis" }));
+    if (a.graded) {
+      const bw = 10, bh = 40, fill = a.submitted / ROSTER;
+      g.append(sv("rect", { x: x - bw / 2, y: base - 14 - bh, width: bw, height: bh, rx: 2, fill: "var(--sunk)" }));
+      g.append(sv("rect", { x: x - bw / 2, y: base - 14 - bh * fill, width: bw, height: bh * fill, rx: 2, fill: "var(--ok)" }));
+      if (a.late) g.append(sv("rect", { x: x - bw / 2, y: base - 14 - bh * fill, width: bw, height: Math.max(2, bh * a.late / ROSTER), rx: 1, fill: "var(--late)" }));
+    } else g.append(sv("circle", { cx: x, cy: base, r: 4, fill: "var(--card)", stroke: "var(--ink3)", "stroke-width": 1.5 }));
+    const label = sv("text", { x, y: a.graded ? base - 62 : base + 36 + (i % 4 >= 2 ? 14 : 0), "text-anchor": "middle", text: a.title.length > 22 ? a.title.slice(0, 21) + "…" : a.title, style: a.graded ? "fill:var(--ink);font-weight:600" : "" });
+    g.append(label);
+    g.append(sv("text", { x, y: a.graded ? base - 76 : base + 50 + (i % 4 >= 2 ? 14 : 0), "text-anchor": "middle", class: "mono", text: a.due }));
+    hover(g, a.title + " · due " + a.due + (a.graded ? " · " + a.submitted + " of " + ROSTER + " turned in, " + a.late + " late · released " + fmtD(a.released) : ""));
+    svg.append(g);
+  });
+  option("o1b", "1B", "The term on one line", "Every assignment on the calendar, a bar for how many turned in where one is graded, red on top for the late ones, and a line for today. Loop's trick from Melbourne: time charts read against the course's own events, not the calendar. Tap a tick to open that assignment.", h("div", {}, topbar(h("span", { class: "pill" }, "Fall 2026")), h("div", { style: "padding:8px 8px 0" }, svg)), true);
+
+  // 1C the 2x2 first
+  option("o1c", "1C", "The class on the 2x2, first", "The same quadrant as 3C, as the opening screen. Work submitted runs across, engagement runs up: messages to you, comments on work, regrade asks, the check-in, a filled profile and photo, and early turn-ins. The right column is everyone who did all three.", h("div", {}, topbar(h("span", { class: "pill" }, "Everyone")), h("div", { style: "padding:8px" }, quadrant({ w: 880, h: 420 }))), true);
+})();
+
+// the quadrant, shared by 1C, 3C and 5C
+function quadrant(opts = {}) {
+  const W = opts.w || 880, H = opts.h || 420, pad = { l: 56, r: 20, t: 28, b: 44 };
+  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "Students by work submitted and engagement" });
+  const cols = A.length + 1, colW = (W - pad.l - pad.r) / cols;
+  const maxE = Math.max(...S.map(s => s.eng));
+  const sy = (e) => H - pad.b - (e / maxE) * (H - pad.t - pad.b);
+  const cx = (d) => pad.l + d * colW + colW / 2;
+  // frame and quadrant lines
+  svg.append(sv("rect", { x: pad.l, y: pad.t, width: W - pad.l - pad.r, height: H - pad.t - pad.b, fill: "none", stroke: "var(--line2)" }));
+  const xSplit = pad.l + (cols - 1) * colW, ySplit = sy(engMedian + .5);
+  svg.append(sv("line", { x1: xSplit, x2: xSplit, y1: pad.t, y2: H - pad.b, class: "axis", style: "stroke:var(--ghost)" }));
+  svg.append(sv("line", { x1: pad.l, x2: W - pad.r, y1: ySplit, y2: ySplit, class: "axis", style: "stroke:var(--ghost)" }));
+  for (let d = 0; d <= A.length; d++) svg.append(sv("text", { x: cx(d), y: H - pad.b + 18, "text-anchor": "middle", class: "mono", text: d + " of " + A.length }));
+  svg.append(sv("text", { x: (pad.l + W - pad.r) / 2, y: H - 6, "text-anchor": "middle", text: "work submitted", style: "fill:var(--ink);font-weight:600" }));
+  const yl = sv("text", { x: 16, y: (pad.t + H - pad.b) / 2, "text-anchor": "middle", transform: `rotate(-90 16 ${(pad.t + H - pad.b) / 2})`, text: "engagement", style: "fill:var(--ink);font-weight:600" });
+  svg.append(yl);
+  const words = opts.words || DATA.words || ["high engagement", "completed all work", "not doing any work", "quiet, but doing the work"];
+  const qText = (x, y, anchor, t) => svg.append(sv("text", { x, y, "text-anchor": anchor, text: t, style: "fill:var(--ink3);font-size:13px" }));
+  qText(pad.l + 6, pad.t + 16, "start", words[0]);
+  qText(W - pad.r - 6, pad.t + 16, "end", words[1]);
+  qText(pad.l + 6, H - pad.b - 8, "start", words[2]);
+  qText(W - pad.r - 6, H - pad.b - 8, "end", words[3]);
+  // cells: group by (done, eng) and bead sideways
+  const groups = {};
+  S.forEach(s => { const k = s.done + ":" + s.eng; (groups[k] = groups[k] || []).push(s); });
+  const r = 5;
+  Object.values(groups).forEach(g => {
+    g.sort((a, b) => a.n.localeCompare(b.n));
+    const n = g.length, perRow = Math.max(1, Math.floor((colW - 16) / (2 * r + 3)));
+    g.forEach((s, i) => {
+      const row = Math.floor(i / perRow), col = i % perRow, inRow = Math.min(perRow, n - row * perRow);
+      const x = cx(s.done) + (col - (inRow - 1) / 2) * (2 * r + 3), y = sy(s.eng) - row * (2 * r + 3);
+      const me = opts.me && s.n === opts.me, crowd = opts.me && !me;
+      const c = sv("circle", { cx: x, cy: y, r: me ? r + 3 : r, class: "dot ring" + (crowd ? " crowd" : s.late ? " late" : "") + (me ? " me" : "") });
+      hover(c, s.n + " · " + s.done + " of " + A.length + " in" + (s.late ? ", late " + s.late : "") + " · " + s.msgs + " message" + (s.msgs === 1 ? "" : "s") + ", " + s.cmts + " comment" + (s.cmts === 1 ? "" : "s") + (s.ck ? ", check-in done" : ""));
+      svg.append(c);
+      // names where there is room: outside the busiest column
+      if ((s.done < A.length && !crowd) || me) svg.append(sv("text", { x: x + r + 4, y: y + 4, text: me ? s.n : s.f, style: me ? "fill:var(--ink);font-weight:600" : "" }));
+    });
+  });
+  const wrap = h("div", {}, svg, h("div", { class: "legend", style: "padding:6px 8px 4px" }, h("span", {}, h("i", { style: "background:var(--ink2);border-radius:50%" }), "a student"), h("span", {}, h("i", { style: "background:var(--late);border-radius:50%" }), "turned something in late"), h("span", {}, "line across: the class median for engagement")));
+  return wrap;
+}
+
+// ─── Part 2 ───
+(function part2() {
+  // 2A cards
+  const cards = h("div", { class: "cards" }, A.map(a => {
+    const m = modeOf(a);
+    return h("div", { class: "card" },
+      h("div", {}, h("div", { class: "t" }, a.title), h("div", { class: "m" }, "Due " + a.due + " · released " + fmtD(a.released))),
+      h("div", { style: "display:flex;align-items:baseline;gap:8px" }, h("span", { style: "font-size:26px;font-weight:600;letter-spacing:-.02em" }, a.submitted), h("span", { class: "small sec" }, "of " + ROSTER + " turned in"), a.late ? h("span", { class: "small", style: "color:var(--late);font-weight:600;margin-left:auto" }, a.late + " late") : null),
+      timingStrip(a, { w: 300, h: 56, noWords: true }),
+      mixBar(a),
+      h("div", { class: "m" }, "Most common: " + bk(m[0]).label + ", " + m[1] + " of " + sortedOf(a) + " · " + a.comments + " comments · " + a.studentMsgs + " messages" + (a.regrades ? " · " + a.regrades + " regrade" + (a.regrades > 1 ? "s" : "") : "")),
+    );
+  }), UP.slice(0, 3).map(u => h("div", { class: "card", style: "border-style:dashed" }, h("div", {}, h("div", { class: "t" }, u.title), h("div", { class: "m" }, "Due " + u.due)), h("div", { class: "m" }, u.scale === "letters" ? "Letters · " + u.weight + "% of the grade" : "Complete scale"))));
+  option("o2a", "2A", "A card per assignment", "Each card is the whole story of one assignment at a glance: the count, the due-line strip, the grade mix with Complete in full ink and Not submitted empty, and the most common grade spelled out. Tap the card to open Part 4. Assignments not yet in sit on dashed cards.", h("div", {}, topbar(), h("div", { style: "padding:12px" }, cards, h("div", { style: "margin-top:10px" }, mixLegend()))));
+
+  // 2B rows, dates big
+  const rows = h("div", { class: "rows" }, A.map(a => {
+    const m = modeOf(a);
+    return h("div", { class: "row" },
+      h("div", {}, h("div", { class: "date" }, a.due), h("div", { class: "micro muted" }, "due 11:59 PM")),
+      h("div", {}, h("div", { class: "t" }, a.title), h("div", { class: "micro muted" }, "released " + fmtD(a.released) + ", " + daysBetween(dueDate(a.due), a.released) + " days after due")),
+      h("div", {}, h("div", { class: "track" }, h("i", { style: "width:" + (a.submitted / ROSTER * 100) + "%" })), h("div", { class: "micro muted", style: "margin-top:4px" }, a.submitted + " of " + ROSTER + " in · " + a.late + " late")),
+      h("div", { class: "hide" }, h("div", { style: "font-weight:600" }, bk(m[0]).short), h("div", { class: "micro muted" }, m[1] + " of " + sortedOf(a))),
+      h("div", { class: "hide" }, mixBar(a)),
+    );
+  }), UP.map(u => h("div", { class: "row", style: "color:var(--ink3)" }, h("div", {}, h("div", { class: "date", style: "color:var(--ink2)" }, u.due)), h("div", {}, h("div", { class: "t", style: "color:var(--ink2)" }, u.title), h("div", { class: "micro muted" }, u.scale === "letters" ? u.weight + "% of the grade" : "Complete scale")), h("div", { class: "track" }), h("div", { class: "hide" }), h("div", { class: "hide" }))));
+  option("o2b", "2B", "Rows, the date first", "One row per assignment down the term, the date set large on the left the way the Slate rows read. A single bar for turned in, the most common grade as a word, and the mix at the end. Datawrapper's table rule: the fewer columns, the more it reads. This one scans in a second and scrolls past the whole term.", h("div", {}, topbar(), rows));
+
+  // 2C stacked strips on one axis
+  const strips = h("div", { style: "display:grid;gap:4px;padding:12px" }, A.map(a => h("div", { style: "display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center" }, h("div", {}, h("div", { style: "font-weight:600" }, a.title), h("div", { class: "micro muted" }, "due " + a.due + " · " + a.lastDay + " in the last day · " + a.late + " late")), timingStrip(a, { w: 640, h: 72 }))));
+  option("o2c", "2C", "When the work comes in", "All three strips on one shared axis, the due line down the middle, late dots in red to the right. The axis stretches near the deadline, since that is where the class lives: most of the dots land in the last day. This is the view that answers your \"when was work submitted\" in one look, and it is the chart none of the big gradebooks draw.", h("div", {}, topbar(h("span", { class: "pill" }, "hours before and after due")), strips), true);
+})();
+
+// ─── Part 3 ───
+(function part3() {
+  // 3A the grid
+  const colsAll = [...A, ...UP.slice(0, 4)];
+  const sorted = [...S].sort((x, y) => x.done - y.done || y.late - x.late || x.n.localeCompare(y.n));
+  const grid = h("div", { class: "grid", style: "--cols:" + colsAll.length });
+  grid.append(h("div", { class: "g h" }, h("span", {}, "Fewest done first"), colsAll.map(c => h("span", {}, c.title.length > 26 ? c.title.slice(0, 25) + "…" : c.title))));
+  sorted.forEach(s => {
+    const row = h("div", { class: "g" }, h("div", { class: "nm", title: s.n }, s.n, s.sec ? h("span", { class: "micro muted" }, " · " + s.sec) : null));
+    colsAll.forEach(c => {
+      const g = s.g[c.id], hb = s.h[c.id], up = !A.some(a => a.id === c.id);
+      let cell;
+      if (up) cell = h("div", { class: "cell", style: "border:1px dashed var(--line2)" });
+      else if (g) { const b = bk(g); cell = h("div", { class: "cell", style: "background:" + b.c + ";color:" + (g === "complete" || g === "revisions-c" ? "var(--page)" : "var(--ink)") + (g === "notsubmitted" ? ";background:var(--card);border:1px solid var(--late);color:var(--late)" : "") }, g === "complete" ? "✓" : g === "revisions-c" ? "Rev" : g === "notquite" ? "NQ" : g === "incomplete-c" ? "Inc" : "NS"); if (hb != null && hb < 0) cell.style.boxShadow = "inset 0 -3px 0 var(--late)"; }
+      else if (hb != null) cell = h("div", { class: "cell", style: "background:var(--sunk);color:var(--ok)" + (hb < 0 ? ";box-shadow:inset 0 -3px 0 var(--late)" : "") }, "in");
+      else cell = h("div", { class: "cell", style: "border:1px solid var(--line2)" }, "");
+      hover(cell, s.n + " · " + c.title + (up ? " · due " + c.due : g ? " · " + bk(g).label + (hb != null ? " · " + rel(hb) : "") : hb != null ? " · turned in, " + rel(hb) : " · nothing turned in"));
+      row.append(cell);
+    });
+    grid.append(row);
+  });
+  option("o3a", "3A", "The grid: every student, every assignment", "Moodle's completion grid, with a fixed meaning per cell: the grade word short, a red underline where it came in late, a dashed box where nothing is due yet. Sorted with the fewest done on top, so the people to see are the first rows, and the ones who did everything are below the fold. Scrolls inside its box; the header stays.", h("div", {}, topbar(h("span", { class: "pill" }, "Everyone"), h("span", { class: "pill" }, "8:00"), h("span", { class: "pill" }, "10:30")), h("div", { class: "gridbox" }, grid), h("div", { class: "legend", style: "padding:10px 16px" }, h("span", {}, h("i", { style: "background:var(--ink)" }), "✓ Complete"), h("span", {}, h("i", { style: "background:var(--ink2)" }), "Rev"), h("span", {}, h("i", { style: "background:var(--ink3)" }), "NQ Not quite"), h("span", {}, h("i", { style: "background:var(--ghost)" }), "Inc"), h("span", {}, h("i", { style: "border:1px solid var(--late);background:transparent" }), "NS Not submitted"), h("span", {}, h("i", { style: "background:var(--sunk);box-shadow:inset 0 -3px 0 var(--late)" }), "red underline: late"))), true);
+
+  // 3B shelves
+  const shelves = [
+    ["Completed all work", "all three in, none late", allOnTime],
+    ["Completed all work, late once or twice", "", allDone.filter(s => s.late > 0)],
+    ["Missing one", "", S.filter(s => s.done === A.length - 1)],
+    ["Missing more than one", "", S.filter(s => s.done > 0 && s.done < A.length - 1)],
+    ["Not doing any work", "nothing turned in", none],
+  ];
+  const sh = h("div", { class: "shelves", style: "padding:16px" }, shelves.map(([t, sub, list]) => h("div", { class: "shelf" }, h("div", { class: "lab" }, h("b", {}, t), h("span", {}, list.length + (sub ? " · " + sub : ""))), h("div", { class: "chips" }, list.sort((a, b) => a.n.localeCompare(b.n)).map(s => { const c = h("span", { class: "chip" + (s.late ? " late" : "") }, s.n); hover(c, s.n + " · " + s.done + " of " + A.length + (s.late ? " · late " + s.late : "") + " · " + s.msgs + " messages"); return c; })))));
+  option("o3b", "3B", "Shelves, in your words", "The roster sorted into the types you named, each a shelf of names. The shelves recompute every time something comes in, so a name moves down as soon as a turn-in lands. Kizilcec's finding behind this: completion alone hides who is drifting; the second shelf is the one worth watching. Tap a name to open Part 5.", h("div", {}, topbar(h("span", { class: "pill" }, "Everyone")), sh));
+
+  // 3C the quadrant
+  option("o3c", "3C", "The 2x2", "Across: how much of the work is in. Up: how much else they do, from messages and comments to the check-in and early turn-ins. The right column is everyone who did all three, beaded sideways where several share a spot, hover for a name. Red dots turned something in late. Blackboard draws this as grade against hours; this one uses what your store actually holds.", h("div", {}, topbar(h("span", { class: "pill" }, "Everyone")), h("div", { style: "padding:8px" }, quadrant({ w: 880, h: 460 }))), true);
+})();
+
+// ─── Part 4 ───
+(function part4() {
+  const a = A[0], m = modeOf(a);
+  // 4A the band above the board
+  const band = h("div", { style: "display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;padding:16px" },
+    h("div", { class: "tile" }, h("div", {}, h("div", { class: "n" }, String(a.submitted)), h("div", { class: "l" }, "of " + ROSTER + " turned in · " + a.late + " late")), h("div", { class: "go" }, "Who is missing")),
+    h("div", { class: "tile" }, h("div", {}, h("div", { class: "n" }, bk(m[0]).short), h("div", { class: "l" }, "most common grade, " + m[1] + " of " + sortedOf(a))), h("div", { class: "go" }, "See the mix")),
+    h("div", { class: "tile" }, h("div", {}, h("div", { class: "n" }, daysBetween(dueDate(a.due), a.released) + " d"), h("div", { class: "l" }, "from due to released · " + fmtD(a.released))), h("div", { class: "go" }, "Hide grades")),
+    h("div", { class: "tile" }, h("div", {}, h("div", { class: "n" }, a.studentMsgs + a.regrades), h("div", { class: "l" }, a.studentMsgs + " messages, " + a.regrades + " regrades")), h("div", { class: "go" }, "Read them")),
+  );
+  const board = h("div", { style: "padding:0 16px 16px;display:grid;gap:12px" }, h("div", { style: "display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:center" }, h("div", { class: "small sec" }, "When it came in"), timingStrip(a, { w: 640, h: 72 })), h("div", {}, mixBar(a), h("div", { style: "margin-top:8px" }, mixLegend())), h("div", { style: "border:1px dashed var(--line2);border-radius:12px;padding:14px;color:var(--ink3);font-size:15px" }, "Not sorted yet · 0", h("br"), "Complete · Completed with Revisions · Not quite · Incomplete · Not submitted"));
+  option("o4a", "4A", "A band above the board", "The sorting board stays exactly as it is, and a band sits on top: four numbers, the due-line strip, the grade mix. Nothing moves; you just see the whole assignment before you start dragging cards. The release button and Hide live where they do now.", h("div", {}, topbar(h("span", { class: "pill" }, a.title), h("span", { class: "pill" }, "Released " + fmtD(a.released))), band, board), true);
+
+  // 4B the beeswarm of grades
+  const W = 880, H = 240, pad = 24, colW = (W - 2 * pad) / BK.length, r = 5, gap = 13;
+  const svg = sv("svg", { viewBox: `0 0 ${W} ${H}`, width: "100%", height: H, role: "img", "aria-label": "Every student by grade" });
+  const names = Object.fromEntries(BK.map(b => [b.id, S.filter(s => s.g[a.id] === b.id).sort((x, y) => (y.h[a.id] ?? -999) - (x.h[a.id] ?? -999))]));
+  BK.forEach((b, i) => {
+    const x0 = pad + i * colW + colW / 2, list = names[b.id], perRow = Math.floor((colW - 20) / gap);
+    svg.append(sv("text", { x: x0, y: H - 8, "text-anchor": "middle", text: b.short, style: b.id === m[0] ? "fill:var(--ink);font-weight:600" : "" }));
+    svg.append(sv("text", { x: x0, y: 18, "text-anchor": "middle", class: "mono", text: String(list.length) + (b.id === m[0] ? " · most common" : ""), style: b.id === m[0] ? "fill:var(--ink);font-weight:600" : "" }));
+    list.forEach((s, k) => {
+      const row = Math.floor(k / perRow), col = k % perRow, inRow = Math.min(perRow, list.length - row * perRow);
+      const x = x0 + (col - (inRow - 1) / 2) * gap, y = H - 34 - row * gap;
+      const hb = s.h[a.id];
+      const c = sv("circle", { cx: x, cy: y, r, class: "dot ring" + (hb != null && hb < 0 ? " late" : "") });
+      hover(c, s.n + (hb != null ? " · " + rel(hb) : " · nothing turned in"));
+      svg.append(c);
+    });
+  });
+  option("o4b", "4B", "Every student as a dot, by grade", "The grade mix as a dot histogram: one dot per student in their column, late turn-ins in red, hover for the name. At sixty-one students a bar hides who; this does not. The most common grade is the headline. Tapping a dot opens that student's card on the board below.", h("div", {}, topbar(h("span", { class: "pill" }, a.title)), h("div", { style: "padding:8px" }, svg)), true);
+
+  // 4C time to grade, as dumbbells
+  const W2 = 880, H2 = 40 + A.length * 44, p = { l: 200, r: 60 }, t0 = new Date("2026-09-25"), t1 = new Date("2026-10-19");
+  const sx = (d) => p.l + (new Date(d) - t0) / (t1 - t0) * (W2 - p.l - p.r);
+  const svg2 = sv("svg", { viewBox: `0 0 ${W2} ${H2}`, width: "100%", height: H2, role: "img", "aria-label": "From due to released" });
+  ["2026-09-27", "2026-10-04", "2026-10-11", "2026-10-18"].forEach(d => { const x = sx(d); svg2.append(sv("line", { x1: x, x2: x, y1: 20, y2: H2 - 24, class: "axis" })); svg2.append(sv("text", { x, y: H2 - 8, "text-anchor": "middle", class: "mono", text: fmtD(d) })); });
+  A.forEach((x, i) => {
+    const y = 36 + i * 44, d0 = sx(dueDate(x.due)), d1 = sx(x.released);
+    svg2.append(sv("text", { x: 0, y: y + 4, text: x.title, style: "fill:var(--ink);font-weight:600" }));
+    svg2.append(sv("line", { x1: d0, x2: d1, y1: y, y2: y, stroke: "var(--ink3)", "stroke-width": 2 }));
+    svg2.append(sv("circle", { cx: d0, cy: y, r: 5, class: "dot ring" }));
+    svg2.append(sv("circle", { cx: d1, cy: y, r: 5, fill: "var(--ok)", class: "ring" }));
+    svg2.append(sv("text", { x: d1 + 10, y: y + 4, class: "mono", text: daysBetween(dueDate(x.due), x.released) + " d", style: "fill:var(--ink)" }));
+  });
+  option("o4c", "4C", "From due to released", "One line per assignment from the due date to the day the grades went out. Sixteen days, twelve, then four: you are getting faster, and this is the chart that shows it. Crowdmark and Blackboard both surface time-to-return; here it is the whole picture rather than a number in a table.", h("div", {}, topbar(h("span", { class: "pill" }, "the term so far")), h("div", { style: "padding:12px 8px 4px" }, svg2, h("div", { class: "legend", style: "padding:6px 8px" }, h("span", {}, h("i", { style: "background:var(--ink2);border-radius:50%" }), "due"), h("span", {}, h("i", { style: "background:var(--ok);border-radius:50%" }), "released")))), true);
+})();
+
+// ─── Part 5 ───
+(function part5() {
+  const P = [...S].filter(s => s.done === A.length && s.late === 1).sort((x, y) => y.msgs - x.msgs || x.n.localeCompare(y.n))[0] || S[0];
+  const head = () => topbar(h("span", { style: "font-size:20px;font-weight:700" }, P.n), P.sec ? h("span", { class: "pill" }, P.sec) : null, h("span", { class: "small sec" }, P.done + " of " + A.length + " in · " + P.late + " late · " + P.msgs + " messages to you"));
+  // 5A tiles: the parade, grown up
+  const tiles = h("div", { style: "display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:16px" }, [...A, ...UP].map(x => {
+    const graded = A.some(a => a.id === x.id), g = P.g[x.id], hb = P.h[x.id], at = P.at[x.id];
+    const t = h("div", { class: "tile", style: graded ? "" : "background:var(--card);border:1px dashed var(--line2)" },
+      h("div", {}, h("div", { class: "micro muted" }, x.title), h("div", { class: "date", style: "margin-top:6px" + (graded ? "" : ";color:var(--ink2)") }, graded && at ? fmtD(at) : "due " + x.due), h("div", { class: "l", style: hb != null && hb < 0 ? "color:var(--late);font-weight:600" : "" }, graded ? (hb != null ? rel(hb) : "nothing turned in") : (x.scale === "letters" ? x.weight + "% of the grade" : ""))),
+      graded ? h("div", { style: "display:flex;justify-content:space-between;align-items:baseline;margin-top:8px" }, h("span", { style: "font-weight:700" }, g ? bk(g).short : "not sorted"), h("span", { class: "micro muted" }, "released " + fmtD(x.released))) : null);
+    return t;
+  }));
+  option("o5a", "5A", "The parade, grown up", "The Grades so far tiles the student already has, with what you need added: the day it came in set large, how early or late under it in red when late, the grade word, the release date. Assignments still to come sit dashed with their due date. Tap a tile to open that assignment with this student's card picked up.", h("div", {}, head(), tiles));
+
+  // 5B the timeline, dates big
+  const events = [];
+  A.forEach(a => { if (P.at[a.id]) events.push({ ts: P.at[a.id], what: ["Turned in", a.title, rel(P.h[a.id])], late: P.h[a.id] < 0 }); if (P.g[a.id] && a.released) events.push({ ts: new Date(a.released).getTime(), what: ["Released", a.title, bk(P.g[a.id]).label] }); });
+  P.t.forEach(m => events.push({ ts: m.ts, what: [m.f === "s" ? "Message to you" : "Message from you", "", ""] }));
+  events.sort((x, y) => y.ts - x.ts);
+  const tl = h("div", { class: "timeline" }, events.map(e => h("div", { class: "ev" }, h("div", {}, h("div", { class: "date" }, fmtD(e.ts)), h("div", { class: "micro muted mono" }, new Date(e.ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }))), h("div", { class: "what" }, h("b", { style: e.late ? "color:var(--late)" : "" }, e.what[0]), e.what[1] ? " · " + e.what[1] : "", e.what[2] ? h("span", { class: "sec" }, " · " + e.what[2]) : ""))));
+  option("o5b", "5B", "Everything they did, dated", "One row per thing, newest first, the date large on the left: a turn-in with how late or early, a release with the grade, a message either way. This is the per-student timeline Canvas used to have and dropped, and the one instructors in the Wise and Jung study used to explain a pattern before acting on it. Each row opens the thing it names.", h("div", {}, head(), tl));
+
+  // 5C them against the class
+  const strips = h("div", { style: "display:grid;gap:4px;padding:12px" }, A.map(a => h("div", { style: "display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center" }, h("div", {}, h("div", { style: "font-weight:600" }, a.title), h("div", { class: "micro muted" }, P.h[a.id] != null ? rel(P.h[a.id]) : "nothing turned in")), timingStrip(a, { w: 640, h: 72, me: P.n, crowd: true }))));
+  option("o5c", "5C", "Them, with the class behind", "The same due-line strips and the same 2x2, the class in grey and this one student in ink. Burn-Murdoch's small-multiple trick from the FT: the crowd is the reference frame, so no average line is needed and the comparison stays soft. Here it shows the one late turn-in was the exception, not the habit.", h("div", {}, head(), strips, h("div", { style: "padding:0 8px 8px" }, quadrant({ w: 880, h: 380, me: P.n }))), true);
+})();
+
+// ─── Part 6 ───
+(function part6() {
+  const sets = [
+    ["6A", "Your words", ["high engagement", "completed all work", "not doing any work", "quiet, but doing the work"], "The three you said, plus one for the fourth corner."],
+    ["6B", "What they are doing", ["In touch, work missing", "Completing, in touch", "Not started", "Completing, quietly"], "Participles for behaviour, after Kizilcec's Completing, Auditing, Disengaging, Sampling. Describes the term so far, not the person."],
+    ["6C", "What I should do", ["Check in", "Keep going", "Reach out", "Encourage"], "Michigan's Student Explorer put a verb on each colour: the label is your next move, so the chart ends in an action."],
+  ];
+  const box = document.getElementById("o6");
+  box.append(h("div", { style: "display:grid;gap:16px" }, sets.map(([tag, title, words, why]) => h("div", { class: "option", style: "margin-top:8px" }, h("div", { class: "head" }, h("span", { class: "tag" }, tag), h("h3", {}, title)), h("div", { class: "mock" }, h("div", { class: "mock-in" }, h("div", { style: "display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:640px" }, [0, 1, 2, 3].map(i => h("div", { style: "background:var(--sunk);border-radius:12px;padding:14px;min-height:64px;font-size:17px;font-weight:600" + (i === 2 ? ";color:var(--ink2)" : "") }, words[i]))))), h("p", { class: "why" }, why)))));
+})();
+
+// ─── Part 7 ───
+(function part7() {
+  const ideas = [
+    ["Due-line dot strip", "One row per assignment, hours before and after the due line, one dot per student, late to the right. The FT's dot strip plot plus Observable's dodge so the deadline pile stays readable. Dartmouth's Canvas data: the median turn-in is 30 minutes before due.", "2A 2C 4A 5C", "https://github.com/Financial-Times/chart-doctor/tree/main/visual-vocabulary", "https://sites.dartmouth.edu/learninganalytics/?p=230"],
+    ["Dots, not bars, for sixty students", "A dot histogram shows every person and lets you hover a name; a bar at this size hides who. The most common grade is the headline, which only Canvas's mastery view surfaces.", "4B", "https://data.europa.eu/apps/data-visualisation-guide/beeswarm-plots", "https://community.canvaslms.com/docs/DOC-16538"],
+    ["The crowd in grey behind one student", "John Burn-Murdoch's FT small multiples: every other line in grey, the one in question in ink. The class becomes the reference frame and no average line is drawn.", "5C", "https://kieranhealy.org/blog/archives/2020/03/27/a-covid-small-multiple/"],
+    ["A fixed meaning per cell", "Moodle's completion grid and Datawrapper's table rules: a cell means one of four things, sorted by what matters, never shaded by a scale that shifts. GitHub's grid shows what goes wrong when the shade is relative.", "3A", "https://docs.moodle.org/en/Activity_completion_report", "https://www.datawrapper.de/blog/tables/"],
+    ["Verbs on segments, not adjectives", "Kizilcec, Piech and Schneider found the same four trajectories in every course: Completing, Auditing, Disengaging, Sampling. Michigan's advisor tool put a verb on each colour. Nobody in the literature keeps 'at risk' on a teacher's screen.", "3B 3C 6", "https://web.stanford.edu/~cpiech/bio/papers/deconstructingDisengagement.pdf", "https://michigan.it.umich.edu/news/2019/04/19/student-explorer-helps-advisors-target-at-risk-students"],
+    ["Two axes, recomputed weekly", "Papageorgiou et al. 2025 tracked students switching profile week to week and found the effective groups stable and the low-time groups restless. Movement between shelves is itself a signal, so the shelves should remember last week.", "3B 3C", "https://learning-analytics.info/index.php/JLA/article/view/8663"],
+    ["The course's own events on every time chart", "Loop at Melbourne drew vertical lines for lectures and exams on every activity chart. Here: class days, due dates, release days, the game.", "1B", "https://doi.org/10.14742/apubs.2015.947"],
+    ["Overview, then a launch pad", "Stephen Few: a dashboard is one screen, read in the order overview, what needs attention, look closer, act. Every tile and every row here opens the page it names, and the message button sits where the count is.", "1A 2A 4A", "https://blogs.ischool.berkeley.edu/i247s13/files/2013/02/WhyMostDashboardsFail.pdf"],
+    ["Time to return, drawn", "Gradescope's grading-progress view was the single most praised analytic in UBC's evaluation; Crowdmark and Blackboard both report time to return. Due to released, per assignment, as a line you can see shortening.", "4C", "https://elearning5.sites.olt.ubc.ca/files/2021/05/gradescope-report.pdf", "https://www.crowdmark.com/blog/assessment-analytics-overview/"],
+    ["Awareness alone changes nothing", "Kaliisa et al. 2023 across 38 studies: dashboards moved participation, not grades, and only when they led to an action. Jivet: students asked for next steps, not more charts. So every view here ends in a press: read, message, open, release.", "all", "https://arxiv.org/pdf/2312.15042", "https://www.solaresearch.org/?p=8136"],
+  ];
+  document.getElementById("ideas").append(...ideas.map(([t, p, feeds, ...links], i) => h("div", { class: "idea" }, h("div", { class: "k" }, String(i + 1).padStart(2, "0")), h("div", {}, h("b", {}, t), h("p", {}, p), h("div", { class: "feeds" }, "feeds " + feeds + " · ", links.map((u, k) => [k ? " · " : "", h("a", { href: u, target: "_blank", rel: "noreferrer" }, new URL(u).hostname.replace(/^www\./, ""))]))))));
+})();
+
+// ─── the picks, saved to the page's store ───
+const PICKS = {
+  p1: ["What should the page open on?", ["1A Numbers", "1B The term line", "1C The 2x2", "A mix", "None of these"]],
+  p2: ["How should assignments read?", ["2A Cards", "2B Rows, date first", "2C The strips", "A mix", "None of these"]],
+  p3: ["How should students read?", ["3A The grid", "3B Shelves", "3C The 2x2", "A mix", "None of these"]],
+  p4: ["What goes above the sorting board?", ["4A The band", "4B Dots by grade", "4C Due to released", "A mix", "None of these"]],
+  p5: ["What opens on a student?", ["5A Tiles", "5B Dated rows", "5C Against the class", "A mix", "None of these"]],
+  p6: ["Which words?", ["6A Mine", "6B What they are doing", "6C What I should do", "Other words"]],
+  p7: ["Anything here to drop or push on?", ["Build it", "Not yet", "Talk first"]],
+};
+let db = null;
+const state = {};
+function renderPick(box) {
+  const part = box.dataset.part, [q, opts] = PICKS[part], cur = state[part] || {};
+  box.innerHTML = "";
+  const pills = h("div", { class: "pills", role: "radiogroup", "aria-label": q }, opts.map(o => h("button", { type: "button", role: "radio", "aria-pressed": String(cur.pick === o), "aria-checked": String(cur.pick === o), onclick: () => save(part, { pick: cur.pick === o ? null : o }) }, o)));
+  const ta = h("textarea", { id: "words-" + part, placeholder: "" }); ta.value = cur.words || "";
+  const saved = h("span", { class: "saved" }, cur.at ? "Saved " + fmtDT(cur.at) : (db ? "" : "Saving needs you signed in as the owner."));
+  box.append(h("div", { class: "q" }, q), pills, h("label", { for: "words-" + part }, "In your words"), ta,
+    h("div", { class: "foot" }, h("button", { class: "btn solid", type: "button", onclick: () => save(part, { words: ta.value }) }, "Save"), saved));
+}
+async function save(part, patch) {
+  state[part] = { ...(state[part] || {}), ...patch, at: Date.now() };
+  document.querySelectorAll(".pick[data-part='" + part + "']").forEach(renderPick);
+  if (!db) return;
+  try { await db.doc("picks/" + part).set(state[part]); } catch (e) { const s = document.querySelector(".pick[data-part='" + part + "'] .saved"); if (s) s.textContent = "Could not save: " + (e && e.code || "unavailable"); }
+}
+document.querySelectorAll(".pick").forEach(renderPick);
+(async () => {
+  try {
+    db = await (window.claude && window.claude.use ? window.claude.use("db") : Promise.resolve(null));
+    if (!db) return;
+    db.collection("picks").onSnapshot(snap => {
+      snap.docs.forEach(d => { if (d.exists) state[d.id] = d.data(); });
+      document.querySelectorAll(".pick").forEach(renderPick);
+    }, () => {});
+  } catch (e) { db = null; }
+})();
+</script>

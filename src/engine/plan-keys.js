@@ -9,7 +9,7 @@ export const PLAN_KEYS = new Set([
   "roomGround", "seedVersion", "athSeats", "commentDrafts", "gradeBoard", "triviaPool",
   "headlineCategories", "instructorCard", "courseTitle", "assignmentsBlurb", "leaderboardExplain",
   "scheduleDocUrl", "gameLinks", "profileTaskOff", "portedFrom", "pins", "attendance", "students",
-  "inboxSeen", "worksheetsOpen", "sitdownRoles",
+  "inboxSeen", "worksheetsOpen", "sitdownRoles", "gradingIdeas",
 ]);
 export const PLAN_SUFFIX = "-plan";
 export const splitParts = (obj) => {
