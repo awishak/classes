@@ -494,6 +494,23 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
   const all = SESSIONS.flatMap(s => tableOf(s, saved));
   const inCount = all.filter(p => linkOf(data, p.roster, asg)).length;
   return (<>
+    {/* Who sits where, first. Andrew, 2026-10-19: "how am i supposed to see
+        who is in each group for the sitdown? i have a hard time finding the
+        page. put it on top of the sit down page." Each row jumps to its
+        table below. */}
+    <section className="sec">
+      <span className="eyebrow">Who sits where</span>
+      <ul className="who">
+        {SESSIONS.map(s => (
+          <li key={s.key}>
+            <a className="whent" href={"#" + s.key}>{whenOf(s)}</a>
+            <span className="whon">{tableOf(s, saved).map((p, i) => (
+              <span key={p.name} className="pc" data-c={i % 8}><b>{p.name}</b>{p.role ? <i>{", " + p.role.role}</i> : null}</span>
+            ))}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
     <section className="sec snap">
       <div className="band">
         <div className="bk"><span className="eyebrow">Every table</span>{released(now) ? <span className="count">Reports open</span> : null}</div>
@@ -511,7 +528,7 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
       const tableSheet = sheet?.tables?.[s.key]?.people?.length ? sheet.tables[s.key] : null;
       const got = table.filter(p => linkOf(data, p.roster, asg)).length;
       return (
-        <section key={s.key} className="sec">
+        <section key={s.key} id={s.key} className="sec">
           <header className="sh">
             <h2 className="h2">{whenOf(s)}</h2>
             <span className={"tally" + (got === table.length ? " ok" : "")}><i><em style={{ width: Math.round(100 * got / Math.max(1, table.length)) + "%" }} /></i><b>{got + " of " + table.length + " in"}</b></span>
@@ -584,6 +601,15 @@ export const CSS = `
 .sd .bar{display:flex;gap:12px 20px;align-items:center;flex-wrap:wrap;padding-top:6px}
 .sd .meta{font-size:15px;line-height:1.45;color:var(--ink2);font-variant-numeric:tabular-nums;max-width:72ch}
 .sd .facts{display:grid;gap:8px;justify-items:start;padding:20px 24px 24px}
+.sd .who{list-style:none;margin:0;padding:0;display:grid;gap:12px;width:100%}
+.sd .who li{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:6px 18px;align-items:baseline;padding-top:12px;border-top:1px solid var(--line)}
+.sd .who li:first-child{border-top:0;padding-top:0}
+.sd .whent{font-family:var(--serif);font-size:19px;font-weight:500;color:var(--ink);text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px}
+.sd .whent:hover{color:var(--accent)}
+.sd .whon{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:16px;line-height:1.5}
+.sd .whon b{font-weight:600;color:var(--pc)}
+.sd .whon i{font-style:normal;color:var(--ink2)}
+@media (max-width:640px){.sd .who li{grid-template-columns:1fr}}
 .sd .btn{font-family:var(--sans);font-size:16px;font-weight:600;line-height:1.2;color:var(--accent);background:var(--card);border:2px solid var(--accent);border-radius:999px;padding:8px 18px;min-height:44px;cursor:pointer}
 .sd .btn:hover{background:var(--accent);color:var(--on-accent)}
 .sd .btn[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
