@@ -4,10 +4,11 @@
   "students": 57,
   "answers": 569,
   "written": "2026-10-19",
+  "shared": false,
   "overview": [
     "57 students handed in a topic. 35 chose a scene with its own rules, 15 chose a tradition, and 6 chose a person who creates their own values. Read as subjects, the class sorted into four piles: teams and pickup games, campus life and belonging, family holidays and food, and scenes off campus like a car show, a repair café and a trinket trade.",
     "The sheets that are ready to shoot name a place, a day and a picture: the gym on Friday before anyone arrives, a volunteer's hands on a broken object, the shelf of unclaimed water bottles. The sheets that are not ready name a subject with no place or person in it, like caffeine, academic stress, or club sports in general.",
-    "Eleven topics cannot be photographed before the story is due Friday. Four are Christmas rituals, four are trips that are over, and three are famous people the writer has never met. A story like that gets built from old photos, borrowed photos or staged ones, and several sheets already say the internet is the fallback.",
+    "Eight topics cannot be photographed before the story is due Friday. Four are Christmas rituals and four are trips that are over. A story like that gets built from old photos, borrowed photos or staged ones, and several sheets already say the internet is the fallback.",
     "The frame is the weakest box. About half the class wrote \"the story is\" where the problem should be, and then put a wish where the next step should be: more students join, the tradition continues, readers adopt it. The frames that work name something a reader could argue with, like whether gyms can keep up or who gets to be called strong.",
     "The headlines split three ways: a question, a sentence with a verb, or a label for the topic. The labels are the majority. The one-sentence box came out best when it was written as a question, which is what the prompt invited."
   ],
@@ -19,11 +20,25 @@
       "answers": 56,
       "summary": "The scene prompt took more than half the class. One sheet left the prompt blank, and its topic, a club's first meeting, reads as a scene.",
       "themes": [
-        { "theme": "A scene with its own rules", "count": 35, "note": "Teams, pickup games, clubs, dorms, a car show, a Sephora, a climbing gym, a lost and found.", "examples": [] },
-        { "theme": "A tradition", "count": 15, "note": "Mostly family holidays and food, plus a weekly game of pool, a weekly breakfast, a weekly movie night and a Friday pickup run.", "examples": [] },
-        { "theme": "Someone who creates their own values", "count": 6, "note": "An artist, a coach, two friends training for an Ironman, two pop stars, and the writer's own life outside class.", "examples": [] }
-      ],
-      "gaps": "Three of the six values stories are about a public figure the writer cannot meet. The values prompt asks for a person living by rules they chose, which is easiest to show with someone you can sit across from."
+        {
+          "theme": "A scene with its own rules",
+          "count": 35,
+          "note": "Teams, pickup games, clubs, dorms, a car show, a Sephora, a climbing gym, a lost and found.",
+          "examples": []
+        },
+        {
+          "theme": "A tradition",
+          "count": 15,
+          "note": "Mostly family holidays and food, plus a weekly game of pool, a weekly breakfast, a weekly movie night and a Friday pickup run.",
+          "examples": []
+        },
+        {
+          "theme": "Someone who creates their own values",
+          "count": 6,
+          "note": "An artist, a coach, two friends training for an Ironman, two pop stars, and the writer's own life outside class.",
+          "examples": []
+        }
+      ]
     },
     {
       "field": "topic",
@@ -71,7 +86,7 @@
         {
           "theme": "One person's values",
           "count": 3,
-          "note": "A game artist, and two pop stars the writer has never met.",
+          "note": "A game artist and two pop stars.",
           "examples": [
             "For my visual story, I want to interview my friend Long, an artist and creative professional who has worked on Street Fighter II HD Remix, Street Fighter IV and V, served as a senior producer at UDON, and helped found Gaia Online and OneSignal."
           ]
@@ -81,7 +96,7 @@
         "We always end up playing for three or four hours because we always get unexpected shots, and accidentally pockets the black ball. We cannot accept it, so we ask for another game.",
         "Every Thursday, a group of people comes together in Swig dorm hall to watch a movie projected on a screen. The group decides together which movie to watch, making the weekly gathering a shared tradition that gives people a chance to relax, spend time together, meet new people who join in, and connect outside of their usual college routines."
       ],
-      "gaps": "Eleven topics cannot be shot before Friday: four Christmas rituals, four trips that already happened, three famous people. About a dozen more have no particular place, person or event in them yet, like caffeine, academic stress, freshman dorms, cultural events, or club sports in general. A topic that names a team, a room and a day is a topic you can photograph."
+      "gaps": "Eight topics cannot be shot before Friday: four Christmas rituals and four trips that already happened. About a dozen more have no particular place, person or event in them yet, like caffeine, academic stress, freshman dorms, cultural events, or club sports in general. A topic that names a team, a room and a day is a topic you can photograph."
     },
     {
       "field": "headline",

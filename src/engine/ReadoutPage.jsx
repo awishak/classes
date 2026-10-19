@@ -150,7 +150,11 @@ export default function ReadoutPage({ config, worksheetKey }) {
   useEffect(() => { if (load) load().then(m => setR(m.default || m)); }, [load]);
 
   const roster = rosterOf(config, data);
-  const allowed = session && (instructor || studentFor(email, roster));
+  // A readout is the class's unless its file says `"shared": false`. Andrew,
+  // 2026-10-19, on the COMM 3 visual-pre readout: "i don't want students to
+  // be able to see this page."
+  const shared = !r || r.shared !== false;
+  const allowed = session && (instructor || (shared && studentFor(email, roster)));
 
   // The map, once the readout and the page are here. A click jumps to the section.
   const mapped = !!(r && r.connections);
@@ -184,7 +188,9 @@ export default function ReadoutPage({ config, worksheetKey }) {
     <p style={{ fontSize: 17, margin: "0 0 12px" }}>This page runs on your email sign-in.</p>
     <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next)} style={{ fontSize: 17, fontWeight: 600, color: config.accent }}>Sign in</a>
   </>);
-  else if (!allowed) gate = data === null
+  else if (!allowed) gate = !shared
+    ? <p style={{ fontSize: 17, margin: 0 }}>This readout is the instructor's.</p>
+    : data === null
     ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
     : <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
   else if (!r) gate = <p style={{ fontSize: 17, margin: 0 }}>Loading.</p>;
