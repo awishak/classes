@@ -180,7 +180,8 @@ const STYLE = `
 .tx5 .still img { display: block; width: 100%; height: auto; max-height: 86vh; object-fit: contain; background: var(--frame); -webkit-user-drag: none; }
 .tx5 .still .acts { position: static; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; background: none; }
 .tx5 .still .acts .num { font-family: var(--mono); font-size: 15px; color: #fff; font-variant-numeric: tabular-nums; }
-@media (min-width: 981px) { .tx5 .canvas.reeling .strips-col { position: sticky; top: 72px; max-height: calc(100vh - 84px); overflow-y: auto; } }
+/* The strips stay put beside the sheet and scroll on their own, in Sheet view and in Big. Andrew, 2026-10-19: it held in Big and not in Sheet; "lock the right side or at least let it scroll separately." */
+@media (min-width: 981px) { .tx5 .canvas .strips-col { position: sticky; top: 72px; max-height: calc(100vh - 84px); overflow-y: auto; overscroll-behavior: contain; } }
 .tx5 .wi { display: grid; gap: 8px; }
 .tx5 .wi-row { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .tx5 .wi-btn { min-height: 44px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--on-film-dim); background: transparent; color: var(--on-film); font-size: 15px; font-weight: 500; cursor: pointer; }
