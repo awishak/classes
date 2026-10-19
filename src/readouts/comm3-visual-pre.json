@@ -1,0 +1,467 @@
+{
+  "worksheet": "visual-pre",
+  "classId": "comm3",
+  "students": 57,
+  "answers": 569,
+  "written": "2026-10-19",
+  "overview": [
+    "57 students handed in a topic. 35 chose a scene with its own rules, 15 chose a tradition, and 6 chose a person who creates their own values. Read as subjects, the class sorted into four piles: teams and pickup games, campus life and belonging, family holidays and food, and scenes off campus like a car show, a repair café and a trinket trade.",
+    "The sheets that are ready to shoot name a place, a day and a picture: the gym on Friday before anyone arrives, a volunteer's hands on a broken object, the shelf of unclaimed water bottles. The sheets that are not ready name a subject with no place or person in it, like caffeine, academic stress, or club sports in general.",
+    "Eleven topics cannot be photographed before the story is due Friday. Four are Christmas rituals, four are trips that are over, and three are famous people the writer has never met. A story like that gets built from old photos, borrowed photos or staged ones, and several sheets already say the internet is the fallback.",
+    "The frame is the weakest box. About half the class wrote \"the story is\" where the problem should be, and then put a wish where the next step should be: more students join, the tradition continues, readers adopt it. The frames that work name something a reader could argue with, like whether gyms can keep up or who gets to be called strong.",
+    "The headlines split three ways: a question, a sentence with a verb, or a label for the topic. The labels are the majority. The one-sentence box came out best when it was written as a question, which is what the prompt invited."
+  ],
+  "sections": [
+    {
+      "field": "prompt",
+      "label": "Which prompt is your story?",
+      "students": 57,
+      "answers": 56,
+      "summary": "The scene prompt took more than half the class. One sheet left the prompt blank, and its topic, a club's first meeting, reads as a scene.",
+      "themes": [
+        { "theme": "A scene with its own rules", "count": 35, "note": "Teams, pickup games, clubs, dorms, a car show, a Sephora, a climbing gym, a lost and found.", "examples": [] },
+        { "theme": "A tradition", "count": 15, "note": "Mostly family holidays and food, plus a weekly game of pool, a weekly breakfast, a weekly movie night and a Friday pickup run.", "examples": [] },
+        { "theme": "Someone who creates their own values", "count": 6, "note": "An artist, a coach, two friends training for an Ironman, two pop stars, and the writer's own life outside class.", "examples": [] }
+      ],
+      "gaps": "Three of the six values stories are about a public figure the writer cannot meet. The values prompt asks for a person living by rules they chose, which is easiest to show with someone you can sit across from."
+    },
+    {
+      "field": "topic",
+      "label": "Tell me about your topic in two or three sentences.",
+      "students": 57,
+      "answers": 57,
+      "summary": "Sports and campus life carried the class. The topics that read best are specific down to a day of the week and a room, and most of those are rituals a small group keeps: pool on a weeknight, breakfast at 9:15, a movie in Swig on Thursdays, a basketball run on Fridays.",
+      "themes": [
+        {
+          "theme": "Campus life and belonging",
+          "count": 18,
+          "note": "Clubs, a dorm, a house, a sorority weekend, a Mass, the lost and found, dorm decor, a weekly breakfast.",
+          "examples": [
+            "My topic is going to be about how me and my two friends have breakfast every MWF at 9:15. Since the first day of classes we have met for breakfast at benson at 9:15. There are times when not all of us are there due to studying or other commitments but usually 2 of us will be present.",
+            "My story will explore the lost and found at Santa Clara University and what happens to things students leave behind. I want to show the different items that get lost, how they end up in the lost and found, and what happens if nobody comes back for them."
+          ]
+        },
+        {
+          "theme": "Teams, pickup games and athletes",
+          "count": 15,
+          "note": "Rugby twice, pickup basketball twice, pickup soccer, a dance team, club sports, flag football, a coach, an Ironman, a pro video crew.",
+          "examples": [
+            "Every Friday, my friends and I meet at the SCU basketball gym and play pickup basketballl, and we've kept it going since I started school here (I'm a sophmore). The story looks at how a weekly game keeps a friend group together as school, jobs, and schedules pull everyone in different directions.",
+            "Women's Rugby culture shapes the way women talk and feel about their bodies, encouraging strength and muscular builds. Women's rugby bonds players through physical contact, mutual trust, and leaning into vulnerability together."
+          ]
+        },
+        {
+          "theme": "Scenes off campus",
+          "count": 12,
+          "note": "A climbing gym, a hot chicken place, a car show, a repair café, a trinket trade, a Sephora, flip-flops, indie shows, a sailboat, a church.",
+          "examples": [
+            "I want to explore the community of volunteer repairers at Repair Café Silicon Valley, where people bring broken belongings and work alongside volunteers to diagnose and potentially fix them.",
+            "A culture that I'm personally invested in is \"trinket\" collecting, a majority of the figures or keychains I collect are mostly from Japan. I go to trading meets where people can sell or trade their collection, some specific series I collect and go to meets for are sonny angels, mofusand, and tokidoki unicornos."
+          ]
+        },
+        {
+          "theme": "Family holidays and food",
+          "count": 9,
+          "note": "Four Christmases, a July 4 cabin, a Labor Day trip, dumplings, Peruvian cooking, Mexican food.",
+          "examples": [
+            "In my family, we make and eat dumplings together for important holidays and before someone leaves for a long trips. Now that my dad and I are in the United States, and most of our family members are far away. My story will show how we making dumplings here and explore what continuing this tradition means to us.",
+            "Every year on Christmas, my parents hides a pickle ornament somewhere deep in the tree. Then whoever can find it first gets a special present."
+          ]
+        },
+        {
+          "theme": "One person's values",
+          "count": 3,
+          "note": "A game artist, and two pop stars the writer has never met.",
+          "examples": [
+            "For my visual story, I want to interview my friend Long, an artist and creative professional who has worked on Street Fighter II HD Remix, Street Fighter IV and V, served as a senior producer at UDON, and helped found Gaia Online and OneSignal."
+          ]
+        }
+      ],
+      "standouts": [
+        "We always end up playing for three or four hours because we always get unexpected shots, and accidentally pockets the black ball. We cannot accept it, so we ask for another game.",
+        "Every Thursday, a group of people comes together in Swig dorm hall to watch a movie projected on a screen. The group decides together which movie to watch, making the weekly gathering a shared tradition that gives people a chance to relax, spend time together, meet new people who join in, and connect outside of their usual college routines."
+      ],
+      "gaps": "Eleven topics cannot be shot before Friday: four Christmas rituals, four trips that already happened, three famous people. About a dozen more have no particular place, person or event in them yet, like caffeine, academic stress, freshman dorms, cultural events, or club sports in general. A topic that names a team, a room and a day is a topic you can photograph."
+    },
+    {
+      "field": "headline",
+      "label": "Your headline.",
+      "students": 57,
+      "answers": 57,
+      "summary": "Most headlines are a name for the topic. The ones a classmate would click ask a question or make a promise the pictures then have to keep.",
+      "themes": [
+        {
+          "theme": "A label for the topic",
+          "count": 34,
+          "note": "It says what the story is about and nothing else.",
+          "examples": [
+            "The importance of tradition",
+            "The Culture of Club Sports at SCU",
+            "Sunday Morning Car Culture",
+            "Beauty in the Making"
+          ]
+        },
+        {
+          "theme": "A sentence with a verb",
+          "count": 9,
+          "note": "A claim the story has to back up.",
+          "examples": [
+            "Women’s Rugby Is Redefining the Strong Body",
+            "California Concert Culture is Shockingly Different than Everywhere Else in the World",
+            "Attending a cultural event could do much more than offer free food, it can offer community."
+          ]
+        },
+        {
+          "theme": "Not settled yet",
+          "count": 8,
+          "note": "Two or more options, a direction instead of a line, or nothing.",
+          "examples": [
+            "I have two ideas, \"From Small Food Truck to San Jose Favorite\" or \"The Best Hot Chicken in the Bay Area\"",
+            "Something along these lines: How Indie Bands Are Saving Live Music (maybe use adjectives like raw, real, powerful, loud, etc.)",
+            "still trying to think on that"
+          ]
+        },
+        {
+          "theme": "A question",
+          "count": 6,
+          "note": "",
+          "examples": [
+            "Why Always #8?",
+            "Who needs a Posse?",
+            "What Makes Something Worth Saving?"
+          ]
+        }
+      ],
+      "standouts": [
+        "Legally Required to Get Breakfast",
+        "Where Lost Things Go",
+        "1.. 2.. 3.. PICKLE!",
+        "Same Court, Every Friday",
+        "What Dumplings Say"
+      ],
+      "gaps": "A headline is the first thing a classmate reads. \"The importance of tradition\" and \"Caffeine Addiction Is Real\" could sit over a hundred stories. \"Legally Required to Get Breakfast\" could only sit over one."
+    },
+    {
+      "field": "learn",
+      "label": "In one well-worded sentence or question, what do you hope readers will learn after enjoying your story?",
+      "students": 57,
+      "answers": 57,
+      "summary": "This box came out better than the frame. Ten students wrote it as a question, and those are the sentences that tell you what the pictures are for.",
+      "themes": [
+        {
+          "theme": "Community is where you find it",
+          "count": 19,
+          "note": "A club, a court, a dinner table, a dorm hallway, roommates, teammates.",
+          "examples": [
+            "What keeps a friend group together when the only plan they make every week is to show up and play?",
+            "How can something as simple as watching a movie together every Thursday become a meaningful college tradition that brings people together and creates a sense of community?"
+          ]
+        },
+        {
+          "theme": "Look again at something you thought you knew",
+          "count": 18,
+          "note": "Hair, strength, makeup, concerts, caffeine, dorm decor, a pop star, a crowded gym.",
+          "examples": [
+            "I want readers to understand how black women at Santa Clara choose to express themselves through their hairstyles and why black hairstyles should be appreciated for history and importance, instead of being judged through negative stereotypes.",
+            "I hope viewers learn that a strong, muscular body is something to be proud of, not something to hide."
+          ]
+        },
+        {
+          "theme": "Family and where you come from",
+          "count": 12,
+          "note": "Food, holidays, distance, the next generation.",
+          "examples": [
+            "Why is food such an important gateway to the way we reconnect with our cultural heritage?",
+            "How do children stay in contact with family friends when their parents don't get along anymore?"
+          ]
+        },
+        {
+          "theme": "The work nobody sees",
+          "count": 8,
+          "note": "A video crew, a game artist, a dance team's weekend, the lost and found, a repair table, Ironman training.",
+          "examples": [
+            "How do volunteer repairers see value in broken possessions, and what makes an ordinary object worth saving to the person who owns it?",
+            "I hope that readers can take away the extent of the grind from everybody in a football staff behind the players and coaches to find a newfound appreciation for the operation."
+          ]
+        }
+      ],
+      "standouts": [
+        "How can a simple game turn into a weekly tradition that brings friends together for hours?",
+        "Why do people wake up early to attend car shows, and what drives them to appreciate the culture?"
+      ],
+      "gaps": "The weakest versions are a moral: take time to relax, appreciate your friends, try something new. A reader does not learn a moral from pictures. A reader learns what happened."
+    },
+    {
+      "field": "ideas",
+      "label": "What are some image ideas that will help you tell this story?",
+      "students": 57,
+      "answers": 57,
+      "summary": "The strong lists read like a shot list a photographer could carry: numbered, specific, with a wide shot, a close-up and a face in each. The weak ones say \"pictures of the game\" or list one idea.",
+      "themes": [
+        {
+          "theme": "A shot list you could hand to a photographer",
+          "count": 8,
+          "note": "Numbered, or close to it, with a beginning and an end.",
+          "examples": [
+            "The empty court before anyone arrives Friends arriving and lacing up shoes Shooting around or picking teams A mid-game action shot at the rim The sideline crew waiting for next A close-up of hands, sweat, or a worn ball A celebration or argument after a big play The group sitting together after the last game",
+            "Image 1: picture of my dance team preparing to dance at Open House welcome in the SCDI courtyard Image 2: Dance team senior tabling at Open House to prospective students Image 3: Getting ready for men's basketball performance Image 4: Ready to take the court and dance for men's basketball Image 5: Practice photo after a long weekend"
+          ]
+        },
+        {
+          "theme": "A graphic planned alongside the photos",
+          "count": 9,
+          "note": "A chart of parents drifting apart while their kids got closer, monthly listeners, a training timeline, a map of how far someone drove for a trade.",
+          "examples": [
+            "1) A photo of two little kids holding hands with two older kids. 2) A photo of someone scrolling through the pictures that were taken on these trips. 3) A chart showing the years the parents drifted alongside the ages/years of the children as they were getting closer. 4) Text messages between the kids.",
+            "I think action photos in all 3 settings would be super good. Especially with graphs comparing the times they are at and their goals for those times and how far off they are from getting to their goal."
+          ]
+        },
+        {
+          "theme": "Mostly old photos",
+          "count": 9,
+          "note": "Years of Christmas pictures, a childhood jetski, a trip that ended, a sailboat, FaceTime screenshots.",
+          "examples": [
+            "Photos of all of us growing up together through every single year from the past 12 years. We face time every single night and I can take screen shots of that as well",
+            "multiple years of Christmas photos, photos of my Tias cooking, photos of me away from family continuing to cook Colombian dish's."
+          ]
+        },
+        {
+          "theme": "One idea, or none",
+          "count": 7,
+          "note": "",
+          "examples": [
+            "none",
+            "I may take the photo that includes both of us making or eating dumplings together.",
+            "I'm thinking that when I see my parents this weekend, I can make something with my mom and take some photos of the process."
+          ]
+        }
+      ],
+      "standouts": [
+        "A photo of the church to show how late it is when we usually finish the game A photo of Zu's posture when taking a shot A photo of me aiming the black ball to end the game (I call it the \"sacred moment\") A photo capturing someone's surprised reaction after accidentally pocketing the black ball A photo of earphone my friend left to show how unsatisfied she is after pocketed the black ball and totally forgot her belongings A photo of my friends reacting to an unexpected shot and deciding to play another game",
+        "A span photo of some of the collection. Trading table at a meet, some people actively trading or looking. A \"whats in my bag\" type of photo, I always carry trinkets so I can show the ones I more commonly carry. A wide shot of a trading event."
+      ],
+      "gaps": "The earphone a friend left behind, the church clock, the squishy drawer: the lists that work are full of objects that stand for something. The lists that do not work say \"pictures of the team\" and stop."
+    },
+    {
+      "field": "need",
+      "label": "Which photo can your story not live without, and what will you do if you can't get the photo?",
+      "students": 57,
+      "answers": 57,
+      "summary": "Most of the class named the photo. Fewer than half named a real backup, and seven said the backup is the internet, an old picture, or the camera roll.",
+      "themes": [
+        {
+          "theme": "Named the photo and a backup you could shoot",
+          "count": 35,
+          "note": "A wide shot from the baseline if the rim shot fails. Another visitor's repair if your own item falls through. A portrait with the artwork if you cannot catch him working.",
+          "examples": [
+            "A mid-game action shot at the rim, with a defender contesting and players watching from the sideline in the background. It shows the competition and the group in one frame. If I can’t get a clean action shot, I will use a wide shot of the full court during a game, taken from behind the baseline, so all the players are in the frame together.",
+            "My essential photograph would show a volunteer actively examining or repairing an object while interacting with its owner. This would capture the community’s specialized knowledge and the personal motivation behind the repair. If I cannot photograph my own item’s repair, I will ask permission to document another visitor’s repair and the story behind their possession."
+          ]
+        },
+        {
+          "theme": "Named the photo, no backup",
+          "count": 15,
+          "note": "Or a backup that is the same photo: \"I will find a way to get the picture.\"",
+          "examples": [
+            "A photo of llomo saltado",
+            "Rugby players tackling each other (during my practice, I will take photos)",
+            "A photo of an empty energy drink."
+          ]
+        },
+        {
+          "theme": "The backup is the internet or an old photo",
+          "count": 7,
+          "note": "",
+          "examples": [
+            "I picture of the gym packed full of people. If I can't find that I will use a photo online and make sure my photos make up for the majority still.",
+            "The pickle ornament! If I can not get the photo I can find one on the internet, look through old photos, or do my best of explaining what it looked like."
+          ]
+        }
+      ],
+      "standouts": [
+        "A photo capturing someone's surprised reaction after accidentally getting the black ball into the pocket. Is important because it represents the unexpected moments that make us what to ask one more game and cause the story.",
+        "The most important photo would be a wide shot showing the group gathered together in Swig dorm hall, with the movie projected in front of them. This image would capture the heart of the story because it shows both the tradition and the community in one frame."
+      ],
+      "gaps": "The question has two halves and the second half is the one that matters. A photo you found online is somebody else's story. A photo from four years ago is a story that already ended."
+    },
+    {
+      "field": "problem",
+      "label": "What problem does your story define?",
+      "students": 57,
+      "answers": 57,
+      "summary": "Half the class defined a problem. The other half described the topic again, usually starting with \"The story is.\" A problem is something that could go the other way.",
+      "themes": [
+        {
+          "theme": "A real tension",
+          "count": 27,
+          "note": "Something a reader could argue with: gyms that cannot keep up, who gets to be called strong, stadium tours crowding out small shows, friends drifting as schedules fill.",
+          "examples": [
+            "The problem is that the gyms can't keep up with the growing amount of people who want to climb",
+            "The problem is the stigma around women having strong, muscular bodies.",
+            "Friend groups tend to drift apart as people get busier and their schedules stop lining up. Our Friday pickup game is the one plan that has held up, and the story is about how a weekly game keeps us together."
+          ]
+        },
+        {
+          "theme": "The topic again",
+          "count": 24,
+          "note": "\"The story is\" or \"the story here is,\" followed by what the story is about.",
+          "examples": [
+            "The story is of new friendships that have been created as roommates have spent more time together.",
+            "Bullard students coming together for a football game.",
+            "Family bonding"
+          ]
+        },
+        {
+          "theme": "Nobody knows about it",
+          "count": 6,
+          "note": "The problem is that the reader has not heard of the subject.",
+          "examples": [
+            "The \"problem\" is that people don't know what Posse is.",
+            "Many people enjoy video games and recognize the characters, but they rarely think about the artists who bring those characters to life."
+          ]
+        }
+      ],
+      "standouts": [
+        "People often discard belongings when they stop functioning, even when those objects still have practical or sentimental value. Repair Café volunteers offer an alternative by attempting repairs and sharing knowledge that many owners don’t possess.",
+        "The \"problem\" is the parents and how their personal life got in the way of their friendship. But, the story is how the children continued to stay in touch."
+      ],
+      "gaps": "Entman's problem is the thing at stake. \"Family bonding\" is not at stake. \"The tradition only dies if we let it\" is, and that writer had a problem the moment they wrote it."
+    },
+    {
+      "field": "cause",
+      "label": "What causes the problem?",
+      "students": 57,
+      "answers": 57,
+      "summary": "Busy schedules and distance cause more of these stories than anything else, followed by social media and trends. A dozen causes are one line and restate the topic.",
+      "themes": [
+        {
+          "theme": "Schedules, distance and growing up",
+          "count": 15,
+          "note": "Jobs, college, siblings who moved out, a dad who is only here a month.",
+          "examples": [
+            "Classes, jobs, and different schedules make it hard to plan time together in college. A set day and place takes the planning out of it, so people keep showing up without anyone having to organize it.",
+            "I moved to the United States for college, and my dad will only stay here for a month, so our family gatherings have changed."
+          ]
+        },
+        {
+          "theme": "Because we love it",
+          "count": 12,
+          "note": "The cause of the gathering is that the people want to gather.",
+          "examples": [
+            "Our competitiveness. Nobody wants to end the game after getting an unexpected shot. So we would ask “one more game” often leads to another three or four hours of playing and feeling confused of whether the black ball has a mojo.",
+            "Just because I love basket ball"
+          ]
+        },
+        {
+          "theme": "Social media and trends",
+          "count": 8,
+          "note": "Dorm decor, trinkets, makeup, concerts, flip-flops, a church revival, a climbing boom after two movies.",
+          "examples": [
+            "Social media, comparison, and trends have caused dorm decorating to be such a popular and well known culture.",
+            "This is caused by climbing blowing up online and through movies like \"Free Solo\" or \"The Dawn Wall\"."
+          ]
+        },
+        {
+          "theme": "A standard somebody set",
+          "count": 3,
+          "note": "Beauty standards, what counts as feminine, what counts as professional hair.",
+          "examples": [
+            "Women are often taught that strength is unfeminine and that they should shrink themselves to fit a narrow beauty standard."
+          ]
+        }
+      ],
+      "standouts": [
+        "I believe that general or more traditional beauty standards make it difficult for black hair to be seen as beautiful. There was never a system created for black hair to exist naturally or even be considered a \"standard\" in society."
+      ],
+      "gaps": "\"It is the homecoming game.\" \"Jobs and distance.\" \"Tradition and Christmas.\" \"How the intermural league works.\" A cause that fits in four words usually has not been thought about yet."
+    },
+    {
+      "field": "next",
+      "label": "What should happen next?",
+      "students": 57,
+      "answers": 57,
+      "summary": "Most of the class wrote a wish: more people join, the tradition continues, readers try it themselves. Eight wrote an event, and an event is what a story can end on.",
+      "themes": [
+        {
+          "theme": "A wish for the reader",
+          "count": 30,
+          "note": "Join, adopt, appreciate, be more aware.",
+          "examples": [
+            "The person reading should want to get a pickle for their family, and keep their traditions alive.",
+            "More students could get involved in club sports and experience the friendships, competition, and teamwork that come with being part of a team."
+          ]
+        },
+        {
+          "theme": "Keep doing it",
+          "count": 19,
+          "note": "The ritual goes on.",
+          "examples": [
+            "We are going to continue having an amazing Wednesday night because all of us enjoy each others company knowing we share the same struggles and keeping this going is giving us something positive to look forward to / a boost during the week."
+          ]
+        },
+        {
+          "theme": "An actual next event",
+          "count": 8,
+          "note": "A basketball game, a repair that succeeds or fails, a race finished or not, a week blocked off in July, a restaurant that has to keep a food-truck feel.",
+          "examples": [
+            "The volunteers may successfully restore an object, identify the parts needed for a later repair, or determine that it cannot reasonably be fixed. I want to document what happens and how that outcome affects the owner",
+            "Maybe they complete the Iron Man, but maybe they don't; the idea that this isn't something easy and doable for everyone.",
+            "We all block off our schedules for the fourth of July week which will allow all of us to attend and keep the tradition alive."
+          ]
+        }
+      ],
+      "standouts": [
+        "With a new restaurant on Branham Lane, there will be task for Jojos to keep feel of a neighborhood food trailer while growing into a full brick-and-mortar operation."
+      ],
+      "gaps": "\"What should happen next\" is a question about the subject, not the reader. The strongest answers could be wrong: the repair might fail, the friends might not finish the race. That is what makes a reader want to know."
+    },
+    {
+      "field": "arc",
+      "label": "Is this story ongoing or over? Is there a what-happens-next feel, or do you have a complete beginning, middle and end?",
+      "students": 57,
+      "answers": 57,
+      "summary": "Almost everyone said ongoing. The useful version of that answer picks one day inside the ongoing thing and gives that day a beginning, middle and end.",
+      "themes": [
+        {
+          "theme": "Ongoing, with a what-happens-next feel",
+          "count": 41,
+          "note": "The ritual repeats, the season continues, the trend has not peaked.",
+          "examples": [
+            "This story is ongoing because playing pool is a weekly tradition for us. And the spirit of \"One More Game\" never ends.",
+            "Ongoing for sure, but with limited knowledge of what could happen."
+          ]
+        },
+        {
+          "theme": "Ongoing, but told as one day with a beginning, middle and end",
+          "count": 9,
+          "note": "One Friday, one Thursday, one repair, one item's trip through the lost and found.",
+          "examples": [
+            "It is ongoing. The game happens every Friday, so the story ends with a \"see you next week\" feel instead of a final ending. The story still has a beginning, middle, and end within one Friday: arriving at an empty court, playing, and leaving the court empty again.",
+            "This is an ongoing story because students are always losing things on campus. My story could start with an item being lost, then show how it gets turned in, and end with whether it gets returned to its owner or stays unclaimed."
+          ]
+        },
+        {
+          "theme": "Over, with a complete arc",
+          "count": 4,
+          "note": "A sailing trip, a homecoming game, a weekend, a pickup game.",
+          "examples": [
+            "My 5 week sailing experience is over, but the lessons I learned from it are still part of my life. My story will have a beginning, middle, and end, starting with the experience of living on the boat, showing the challenges, and ending with what the experience taught me."
+          ]
+        },
+        {
+          "theme": "Not sure yet",
+          "count": 3,
+          "note": "",
+          "examples": [
+            "I think this story could go both ways. It could be ongoing because the pickle finding happens every year. Or it could end with the importance of traditions.",
+            "This is an ongoing story, I think the beginning will be on Monday, after I have some more clarity on the assignment."
+          ]
+        }
+      ],
+      "standouts": [
+        "The repair café is an ongoing community activity, but I plan to follow a particular repair from the initial problem through diagnosis to its actual outcome. This should provide a beginning, middle, and ending, even if the repair is unsuccessful. The larger question of how people value and preserve their possessions will remain open"
+      ],
+      "gaps": "\"Ongoing\" on its own is not a shape. Five photos need a first one and a last one. The sheets that picked a single Friday, a single Thursday or a single repair already have both."
+    }
+  ]
+}

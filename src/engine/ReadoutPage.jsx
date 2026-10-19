@@ -34,6 +34,10 @@ const READOUTS = {
   // A readout with `sections` and no boxes, cards or connections draws no
   // map, and its `written` is null until the analysis is in.
   "comm118/worktopia": () => import("../readouts/comm118-worktopia.json"),
+  // Written 2026-10-19 from 57 pre-production pages, in the same shape.
+  // Anonymous, quotes exactly as written, the verdicts as patterns without
+  // names. Andrew, 2026-10-19: "i also want a student facing one."
+  "comm3/visual-pre": () => import("../readouts/comm3-visual-pre.json"),
 };
 export const hasReadout = (classId, key) => !!READOUTS[classId + "/" + key];
 
