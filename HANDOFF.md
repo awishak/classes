@@ -1181,3 +1181,18 @@ untouched; once he picks, the chosen pieces move into GradeView.jsx and the
 instructor's My Work, and this page comes off. A chip on his My Work page
 ("Grade view, round two") opens it. The reading behind the round is in
 `teaching/grade-view-ideas/RESEARCH.md`.
+
+## Pre-production, a second topic
+
+Andrew, 2026-10-19: "some students want to do a whole second preproduction
+on a different topic. give them that ability." The second page is its own
+local worksheet, `visual-pre-2`, the same `PreSheet` on its own rows with its
+own review (`mountVisualPre2` in pre.jsx), listed and open wherever the first
+is. The first page links to it under Submit; the second links back. His
+review page is `/comm3/worksheets/visual-pre-2?review`, linked from the
+first's. Students see each page's review as its own row on the home and on
+My work (prerow.jsx), and the challenge card has Plan a second topic, or
+Reopen your second topic. The builder shows a Second topic door once the
+page exists and starts the headline from whichever page is approved, the
+first when both or neither are. The My Work challenge counts only the first
+page's submit.

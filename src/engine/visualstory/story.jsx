@@ -99,8 +99,13 @@ export function StoryView({ story, urls, showPrivate = false, look, credit }) {
 
 // ─── the student's sheet ───
 
+// The approved topic's headline when one page is approved and the other is
+// not; otherwise the first page's. A student with two topics builds the one
+// Andrew approved.
 async function preHeadline({ classId, viewerId }) {
-  const s = await gameClient.from("worksheet_sheets").select("id").eq("worksheet_key", "visual-pre").eq("group_key", classId).eq("viewer_id", viewerId);
+  const [a, b] = await Promise.all([preStanding({ classId, viewerId }), preStanding({ classId, viewerId, key: "visual-pre-2" })]);
+  const key = a?.kind !== "approved" && b?.kind === "approved" ? "visual-pre-2" : "visual-pre";
+  const s = await gameClient.from("worksheet_sheets").select("id").eq("worksheet_key", key).eq("group_key", classId).eq("viewer_id", viewerId);
   const id = s.data && s.data[0] && s.data[0].id;
   if (!id) return "";
   const r = await gameClient.from("worksheet_answers").select("value,position").eq("sheet_id", id).eq("field", "headline").order("position");
@@ -109,10 +114,10 @@ async function preHeadline({ classId, viewerId }) {
 
 // Where the student's pre-production page stands, for its door in the header:
 // open, waiting (submitted), approved or needs (needs work).
-async function preStanding({ classId, viewerId }) {
-  const s = await gameClient.from("worksheet_sheets").select("id,submitted_at").eq("worksheet_key", "visual-pre").eq("group_key", classId).eq("viewer_id", viewerId);
+async function preStanding({ classId, viewerId, key = "visual-pre" }) {
+  const s = await gameClient.from("worksheet_sheets").select("id,submitted_at").eq("worksheet_key", key).eq("group_key", classId).eq("viewer_id", viewerId);
   const sheet = s.data && s.data[0];
-  if (!sheet) return { kind: "open" };
+  if (!sheet) return null;   // no page yet: no badge, and no door for a second topic
   const r = await gameClient.from("worksheet_reviews").select("status,note,reviewed_at").eq("sheet_id", sheet.id);
   return standing(sheet.submitted_at, (r.data && r.data[0]) || null);
 }
@@ -140,6 +145,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   const [submitting, setSubmitting] = useState("");
   const [lock, setLock] = useState(null);
   const [pre, setPre] = useState(null);
+  const [pre2, setPre2] = useState(null);   // the second topic's page, when the student started one
   const [now, setNow] = useState(Date.now());
   const [dragId, setDragId] = useState(null);
   const [dropAt, setDropAt] = useState(null);
@@ -172,6 +178,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
       }
     }).catch(() => { if (alive) setStatus("failed-load"); });
     if (!readOnly && classId && viewer?.id) preStanding({ classId, viewerId: viewer.id }).then(p => { if (alive) setPre(p); }).catch(() => {});
+    if (!readOnly && classId && viewer?.id) preStanding({ classId, viewerId: viewer.id, key: "visual-pre-2" }).then(p => { if (alive) setPre2(p); }).catch(() => {});
     if (!readOnly && classId && viewer?.id) lockOf({ classId, viewerId: viewer.id }).then(l => { if (alive) setLock(l); }).catch(() => {});
     const tick = setInterval(() => setNow(Date.now()), 30000);
     if (readOnly) return () => { alive = false; clearInterval(tick); s.destroy(); };
@@ -313,6 +320,12 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
             <span className="vss-door-name">Pre-production{pre && PRE_BADGE[pre.kind] ? <span className="vss-door-badge">{PRE_BADGE[pre.kind][0]}</span> : null}</span>
             <span className="vss-door-say">Your topic, your headline and your plan.</span>
           </a>
+          {pre2 ? (
+            <a className={"vss-door" + (PRE_BADGE[pre2.kind] ? " " + PRE_BADGE[pre2.kind][1] : "")} href={"/" + classId + "/worksheets/visual-pre-2"} target="_blank" rel="noreferrer">
+              <span className="vss-door-name">Second topic{PRE_BADGE[pre2.kind] ? <span className="vss-door-badge">{PRE_BADGE[pre2.kind][0]}</span> : null}</span>
+              <span className="vss-door-say">Your second pre-production page.</span>
+            </a>
+          ) : null}
           <a className="vss-door" href={"/" + classId + "/visual-story/sample"} target="_blank" rel="noreferrer">
             <span className="vss-door-name">See a sample story</span>
             <span className="vss-door-say">How a finished story could look.</span>

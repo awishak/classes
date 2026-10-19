@@ -19,6 +19,12 @@ import * as TOKENS from "../tokens.js";
 
 export const VISUAL_PRE_KEY = "visual-pre";
 export const VISUAL_PRE_TITLE = "Visual story pre-production";
+// A second page, for a second topic. Andrew, 2026-10-19: "some students want
+// to do a whole second preproduction on a different topic. give them that
+// ability." Its own sheet and its own review; the first stays as it is.
+export const VISUAL_PRE_2_KEY = "visual-pre-2";
+export const VISUAL_PRE_2_TITLE = "Visual story pre-production, second topic";
+export const preHref = (classId, key = VISUAL_PRE_KEY) => "/" + classId + "/worksheets/" + key;
 
 // Andrew's three prompts, chosen 2026-10-13.
 export const PROMPTS = [
@@ -116,8 +122,9 @@ async function reviewFor({ worksheetKey, classId, viewerId }) {
   return (r.data && r.data[0]) || null;
 }
 
-export function PreSheet({ store, viewer, classId, readOnly, review: givenReview, storage, editor = false }) {
+export function PreSheet({ store, viewer, classId, readOnly, review: givenReview, storage, editor = false, worksheetKey = VISUAL_PRE_KEY }) {
   const copy = useCopy(editor);
+  const second = worksheetKey === VISUAL_PRE_2_KEY;
   const [editing, setEditing] = useState(false);
   const [answers, setAnswers] = useState(null);
   const [submitted, setSubmitted] = useState(null);
@@ -127,13 +134,13 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
   const saver = useRef(null);
 
   useEffect(() => {
-    const draftKey = "visual-pre:" + (classId || "") + ":" + (viewer?.id || "");
+    const draftKey = worksheetKey + ":" + (classId || "") + ":" + (viewer?.id || "");
     const s = createSaver({ store, draftKey, storage: readOnly ? null : (storage ?? (typeof localStorage !== "undefined" ? localStorage : null)), onStatus: setStatus });
     saver.current = s;
     let alive = true;
     s.load().then(got => { if (alive) { setAnswers(got.answers); setSubmitted(got.submitted_at); } })
       .catch(() => { if (alive) setStatus("failed-load"); });
-    if (!readOnly && classId && viewer?.id) reviewFor({ worksheetKey: VISUAL_PRE_KEY, classId, viewerId: viewer.id }).then(r => { if (alive && r) setReview(r); }).catch(() => {});
+    if (!readOnly && classId && viewer?.id) reviewFor({ worksheetKey, classId, viewerId: viewer.id }).then(r => { if (alive && r) setReview(r); }).catch(() => {});
     if (readOnly) return () => { alive = false; s.destroy(); };
     const flush = () => s.flush();
     const hidden = () => { if (document.visibilityState === "hidden") s.flush(); };
@@ -148,7 +155,7 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
       window.removeEventListener("beforeunload", leaving);
       s.flush(); s.destroy();
     };
-  }, [store, viewer?.id, classId, readOnly, storage]);
+  }, [store, viewer?.id, classId, readOnly, storage, worksheetKey]);
 
   const set = (field, value) => {
     if (readOnly) return;
@@ -179,7 +186,7 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
       <style>{CSS}</style>
       <div className="vsp-in">
         <div className="vsp-top">
-          <h1 className="vsp-title">{VISUAL_PRE_TITLE}</h1>
+          <h1 className="vsp-title">{second ? VISUAL_PRE_2_TITLE : VISUAL_PRE_TITLE}</h1>
           {!readOnly ? <span className={"vsp-status" + (status === "retrying" ? " vsp-warn" : "")} aria-live="polite">{STATUS[status]}</span> : null}
         </div>
         {editor ? (
@@ -189,6 +196,7 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
           </div>
         ) : null}
         <Words k="intro" copy={copy} editing={editing} as="p" className="vsp-p" />
+        {second ? <p className="vsp-p">This is a second pre-production page, for a different topic. Your first page stays as it is, and each one gets its own review.{classId ? <> <a className="vsp-a" href={preHref(classId)}>Back to your first topic</a>.</> : null}</p> : null}
 
         <Standing where={where} />
 
@@ -240,6 +248,7 @@ export function PreSheet({ store, viewer, classId, readOnly, review: givenReview
             {submitted && !handing ? <span className="vsp-muted">Submitted {when(submitted)}. You can keep editing until the due date.</span> : null}
           </div>
         ) : null}
+        {!readOnly && !second && classId ? <p className="vsp-muted">Planning a second topic? <a className="vsp-a" href={preHref(classId, VISUAL_PRE_2_KEY)}>Open a second pre-production page</a>. This one stays as it is.</p> : null}
       </div>
     </div>
   );
@@ -259,11 +268,13 @@ function Standing({ where }) {
 }
 
 /** The worksheet registry's mount: React inside the plain-DOM contract. */
-export function mountVisualPre(root, { store, viewer, readOnly = false, classId, editor = false } = {}) {
+export function mountVisualPre(root, { store, viewer, readOnly = false, classId, editor = false, worksheetKey = VISUAL_PRE_KEY } = {}) {
   const r = createRoot(root);
-  r.render(<PreSheet store={store} viewer={viewer} readOnly={readOnly} classId={classId} editor={editor && !readOnly} />);
+  r.render(<PreSheet store={store} viewer={viewer} readOnly={readOnly} classId={classId} editor={editor && !readOnly} worksheetKey={worksheetKey} />);
   return { destroy() { r.unmount(); } };
 }
+/** The second topic's page: the same sheet on its own rows. */
+export const mountVisualPre2 = (root, opts = {}) => mountVisualPre(root, { ...opts, worksheetKey: VISUAL_PRE_2_KEY });
 
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE;
 const CSS = `
@@ -288,6 +299,7 @@ const CSS = `
 .vsp-go:disabled{opacity:.6;cursor:default}
 .vsp-warn{color:${TOKENS.STATE.late};font-size:15px}
 .vsp-muted{color:${T.muted};font-size:15px}
+.vsp-a{color:inherit;font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .vsp-stand{border:1px solid ${L.strong};border-radius:12px;padding:12px 14px;font-size:16px;line-height:1.5;background:${S.sunk}}
 .vsp-ok{border-color:${TOKENS.STATE.ok}}
 .vsp-ok b{color:${TOKENS.STATE.ok}}

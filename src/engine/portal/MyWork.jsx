@@ -24,8 +24,8 @@ import { useMarkThreadSeen } from "../YouCard.jsx";
 import { Sec, Row, Io, Btn, Chip, Lnk, Check, Gm, Face, DrFace, I, dcolOf, dueWords, whenWords, dayWords, firstLink, hostOf, drShort } from "./bits.jsx";
 import { visibleAssignments, workOf, unseenOf, nextOwedOf, counts, flowOf, FLOW_FILTERS, opensWords } from "./work.js";
 import { worksheetOf } from "../worksheetSubmits.js";
-import { VISUAL_PRE_KEY } from "../visualstory/pre.jsx";
-import { PreRow, PreStanding, usePreStanding, preShort } from "../visualstory/prerow.jsx";
+import { VISUAL_PRE_KEY, VISUAL_PRE_2_KEY } from "../visualstory/pre.jsx";
+import { PreRow, PreStanding, usePreStanding, preShort, preHref } from "../visualstory/prerow.jsx";
 import { StoriesRow, StoriesLink } from "../visualstory/door.jsx";
 
 // A challenge that is a worksheet on this site keeps a plain way back to the
@@ -391,10 +391,14 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   const more = story ? <div><Lnk href={"/" + story[1] + "/worksheets/visual-story"}>Go to story builder</Lnk></div>
     : asg.instructionsUrl && !sheet ? <div><Lnk href={asg.instructionsUrl}>More instructions</Lnk></div> : null;
   // The sheet's button sits above the fold, so it is there turned in or not.
-  const preBox = sheet && sheet.key === VISUAL_PRE_KEY ? <PreStanding config={config} /> : null;
+  const isPre = !!sheet && sheet.key === VISUAL_PRE_KEY;
+  const preBox = isPre ? <PreStanding config={config} /> : null;
+  // A second topic, on its own page: start one, or get back to the one started.
+  const second = usePreStanding(isPre ? config : null, VISUAL_PRE_2_KEY);
   const sheetBtn = sheet ? (
     <div className="pt-acts">
       <Btn href={"/" + sheet.classId + "/worksheets/" + sheet.key}>{st.state === "open" || st.state === "missed" ? "Open your " + sheetWords(sheet.key) : "Reopen your " + sheetWords(sheet.key)}</Btn>
+      {isPre ? <Btn kind="light" href={preHref(config, VISUAL_PRE_2_KEY)}>{second ? "Reopen your second topic" : "Plan a second topic"}</Btn> : null}
       {st.state === "turnedIn" || st.state === "graded" ? <span className="pt-quiet" style={{ padding: 0 }}>You can keep editing until the due date. Press Submit again when you change something.</span> : null}
     </div>
   ) : null;

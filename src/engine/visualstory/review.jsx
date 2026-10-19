@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { PROMPTS, BOXES, standing, missingOf, useCopy } from "./pre.jsx";
+import { PROMPTS, BOXES, standing, missingOf, useCopy, VISUAL_PRE_KEY, VISUAL_PRE_2_KEY } from "./pre.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -57,7 +57,8 @@ export default function PreReview({ config, worksheetKey, roster }) {
 
   return (
     <Shell>
-      <h1 className="vpr-title">Pre-production topics</h1>
+      <h1 className="vpr-title">{worksheetKey === VISUAL_PRE_2_KEY ? "Pre-production, second topics" : "Pre-production topics"}</h1>
+      <a className="vpr-other" href={"/" + config.id + "/worksheets/" + (worksheetKey === VISUAL_PRE_2_KEY ? VISUAL_PRE_KEY : VISUAL_PRE_2_KEY) + "?review"}>{worksheetKey === VISUAL_PRE_2_KEY ? "First topics" : "Second topics, for students who planned two"}</a>
       {noTable ? <p className="vpr-warn">The reviews table is not in the database yet, so reviews cannot be saved. Run sql/visual-story-pre.sql in Supabase.</p> : null}
       {sections.length > 1 ? (
         <div className="vpr-tabs" role="tablist">
@@ -114,6 +115,7 @@ const CSS = `
 .vpr{padding:20px 16px 80px;color:${T.primary}}
 .vpr-in{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .vpr-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
+.vpr-other{font-size:15px;font-weight:600;color:inherit;text-decoration:underline;text-underline-offset:3px}
 .vpr-h2{margin:18px 0 0;font-size:19px;font-weight:700}
 .vpr-p{margin:0;font-size:16px;color:${T.secondary}}
 .vpr-warn{margin:0;font-size:16px;color:${ST.late}}
