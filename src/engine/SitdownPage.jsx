@@ -494,12 +494,13 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
   const all = SESSIONS.flatMap(s => tableOf(s, saved));
   const inCount = all.filter(p => linkOf(data, p.roster, asg)).length;
   return (<>
-    {/* Who sits where, first. Andrew, 2026-10-19: "how am i supposed to see
+    {/* The tables, first. Andrew, 2026-10-19: "how am i supposed to see
         who is in each group for the sitdown? i have a hard time finding the
-        page. put it on top of the sit down page." Each row jumps to its
-        table below. */}
+        page. put it on top of the sit down page." Then: "dont's ay who sits
+        where. stop saying things like that ... don't include headers where
+        i don't ask for them." So no label; each row jumps to its table
+        below. */}
     <section className="sec">
-      <span className="eyebrow">Who sits where</span>
       <ul className="who">
         {SESSIONS.map(s => (
           <li key={s.key}>
