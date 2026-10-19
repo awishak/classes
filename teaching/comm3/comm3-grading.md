@@ -16,6 +16,8 @@ Complete gets "Nice work, [first name]." A slip on a Complete is "One note:" and
 
 If they left my instructions in the doc, the work can still be Complete this week, and they get this line: "One thing I'd like you to do for all future assignments: please delete all my instructions so that your answers are readable and accessible."
 
+The coach's voice, when the comment comes from the recording. Andrew, Oct 19, 2026: "you have to be more encouraging and softer ... make it more as an encouraging coach, and then take that style forever." His verbal notes are blunt ("We don't do minutes in a bar graph," "sounds very AI to me," "doesn't mean anything to us yet"), and written down as said they land as a scolding on a student reading alone. So: keep every point he made, and change how it lands. Each point under What to work on opens with what the student is going for or what is already there, then the ask in his forward phrases, "I'd encourage you to," "I'd like to see you," "next time I want you to." A rule becomes a direction: "Minutes belong on a map," not "We don't do minutes in a bar graph." A hard read stays honest but says the student can do it: "I want to hear you in this, Grayson." A flat question ("Is that a high cost or a low cost?") stays, followed by the way forward. No praise he did not give; the softening is in the framing, not in added compliments.
+
 ## Framing exercise (ex1)
 
 Part 1, for each person: a headline, Entman's four parts named (problem, cause, who's good or bad, how it ended), one moment a transcript wouldn't catch, the follow-up about what the other person left out, and why the headline is built the way it is.
