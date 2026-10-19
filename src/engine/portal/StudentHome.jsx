@@ -21,6 +21,7 @@ import { DrCard, DrSheet } from "./ClassPage.jsx";
 import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
 import { StoriesRow } from "../visualstory/door.jsx";
+import { PreRow } from "../visualstory/prerow.jsx";
 import { assignmentsOf } from "../profileTask.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { SITDOWN_CLASSES, SITDOWN, released, sessionOf, tableOf, sitdownAssignment, linkOf } from "../worktopia/sitdown.js";
@@ -200,9 +201,12 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
         <Sec name={<button type="button" className="pt-focus" onClick={() => go("assignments")} style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }}>My work</button>}
           sub={owed ? "Next up" : ""} right={<Chip onClick={() => go("performance")}>My performance</Chip>} />
         <div className="pt-stack">
+          <PreRow config={config} />
           <StoriesRow config={config} />
-          {owed ? <WorkRow asg={owed.asg} st={owed.st} ring onOpen={() => go("assignments/" + owed.asg.id)} />
+          {owed ? <WorkRow asg={owed.asg} st={owed.st} ring config={config} onOpen={() => go("assignments/" + owed.asg.id)} />
             : <p className="pt-quiet">Nothing is waiting on you.</p>}
+          {/* Andrew, 2026-10-19: "make it easy for them to get to their assignments." The heading was the only way in, and it did not look like one. */}
+          <div className="pt-acts"><Btn onClick={() => go("assignments")}>All my work</Btn></div>
         </div>
       </div>
       <QuestionsSection config={config} name={name} profiles={data?.profiles} go={go} />

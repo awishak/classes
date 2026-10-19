@@ -25,6 +25,7 @@ import { Sec, Row, Io, Btn, Chip, Lnk, Check, Gm, Face, DrFace, I, dcolOf, dueWo
 import { visibleAssignments, workOf, unseenOf, nextOwedOf, counts, flowOf, FLOW_FILTERS, opensWords } from "./work.js";
 import { worksheetOf } from "../worksheetSubmits.js";
 import { VISUAL_PRE_KEY } from "../visualstory/pre.jsx";
+import { PreRow, PreStanding, usePreStanding, preShort } from "../visualstory/prerow.jsx";
 import { StoriesRow, StoriesLink } from "../visualstory/door.jsx";
 
 // A challenge that is a worksheet on this site keeps a plain way back to the
@@ -60,9 +61,12 @@ export function directHref(asg) {
   return sheet ? "/" + sheet.classId + "/worksheets/" + sheet.key : "";
 }
 
-export function WorkRow({ asg, st, ring, onOpen }) {
+export function WorkRow({ asg, st, ring, onOpen, config }) {
   const tint = tintOf(st);
   const direct = directHref(asg);
+  // The pre-production row carries the review once there is one.
+  const pre = usePreStanding(worksheetOf(asg)?.key === VISUAL_PRE_KEY ? config : null);
+  const reviewed = st.state === "turnedIn" || st.state === "graded" ? preShort(pre) : "";
   const side = st.state === "open" ? (direct ? <Io kind="go" href={direct}>Open</Io> : <Io kind="go" onClick={onOpen}>Submit</Io>)
     : st.state === "turnedIn" && direct ? <Io kind="go" href={direct}>Reopen</Io>
     : st.state === "graded" || st.state === "turnedIn" ? <Check />
@@ -71,7 +75,7 @@ export function WorkRow({ asg, st, ring, onOpen }) {
   return (
     <Row tint={tint} d={dcolOf(asg.due)} ring={ring} onOpen={onOpen} side={side}>
       <p className="pt-title">{asg.title}</p>
-      <p className={"pt-when " + tint}><span>{lineOf(asg, st)}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}</p>
+      <p className={"pt-when " + tint}><span>{lineOf(asg, st)}{reviewed ? " · " + reviewed : ""}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}</p>
       {st.state === "graded" && st.last ? <p className="pt-meta">Turned in {whenWords(st.last.ts)}</p> : null}
     </Row>
   );
@@ -185,6 +189,7 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
     return (
       <div className="pt-body" style={{ gap: 16 }}>
         {sw}
+        <PreRow config={config} />
         <StoriesRow config={config} />
         <div className="pt-chips">
           {[["all", "All", ""], ["todo", "To do", "due"], ["done", "Done", "done"]].map(([id, say, kind]) => (
@@ -193,11 +198,11 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
         </div>
         {Object.entries(months).map(([m, rs]) => (
           <div key={m} className="pt-day"><Sec name={m} /><div className="pt-stack">
-            {rs.map(r => <WorkRow key={r.asg.id} asg={r.asg} st={r.st} ring={owed && owed.asg.id === r.asg.id} onOpen={() => open(r.asg.id)} />)}
+            {rs.map(r => <WorkRow key={r.asg.id} asg={r.asg} st={r.st} ring={owed && owed.asg.id === r.asg.id} config={config} onOpen={() => open(r.asg.id)} />)}
           </div></div>
         ))}
         {ongoing.length ? <div className="pt-day"><Sec name="All quarter" /><div className="pt-stack">
-          {ongoing.map(r => <WorkRow key={r.asg.id} asg={r.asg} st={r.st} onOpen={() => open(r.asg.id)} />)}
+          {ongoing.map(r => <WorkRow key={r.asg.id} asg={r.asg} st={r.st} config={config} onOpen={() => open(r.asg.id)} />)}
         </div></div> : null}
         {!rows.length ? <p className="pt-quiet" style={{ textAlign: "center", padding: "16px 0" }}>Nothing here yet.</p> : null}
       </div>
@@ -220,7 +225,7 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
         <div className="pt-chips">
           {FLOW_FILTERS.map(f => <Chip key={f.id} on={filter === f.id} kind={f.kind} onClick={() => setFilter(f.id)}>{f.label}</Chip>)}
         </div>
-        {filter === "all" || filter === "work" ? <StoriesRow config={config} /> : null}
+        {filter === "all" || filter === "work" ? <><PreRow config={config} /><StoriesRow config={config} /></> : null}
         {owed && (filter === "all" || filter === "work") ? (
           <div className="pt-notice" style={{ boxShadow: "inset 0 0 0 2px var(--ca-accent)", background: "var(--surface-card)" }}>
             {I.pin()}
@@ -386,6 +391,7 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   const more = story ? <div><Lnk href={"/" + story[1] + "/worksheets/visual-story"}>Go to story builder</Lnk></div>
     : asg.instructionsUrl && !sheet ? <div><Lnk href={asg.instructionsUrl}>More instructions</Lnk></div> : null;
   // The sheet's button sits above the fold, so it is there turned in or not.
+  const preBox = sheet && sheet.key === VISUAL_PRE_KEY ? <PreStanding config={config} /> : null;
   const sheetBtn = sheet ? (
     <div className="pt-acts">
       <Btn href={"/" + sheet.classId + "/worksheets/" + sheet.key}>{st.state === "open" || st.state === "missed" ? "Open your " + sheetWords(sheet.key) : "Reopen your " + sheetWords(sheet.key)}</Btn>
@@ -394,9 +400,10 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   ) : null;
   const instructions = (words || asg.instructionsUrl) ? (
     st.state === "open" || st.state === "missed"
-      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{storiesLink}{sheetBtn}{more}</div>
+      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{storiesLink}{preBox}{sheetBtn}{more}</div>
       : <div className="pt-stack">
           {storiesLink}
+          {preBox}
           {sheetBtn}
           <div className="pt-acts"><Io onClick={() => setFold(v => !v)}>Instructions</Io>{st.state === "turnedIn" && canSend ? <span className="pt-quiet" style={{ padding: 0 }}>Send another link below.</span> : null}</div>
           {fold ? <>{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{more}</> : null}
