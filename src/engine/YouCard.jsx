@@ -156,6 +156,10 @@ function Bubble({ m, accent, config, data, name, instructor }) {
           background: his ? accent + "12" : "#f3f4f6",
           color: TEXT_PRIMARY, border: isQuestion ? "1px solid #f59e0b55" : "none" }}>
           {m.text}
+          {/* A picture in a message. Andrew, 2026-10-19: a photo he picked
+              for each student goes to them with a note, so a message can
+              carry one, as `image`, a URL in the class's media bucket. */}
+          {m.image ? <img src={m.image} alt="" style={{ display: "block", maxWidth: "100%", borderRadius: 12, marginTop: m.text ? 8 : 0 }} /> : null}
         </div>
         <div style={{ fontSize: 12, color: TEXT_MUTED, marginTop: 3, textAlign: mine ? "left" : "right" }}>
           {who} · {fmtTime(m.ts)}
