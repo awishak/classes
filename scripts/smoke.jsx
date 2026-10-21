@@ -5682,7 +5682,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // sheet and none of the sheet; the sheet page carries the read across the
   // class, then each table with the picks first and everyone after, every
   // question tagged with who the question is about.
-  if (!all.includes("/comm118/sitdown/sheet") || !all.includes("Open my sheet")) say("the instructor's view has no door to the sheet");
+  if (!all.includes("/comm118/sitdown/sheet") || !all.includes("Open my sheet: every group, every question")) say("the instructor's view has no door to the sheet");
+  const { appsFor } = await import("../src/engine/apps.js");
+  if (!appsFor(scfg, "instructor").some(a => a.href === "/comm118/sitdown/sheet")) say("his menu has no Sit-Down sheet");
+  if (appsFor(scfg, "student").some(a => String(a.href || "").includes("/sheet"))) say("a student's menu has the sheet");
   const { SheetBody } = await import("../src/engine/SitdownPage.jsx");
   const fixture = { written: "2026-10-20", counts: { roster: 25, turnedIn: 22, read: 15, locked: 6, notADoc: 1, missing: 3 },
     overview: ["22 of 25 turned in a link by Monday night."],
@@ -5695,20 +5698,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (all.includes("The work") || all.includes("Ask first")) say("the instructor's Sit-Down page carries the sheet");
   fixture.tables["wed-915"].people[0].points = ["Streaming at home makes the room more valuable."];
   fixture.tables["wed-915"].people[0].voice = "His own. First person and casual.";
-  // The sheet's front: the read across the class and a door to each group.
+  // One page: a button to each group, the read across the class with every
+  // name's role, then every group in full: the seats with roles, each
+  // person's summary, good points and whose writing, then the questions by
+  // who they are for, with the writer's job, the picks bold.
   const sheeted = html(<SheetBody config={scfg} data={d2} instructor sheet={fixture} />);
-  for (const want of ["The sheet", "The work", "22 of 25 turned in. 15 read, 6 locked, 1 not a Doc, 3 missing.", "/comm118/sitdown/sheet/wed-915", "1 of 2 read", "No sheet yet", "Luke Baird", "No link turned in."]) {
-    if (!sheeted.includes(want)) say("the sheet's front lacks " + JSON.stringify(want));
+  for (const want of ["The sheet", "The work", "22 of 25 turned in. 15 read, 6 locked, 1 not a Doc, 3 missing.", 'href="#wed-915"', "Wed 9:15", "Fri 9:45", "No link turned in.",
+    'id="wed-915"', "Wednesday, October 21, 9:15 AM", "Three of four in.", "Each person", "The bar as a third space.", "Good points", "Streaming at home makes the room more valuable.", "Whose writing", "His own. First person and casual.", "Not turned in", "No report turned in.", "by who they are for", "For Charles Kosinski, head of stadium real estate", "Luke, sports bar owner:", "What would the hardships be?", "Their own questions", "Luke Baird, sports bar owner", "How do I keep a third space full?", "Nobody wrote a question for Luke", "No sheet for this group yet."]) {
+    if (!sheeted.includes(want)) say("the sheet lacks " + JSON.stringify(want));
   }
-  if (sheeted.includes("How do I keep a third space full?")) say("the sheet's front carries a group's questions");
-  // One group: each person's summary, good points and whose writing, then the
-  // questions by who they are for, with the writer's job, the picks bold.
-  const grouped = html(<SheetBody config={scfg} data={d2} instructor group="wed-915" sheet={fixture} />);
-  for (const want of ["Wednesday, October 21, 9:15 AM", "Three of four in.", "Each person", "The bar as a third space.", "Good points", "Streaming at home makes the room more valuable.", "Whose writing", "His own. First person and casual.", "Not turned in", "No report turned in.", "by who they are for", "For Charles Kosinski, head of stadium real estate", "Luke, sports bar owner:", "What would the hardships be?", "Their own questions", "Luke Baird, sports bar owner", "How do I keep a third space full?", "Nobody wrote a question for Luke"]) {
-    if (!grouped.includes(want)) say("the group page lacks " + JSON.stringify(want));
-  }
-  if (!/class="ask"><span class="q">How do I keep a third space full/.test(grouped) || /class="ask"><span class="from">Luke, sports bar owner:<\/span><span class="q">What would the hardships be/.test(grouped)) say("the picked question is not the bold one");
-  if (!html(<SheetBody config={scfg} data={d2} instructor group="fri-945" sheet={fixture} />).includes("No sheet for this group yet.")) say("a group with no sheet does not say so");
+  if (!/class="rn">Luke Baird(<!-- -->)?<i>, sports bar owner<\/i>/.test(sheeted)) say("the roll has no role beside a name");
+  // Every seat at the top of a group carries a role, from the sheet or the roles page.
+  if (!/<li class="pc" data-c="1"><b>Charles Kosinski<\/b><i>, head of stadium real estate<\/i>/.test(sheeted) || !/<b>Sophia Alvarenga<\/b><i>, [a-z]/.test(sheeted)) say("a seat at the top of a group has no role");
+  if (!/class="ask"><span class="q">How do I keep a third space full/.test(sheeted) || /class="ask"><span class="from">Luke, sports bar owner:<\/span><span class="q">What would the hardships be/.test(sheeted)) say("the picked question is not the bold one");
+  if (html(<SheetBody config={scfg} data={d2} instructor group="wed-915" sheet={fixture} />) !== sheeted) say("a group's address draws a different page");
   // A student never sees the sheet, even when one is handed in.
   for (const g of ["", "wed-915"]) {
     const lukeSheet = html(<SheetBody config={scfg} data={d2} instructor={false} group={g} sheet={fixture} />);

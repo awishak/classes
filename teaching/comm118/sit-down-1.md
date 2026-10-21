@@ -197,14 +197,17 @@ scratchpad grabs frames of one cycle (`frames.mjs`) to see the sweep move.
   signed-in instructor and nobody else. The sheet is his own page,
   `/comm118/sitdown/sheet` (`SheetBody` in SitdownPage.jsx), reached from
   Open my sheet on his view of `/comm118/sitdown`: The work (the read across
-  the class, one line a person by table) and a door to each group. Each group
-  is its own page, `/comm118/sitdown/sheet/<session key>`: what the group is
+  the class, one line a person by table, each with their role), then every
+  group in full on the same page: the seats with roles; what the group is
   about; each person's summary, Good points (`points`) and Whose writing
   (`voice`, his own or a tool's, with the evidence); then every question
   sorted by who it is for, with the writer's job, the picks in bold; then each
-  person's own questions. He asked for the split that evening ("one page for
-  me one page for students") and then for the per-group shape ("I'm gonna do
-  it by group").
+  person's own questions. `/comm118/sitdown/sheet/<session key>` is the same
+  page scrolled to that group. He asked for the split that evening ("one page
+  for me one page for students"), then for the per-group shape ("I'm gonna do
+  it by group"), then, shown six separate pages, for one page with roles on
+  every name ("so many diff pages ... make the links clearer"). Sit-Down sheet
+  is in his menu (apps.js) beside Sit-Down 1.
 - **The script**: `node scripts/sitdown-links.mjs` prints every table with
   its links from production. Read-only. Needs `SUPABASE_SERVICE_ROLE_KEY` in
   `.env.local`.

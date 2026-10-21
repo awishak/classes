@@ -9,7 +9,7 @@
 
 import { localWorksheet, openTo } from "./localWorksheets.js";
 import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
-import { SITDOWN_CLASSES } from "./worktopia/sitdown.js";
+import { SITDOWN_CLASSES, SHEET_CLASSES } from "./worktopia/sitdown.js";
 
 // Sit-Down 1 lives in COMM 118, and COMM 999 is the rig for trying the
 // student path. The tables themselves are in worktopia/sitdown.js.
@@ -23,6 +23,9 @@ export function appsFor(config, role) {
     const worktopia = localWorksheet(WORKTOPIA_KEY);
     const answers = worktopia && openTo(worktopia, config.id)
       ? [{ id: "worktopia-answers", label: "Worktopia answers", href: p + "/worksheets/worktopia/answers" }] : [];
+    // His sheet for the sit-downs, beside the Sit-Down page. Andrew,
+    // 2026-10-20: "make the links clearer."
+    const sheet = SHEET_CLASSES.includes(config.id) ? [{ id: "sitdown-sheet", label: "Sit-Down sheet", href: p + "/sitdown/sheet" }] : [];
     return [
       { id: "dashboard", label: "Dashboard", href: p + "/dashboard" },
       { id: "repo", label: "Repository", href: "/repo" },
@@ -30,6 +33,7 @@ export function appsFor(config, role) {
       { id: "worksheets", label: "Worksheets", href: p + "/worksheets" },
       ...answers,
       ...sitdown,
+      ...sheet,
       { id: "grade", label: "Grade view", href: p + "/grade" },
       { id: "checkins", label: "Check-in answers", href: p + "/checkins" },
       { id: "horn", label: "Around the Horn", opens: "horn" },

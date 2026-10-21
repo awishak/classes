@@ -57,6 +57,8 @@ export const sessionName = (name) => { const s = sessionOf(name); return s ? s.n
 // The classes that hold a sit-down: COMM 118, and COMM 999, the rig for
 // trying the student path with Pepe and Jan.
 export const SITDOWN_CLASSES = ["comm118", "comm999"];
+// The classes with an instructor's sheet written: /<class>/sitdown/sheet.
+export const SHEET_CLASSES = ["comm118"];
 export const SITDOWN = {
   title: "Sit-Down 1",
   room: "Vari Hall 206",
