@@ -7,7 +7,10 @@
 // on the assignment that links to it (worksheetSubmits.js reads by key, so
 // nothing there needs to know which repo a sheet came from).
 //
-// A local worksheet is { key, title, mount, open, classes? }. mount(root, {
+// A local worksheet is { key, title, mount, open, classes?, review?, read? }.
+// review is the instructor's page for the whole class at ?review, and read,
+// when a sheet has one, draws one student's file at ?s=<id> in place of the
+// read-only mount. mount(root, {
 // store, viewer, photo, classmates, readOnly, theme }) draws it and returns
 // { destroy }. open: true opens it to every class's students; a list of class
 // ids opens it to those classes only (COMM 999, the rig with Pepe and Jan, for
@@ -25,6 +28,7 @@
 
 import { WORKTOPIA_KEY, WORKTOPIA_TITLE, mountWorktopia } from "./worktopia/terminal.js";
 import { THREE_BY_FIVE_KEY, THREE_BY_FIVE_TITLE, mountThreeByFive } from "./threebyfive/sheet.js";
+import { ThreeByFiveReview, ThreeByFiveRoll } from "./threebyfive/review.jsx";
 import { VISUAL_PRE_KEY, VISUAL_PRE_TITLE, mountVisualPre, VISUAL_PRE_2_KEY, VISUAL_PRE_2_TITLE, mountVisualPre2 } from "./visualstory/pre.jsx";
 import PreReview from "./visualstory/review.jsx";
 import { VISUAL_STORY_KEY, VISUAL_STORY_TITLE, mountVisualStory } from "./visualstory/story.jsx";
@@ -34,7 +38,9 @@ export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
   { key: WORKTOPIA_KEY, title: WORKTOPIA_TITLE, mount: mountWorktopia, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
   // Andrew, 2026-10-16: "i need to make 3x5 available for my comm 3 classes."
-  { key: THREE_BY_FIVE_KEY, title: THREE_BY_FIVE_TITLE, mount: mountThreeByFive, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  // The rolls read big, one page a group, and the class's index. Andrew,
+  // 2026-10-21: "a nice page for each submission for each class."
+  { key: THREE_BY_FIVE_KEY, title: THREE_BY_FIVE_TITLE, mount: mountThreeByFive, review: ThreeByFiveReview, read: ThreeByFiveRoll, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The visual story's topic page, planned 2026-10-13. Tried in COMM 999 with
   // Marty first, then opened to COMM 3 from the Worksheets page. review is the
   // instructor's page at ?review.

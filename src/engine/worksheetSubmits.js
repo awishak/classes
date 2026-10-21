@@ -53,18 +53,24 @@ export function withWorksheetSubmits(data, config, sheets) {
     const base = String(asg.instructionsUrl).trim().replace(/[?#].*$/, "").replace(/\/$/, "");
     const theirs = (s) => base + "?s=" + encodeURIComponent(idOf(s));
     const toSheet = (link) => String(link || "").replace(/[?#].*$/, "").replace(/\/$/, "") === base;
+    const byName = new Map(rosterOf(config, data).map(s => [String(s.name || "").trim().toLowerCase(), s]));
     (sheets[ws.key] || []).forEach(sh => {
-      const s = byEmail.get(sh.viewer_id);
-      if (!s || !sh.submitted_at) return;
-      const log = (al || data.assignmentLog || {})[asg.id]?.[s.name];
-      const live = alive(log).filter(e => e.type === "submission");
-      if (live.length && !live.some(e => toSheet(e.link))) return;
-      al = al || { ...(data.assignmentLog || {}) };
-      const kept = (log || []).map(e => e.type === "submission" && toSheet(e.link) ? { ...e, link: theirs(s) } : e);
-      al[asg.id] = { ...(al[asg.id] || {}), [s.name]: live.length ? kept : [...kept, {
-        id: "ws-" + asg.id + "-" + sh.viewer_id, ts: Date.parse(sh.submitted_at), type: "submission",
-        link: theirs(s), worksheet: ws.key,
-      }].sort((a, b) => (a.ts || 0) - (b.ts || 0)) };
+      const owner = byEmail.get(sh.viewer_id);
+      if (!owner || !sh.submitted_at) return;
+      // A sheet that names a group (3x5) is a submission for each of them,
+      // every link pointed at the owner's file, where the roll lives.
+      const group = [owner, ...(sh.names || []).map(n => byName.get(String(n).trim().toLowerCase())).filter(s => s && s !== owner)];
+      group.forEach(s => {
+        const log = (al || data.assignmentLog || {})[asg.id]?.[s.name];
+        const live = alive(log).filter(e => e.type === "submission");
+        if (live.length && !live.some(e => toSheet(e.link))) return;
+        al = al || { ...(data.assignmentLog || {}) };
+        const kept = (log || []).map(e => e.type === "submission" && toSheet(e.link) ? { ...e, link: theirs(owner) } : e);
+        al[asg.id] = { ...(al[asg.id] || {}), [s.name]: live.length ? kept : [...kept, {
+          id: "ws-" + asg.id + "-" + sh.viewer_id, ts: Date.parse(sh.submitted_at), type: "submission",
+          link: theirs(owner), worksheet: ws.key,
+        }].sort((a, b) => (a.ts || 0) - (b.ts || 0)) };
+      });
     });
   });
   return al ? { ...data, assignmentLog: al } : data;

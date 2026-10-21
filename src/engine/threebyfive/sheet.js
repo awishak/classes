@@ -41,6 +41,12 @@ const freshRoll = (names) => ({
   more: [["", ""], ["", ""], ["", ""]], sent: [[false, false], [false, false], [false, false]],
   started: new Date().toISOString(),
 });
+// The rolls on a sheet, from its answers, for the review pages: roll:a, roll:b
+// and so on, in order, each tidied.
+export const rollsOf = (answers) => Object.keys(answers || {}).map(k => k.match(/^roll:([a-z]+)$/)).filter(Boolean)
+  .map(m => [numberOf(m[1]), m[0]]).sort((a, b) => a[0] - b[0])
+  .map(([, k]) => { try { return tidyRoll(JSON.parse(answers[k]), []); } catch { return null; } }).filter(Boolean);
+
 // A roll read back, with any missing part filled in, so an older shape still draws.
 const tidyRoll = (r, names) => {
   const f = freshRoll(names);

@@ -168,7 +168,7 @@ export default function WorksheetPage({ config, worksheetKey }) {
   } else if (wantIndex) {
     body = "index";
   } else if (sheet && want) {
-    body = them && them.email ? "theirs"
+    body = them && them.email ? (local && local.read && !(session && instructor) && !savedPin() ? <p style={{ fontSize: 17, margin: 0 }}>Only the instructor can open a student's sheet. <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next + "?s=" + encodeURIComponent(want))} style={{ color: config.accent, fontWeight: 600 }}>Sign in</a></p> : "theirs")
       : data === null ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : <p style={{ fontSize: 17, margin: 0 }}>There is no student {want} on the {config.code} roster.</p>;
   } else if (!sheet) {
@@ -204,6 +204,8 @@ export default function WorksheetPage({ config, worksheetKey }) {
         ? <local.review config={config} worksheetKey={worksheetKey} roster={roster} />
         : body === "index"
         ? <JobIndex />
+        : body === "theirs" && local && local.read
+        ? <local.read config={config} worksheetKey={worksheetKey} roster={roster} student={them} />
         : body === "theirs"
         ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} photo={photos[them.name] || ""} />
         : body !== null

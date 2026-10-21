@@ -139,10 +139,30 @@ export default async function handler(req, res) {
 
   const sheets = {};
   for (const key of keys) {
-    const q = `/rest/v1/worksheet_sheets?select=viewer_id,submitted_at&worksheet_key=eq.${key}&group_key=eq.${groupKey}&submitted_at=not.is.null`;
+    const q = `/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${key}&group_key=eq.${groupKey}&submitted_at=not.is.null`;
     const r = await fetch(SUPABASE_URL + q, { headers: serviceHeaders() });
     if (!r.ok) return res.status(502).json({ ok: false, error: "Could not read the worksheet." });
-    sheets[key] = await r.json();
+    const list = await r.json();
+    // 3x5 is group work: a roll on one sheet names up to five students, and
+    // every one of them handed it in. The names ride along so the grade view
+    // can credit each. Andrew, 2026-10-21: "if students work together make
+    // sure both names are on there."
+    if (key === "3x5" && list.length) {
+      const a = await fetch(SUPABASE_URL + `/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${list.map(x => x.id).join(",")})&field=like.roll:*&order=position&limit=20000`, { headers: serviceHeaders() });
+      const slot = {};
+      for (const row of a.ok ? await a.json() : []) slot[row.sheet_id + "\u0000" + row.field + "\u0000" + (row.position || 0)] = row;
+      const joined = {};
+      Object.values(slot).sort((x, y) => (x.position || 0) - (y.position || 0)).forEach(row => {
+        const m = (joined[row.sheet_id] = joined[row.sheet_id] || {});
+        m[row.field] = (m[row.field] || "") + row.value;
+      });
+      list.forEach(x => {
+        const names = new Set();
+        Object.values(joined[x.id] || {}).forEach(v => { try { (JSON.parse(v).names || []).forEach(n => { if (typeof n === "string" && n.trim()) names.add(n.trim()); }); } catch { /* an unreadable roll names nobody */ } });
+        x.names = [...names];
+      });
+    }
+    sheets[key] = list.map(({ id, ...x }) => x);
   }
   return res.status(200).json({ ok: true, sheets });
 }
