@@ -2,8 +2,8 @@
 //
 // COMM 3's worksheet, from the brief at ~/Projects/3x5/BRIEF.md (2026-10-03)
 // and the mockup beside it. A group of one to five drags exactly three photos
-// into each of three strips, then writes two more photos they would shoot for
-// each strip and where they would go to get them. The first strip is named by
+// into each of three strips, then writes one more photo they could get and one
+// graphic that would pair with the three (WRITE_INS). The first strip is named by
 // the group and has to be finished, three photos and two write-ins, before the
 // second and third open. Andrew, 2026-10-03: "they should have to do the first
 // topic on their own ... once they do that and add the 4th and 5th picture
@@ -41,6 +41,11 @@ const freshRoll = (names) => ({
   more: [["", ""], ["", ""], ["", ""]], sent: [[false, false], [false, false], [false, false]],
   started: new Date().toISOString(),
 });
+// The two write-ins under each strip. Andrew, 2026-10-21: "one additional
+// photo you could get, and one graphic that would pair well with these photos."
+// They were two more photos and where to go for them until then.
+export const WRITE_INS = ["One additional photo you could get", "One graphic that would pair well with these photos"];
+
 // The rolls on a sheet, from its answers, for the review pages: roll:a, roll:b
 // and so on, in order, each tidied.
 export const rollsOf = (answers) => Object.keys(answers || {}).map(k => k.match(/^roll:([a-z]+)$/)).filter(Boolean)
@@ -89,6 +94,8 @@ const STYLE = `
 .tx5 .save { margin-left: auto; font-family: var(--mono); font-size: 13px; color: var(--ink-3); }
 .tx5 .save.bad { color: var(--stamp); }
 .tx5 .roll { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 16px; margin-bottom: 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+/* The themes note above the canvas. Andrew, 2026-10-21: "put a little explainer on top that some themes will be about composition ... and some themes will go a bit deeper." */
+.tx5 .themes { font-size: 16px; line-height: 1.5; color: var(--ink-2); margin: 0 0 16px; max-width: 90ch; }
 .tx5 .roll .lbl { font-size: 13px; color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; }
 .tx5 .who { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .tx5 .name { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; padding: 0 4px 0 14px; border-radius: 999px; background: var(--sunk); font-family: var(--mono); font-size: 15px; color: var(--stamp); font-weight: 500; }
@@ -240,6 +247,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
         <span class="save" aria-live="polite"></span>
       </header>
       <div class="roll"><span class="lbl">On this roll</span><div class="who"></div><span class="date"></span></div>
+      ${readOnly ? "" : `<p class="themes">Some themes will be about composition: symmetry, background, shallow depth of field, repetition, framing. Some themes will go a bit deeper. We want at least two of your strips to have deeper themes. A deeper theme helps connect the audience, and it can be better for thinking of what kind of graphics would go with it. So you might have a theme where everything is symmetrical, but as you look at those three photos, think about what the deeper theme might be, and consider replacing one of them with a different photo to get a really strong theme you can build a good visual story on.</p>`}
       <div class="canvas">
         <section class="sheet" aria-label="Contact sheet">
           <div class="sheet-head"><h2>Contact sheet</h2><span class="count"></span></div>
@@ -452,7 +460,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
           const left = [];
           if (!R().cats[0].trim()) left.push("name your first strip");
           if (!R().frames[0].every(Boolean)) left.push("fill the first strip (" + (3 - R().frames[0].filter(Boolean).length) + " to go)");
-          if (written(0) < 2) left.push("write and submit the two more (" + (2 - written(0)) + " to go)");
+          if (written(0) < 2) left.push("write and submit the photo and the graphic (" + (2 - written(0)) + " to go)");
           why.textContent = "Opens when you " + left.join(", ") + ".";
           el.appendChild(why);
         }
@@ -524,8 +532,10 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
         el.appendChild(hint);
       }
       const more = document.createElement("div"); more.className = "more";
-      const lbl = document.createElement("div"); lbl.className = "lbl"; lbl.textContent = "Two more you'd shoot, and where you'd go"; more.appendChild(lbl);
-      for (let m = 0; m < 2; m++) more.appendChild(writeIn(c, m));
+      for (let m = 0; m < 2; m++) {
+        const lbl = document.createElement("label"); lbl.className = "lbl"; lbl.htmlFor = "tx5-more-" + c + "-" + m; lbl.textContent = WRITE_INS[m]; more.appendChild(lbl);
+        more.appendChild(writeIn(c, m));
+      }
       el.appendChild(more);
       stripsEl.appendChild(el);
     });
@@ -533,7 +543,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
   }
   function writeIn(c, m) {
     const box = document.createElement("div"); box.className = "wi";
-    const label = "Photo " + (m + 4) + " for " + catName(c);
+    const label = (m === 0 ? "The additional photo for " : "The graphic for ") + catName(c);
     if (readOnly) {
       const text = R().more[c][m].trim();
       if (!text) { const p = document.createElement("p"); p.className = "wi-empty"; p.textContent = "Not written."; box.appendChild(p); return box; }
@@ -552,7 +562,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
       return box;
     }
     const ta = document.createElement("textarea"); ta.id = "tx5-more-" + c + "-" + m; ta.value = R().more[c][m]; ta.rows = 2;
-    ta.placeholder = m === 0 ? "A dog mid-leap at the dog park on Lincoln." : "Two men at the chess tables in the square, late afternoon.";
+    ta.placeholder = m === 0 ? "A dog mid-leap at the dog park on Lincoln." : "Think about what kind of data would be helpful.";
     ta.setAttribute("aria-label", label);
     const row = document.createElement("div"); row.className = "wi-row";
     const go = document.createElement("button"); go.type = "button"; go.className = "wi-btn go"; go.textContent = "submit";

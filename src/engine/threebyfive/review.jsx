@@ -18,7 +18,7 @@ import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { idOf } from "../roster.js";
-import { rollsOf } from "./sheet.js";
+import { rollsOf, WRITE_INS } from "./sheet.js";
 import * as TOKENS from "../tokens.js";
 
 const BASE = "/3x5/";
@@ -170,8 +170,7 @@ export function ThreeByFiveRoll({ config, worksheetKey, roster, student }) {
               </div>
               {roll.more[c].some(t => t.trim()) ? (
                 <div className="t5r-more">
-                  <span className="t5r-k">Two more they'd shoot, and where they'd go</span>
-                  {roll.more[c].map((t, m) => t.trim() ? <p className="t5r-line" key={m}>{t}</p> : null)}
+                  {roll.more[c].map((t, m) => t.trim() ? <div key={m}><span className="t5r-k">{WRITE_INS[m]}</span><p className="t5r-line">{t}</p></div> : null)}
                 </div>
               ) : null}
             </div>
@@ -225,7 +224,7 @@ a.t5r-names:hover{text-decoration:underline;text-underline-offset:3px}
 .t5r-frame figcaption{position:absolute;left:8px;bottom:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8);font-variant-numeric:tabular-nums}
 .t5r-blank{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:15px;color:${ON_FILM_DIM};background:${FRAME_EMPTY};width:100%;height:100%;display:grid;place-items:center}
 .t5r-more{margin-top:14px;display:flex;flex-direction:column;gap:6px}
-.t5r-k{font-size:12.5px;font-weight:600;color:${ON_FILM_DIM};letter-spacing:.04em;text-transform:uppercase}
+.t5r-k{font-size:13px;font-weight:600;color:${ON_FILM_DIM};letter-spacing:.04em;text-transform:uppercase}
 .t5r-line{margin:0;font-size:16px;line-height:1.5;white-space:pre-wrap;color:${ON_FILM}}
 .t5r-nav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:8px}
 .t5r-link{font-size:15px;font-weight:600;color:${STAMP};text-decoration:underline;text-underline-offset:3px}
