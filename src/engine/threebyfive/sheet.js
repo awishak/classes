@@ -127,7 +127,12 @@ const STYLE = `
 .tx5 .frame.landed img { animation: tx5-land .28s cubic-bezier(.2,.9,.3,1.15); }
 @keyframes tx5-land { 0% { transform: scale(1.18); opacity: .4; } 100% { transform: scale(1); opacity: 1; } }
 .tx5 .frame .eject { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #fff; background: rgba(0,0,0,.55); opacity: 0; transition: opacity .15s; font-weight: 600; }
-.tx5 .frame.full:hover .eject, .tx5 .frame.full:focus-visible .eject { opacity: 1; }
+.tx5 .frame.full:hover .eject, .tx5 .frame.full:focus-visible .eject, .tx5 .frame.full:focus-within .eject { opacity: 1; }
+/* Take a photo out from the frame itself. Andrew, 2026-10-21: "students have to be able to remove pics from a strip, or replace pics." Dropping a photo on a full frame replaces it, and the old one goes back to the sheet. */
+.tx5 .frame .x { position: absolute; top: 4px; right: 4px; width: 28px; height: 28px; border-radius: 999px; border: 1px solid rgba(255,255,255,.7); background: rgba(0,0,0,.6); color: #fff; font-size: 17px; line-height: 1; display: grid; place-items: center; cursor: pointer; padding: 0; opacity: 0; transition: opacity .15s; z-index: 1; }
+.tx5 .frame.full:hover .x, .tx5 .frame.full:focus-within .x, .tx5 .frame .x:focus-visible { opacity: 1; }
+@media (hover: none) { .tx5 .frame.full .x { opacity: 1; } }
+.tx5 .frame.big .x { display: none; }
 .tx5 .more { display: grid; gap: 8px; margin-top: 12px; overflow: hidden; max-height: 0; opacity: 0; transition: max-height .4s ease, opacity .3s ease .1s; }
 .tx5 .strip.complete .more { max-height: 520px; opacity: 1; }
 .tx5 .more .lbl { font-size: 13px; color: var(--on-film-dim); letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
@@ -241,7 +246,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
             <div class="btns">${readOnly ? "" : `<button type="button" class="btn newroll">New roll</button><button type="button" class="btn primary handin" disabled>Hand in</button>`}</div>
           </div>
           <p class="handed" hidden></p>
-          ${readOnly ? "" : `<p class="note">Drag a photo onto a frame, or click the photo to see it big and put it in a strip from there. Big, in the bar, shows every photo full size to scroll through. Click a filled frame to see it big or take it out. Esc shrinks anything big. Return submits a write-in; shift-return starts a new line. Everything saves as you go. Put your group on the roll at the top: the canvas lives on your sheet, so hand it in from here.</p>`}
+          ${readOnly ? "" : `<p class="note">Drag a photo onto a frame, or click the photo to see it big and put it in a strip from there. Big, in the bar, shows every photo full size to scroll through. Drop a photo on a filled frame to replace it, or press the × on the frame to take it out. Click a filled frame to see it big. Esc shrinks anything big. Return submits a write-in; shift-return starts a new line. Everything saves as you go. Put your group on the roll at the top: the canvas lives on your sheet, so hand it in from here.</p>`}
         </aside>
       </div>
     </div>`;
@@ -354,7 +359,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
     const spot = slotOf(p.id);
     if (spot) {
       const [c, s] = spot;
-      bar.appendChild(act("take out of " + stripWord(c), () => { R().frames[c][s] = null; bigFrame = null; persist(); sfx.drop(); renderAll(); checkDone(); }));
+      bar.appendChild(act("take out of " + stripWord(c), () => takeOut(c, s)));
     } else {
       let any = false;
       for (let c = 0; c < 3; c++) {
@@ -488,9 +493,15 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
           const isBig = bigFrame && bigFrame[0] === c && bigFrame[1] === s;
           if (p) { const img = document.createElement("img"); img.src = BASE + (isBig && p.large ? p.large : p.thumb); img.alt = ""; f.appendChild(img); }
           const e = document.createElement("span"); e.className = "eject"; e.textContent = "view"; f.appendChild(e);
+          if (!readOnly) {
+            const x = document.createElement("button"); x.type = "button"; x.className = "x"; x.textContent = "×";
+            x.setAttribute("aria-label", "Take this photo out of " + stripWord(c));
+            x.addEventListener("click", (ev) => { ev.stopPropagation(); takeOut(c, s); });
+            f.appendChild(x);
+          }
           if (isBig) { f.classList.add("big"); if (p && p.w && p.h) f.style.setProperty("--ar", p.w + " / " + p.h); if (p) f.appendChild(actsFor(p)); }
           f.setAttribute("aria-label", "Frame " + (s + 1) + " of " + catName(c) + ", filled. " + (isBig ? "Press to shrink." : "Press to see the photo big."));
-          f.addEventListener("click", (ev) => { if (ev.target.closest(".act")) return; bigFrame = isBig ? null : [c, s]; renderStrips(); });
+          f.addEventListener("click", (ev) => { if (ev.target.closest(".act, .x")) return; bigFrame = isBig ? null : [c, s]; renderStrips(); });
           f.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); f.click(); } });
         } else {
           const sl = document.createElement("span"); sl.className = "slot"; sl.textContent = String(s + 1); f.appendChild(sl);
@@ -627,8 +638,14 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
   }
   function renderAll() { if (!alive) return; renderRoll(); renderSheet(); renderStrips(); sizeGrid(); }
 
+  function takeOut(c, s) {
+    if (readOnly || !R().frames[c][s]) return;
+    R().frames[c][s] = null; bigFrame = null; persist(); sfx.drop(); renderAll(); checkDone();
+  }
+
+  // A full frame takes the new photo and the old one goes back to the sheet.
   function place(id, c, s) {
-    if (readOnly || R().frames[c][s]) return;
+    if (readOnly) return;
     if (placedIn(id) >= 0) return;
     R().frames[c][s] = id; persist();
     const full = R().frames[c].every(Boolean);
@@ -661,7 +678,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
     }
     drag.ghost.style.left = ev.clientX + "px"; drag.ghost.style.top = ev.clientY + "px";
     const under = document.elementFromPoint(ev.clientX, ev.clientY);
-    const f = under && root.contains(under) ? under.closest(".strip:not(.locked) .frame:not(.full)") : null;
+    const f = under && root.contains(under) ? under.closest(".strip:not(.locked) .frame") : null;
     if (drag.over && drag.over !== f) drag.over.classList.remove("over");
     if (f) f.classList.add("over");
     drag.over = f || null;
