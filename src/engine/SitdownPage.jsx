@@ -606,6 +606,10 @@ export function SheetBody({ config, data, instructor = false, group = "", sheet:
     );
   }
   const saved = data?.sitdownRoles || {};
+  // Andrew, 2026-10-20: "need links to all student work on both pages." The
+  // same link his Sit-Down view shows, by the session's spelling of a name.
+  const asg = sitdownAssignment(data?.assignments || config.assignments);
+  const linkFor = (name) => { const p = SESSIONS.flatMap(x => tableOf(x, saved)).find(x => same(x.name, name)); return p ? linkOf(data, p.roster, asg) : null; };
   return (
     <div className="sd sheet-page">
       <header className="top">
@@ -620,8 +624,8 @@ export function SheetBody({ config, data, instructor = false, group = "", sheet:
           <a className="jl" href="#work">The work</a>
           {SESSIONS.map(s => <a key={s.key} className="jl" href={"#" + s.key}>{shortOf(s)}</a>)}
         </nav>
-        <Work sheet={sheet} />
-        {SESSIONS.map(s => <GroupSheet key={s.key} s={s} table={sheet.tables?.[s.key]} roster={tableOf(s, saved)} />)}
+        <Work sheet={sheet} linkFor={linkFor} />
+        {SESSIONS.map(s => <GroupSheet key={s.key} s={s} table={sheet.tables?.[s.key]} roster={tableOf(s, saved)} linkFor={linkFor} />)}
         <p className="meta">{"Written " + sheet.written + ". Every question is exactly as the student wrote it."}</p>
       </>)}
     </div>
@@ -646,7 +650,7 @@ const roleOn = (sheet, name) => {
 // all the work. did they do it? is it good in your opinion? who was working
 // hard? who is thin?" The paragraphs, then one line a person, by group, each
 // with their role.
-function Work({ sheet }) {
+function Work({ sheet, linkFor }) {
   return (
     <section className="sec" id="work">
       <h2 className="h2">The work</h2>
@@ -664,7 +668,7 @@ function Work({ sheet }) {
                     const role = roleOn(sheet, r.name);
                     return (
                       <li key={r.name} className={"rl " + (r.status || "")}>
-                        <span className="rn">{r.name}{role ? <i>{", " + role.toLowerCase()}</i> : null}</span>
+                        <span className="rn">{linkFor(r.name) ? <a className="rep" href={linkFor(r.name).link} target="_blank" rel="noopener noreferrer">{r.name}</a> : r.name}{role ? <i>{", " + role.toLowerCase()}</i> : null}</span>
                         <span className="rs">{STATUS_WORDS[r.status] || "Read"}</span>
                         <span className="rt">{r.line}</span>
                       </li>
@@ -684,7 +688,7 @@ function Work({ sheet }) {
 // about; each person's summary, the good points and whose writing; then every
 // question sorted by who it is for, with the writer's job on each, the picks
 // in bold and marked; then each person's own questions.
-function GroupSheet({ s, table, roster }) {
+function GroupSheet({ s, table, roster, linkFor }) {
   const people = table?.people || [];
   const roleOf = (name) => { const p = people.find(x => same(x.name, name)); if (p?.role) return p.role; const r = roster.find(x => same(x.name, name)); return r?.role?.role || ""; };
   const byFirst = (f) => s.names.find(n => same(first(n), f)) || f;
@@ -693,7 +697,7 @@ function GroupSheet({ s, table, roster }) {
       <header className="sh"><h2 className="h2">{whenOf(s)}</h2><span className="meta">{SITDOWN.room}</span></header>
       <ul className="seats">
         {s.names.map(name => (
-          <li key={name} className="pc" data-c={seatIn(s, name)}><b>{name}</b>{roleOf(name) ? <i>{", " + roleOf(name).toLowerCase()}</i> : null}</li>
+          <li key={name} className="pc" data-c={seatIn(s, name)}><b>{linkFor(name) ? <a className="rep" href={linkFor(name).link} target="_blank" rel="noopener noreferrer">{name}</a> : name}</b>{roleOf(name) ? <i>{", " + roleOf(name).toLowerCase()}</i> : null}</li>
         ))}
       </ul>
       {!people.length ? <p className="p">No sheet for this group yet.</p> : (<>
@@ -705,6 +709,7 @@ function GroupSheet({ s, table, roster }) {
               <h4 className="h4">{p.name}</h4>
               {p.role ? <span className="dr">{p.role}</span> : null}
               {STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}
+              {linkFor(p.name) ? <a className="open" href={linkFor(p.name).link} target="_blank" rel="noopener noreferrer">{"Open " + first(p.name) + "'s report"}<span className="dh">{hostOf(linkFor(p.name).link)}</span></a> : null}
             </header>
             {p.focus ? <p className="p">{p.focus}</p> : null}
             {(p.points || []).length ? (<>
@@ -1008,4 +1013,8 @@ export const CSS = `
 .sd .seats b{font-weight:600;color:var(--pc)}
 .sd .seats i,.sd .rn i{font-style:normal;font-weight:400;color:var(--ink2)}
 .sd .sheet-page .jump{position:sticky;top:0;z-index:5;background:var(--page);padding:10px 0}
+/* A name that opens the report. Andrew, 2026-10-20: "need links to all student work on both pages." */
+.sd .rep{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px;margin:-10px 0}
+.sd .rep:hover{color:var(--accent)}
+.sd .ph .open{margin-left:auto}
 `;

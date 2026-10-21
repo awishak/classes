@@ -5707,9 +5707,14 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     'id="wed-915"', "Wednesday, October 21, 9:15 AM", "Three of four in.", "Each person", "The bar as a third space.", "Good points", "Streaming at home makes the room more valuable.", "Whose writing", "His own. First person and casual.", "Not turned in", "No report turned in.", "by who they are for", "For Charles Kosinski, head of stadium real estate", "Luke, sports bar owner:", "What would the hardships be?", "Their own questions", "Luke Baird, sports bar owner", "How do I keep a third space full?", "Nobody wrote a question for Luke", "No sheet for this group yet."]) {
     if (!sheeted.includes(want)) say("the sheet lacks " + JSON.stringify(want));
   }
-  if (!/class="rn">Luke Baird(<!-- -->)?<i>, sports bar owner<\/i>/.test(sheeted)) say("the roll has no role beside a name");
+  if (!/class="rn"><a class="rep" href="https:\/\/docs.google.com\/document\/d\/luke"[^>]*>Luke Baird<\/a>(<!-- -->)?<i>, sports bar owner<\/i>/.test(sheeted)) say("the roll has no role beside a name, or no link on the name");
+  // Every report is one click away: the seat, the card, the roll. Andrew,
+  // 2026-10-20: "need links to all student work on both pages."
+  if (!sheeted.includes("Open Luke&#x27;s report") || !sheeted.includes("Open Charles&#x27;s report") || !sheeted.includes("https://x.test/charles-prep")) say("a person's card has no link to their report");
+  if (!/<li class="pc" data-c="0"><b><a class="rep" href="https:\/\/docs.google.com\/document\/d\/luke"/.test(sheeted)) say("a seat has no link to the report");
+  if (sheeted.includes("Open Catherine&#x27;s report")) say("a person with no link got an Open button");
   // Every seat at the top of a group carries a role, from the sheet or the roles page.
-  if (!/<li class="pc" data-c="1"><b>Charles Kosinski<\/b><i>, head of stadium real estate<\/i>/.test(sheeted) || !/<b>Sophia Alvarenga<\/b><i>, [a-z]/.test(sheeted)) say("a seat at the top of a group has no role");
+  if (!/<li class="pc" data-c="1"><b><a class="rep" href="https:\/\/x.test\/charles-prep"[^>]*>Charles Kosinski<\/a><\/b><i>, head of stadium real estate<\/i>/.test(sheeted) || !/<b>Sophia Alvarenga<\/b><i>, [a-z]/.test(sheeted)) say("a seat at the top of a group has no role");
   if (!/class="ask"><span class="q">How do I keep a third space full/.test(sheeted) || /class="ask"><span class="from">Luke, sports bar owner:<\/span><span class="q">What would the hardships be/.test(sheeted)) say("the picked question is not the bold one");
   if (html(<SheetBody config={scfg} data={d2} instructor group="wed-915" sheet={fixture} />) !== sheeted) say("a group's address draws a different page");
   // A student never sees the sheet, even when one is handed in.
