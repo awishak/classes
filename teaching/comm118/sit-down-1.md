@@ -315,10 +315,35 @@ talked about their own job, about each relationship, and about the questions
 they and others wrote, and whether they could go beyond the document. No
 grade; he sets the grade. The shape of a comment he has already approved for
 verbal grading, top line then What worked then What to work on, is in the
-memory note on verbal grading and is a reasonable shape here. Where the
-recording goes and how a transcript is made is not built; the meeting
-recording feature in memory is the planned home for recording, Whisper
-transcript, summary and feedback.
+memory note on verbal grading and is a reasonable shape here.
+
+His recalibration after the first two meetings, 2026-10-21: "they all did
+fine, some better than others, and i don't know that we can assign too much
+quality to what they said today. I wasn't really testing them. and I wont' do
+that this week. I was going easy. For the next one, I expect them to be able
+to answer questions from the material." Then: "you can evaluate to some
+degree but my questions weren't tough enough to evaluate on topics. the
+problem is I didn't test them on concepts." And: "i wasn't pushing them.
+doesn't mean you can't evaluate quality to some degree, but i think they were
+all in the B+ to A range." So the Sit-Down 1 read does evaluate quality, with
+that ceiling in mind: explaining the job without reading from the page,
+handling a question they did not write, building on what someone else said
+or waiting for a turn, going past their own document. The read says nothing
+about whether they know the concepts, because no question in the room asked
+for one. No ranking across students; he sets the grade. Sit-Down 2 (week 8) is where the
+questions test concepts from the course material, and the prep and the
+instructor's question list for that one should be built to do that.
+
+The transcript comes from `~/Projects/transcribe` (built 2026-10-21, its
+README has the setup): `bin/transcribe run <memo>.m4a --speakers 5 --out
+~/Projects/classes/private/sitdowns` writes a speaker-lettered transcript,
+and `bin/transcribe names <stem>.json A=Andrew B="Luke Baird" ...` puts the
+names on. Students say their names early but not every turn, so the letters
+get names from content: Andrew is the one asking, and each student's job is
+on the sheet. Speaker separation needs his Hugging Face token in
+`~/Projects/transcribe/.env`; without one, `--no-diarize` still gives the
+plain transcript. The recordings are audio voice memos, and the first two
+(Wed Oct 21, 9:15 and 9:45) exist as of that afternoon.
 
 ## Open
 

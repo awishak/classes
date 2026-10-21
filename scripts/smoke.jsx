@@ -5717,6 +5717,20 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!/<li class="pc" data-c="1"><b><a class="rep" href="https:\/\/x.test\/charles-prep"[^>]*>Charles Kosinski<\/a><\/b><i>, head of stadium real estate<\/i>/.test(sheeted) || !/<b>Sophia Alvarenga<\/b><i>, [a-z]/.test(sheeted)) say("a seat at the top of a group has no role");
   if (!/class="qi ask"><span class="ck" aria-hidden="true">✓<\/span><span class="qb"><span class="q">How do I keep a third space full/.test(sheeted) || !/class="qi"><span class="ck" aria-hidden="true"><\/span><span class="qb"><span class="q">What would the hardships be\?<\/span><span class="from">From Luke, sports bar owner<\/span>/.test(sheeted)) say("the picked question is not the one with the check, or the writer is not under the question");
   if (html(<SheetBody config={scfg} data={d2} instructor group="wed-915" sheet={fixture} />) !== sheeted) say("a group's address draws a different page");
+  // The read from the recording, 2026-10-21: part 3 of a group once the
+  // meeting is on the sheet, the questions moving to 4 and 5; talk time as a
+  // chip a person, his without a seat colour; a card a person in the top
+  // line, what worked, what to work on shape. Without a meeting, nothing.
+  if (sheeted.includes("from the recording") || !/<span class="num">3<\/span>The questions/.test(sheeted)) say("a group with no recording shows a recording part, or the questions moved");
+  const heard = JSON.parse(JSON.stringify(fixture));
+  heard.tables["wed-915"].meeting = { recorded: "2026-10-21", length: "36:30", talk: [{ name: "Andrew", time: "14:00" }, { name: "Luke Baird", time: "3:28" }], notes: ["Seven questions, all Andrew's."] };
+  heard.tables["wed-915"].people[0].heard = { top: "Said the least and used it.", worked: "Had a concrete answer ready.", workOn: "His sources never came out loud." };
+  const heardHtml = html(<SheetBody config={scfg} data={d2} instructor sheet={heard} />);
+  for (const want of ['<span class="num">3</span>The sit-down, from the recording', '<span class="num">4</span>The questions', '<span class="num">5</span>Their own questions', "Seven questions, all Andrew&#x27;s.",
+    '<li class=""><b>14:00</b><span>Andrew</span></li>', '<li class="pc" data-c="0"><b>3:28</b><span>Luke</span></li>', 'class="p top">Said the least and used it.', "What worked", "Had a concrete answer ready.", "What to work on", "His sources never came out loud."]) {
+    if (!heardHtml.includes(want)) say("the recording part lacks " + JSON.stringify(want));
+  }
+  if (html(<SheetBody config={scfg} data={d2} instructor={false} sheet={heard} />).includes("Said the least")) say("a student can see the read from the recording");
   // A student never sees the sheet, even when one is handed in.
   for (const g of ["", "wed-915"]) {
     const lukeSheet = html(<SheetBody config={scfg} data={d2} instructor={false} group={g} sheet={fixture} />);

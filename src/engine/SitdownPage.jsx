@@ -705,6 +705,47 @@ function Question({ q, by, job }) {
     </li>
   );
 }
+// What the recording says. Andrew, 2026-10-21, after the first two meetings:
+// "they all did fine, some better than others ... I wasn't pushing them.
+// doesn't mean you can't evaluate quality to some degree, but i think they
+// were all in the B+ to A range." So the group's line from the recording
+// (length, who talked for how long, what was asked), then one card a person:
+// a top line, what worked, what to work on. Nothing on concepts, because no
+// question in the room asked for one; no ranking across students. He sets
+// the grade. The transcript comes from ~/Projects/transcribe; the words are
+// in `meeting` on the table and `heard` on each person in the sheet.
+function Heard({ s, table }) {
+  const m = table.meeting || {};
+  const people = (table.people || []).filter(p => p.heard);
+  return (<>
+    <h3 className="h3 tag"><span className="num">3</span>The sit-down, from the recording</h3>
+    {(m.talk || []).length ? (
+      <ul className="talk" aria-label="Talk time">
+        {m.talk.map(t => <li key={t.name} className={s.names.includes(t.name) ? "pc" : ""} data-c={s.names.includes(t.name) ? seatIn(s, t.name) : undefined}><b>{t.time}</b><span>{first(t.name)}</span></li>)}
+      </ul>
+    ) : null}
+    {(m.notes || []).map((x, i) => <p key={i} className="p big">{x}</p>)}
+    {people.map(p => (
+      <article key={p.name} className="person pc" data-c={seatIn(s, p.name)}>
+        <header className="ph">
+          <div className="pwho">
+            <h4 className="h4">{p.name}</h4>
+            {p.role ? <span className="dr">{p.role}</span> : null}
+          </div>
+        </header>
+        {p.heard.top ? <p className="p top">{p.heard.top}</p> : null}
+        {p.heard.worked ? (<>
+          <h5 className="h5">What worked</h5>
+          <p className="p">{p.heard.worked}</p>
+        </>) : null}
+        {p.heard.workOn ? (<>
+          <h5 className="h5">What to work on</h5>
+          <p className="p">{p.heard.workOn}</p>
+        </>) : null}
+      </article>
+    ))}
+  </>);
+}
 function GroupSheet({ s, table, roster, linkFor, n, total }) {
   const people = table?.people || [];
   const roleOf = (name) => { const p = people.find(x => same(x.name, name)); if (p?.role) return p.role; const r = roster.find(x => same(x.name, name)); return r?.role?.role || ""; };
@@ -747,7 +788,8 @@ function GroupSheet({ s, table, roster, linkFor, n, total }) {
               </>) : null}
             </article>
           ))}
-          <h3 className="h3 tag"><span className="num">3</span>The questions, by who they are for</h3>
+          {table.meeting ? <Heard s={s} table={table} /> : null}
+          <h3 className="h3 tag"><span className="num">{table.meeting ? 4 : 3}</span>The questions, by who they are for</h3>
           <p className="meta">The check marks the ones I would ask. Under each question is the writer and the writer's job.</p>
           {s.names.map(name => {
             const f = first(name);
@@ -767,7 +809,7 @@ function GroupSheet({ s, table, roster, linkFor, n, total }) {
             );
           })}
           {own.length ? (<>
-            <h3 className="h3 tag"><span className="num">4</span>Their own questions</h3>
+            <h3 className="h3 tag"><span className="num">{table.meeting ? 5 : 4}</span>Their own questions</h3>
             {own.map(p => (
               <div key={p.name} className="qfor pc" data-c={seatIn(s, p.name)}>
                 <header className="qh">
@@ -1029,6 +1071,11 @@ export const CSS = `
 .sd .pts li::marker{color:var(--pc)}
 .sd .person.off .pts li::marker{color:var(--ink2)}
 .sd .p.voice{color:var(--ink2);font-style:italic}
+.sd .talk{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px;width:100%}
+.sd .talk li{display:inline-flex;gap:8px;align-items:baseline;padding:6px 16px 6px 14px;border-radius:999px;background:var(--sunk);font-size:15px;line-height:1.5;box-shadow:inset 4px 0 0 var(--pc,var(--ink2))}
+.sd .talk b{font-variant-numeric:tabular-nums;font-weight:600;color:var(--ink)}
+.sd .talk span{color:var(--ink2)}
+.sd .p.top{font-size:19px;line-height:1.5;font-weight:500;color:var(--ink)}
 .sd .qfor{display:grid;gap:10px;width:100%;box-sizing:border-box;padding:18px 22px 20px;border-radius:var(--rr);background:var(--sunk);box-shadow:inset 5px 0 0 var(--pc)}
 .sd .qfor .h4{color:var(--pc)}
 .sd .ql .from{display:block;font-size:14px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);margin-bottom:2px}
