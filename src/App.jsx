@@ -299,9 +299,12 @@ export default function App() {
   }
   // Sit-Down 1, for the student: /<class>/sitdown. Their table, their time,
   // the prep, where the link goes, and the table's documents once the prep is
-  // due. The instructor sees every table on the same address.
+  // due. The instructor sees every table and every link on the same address.
   // The prep, what goes in the document, is its own page: /<class>/sitdown/prep.
-  const sd = path.match(/^\/(comm118|comm999)\/sitdown(?:\/(prep))?\/?$/);
+  // The instructor's sheet, the read of every report, is his own page:
+  // /<class>/sitdown/sheet. Andrew, 2026-10-20: "one page for me one page for
+  // students."
+  const sd = path.match(/^\/(comm118|comm999)\/sitdown(?:\/(prep|sheet))?\/?$/);
   if (sd && ENGINE[sd[1]]) {
     return <SitdownPage key={sd[1] + (sd[2] || "")} config={ENGINE[sd[1]]} page={sd[2] || "home"} />;
   }

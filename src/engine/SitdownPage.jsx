@@ -33,7 +33,7 @@ import { usePhotos, useWithPhotos } from "./photos.js";
 import { Face } from "./Face.jsx";
 import { genId } from "../utils.jsx";
 import { useCopy, Words } from "./visualstory/pre.jsx";
-import { SESSIONS, SITDOWN, released, sessionOf, tableOf, promptFor, sitdownAssignment, linkOf, withLink, looksLikeLink } from "./worktopia/sitdown.js";
+import { SESSIONS, SITDOWN, released, sessionOf, shortOf, tableOf, promptFor, sitdownAssignment, linkOf, withLink, looksLikeLink } from "./worktopia/sitdown.js";
 import { WORDS, WORDS_ROW, AI_PAGE_URL } from "./worktopia/sitdownWords.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { setClassFavicon } from "./favicon.js";
@@ -71,6 +71,7 @@ const fmtWhen = (ms) => new Date(ms).toLocaleString("en-US", { weekday: "short",
 const whenOf = (s) => s.day + ", " + s.time + " AM";
 const hostOf = (link) => { try { return new URL(link).hostname.replace(/^www\./, ""); } catch { return link; } };
 const prepPath = (config) => config.path + "/sitdown/prep";
+const sheetPath = (config) => config.path + "/sitdown/sheet";
 const homePath = (config) => config.path + "/sitdown";
 
 export default function SitdownPage({ config, page = "home" }) {
@@ -86,7 +87,7 @@ export default function SitdownPage({ config, page = "home" }) {
   const copy = useCopy(!!(session && instructor), WORDS_ROW, WORDS);
 
   useEffect(() => {
-    document.title = config.code + " · " + (page === "prep" ? WORDS["prep.title"] : SITDOWN.title);
+    document.title = config.code + " · " + (page === "prep" ? WORDS["prep.title"] : page === "sheet" ? SITDOWN.title + " · The sheet" : SITDOWN.title);
     setClassFavicon(config);
   }, [config, page]);
 
@@ -122,7 +123,9 @@ export default function SitdownPage({ config, page = "home" }) {
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
-      {gate ? <div className="sd gate">{gate}</div> : (
+      {gate ? <div className="sd gate">{gate}</div> : page === "sheet" ? (
+        <SheetBody config={config} data={data} instructor={!!instructor} />
+      ) : (
         <SitdownBody config={config} data={data} update={update} viewer={viewer} copy={copy} editing={editing} page={page}
           instructor={!!instructor} onEdit={instructor ? () => setEditing(e => !e) : null} onAs={instructor ? pickAs : null} as={as} />
       )}
@@ -134,18 +137,9 @@ export default function SitdownPage({ config, page = "home" }) {
 // and a viewer of its own. `viewer` is { instructor: true } or { name }, the
 // roster's name. `now` is for the render, so a test can sit before or after
 // the release. `page` is "home" or "prep".
-export function SitdownBody({ config, data, update, viewer, copy, editing = false, page = "home", instructor = false, onEdit, onAs, as = "", now = Date.now(), sheet: given = null }) {
+export function SitdownBody({ config, data, update, viewer, copy, editing = false, page = "home", instructor = false, onEdit, onAs, as = "", now = Date.now() }) {
   const saved = data?.sitdownRoles || {};
   const asg = sitdownAssignment(data?.assignments || config.assignments);
-  // `given` is the smoke run handing a sheet in; the page asks the server.
-  const [loaded, setLoaded] = useState(null);
-  const sheet = given || loaded;
-  useEffect(() => {
-    if (!instructor || given) return undefined;
-    let alive = true;
-    loadSheet(config.id).then(s => { if (alive && s) setLoaded(s); }).catch(() => {});
-    return () => { alive = false; };
-  }, [instructor, given, config.id]);
   const prep = page === "prep";
   const suffix = as ? "?as=" + encodeURIComponent(as) : "";
 
@@ -172,6 +166,7 @@ export function SitdownBody({ config, data, update, viewer, copy, editing = fals
               </label>
             ) : null}
             <a className="lnk" href={config.path + "/worksheets/worktopia/roles"}>Open the roles page</a>
+            {SHEET_CLASSES.has(config.id) ? <a className="btn" href={sheetPath(config)}>Open my sheet</a> : null}
             <span className="meta" aria-live="polite">{copy.status || (editing ? "Change any line students read. Clear a line to put the original back." : "")}</span>
           </div>
         ) : null}
@@ -180,7 +175,7 @@ export function SitdownBody({ config, data, update, viewer, copy, editing = fals
       {prep
         ? <Prep config={config} data={data} copy={copy} editing={editing} table={viewer.instructor ? null : tableOf(sessionOf(viewer.name), saved)} me={viewer.name} suffix={suffix} />
         : viewer.instructor
-          ? <AllTables config={config} data={data} saved={saved} asg={asg} sheet={sheet} now={now} />
+          ? <AllTables config={config} data={data} saved={saved} asg={asg} now={now} />
           : <Mine config={config} data={data} update={update} name={viewer.name} saved={saved} asg={asg} copy={copy} editing={editing} now={now} suffix={suffix} />}
     </div>
   );
@@ -503,7 +498,7 @@ function Prep({ config, data, copy, editing, table, me, suffix = "" }) {
 
 // ─── every table, for the instructor ───
 
-function AllTables({ config, data, saved, asg, sheet, now }) {
+function AllTables({ config, data, saved, asg, now }) {
   const all = SESSIONS.flatMap(s => tableOf(s, saved));
   const inCount = all.filter(p => linkOf(data, p.roster, asg)).length;
   return (<>
@@ -537,10 +532,8 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
         <a className="dl" href={prepPath(config)}>Open the prep page</a>
       </div>
     </section>
-    {sheet?.overview?.length ? <Work sheet={sheet} /> : null}
     {SESSIONS.map(s => {
       const table = tableOf(s, saved);
-      const tableSheet = sheet?.tables?.[s.key]?.people?.length ? sheet.tables[s.key] : null;
       const got = table.filter(p => linkOf(data, p.roster, asg)).length;
       return (
         <section key={s.key} id={s.key} className="sec">
@@ -568,71 +561,158 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
               );
             })}
           </ul>
-          {tableSheet ? <Sheet table={tableSheet} /> : sheet ? <p className="meta">{sheet.written ? "No sheet for this table." : "The sheet for this table is written after the prep is in."}</p> : null}
         </section>
       );
     })}
   </>);
 }
 
-// The read across the whole class, above the tables. Andrew, 2026-10-20: "i
-// want a summary of all the work. did they do it? is it good in your opinion?
-// who was working hard? who is thin?" The paragraphs, then one line a person.
-function Work({ sheet }) {
+// ─── the instructor's sheet, its own page ───
+//
+// Andrew, 2026-10-20: "we need to separate. one page for me one page for
+// students. give me a different page. and please make it easier to read." So
+// /<class>/sitdown/sheet: the read across the class, then each table with the
+// questions to ask first and everyone's report after. A student who lands
+// here is told the page is the instructor's. The sheet comes from
+// /api/sitdown-sheet; `given` is the smoke run handing one in.
+export function SheetBody({ config, data, instructor = false, sheet: given = null }) {
+  const [loaded, setLoaded] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const sheet = given || loaded;
+  useEffect(() => {
+    if (!instructor || given) return undefined;
+    let alive = true;
+    loadSheet(config.id).then(s => { if (!alive) return; if (s) setLoaded(s); else setFailed(true); }).catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [instructor, given, config.id]);
+  if (!instructor) {
+    return (
+      <div className="sd gate">
+        <p className="p">This page is the instructor's.</p>
+        <a className="dl" href={homePath(config)}>Open the Sit-Down page</a>
+      </div>
+    );
+  }
+  return (
+    <div className="sd sheet-page">
+      <header className="top">
+        <div className="eyebrow"><a className="crumb" href={homePath(config)}>{config.code + " · " + SITDOWN.title}</a></div>
+        <h1 className="h1">The sheet</h1>
+        {sheet ? <p className="intro">{countsLine(sheet)}</p> : null}
+      </header>
+      {!sheet ? (
+        <section className="sec"><p className="p">{failed ? "No sheet is written for this class yet." : "Loading the sheet."}</p></section>
+      ) : (<>
+        <nav className="jump" aria-label="Sections">
+          <a className="jl" href="#work">The work</a>
+          {SESSIONS.map(s => <a key={s.key} className="jl" href={"#" + s.key}>{shortOf(s)}</a>)}
+        </nav>
+        <Work sheet={sheet} />
+        {SESSIONS.map(s => <TableSheet key={s.key} s={s} table={sheet.tables?.[s.key]} />)}
+        <p className="meta">{"Written " + sheet.written + ". Every question is exactly as the student wrote it."}</p>
+      </>)}
+    </div>
+  );
+}
+
+// "22 of 25 turned in. 15 read, 6 locked, 1 not a Doc, 3 missing."
+const countsLine = (sheet) => {
   const c = sheet.counts || {};
+  if (!c.roster) return "";
+  const parts = [c.read + " read", c.locked ? c.locked + " locked" : "", c.notADoc ? c.notADoc + " not a Doc" : "", c.missing ? c.missing + " missing" : ""].filter(Boolean);
+  return c.turnedIn + " of " + c.roster + " turned in. " + parts.join(", ") + ".";
+};
+const seatIn = (s, name) => { const i = s.names.indexOf(name); return i >= 0 ? i % 8 : 0; };
+
+// The read across the whole class. Andrew, 2026-10-20: "i want a summary of
+// all the work. did they do it? is it good in your opinion? who was working
+// hard? who is thin?" The paragraphs, then one line a person, by table.
+function Work({ sheet }) {
   return (
     <section className="sec" id="work">
-      <header className="sh">
-        <h2 className="h2">The work</h2>
-        {c.roster ? <span className="meta">{[c.turnedIn + " of " + c.roster + " turned in", c.read + " read", c.locked ? c.locked + " locked" : "", c.notADoc ? c.notADoc + " not a Doc" : "", c.missing ? c.missing + " missing" : ""].filter(Boolean).join(" · ")}</span> : null}
-      </header>
-      {sheet.overview.map((o, i) => <p key={i} className="p">{o}</p>)}
+      <h2 className="h2">The work</h2>
+      <div className="prose">{(sheet.overview || []).map((o, i) => <p key={i} className="p big">{o}</p>)}</div>
       {(sheet.roll || []).length ? (
-        <ul className="roll">
-          {sheet.roll.map(r => (
-            <li key={r.name} className={"rl " + (r.status || "")}>
-              <span className="rn">{r.name}</span>
-              <span className="rs">{STATUS_WORDS[r.status] || (r.status === "read" ? "Read" : r.status)}</span>
-              <span className="rt">{r.line}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="rollg">
+          {SESSIONS.map(s => {
+            const rows = sheet.roll.filter(r => r.table === s.key);
+            if (!rows.length) return null;
+            return (
+              <div key={s.key} className="rollt">
+                <h3 className="h3"><a href={"#" + s.key}>{whenOf(s)}</a></h3>
+                <ul className="roll">
+                  {rows.map(r => (
+                    <li key={r.name} className={"rl " + (r.status || "")}>
+                      <span className="rn">{r.name}</span>
+                      <span className="rs">{STATUS_WORDS[r.status] || "Read"}</span>
+                      <span className="rt">{r.line}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </div>
       ) : null}
-      <p className="meta">Written {sheet.written}. Questions on the sheets below are exactly as students wrote them.</p>
     </section>
   );
 }
 
-// The instructor's sheet for one table: what the table is about, then each
-// person's status, what their report focuses on, how they see each
-// relationship, and every question they wrote, tagged with who the question
-// is about, the picked ones in bold. Andrew, 2026-10-20: "a cheat sheet with
+// One table: what the table is about, the picked questions first, then each
+// person with status, focus, how they see each group-mate, and every question
+// they wrote, tagged own or for whom. Andrew, 2026-10-20: "a cheat sheet with
 // what they focused on, as well as all of their questions, and who wrote them
 // for whom."
-function Sheet({ table }) {
+function TableSheet({ s, table }) {
+  const people = table?.people || [];
+  const picks = people.flatMap(p => (p.questions || []).filter(q => q.ask).map(q => ({ ...q, by: p.name })));
   return (
-    <div className="sheet">
-      <h3 className="h3">The sheet</h3>
-      {table.focus ? <p className="p">{table.focus}</p> : null}
-      {(table.people || []).map(p => (
-        <div key={p.name} className={"sp" + (p.status && p.status !== "read" ? " off" : "")}>
-          <div className="pn">{p.name}{p.role ? <span className="dr">{", " + p.role}</span> : null}{STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}</div>
-          {p.focus || p.summary ? <p className="p">{p.focus || p.summary}</p> : null}
-          {(p.relations || []).length ? (
-            <ul className="list">{p.relations.map((r, i) => <li key={i}><b>{"With " + r.with + ": "}</b>{r.line}</li>)}</ul>
-          ) : null}
-          {(p.questions || []).length ? (
-            <ul className="qs">{p.questions.map((q, i) => <li key={i} className={q.ask ? "ask" : ""}><span className="qf">{q.for ? "for " + q.for : "own"}</span>{q.q}</li>)}</ul>
-          ) : null}
-        </div>
-      ))}
-      {(table.ask || []).length ? (<>
-        <h3 className="h3">To ask the table</h3>
-        <ul className="qs">{table.ask.map((q, i) => <li key={i} className="ask">{q}</li>)}</ul>
-      </>) : null}
-    </div>
+    <section className="sec" id={s.key}>
+      <header className="sh"><h2 className="h2">{whenOf(s)}</h2><span className="meta">{SITDOWN.room}</span></header>
+      {!people.length ? <p className="p">No sheet for this table yet.</p> : (<>
+        {table.focus ? <p className="p big">{table.focus}</p> : null}
+        {picks.length ? (
+          <div className="asks">
+            <h3 className="h3">Ask first</h3>
+            <ol className="askl">
+              {picks.map((q, i) => (
+                <li key={i} className="pc" data-c={seatIn(s, q.by)}>
+                  <span className="who">{first(q.by) + (q.for ? ", for " + q.for : ", own")}</span>
+                  <span className="q">{q.q}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        ) : null}
+        <h3 className="h3">Everyone</h3>
+        {people.map(p => (
+          <article key={p.name} className={"person pc" + (p.status && p.status !== "read" ? " off" : "")} data-c={seatIn(s, p.name)}>
+            <header className="ph">
+              <h4 className="h4">{p.name}</h4>
+              {p.role ? <span className="dr">{p.role}</span> : null}
+              {STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}
+            </header>
+            {p.focus ? <p className="p">{p.focus}</p> : null}
+            {(p.relations || []).length ? (
+              <ul className="rel">{p.relations.map((r, i) => <li key={i}><b>{"With " + r.with}</b><span>{r.line}</span></li>)}</ul>
+            ) : null}
+            {(p.questions || []).length ? (
+              <ol className="ql">
+                {p.questions.map((q, i) => (
+                  <li key={i} className={q.ask ? "ask" : ""}>
+                    <span className="qf">{q.for ? "for " + q.for : "own"}</span>
+                    <span className="q">{q.q}</span>
+                  </li>
+                ))}
+              </ol>
+            ) : null}
+          </article>
+        ))}
+      </>)}
+    </section>
   );
 }
+
 
 export const CSS = `
 .sd-root{--page:#f3f4f1;--card:#ffffff;--sunk:#eef2f0;--ink:#22302f;--ink2:#586864;--line:#dfe6e3;--accent:#27756a;--accent-tint:#e2f0ec;--on-accent:#ffffff;--ok:#0f766e;--warn:#b45309;--late:#c81e1e;--serif:'Fraunces',Georgia,serif;--sans:'Outfit',system-ui,sans-serif;--r:18px;--rr:12px}
@@ -831,4 +911,36 @@ export const CSS = `
 .sd .dl .dh{-webkit-text-fill-color:var(--ink2)}
 .sd .open .dh{-webkit-text-fill-color:currentColor}
 @keyframes sd-glint{0%,70%{background-position:100% 0}100%{background-position:0% 0}}
+/* The sheet page: one column, bigger type, room to read. Andrew, 2026-10-20: "please make it easier to read." */
+.sd.sheet-page{max-width:820px;font-size:18px;gap:20px}
+.sd.sheet-page .sec{padding:28px 32px 32px;gap:18px}
+.sd .jump{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0}
+.sd .jl{display:inline-flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;border:2px solid var(--accent);color:var(--accent);font-weight:600;font-size:16px;text-decoration:none;background:var(--card)}
+.sd .jl:hover{background:var(--accent);color:var(--on-accent)}
+.sd .prose{display:grid;gap:14px}
+.sd .p.big{font-size:19px;line-height:1.6;max-width:68ch}
+.sd .rollg{display:grid;gap:22px;width:100%;padding-top:6px}
+.sd .rollt{display:grid;gap:4px}
+.sd .rollt .h3 a{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px}
+.sd .asks{display:grid;gap:12px;width:100%;background:var(--sunk);border-radius:var(--rr);padding:18px 22px 22px;box-sizing:border-box;box-shadow:inset 5px 0 0 var(--accent)}
+.sd .askl{margin:0;padding-left:28px;display:grid;gap:14px;font-size:18px;line-height:1.5;color:var(--ink)}
+.sd .askl li::marker{color:var(--accent);font-weight:600}
+.sd .askl .who{display:block;font-size:14px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--pc);margin-bottom:2px}
+.sd .askl .q{font-weight:500}
+.sd .person{display:grid;gap:12px;width:100%;box-sizing:border-box;padding:20px 22px 22px;border-radius:var(--rr);background:var(--sunk);box-shadow:inset 5px 0 0 var(--pc)}
+.sd .person.off{box-shadow:inset 5px 0 0 var(--warn)}
+.sd .ph{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px}
+.sd .h4{margin:0;font-family:var(--serif);font-size:25px;font-weight:500;line-height:1.2;color:var(--pc)}
+.sd .person.off .h4{color:var(--ink)}
+.sd .rel{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:17px;line-height:1.5;color:var(--ink)}
+.sd .rel li{display:grid;grid-template-columns:150px minmax(0,1fr);gap:12px}
+.sd .rel b{color:var(--pc);font-weight:600}
+.sd .person.off .rel b{color:var(--ink)}
+.sd .ql{margin:0;padding-left:28px;display:grid;gap:10px;font-size:17px;line-height:1.5;color:var(--ink2)}
+.sd .ql li::marker{color:var(--ink2)}
+.sd .ql .ask{color:var(--ink);font-weight:600}
+.sd .ql .ask::marker{color:var(--accent);font-weight:600}
+.sd .ql .q{display:inline}
+@media (max-width:640px){.sd .rel li{grid-template-columns:1fr;gap:2px}.sd.sheet-page .sec{padding:18px}.sd .person,.sd .asks{padding:16px}}
+@media print{.sd .jump,.sd .crumb{display:none}.sd-root{background:#fff}.sd .sec,.sd .person{break-inside:avoid}}
 `;

@@ -5677,9 +5677,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   }
   const none = html(<SitdownBody config={scfg} data={{ ...d2, assignments: [] }} update={() => {}} viewer={{ instructor: true }} copy={copy} instructor now={before} />);
   if (!none.includes("No assignment on My Work points at this page yet")) say("the instructor is not told there is no assignment");
-  // The sheet, handed in the way the server hands it: the read across the
-  // class on top, a sheet under each table with status, focus and every
+  // The sheet is its own page. Andrew, 2026-10-20: "one page for me one page
+  // for students." His view of the Sit-Down page carries the door to the
+  // sheet and none of the sheet; the sheet page carries the read across the
+  // class, then each table with the picks first and everyone after, every
   // question tagged with who the question is about.
+  if (!all.includes("/comm118/sitdown/sheet") || !all.includes("Open my sheet")) say("the instructor's view has no door to the sheet");
+  const { SheetBody } = await import("../src/engine/SitdownPage.jsx");
   const fixture = { written: "2026-10-20", counts: { roster: 25, turnedIn: 22, read: 15, locked: 6, notADoc: 1, missing: 3 },
     overview: ["22 of 25 turned in a link by Monday night."],
     roll: [{ name: "Luke Baird", table: "wed-915", status: "read", line: "Solid." }, { name: "Charles Kosinski", table: "wed-915", status: "missing", line: "No link turned in." }],
@@ -5688,15 +5692,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
         questions: [{ q: "How do I keep a third space full?", for: null, ask: true }, { q: "What would the hardships be?", for: "Charles", ask: false }] },
       { name: "Charles Kosinski", role: "Head of stadium real estate", status: "missing", focus: "No report turned in.", relations: [], questions: [] },
     ], ask: [] } } };
-  const sheeted = html(<SitdownBody config={scfg} data={d2} update={() => {}} viewer={{ instructor: true }} copy={copy} instructor now={after} sheet={fixture} />);
-  for (const want of ["The work", "22 of 25 turned in", "15 read", "6 locked", "1 not a Doc", "3 missing", "Three of four in.", "The bar as a third space.", "With Charles: ", ">own<", ">for Charles<", "Not turned in", "No report turned in.", "How do I keep a third space full?"]) {
-    if (!sheeted.includes(want)) say("the sheet lacks " + JSON.stringify(want));
+  if (all.includes("The work") || all.includes("Ask first")) say("the instructor's Sit-Down page carries the sheet");
+  const sheeted = html(<SheetBody config={scfg} data={d2} instructor sheet={fixture} />);
+  for (const want of ["The sheet", "The work", "22 of 25 turned in. 15 read, 6 locked, 1 not a Doc, 3 missing.", "Three of four in.", "Ask first", "Luke, own", "Everyone", "The bar as a third space.", "With Charles", ">own<", ">for Charles<", "Not turned in", "No report turned in.", "How do I keep a third space full?", "No sheet for this table yet."]) {
+    if (!sheeted.includes(want)) say("the sheet page lacks " + JSON.stringify(want));
   }
-  if (!/class="ask"><span class="qf">own<\/span>How do I keep a third space full/.test(sheeted) || /class="ask"><span class="qf">for Charles<\/span>What would the hardships be/.test(sheeted)) say("the picked question is not the bold one");
-  if (!sheeted.includes("No sheet for this table.")) say("a table with no sheet does not say so");
+  if (!/class="ask"><span class="qf">own<\/span><span class="q">How do I keep a third space full/.test(sheeted) || /class="ask"><span class="qf">for Charles<\/span><span class="q">What would the hardships be/.test(sheeted)) say("the picked question is not the bold one");
+  if (sheeted.includes("What would the hardships be?</span></li></ol></div>")) say("an unpicked question is in Ask first");
   // A student never sees the sheet, even when one is handed in.
-  const lukeSheet = html(<SitdownBody config={scfg} data={d2} update={() => {}} viewer={{ name: "Luke Baird" }} copy={copy} now={after} sheet={fixture} />);
-  if (lukeSheet.includes("The work") || lukeSheet.includes("The bar as a third space.")) say("a student can see the instructor's sheet");
+  const lukeSheet = html(<SheetBody config={scfg} data={d2} instructor={false} sheet={fixture} />);
+  if (lukeSheet.includes("The work") || lukeSheet.includes("The bar as a third space.") || !lukeSheet.includes("This page is the instructor")) say("a student can see the instructor's sheet");
   // Every word a student reads is a clause that ends on something named.
   Object.entries(WORDS).forEach(([k, v]) => {
     for (const clause of String(v).split(/[.;,]/)) if (/\b(it|this|that|one|them)\s*$/i.test(clause.trim())) say("the words at " + k + " end a clause on a word that names nothing: " + JSON.stringify(clause.trim()));

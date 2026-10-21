@@ -194,9 +194,12 @@ scratchpad grabs frames of one cycle (`frames.mjs`) to see the sweep move.
   is in .gitignore), the live copy is in the private `instructor` bucket on
   Supabase, `scripts/sitdown-sheet.mjs --file private/comm118-sitdown-1.json
   --write` puts a new copy up, and `/api/sitdown-sheet` hands the file to a
-  signed-in instructor and nobody else. His view of `/comm118/sitdown` draws
-  The work (the read across the class, one line a person) above the tables
-  and each table's sheet under its links.
+  signed-in instructor and nobody else. The sheet is his own page,
+  `/comm118/sitdown/sheet` (`SheetBody` in SitdownPage.jsx), reached from
+  Open my sheet on his view of `/comm118/sitdown`: The work (the read across
+  the class, one line a person by table), then each table with Ask first (the
+  picks, who wrote each and for whom) and everyone's report after. He asked
+  for the split that evening: "one page for me one page for students."
 - **The script**: `node scripts/sitdown-links.mjs` prints every table with
   its links from production. Read-only. Needs `SUPABASE_SERVICE_ROLE_KEY` in
   `.env.local`.
