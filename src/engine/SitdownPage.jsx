@@ -74,7 +74,7 @@ const prepPath = (config) => config.path + "/sitdown/prep";
 const sheetPath = (config) => config.path + "/sitdown/sheet";
 const homePath = (config) => config.path + "/sitdown";
 
-export default function SitdownPage({ config, page = "home" }) {
+export default function SitdownPage({ config, page = "home", group = "" }) {
   const [stored, update] = useClassData(config.storageKey);
   const [photos] = usePhotos(config.storageKey);
   const data = useWithPhotos(stored, photos);
@@ -124,7 +124,7 @@ export default function SitdownPage({ config, page = "home" }) {
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
       {gate ? <div className="sd gate">{gate}</div> : page === "sheet" ? (
-        <SheetBody config={config} data={data} instructor={!!instructor} />
+        <SheetBody config={config} data={data} instructor={!!instructor} group={group} />
       ) : (
         <SitdownBody config={config} data={data} update={update} viewer={viewer} copy={copy} editing={editing} page={page}
           instructor={!!instructor} onEdit={instructor ? () => setEditing(e => !e) : null} onAs={instructor ? pickAs : null} as={as} />
@@ -567,15 +567,20 @@ function AllTables({ config, data, saved, asg, now }) {
   </>);
 }
 
-// ─── the instructor's sheet, its own page ───
+// ─── the instructor's sheet, its own pages ───
 //
 // Andrew, 2026-10-20: "we need to separate. one page for me one page for
-// students. give me a different page. and please make it easier to read." So
-// /<class>/sitdown/sheet: the read across the class, then each table with the
-// questions to ask first and everyone's report after. A student who lands
-// here is told the page is the instructor's. The sheet comes from
-// /api/sitdown-sheet; `given` is the smoke run handing one in.
-export function SheetBody({ config, data, instructor = false, sheet: given = null }) {
+// students. give me a different page. and please make it easier to read."
+// Then: "one document per group where it's a summary of each person's work
+// and then also I want the list of questions ... what are all the questions
+// for Kate, what are all the questions for Charles ... put their jobs there
+// ... highlight which questions you think are better. I'm gonna do it by
+// group." So /<class>/sitdown/sheet is The work and a door to each group, and
+// /<class>/sitdown/sheet/<key> is one group: each person's summary, the good
+// points, whose writing, then the questions sorted by who they are for. A
+// student who lands here is told the page is the instructor's. The sheet
+// comes from /api/sitdown-sheet; `given` is the smoke run handing one in.
+export function SheetBody({ config, data, instructor = false, group = "", sheet: given = null }) {
   const [loaded, setLoaded] = useState(null);
   const [failed, setFailed] = useState(false);
   const sheet = given || loaded;
@@ -593,24 +598,29 @@ export function SheetBody({ config, data, instructor = false, sheet: given = nul
       </div>
     );
   }
+  const s = group ? SESSIONS.find(x => x.key === group) : null;
+  const saved = data?.sitdownRoles || {};
   return (
     <div className="sd sheet-page">
       <header className="top">
-        <div className="eyebrow"><a className="crumb" href={homePath(config)}>{config.code + " · " + SITDOWN.title}</a></div>
-        <h1 className="h1">The sheet</h1>
-        {sheet ? <p className="intro">{countsLine(sheet)}</p> : null}
+        <div className="eyebrow">
+          <a className="crumb" href={homePath(config)}>{config.code + " · " + SITDOWN.title}</a>
+          {s ? <span className="sep">/</span> : null}
+          {s ? <a className="crumb" href={sheetPath(config)}>The sheet</a> : null}
+        </div>
+        <h1 className="h1">{s ? whenOf(s) : "The sheet"}</h1>
+        {s ? <p className="intro">{SITDOWN.room + ". " + tableOf(s, saved).map(p => first(p.name) + (p.role ? ", " + p.role.role.toLowerCase() : "")).join("; ") + "."}</p>
+          : sheet ? <p className="intro">{countsLine(sheet)}</p> : null}
       </header>
       {!sheet ? (
         <section className="sec"><p className="p">{failed ? "No sheet is written for this class yet." : "Loading the sheet."}</p></section>
+      ) : s ? (
+        <GroupSheet config={config} s={s} table={sheet.tables?.[s.key]} roster={tableOf(s, saved)} />
       ) : (<>
-        <nav className="jump" aria-label="Sections">
-          <a className="jl" href="#work">The work</a>
-          {SESSIONS.map(s => <a key={s.key} className="jl" href={"#" + s.key}>{shortOf(s)}</a>)}
-        </nav>
+        <Doors config={config} sheet={sheet} />
         <Work sheet={sheet} />
-        {SESSIONS.map(s => <TableSheet key={s.key} s={s} table={sheet.tables?.[s.key]} />)}
-        <p className="meta">{"Written " + sheet.written + ". Every question is exactly as the student wrote it."}</p>
       </>)}
+      {sheet ? <p className="meta">{"Written " + sheet.written + ". Every question is exactly as the student wrote it."}</p> : null}
     </div>
   );
 }
@@ -623,10 +633,34 @@ const countsLine = (sheet) => {
   return c.turnedIn + " of " + c.roster + " turned in. " + parts.join(", ") + ".";
 };
 const seatIn = (s, name) => { const i = s.names.indexOf(name); return i >= 0 ? i % 8 : 0; };
+const groupPath = (config, s) => sheetPath(config) + "/" + s.key;
+
+// One door per group, with who is in and how many reports were read.
+function Doors({ config, sheet }) {
+  return (
+    <section className="sec">
+      <ul className="doors">
+        {SESSIONS.map(s => {
+          const people = sheet.tables?.[s.key]?.people || [];
+          const read = people.filter(p => p.status === "read").length;
+          return (
+            <li key={s.key}>
+              <a className="door" href={groupPath(config, s)}>
+                <span className="dwhen">{whenOf(s)}</span>
+                <span className="dwho">{s.names.map(first).join(", ")}</span>
+                <span className="dread">{people.length ? read + " of " + people.length + " read" : "No sheet yet"}</span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 // The read across the whole class. Andrew, 2026-10-20: "i want a summary of
 // all the work. did they do it? is it good in your opinion? who was working
-// hard? who is thin?" The paragraphs, then one line a person, by table.
+// hard? who is thin?" The paragraphs, then one line a person, by group.
 function Work({ sheet }) {
   return (
     <section className="sec" id="work">
@@ -639,7 +673,7 @@ function Work({ sheet }) {
             if (!rows.length) return null;
             return (
               <div key={s.key} className="rollt">
-                <h3 className="h3"><a href={"#" + s.key}>{whenOf(s)}</a></h3>
+                <h3 className="h3">{whenOf(s)}</h3>
                 <ul className="roll">
                   {rows.map(r => (
                     <li key={r.name} className={"rl " + (r.status || "")}>
@@ -658,59 +692,73 @@ function Work({ sheet }) {
   );
 }
 
-// One table: what the table is about, the picked questions first, then each
-// person with status, focus, how they see each group-mate, and every question
-// they wrote, tagged own or for whom. Andrew, 2026-10-20: "a cheat sheet with
-// what they focused on, as well as all of their questions, and who wrote them
-// for whom."
-function TableSheet({ s, table }) {
+// One group's page. What the group is about; each person's summary, the good
+// points and whose writing; then every question sorted by who it is for, with
+// the writer's job on each, the picks in bold and marked; then each person's
+// own questions.
+function GroupSheet({ s, table, roster }) {
   const people = table?.people || [];
-  const picks = people.flatMap(p => (p.questions || []).filter(q => q.ask).map(q => ({ ...q, by: p.name })));
-  return (
-    <section className="sec" id={s.key}>
-      <header className="sh"><h2 className="h2">{whenOf(s)}</h2><span className="meta">{SITDOWN.room}</span></header>
-      {!people.length ? <p className="p">No sheet for this table yet.</p> : (<>
-        {table.focus ? <p className="p big">{table.focus}</p> : null}
-        {picks.length ? (
-          <div className="asks">
-            <h3 className="h3">Ask first</h3>
-            <ol className="askl">
-              {picks.map((q, i) => (
-                <li key={i} className="pc" data-c={seatIn(s, q.by)}>
-                  <span className="who">{first(q.by) + (q.for ? ", for " + q.for : ", own")}</span>
-                  <span className="q">{q.q}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        ) : null}
-        <h3 className="h3">Everyone</h3>
-        {people.map(p => (
-          <article key={p.name} className={"person pc" + (p.status && p.status !== "read" ? " off" : "")} data-c={seatIn(s, p.name)}>
-            <header className="ph">
-              <h4 className="h4">{p.name}</h4>
-              {p.role ? <span className="dr">{p.role}</span> : null}
-              {STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}
-            </header>
-            {p.focus ? <p className="p">{p.focus}</p> : null}
-            {(p.relations || []).length ? (
-              <ul className="rel">{p.relations.map((r, i) => <li key={i}><b>{"With " + r.with}</b><span>{r.line}</span></li>)}</ul>
-            ) : null}
-            {(p.questions || []).length ? (
+  const roleOf = (name) => { const p = people.find(x => same(x.name, name)) || roster.find(x => same(x.name, name)); return p ? (p.role?.role || p.role || "") : ""; };
+  const byFirst = (f) => s.names.find(n => same(first(n), f)) || f;
+  if (!people.length) return <section className="sec"><p className="p">No sheet for this group yet.</p></section>;
+  return (<>
+    {table.focus ? <section className="sec"><p className="p big">{table.focus}</p></section> : null}
+    <section className="sec" id="people">
+      <h2 className="h2">Each person's work</h2>
+      {people.map(p => (
+        <article key={p.name} className={"person pc" + (p.status && p.status !== "read" ? " off" : "")} data-c={seatIn(s, p.name)}>
+          <header className="ph">
+            <h3 className="h4">{p.name}</h3>
+            {p.role ? <span className="dr">{p.role}</span> : null}
+            {STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}
+          </header>
+          {p.focus ? <p className="p">{p.focus}</p> : null}
+          {(p.points || []).length ? (<>
+            <h4 className="h5">Good points</h4>
+            <ul className="pts">{p.points.map((x, i) => <li key={i}>{x}</li>)}</ul>
+          </>) : null}
+          {p.voice ? (<>
+            <h4 className="h5">Whose writing</h4>
+            <p className="p voice">{p.voice}</p>
+          </>) : null}
+        </article>
+      ))}
+    </section>
+    <section className="sec" id="questions">
+      <h2 className="h2">The questions, by who they are for</h2>
+      <p className="meta">Bold, with the mark, are the ones I would ask. The writer's job is on each line.</p>
+      {s.names.map(name => {
+        const f = first(name);
+        const qs = people.flatMap(p => (p.questions || []).filter(q => q.for && same(byFirst(q.for), name)).map(q => ({ ...q, by: p.name, job: p.role })));
+        return (
+          <div key={name} className="qfor pc" data-c={seatIn(s, name)}>
+            <h3 className="h4">{"For " + name + (roleOf(name) ? ", " + roleOf(name).toLowerCase() : "")}</h3>
+            {qs.length ? (
               <ol className="ql">
-                {p.questions.map((q, i) => (
+                {qs.map((q, i) => (
                   <li key={i} className={q.ask ? "ask" : ""}>
-                    <span className="qf">{q.for ? "for " + q.for : "own"}</span>
+                    <span className="from">{first(q.by) + (q.job ? ", " + q.job.toLowerCase() : "") + ":"}</span>
                     <span className="q">{q.q}</span>
                   </li>
                 ))}
               </ol>
-            ) : null}
-          </article>
-        ))}
-      </>)}
+            ) : <p className="meta">{"Nobody wrote a question for " + f + ", or the reports that would have one are not in."}</p>}
+          </div>
+        );
+      })}
+      <h3 className="h3">Their own questions</h3>
+      {people.filter(p => (p.questions || []).some(q => !q.for)).map(p => (
+        <div key={p.name} className="qfor pc" data-c={seatIn(s, p.name)}>
+          <h3 className="h4">{p.name + (p.role ? ", " + p.role.toLowerCase() : "")}</h3>
+          <ol className="ql">
+            {p.questions.filter(q => !q.for).map((q, i) => (
+              <li key={i} className={q.ask ? "ask" : ""}><span className="q">{q.q}</span></li>
+            ))}
+          </ol>
+        </div>
+      ))}
     </section>
-  );
+  </>);
 }
 
 
@@ -943,4 +991,23 @@ export const CSS = `
 .sd .ql .q{display:inline}
 @media (max-width:640px){.sd .rel li{grid-template-columns:1fr;gap:2px}.sd.sheet-page .sec{padding:18px}.sd .person,.sd .asks{padding:16px}}
 @media print{.sd .jump,.sd .crumb{display:none}.sd-root{background:#fff}.sd .sec,.sd .person{break-inside:avoid}}
+/* The sheet's doors, one a group, and the group page: good points, whose writing, questions by who they are for. */
+.sd .sep{color:var(--ink2);margin:0 10px}
+.sd .doors{list-style:none;margin:0;padding:0;display:grid;gap:10px;width:100%}
+.sd .door{display:grid;grid-template-columns:minmax(200px,260px) minmax(0,1fr) auto;gap:6px 18px;align-items:baseline;padding:16px 18px;border-radius:var(--rr);background:var(--sunk);text-decoration:none;color:var(--ink);min-height:44px;box-shadow:inset 5px 0 0 var(--accent)}
+.sd .door:hover{background:var(--accent-tint)}
+.sd .dwhen{font-family:var(--serif);font-size:21px;font-weight:500;line-height:1.2;color:var(--accent);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
+.sd .dwho{font-size:16px;line-height:1.5;color:var(--ink)}
+.sd .dread{font-size:14px;font-weight:600;color:var(--ink2);white-space:nowrap}
+.sd .h5{margin:4px 0 0;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
+.sd .pts{margin:0;padding-left:24px;display:grid;gap:8px;font-size:17px;line-height:1.5;color:var(--ink)}
+.sd .pts li::marker{color:var(--pc)}
+.sd .person.off .pts li::marker{color:var(--ink2)}
+.sd .p.voice{color:var(--ink2);font-style:italic}
+.sd .qfor{display:grid;gap:10px;width:100%;box-sizing:border-box;padding:18px 22px 20px;border-radius:var(--rr);background:var(--sunk);box-shadow:inset 5px 0 0 var(--pc)}
+.sd .qfor .h4{color:var(--pc)}
+.sd .ql .from{display:block;font-size:14px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);margin-bottom:2px}
+.sd .ql .ask .from{color:var(--ink)}
+.sd .ql .ask .q::after{content:" ✓";color:var(--accent);font-weight:700}
+@media (max-width:720px){.sd .door{grid-template-columns:1fr;gap:4px}.sd .dread{white-space:normal}}
 `;

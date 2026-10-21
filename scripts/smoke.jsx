@@ -5693,15 +5693,27 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       { name: "Charles Kosinski", role: "Head of stadium real estate", status: "missing", focus: "No report turned in.", relations: [], questions: [] },
     ], ask: [] } } };
   if (all.includes("The work") || all.includes("Ask first")) say("the instructor's Sit-Down page carries the sheet");
+  fixture.tables["wed-915"].people[0].points = ["Streaming at home makes the room more valuable."];
+  fixture.tables["wed-915"].people[0].voice = "His own. First person and casual.";
+  // The sheet's front: the read across the class and a door to each group.
   const sheeted = html(<SheetBody config={scfg} data={d2} instructor sheet={fixture} />);
-  for (const want of ["The sheet", "The work", "22 of 25 turned in. 15 read, 6 locked, 1 not a Doc, 3 missing.", "Three of four in.", "Ask first", "Luke, own", "Everyone", "The bar as a third space.", "With Charles", ">own<", ">for Charles<", "Not turned in", "No report turned in.", "How do I keep a third space full?", "No sheet for this table yet."]) {
-    if (!sheeted.includes(want)) say("the sheet page lacks " + JSON.stringify(want));
+  for (const want of ["The sheet", "The work", "22 of 25 turned in. 15 read, 6 locked, 1 not a Doc, 3 missing.", "/comm118/sitdown/sheet/wed-915", "1 of 2 read", "No sheet yet", "Luke Baird", "No link turned in."]) {
+    if (!sheeted.includes(want)) say("the sheet's front lacks " + JSON.stringify(want));
   }
-  if (!/class="ask"><span class="qf">own<\/span><span class="q">How do I keep a third space full/.test(sheeted) || /class="ask"><span class="qf">for Charles<\/span><span class="q">What would the hardships be/.test(sheeted)) say("the picked question is not the bold one");
-  if (sheeted.includes("What would the hardships be?</span></li></ol></div>")) say("an unpicked question is in Ask first");
+  if (sheeted.includes("How do I keep a third space full?")) say("the sheet's front carries a group's questions");
+  // One group: each person's summary, good points and whose writing, then the
+  // questions by who they are for, with the writer's job, the picks bold.
+  const grouped = html(<SheetBody config={scfg} data={d2} instructor group="wed-915" sheet={fixture} />);
+  for (const want of ["Wednesday, October 21, 9:15 AM", "Three of four in.", "Each person", "The bar as a third space.", "Good points", "Streaming at home makes the room more valuable.", "Whose writing", "His own. First person and casual.", "Not turned in", "No report turned in.", "by who they are for", "For Charles Kosinski, head of stadium real estate", "Luke, sports bar owner:", "What would the hardships be?", "Their own questions", "Luke Baird, sports bar owner", "How do I keep a third space full?", "Nobody wrote a question for Luke"]) {
+    if (!grouped.includes(want)) say("the group page lacks " + JSON.stringify(want));
+  }
+  if (!/class="ask"><span class="q">How do I keep a third space full/.test(grouped) || /class="ask"><span class="from">Luke, sports bar owner:<\/span><span class="q">What would the hardships be/.test(grouped)) say("the picked question is not the bold one");
+  if (!html(<SheetBody config={scfg} data={d2} instructor group="fri-945" sheet={fixture} />).includes("No sheet for this group yet.")) say("a group with no sheet does not say so");
   // A student never sees the sheet, even when one is handed in.
-  const lukeSheet = html(<SheetBody config={scfg} data={d2} instructor={false} sheet={fixture} />);
-  if (lukeSheet.includes("The work") || lukeSheet.includes("The bar as a third space.") || !lukeSheet.includes("This page is the instructor")) say("a student can see the instructor's sheet");
+  for (const g of ["", "wed-915"]) {
+    const lukeSheet = html(<SheetBody config={scfg} data={d2} instructor={false} group={g} sheet={fixture} />);
+    if (lukeSheet.includes("The work") || lukeSheet.includes("The bar as a third space.") || !lukeSheet.includes("This page is the instructor")) say("a student can see the instructor's sheet at " + JSON.stringify(g));
+  }
   // Every word a student reads is a clause that ends on something named.
   Object.entries(WORDS).forEach(([k, v]) => {
     for (const clause of String(v).split(/[.;,]/)) if (/\b(it|this|that|one|them)\s*$/i.test(clause.trim())) say("the words at " + k + " end a clause on a word that names nothing: " + JSON.stringify(clause.trim()));

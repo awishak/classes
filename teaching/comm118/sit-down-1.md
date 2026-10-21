@@ -197,9 +197,14 @@ scratchpad grabs frames of one cycle (`frames.mjs`) to see the sweep move.
   signed-in instructor and nobody else. The sheet is his own page,
   `/comm118/sitdown/sheet` (`SheetBody` in SitdownPage.jsx), reached from
   Open my sheet on his view of `/comm118/sitdown`: The work (the read across
-  the class, one line a person by table), then each table with Ask first (the
-  picks, who wrote each and for whom) and everyone's report after. He asked
-  for the split that evening: "one page for me one page for students."
+  the class, one line a person by table) and a door to each group. Each group
+  is its own page, `/comm118/sitdown/sheet/<session key>`: what the group is
+  about; each person's summary, Good points (`points`) and Whose writing
+  (`voice`, his own or a tool's, with the evidence); then every question
+  sorted by who it is for, with the writer's job, the picks in bold; then each
+  person's own questions. He asked for the split that evening ("one page for
+  me one page for students") and then for the per-group shape ("I'm gonna do
+  it by group").
 - **The script**: `node scripts/sitdown-links.mjs` prints every table with
   its links from production. Read-only. Needs `SUPABASE_SERVICE_ROLE_KEY` in
   `.env.local`.

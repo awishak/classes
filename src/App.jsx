@@ -304,9 +304,10 @@ export default function App() {
   // The instructor's sheet, the read of every report, is his own page:
   // /<class>/sitdown/sheet. Andrew, 2026-10-20: "one page for me one page for
   // students."
-  const sd = path.match(/^\/(comm118|comm999)\/sitdown(?:\/(prep|sheet))?\/?$/);
+  // One page per group under the sheet: /<class>/sitdown/sheet/<session key>.
+  const sd = path.match(/^\/(comm118|comm999)\/sitdown(?:\/(prep|sheet)(?:\/([a-z]{3}-\d{3,4}))?)?\/?$/);
   if (sd && ENGINE[sd[1]]) {
-    return <SitdownPage key={sd[1] + (sd[2] || "")} config={ENGINE[sd[1]]} page={sd[2] || "home"} />;
+    return <SitdownPage key={sd[1] + (sd[2] || "") + (sd[3] || "")} config={ENGINE[sd[1]]} page={sd[2] || "home"} group={sd[2] === "sheet" ? sd[3] || "" : ""} />;
   }
   // Sit-Down 1, the role each student plays at their table, for the
   // instructor: /<class>/worksheets/worktopia/roles.
