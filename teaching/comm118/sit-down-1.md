@@ -207,7 +207,9 @@ scratchpad grabs frames of one cycle (`frames.mjs`) to see the sweep move.
   for me one page for students"), then for the per-group shape ("I'm gonna do
   it by group"), then, shown six separate pages, for one page with roles on
   every name ("so many diff pages ... make the links clearer"). Sit-Down sheet
-  is in his menu (apps.js) beside Sit-Down 1.
+  is in his menu (apps.js) beside Sit-Down 1. Every report is a link on the
+  sheet too ("need links to all student work on both pages"): the name in
+  the seats, an Open button on the card, the name in the roll.
 - **The script**: `node scripts/sitdown-links.mjs` prints every table with
   its links from production. Read-only. Needs `SUPABASE_SERVICE_ROLE_KEY` in
   `.env.local`.
