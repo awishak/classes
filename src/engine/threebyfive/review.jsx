@@ -114,17 +114,19 @@ function Row({ sheet, photos, href }) {
       <div className="t5r-head">
         {href ? <a className="t5r-names" href={href}>{names.join(", ")}</a> : <span className="t5r-names">{names.join(", ")}</span>}
         <span className="t5r-when">{sheet.submitted_at ? "Handed in " + when(sheet.submitted_at) : "Started, not handed in"}</span>
+        {href ? <a className="t5r-link" href={href}>Open</a> : null}
       </div>
       {sheet.rolls.map((roll, i) => (
         <div className="t5r-mini" key={i}>
           {roll.cats.map((cat, c) => (
             <div className="t5r-ministrip" key={c}>
-              <span className="t5r-miniword">{cat.trim() || "—"}</span>
+              <span className="t5r-miniword">{cat.trim() || "unnamed"}</span>
               <span className="t5r-thumbs">
                 {roll.frames[c].map((id, s) => { const p = id && photos.get(id); return p
                   ? <img key={s} src={BASE + p.thumb} alt={"Photo " + p.n} loading="lazy" />
                   : <span key={s} className="t5r-empty" />; })}
               </span>
+              {roll.more[c].map((t, m) => t.trim() ? <p className="t5r-idea" key={m}>{t}</p> : null)}
             </div>
           ))}
         </div>
@@ -203,10 +205,12 @@ const CSS = `
 .t5r-names{font-size:18px;font-weight:600;color:inherit;text-decoration:none}
 a.t5r-names:hover{text-decoration:underline;text-underline-offset:3px}
 .t5r-when{font-size:14px;color:${T.muted};margin-left:auto}
-.t5r-mini{display:flex;gap:14px;flex-wrap:wrap}
-.t5r-ministrip{display:flex;flex-direction:column;gap:4px}
+.t5r-mini{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.t5r-ministrip{display:flex;flex-direction:column;gap:4px;min-width:0}
+.t5r-idea{margin:2px 0 0;font-size:14px;line-height:1.4;color:${T.primary};white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:640px){.t5r-mini{grid-template-columns:1fr}}
 .t5r-miniword{font-size:13px;color:${T.secondary};text-transform:lowercase}
-.t5r-thumbs{display:inline-flex;gap:3px;padding:4px;border-radius:6px;background:${FILM}}
+.t5r-thumbs{display:inline-flex;gap:3px;padding:4px;border-radius:6px;background:${FILM};align-self:flex-start}
 .t5r-thumbs img{width:52px;height:52px;object-fit:cover;border-radius:3px;display:block}
 .t5r-empty{width:52px;height:52px;border-radius:3px;background:${FRAME_EMPTY};display:block}
 .t5r-top{display:flex;flex-direction:column;gap:6px}

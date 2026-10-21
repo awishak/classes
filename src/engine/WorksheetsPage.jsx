@@ -134,6 +134,10 @@ export default function WorksheetsPage({ config }) {
   const readoutUrl = sheet && hasReadout(config.id, sheet.key) ? studentUrl + "/readout" : "";
   // And everyone's file by question, live. Names for me, none for the class.
   const answersUrl = sheet && sheet.key === WORKTOPIA_KEY ? studentUrl + "/answers" : "";
+  // And the review, where a sheet has one: every file in the class, each with
+  // its own page. Andrew, 2026-10-21, on 3x5: "where's the link for me to
+  // review them all?"
+  const reviewUrl = local && local.review ? studentUrl + "?review" : "";
   const copy = async (url) => {
     try { await navigator.clipboard.writeText(url); setCopied(url); setTimeout(() => setCopied(false), 1500); }
     catch { /* no clipboard: the box is selectable */ }
@@ -210,6 +214,7 @@ export default function WorksheetsPage({ config }) {
               </button>
             </div>
           ) : null}
+          {reviewUrl ? addressBox("Review every sheet, each on its own page", reviewUrl, "") : null}
           {addressBox("Students open this worksheet at", studentUrl, "Paste the address into the Details link on the assignment.")}
           {answersUrl ? addressBox("Everyone's answers, by question", answersUrl, "You see names. A student who opens the same address sees the answers with no names.") : null}
           {readoutUrl ? addressBox("What the class wrote, to share with them", readoutUrl, "") : null}
