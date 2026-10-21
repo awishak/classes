@@ -47,6 +47,22 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "oct20-sitdown-sheet", date: "Tuesday, October 20", title: "Sit-Down 1: the Scouting Reports read, and the sheet only he can open",
+    blurb: "Andrew: \"i want a summary of all the work. did they do it? is it good in your opinion? who was working hard? who is thin? and then for each group meeting, I want a cheat sheet with what they focused on, as well as all of their questions, and who wrote them for whom. deploy and make sure only i have access.\"",
+    groups: [
+      { name: "What changed", items: [
+        ["The reports, read", "22 of 25 turned in a link by Monday night; 15 could be read. Six Docs are locked to their owner, so even his SCU account gets an access-request page, and one came in as an Adobe link. Three never came in. The Docs shared to the SCU domain were read through his Chrome, one at a time, since the Drive connector is tied to his Gmail and only one Doc was shared with that account."],
+        ["The work", "A section above the tables on his view of /comm118/sitdown: six paragraphs across the class (who turned in, what the strong reports do that the thin ones do not, who worked hard, who is thin, who to ask about pasted lines, and the questions only he can answer), then one line a student with their status."],
+        ["The sheet under each table", "What the table is about, then each person: status, what their report focuses on, how they see each group-mate, and every question they wrote, exactly as written, tagged own or for whom, the picks in bold. A missing or locked person still gets a card, since the others wrote about them."],
+        ["Only he can open the sheet", "The repo is public on GitHub, so the sheet is not in the repo and not in the bundle. The file lives in a private bucket; /api/sitdown-sheet hands the file to a signed-in instructor and nobody else, and the anon key gets a 400. scripts/sitdown-sheet.mjs puts a new copy up without a deploy."],
+        ["Seven notes", "Chloe and the six with locked Docs each got a note in their thread asking for a Google Doc shared to anyone at SCU, turned in again on the Sit-Down page, before their group meets."],
+      ] },
+      { name: "Still to do", items: [
+        ["Seven reports unread", "When a locked Doc opens or Chloe's Doc arrives, read the report the same way, add the person to the sheet, and put the sheet up again. Charles, Paul and Neel have nothing in."],
+      ] },
+    ],
+  },
+  {
     id: "oct16-ways-in", date: "Friday, October 16", title: "The ways in: the stories under My work, the Tools panel, and the button that opens the sheet",
     blurb: "Andrew: \"work on the page that students will see after the stories are completed to let them see all the headlines and featured images and the stories they have to read.\" The page is /comm3/stories, built on October 13 from the planning that day and never written up here: a grid of the section's stories with no names, each tile the headline and the feature image, the four pod stories in a red box with a Required reading chip, the student's own with a My story chip, a green box and a check on every story commented on, and a count of stories read. A pass at a new look for the page was shown and turned down: \"nah i like the before.\" What was missing was the way in: \"i want to know how students will access it! that's the important part. so it needs to be a link under My work when appropriate.\"",
     groups: [

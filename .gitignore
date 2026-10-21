@@ -5,3 +5,6 @@ dist
 .env
 .env.*
 .env*.local
+
+# Instructor-only readouts about named students. The repo is public; these never go in.
+private

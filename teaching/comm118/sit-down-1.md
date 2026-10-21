@@ -188,8 +188,15 @@ scratchpad grabs frames of one cycle (`frames.mjs`) to see the sweep move.
   as a submission, so My Work shows the hand-in and Grade view queues the
   work, and a link turned in on My Work shows on the Sit-Down page. Keys are
   roster names: Emma is Vianna Alvarez, Yoyo is Haixing Yang.
-- **The instructor's sheet**: `src/readouts/comm118-sitdown-1.json`, drawn
-  under each table on his view once written. Empty until Tuesday.
+- **The instructor's sheet**: written 2026-10-20. Not in the repo, which is
+  public on GitHub; the sheet names students and says who is thin. The
+  working copy is `private/comm118-sitdown-1.json` on his laptop (`private/`
+  is in .gitignore), the live copy is in the private `instructor` bucket on
+  Supabase, `scripts/sitdown-sheet.mjs --file private/comm118-sitdown-1.json
+  --write` puts a new copy up, and `/api/sitdown-sheet` hands the file to a
+  signed-in instructor and nobody else. His view of `/comm118/sitdown` draws
+  The work (the read across the class, one line a person) above the tables
+  and each table's sheet under its links.
 - **The script**: `node scripts/sitdown-links.mjs` prints every table with
   its links from production. Read-only. Needs `SUPABASE_SERVICE_ROLE_KEY` in
   `.env.local`.
@@ -231,6 +238,41 @@ The session that does this:
 
 A pod whose prep is not all in by Tuesday gets a sheet from what is in, and
 the missing person is named as missing.
+
+### What happened on October 20
+
+His ask that afternoon: "i want a summary of all the work. did they do it?
+is it good in your opinion? who was working hard? who is thin? and then for
+each group meeting, I want a cheat sheet with what they focused on, as well
+as all of their questions, and who wrote them for whom. deploy and make sure
+only i have access."
+
+- 22 of 25 turned in a link. Charles Kosinski, Paul Beaven and Neel Namburar
+  did not.
+- The Google Drive connector is tied to his Gmail, and only Lila's Doc was
+  shared with it. The other Docs are shared to the SCU domain, so they were
+  read through his Chrome, signed in as aishak@scu.edu: open
+  `https://docs.google.com/document/u/1/d/<id>/mobilebasic`, wait for the
+  title, and read `document.body.innerText` in 950-character slices through
+  the JavaScript tool (the tool truncates longer results, and blocks base64).
+  `/u/1/` is the SCU account in his Chrome; `/u/0/` is Gmail; `/u/2/` is
+  aishak@lgll.org. A fetch from the page to localhost hangs, and `export?
+  format=txt` is 401 for a domain-shared Doc.
+- Six Docs are locked to their owner, so even his SCU account gets an
+  access-request page: Jameson Baldwin, Will Tortorella, Mailin Orozco,
+  Gianna Alcaraz, Audrey Graham, Yoyo Yang. Chloe Shim turned in an Adobe
+  Acrobat link. Their group-mates cannot read those seven either. Each of
+  the seven got a note in their thread that afternoon (`scripts/send-note.mjs`)
+  asking for a Google Doc shared to anyone at SCU, turned in again on the
+  Sit-Down page.
+- 15 read. The sheet's `overview` carries the read across the class and
+  `roll` one line a person; each table has `focus`, and each person `status`
+  (read, locked, not-a-doc, missing), `focus`, `relations`, and every
+  question with `for` naming who the question is about and `ask` on the
+  picks. Questions are exactly as written.
+- When a locked Doc opens, read it the same way, add the person to the
+  sheet, and run `scripts/sitdown-sheet.mjs --file private/comm118-sitdown-1.json --write`.
+  No deploy is needed for a sheet change.
 
 ## After each sit-down: the recording
 

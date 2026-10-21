@@ -28,7 +28,7 @@
 import { useEffect, useState } from "react";
 import { useClassData } from "./store.js";
 import { rosterOf } from "./roster.js";
-import { useSession, studentFor } from "./session.js";
+import { useSession, studentFor, authHeaders } from "./session.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
 import { Face } from "./Face.jsx";
 import { genId } from "../utils.jsx";
@@ -39,11 +39,22 @@ import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
 
-// The instructor's sheet for each table, written after the prep is in. One
-// file per class, loaded only for him. The shape is in the file.
-const SHEETS = {
-  comm118: () => import("../readouts/comm118-sitdown-1.json"),
-};
+// The instructor's sheet: the read across the class and a sheet per table,
+// written 2026-10-20 from the Scouting Reports. Andrew: "make sure only i have
+// access." The repo is public, so the sheet is not in the bundle; it sits in a
+// private bucket and /api/sitdown-sheet hands it to a signed-in instructor and
+// nobody else (scripts/sitdown-sheet.mjs puts it there). The shape is in the
+// file's own `_about`.
+const SHEET_CLASSES = new Set(["comm118"]);
+async function loadSheet(classId) {
+  if (!SHEET_CLASSES.has(classId)) return null;
+  const r = await fetch("/api/sitdown-sheet?class=" + encodeURIComponent(classId), { headers: await authHeaders() });
+  if (!r.ok) return null;
+  const sheet = await r.json().catch(() => null);
+  return sheet && sheet.tables ? sheet : null;
+}
+// What a person's status says on the sheet. "read" says nothing.
+const STATUS_WORDS = { locked: "Doc locked to its owner", "not-a-doc": "Adobe link, not a Google Doc", missing: "Not turned in" };
 
 // The Skylight look, the same tokens as the features page and
 // drewi.sh/teaching: Fraunces for headings, Outfit for everything else,
@@ -123,16 +134,18 @@ export default function SitdownPage({ config, page = "home" }) {
 // and a viewer of its own. `viewer` is { instructor: true } or { name }, the
 // roster's name. `now` is for the render, so a test can sit before or after
 // the release. `page` is "home" or "prep".
-export function SitdownBody({ config, data, update, viewer, copy, editing = false, page = "home", instructor = false, onEdit, onAs, as = "", now = Date.now() }) {
+export function SitdownBody({ config, data, update, viewer, copy, editing = false, page = "home", instructor = false, onEdit, onAs, as = "", now = Date.now(), sheet: given = null }) {
   const saved = data?.sitdownRoles || {};
   const asg = sitdownAssignment(data?.assignments || config.assignments);
-  const [sheet, setSheet] = useState(null);
+  // `given` is the smoke run handing a sheet in; the page asks the server.
+  const [loaded, setLoaded] = useState(null);
+  const sheet = given || loaded;
   useEffect(() => {
-    if (!instructor || !SHEETS[config.id]) return undefined;
+    if (!instructor || given) return undefined;
     let alive = true;
-    SHEETS[config.id]().then(m => { if (alive) setSheet(m.default || m); }).catch(() => {});
+    loadSheet(config.id).then(s => { if (alive && s) setLoaded(s); }).catch(() => {});
     return () => { alive = false; };
-  }, [instructor, config.id]);
+  }, [instructor, given, config.id]);
   const prep = page === "prep";
   const suffix = as ? "?as=" + encodeURIComponent(as) : "";
 
@@ -524,6 +537,7 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
         <a className="dl" href={prepPath(config)}>Open the prep page</a>
       </div>
     </section>
+    {sheet?.overview?.length ? <Work sheet={sheet} /> : null}
     {SESSIONS.map(s => {
       const table = tableOf(s, saved);
       const tableSheet = sheet?.tables?.[s.key]?.people?.length ? sheet.tables[s.key] : null;
@@ -561,21 +575,54 @@ function AllTables({ config, data, saved, asg, sheet, now }) {
   </>);
 }
 
-// The instructor's sheet for one table: each person's summary, how they see
-// each relationship, and the questions worth asking, the picked ones first.
+// The read across the whole class, above the tables. Andrew, 2026-10-20: "i
+// want a summary of all the work. did they do it? is it good in your opinion?
+// who was working hard? who is thin?" The paragraphs, then one line a person.
+function Work({ sheet }) {
+  const c = sheet.counts || {};
+  return (
+    <section className="sec" id="work">
+      <header className="sh">
+        <h2 className="h2">The work</h2>
+        {c.roster ? <span className="meta">{[c.turnedIn + " of " + c.roster + " turned in", c.read + " read", c.locked ? c.locked + " locked" : "", c.notADoc ? c.notADoc + " not a Doc" : "", c.missing ? c.missing + " missing" : ""].filter(Boolean).join(" · ")}</span> : null}
+      </header>
+      {sheet.overview.map((o, i) => <p key={i} className="p">{o}</p>)}
+      {(sheet.roll || []).length ? (
+        <ul className="roll">
+          {sheet.roll.map(r => (
+            <li key={r.name} className={"rl " + (r.status || "")}>
+              <span className="rn">{r.name}</span>
+              <span className="rs">{STATUS_WORDS[r.status] || (r.status === "read" ? "Read" : r.status)}</span>
+              <span className="rt">{r.line}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <p className="meta">Written {sheet.written}. Questions on the sheets below are exactly as students wrote them.</p>
+    </section>
+  );
+}
+
+// The instructor's sheet for one table: what the table is about, then each
+// person's status, what their report focuses on, how they see each
+// relationship, and every question they wrote, tagged with who the question
+// is about, the picked ones in bold. Andrew, 2026-10-20: "a cheat sheet with
+// what they focused on, as well as all of their questions, and who wrote them
+// for whom."
 function Sheet({ table }) {
   return (
     <div className="sheet">
       <h3 className="h3">The sheet</h3>
+      {table.focus ? <p className="p">{table.focus}</p> : null}
       {(table.people || []).map(p => (
-        <div key={p.name} className="sp">
-          <div className="pn">{p.name}{p.role ? <span className="dr">{", " + p.role}</span> : null}</div>
-          {p.summary ? <p className="p">{p.summary}</p> : null}
+        <div key={p.name} className={"sp" + (p.status && p.status !== "read" ? " off" : "")}>
+          <div className="pn">{p.name}{p.role ? <span className="dr">{", " + p.role}</span> : null}{STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}</div>
+          {p.focus || p.summary ? <p className="p">{p.focus || p.summary}</p> : null}
           {(p.relations || []).length ? (
             <ul className="list">{p.relations.map((r, i) => <li key={i}><b>{"With " + r.with + ": "}</b>{r.line}</li>)}</ul>
           ) : null}
           {(p.questions || []).length ? (
-            <ul className="qs">{p.questions.slice().sort((a, b) => (b.ask ? 1 : 0) - (a.ask ? 1 : 0)).map((q, i) => <li key={i} className={q.ask ? "ask" : ""}>{q.q}</li>)}</ul>
+            <ul className="qs">{p.questions.map((q, i) => <li key={i} className={q.ask ? "ask" : ""}><span className="qf">{q.for ? "for " + q.for : "own"}</span>{q.q}</li>)}</ul>
           ) : null}
         </div>
       ))}
@@ -738,6 +785,18 @@ export const CSS = `
 .sd .pn{font-family:var(--serif);font-size:21px;line-height:1.2;color:var(--ink)}
 .sd .qs{margin:0;padding-left:22px;display:grid;gap:6px;font-size:16px;line-height:1.5;color:var(--ink2)}
 .sd .qs .ask{color:var(--ink);font-weight:600}
+/* Who a question is about, before the question; the status of a report, after the name. */
+.sd .qf{display:inline-block;margin-right:8px;padding:1px 8px;border-radius:999px;background:var(--card);color:var(--ink2);font-size:13px;font-weight:600;line-height:1.5;vertical-align:1px;white-space:nowrap}
+.sd .sp.off{box-shadow:inset 4px 0 0 var(--warn)}
+.sd .st{display:inline-block;margin-left:10px;padding:2px 10px;border-radius:999px;background:var(--card);color:var(--warn);font-family:var(--sans);font-size:13px;font-weight:600;line-height:1.5;vertical-align:3px;white-space:nowrap}
+/* The roll: one line a person, across the class. */
+.sd .roll{list-style:none;margin:0;padding:0;display:grid;gap:0;width:100%}
+.sd .rl{display:grid;grid-template-columns:minmax(150px,190px) minmax(120px,170px) minmax(0,1fr);gap:6px 16px;align-items:baseline;padding:10px 0;border-top:1px solid var(--line);font-size:16px;line-height:1.5}
+.sd .rn{font-weight:600;color:var(--ink)}
+.sd .rs{font-size:13px;font-weight:600;color:var(--ok)}
+.sd .rl.locked .rs,.sd .rl.not-a-doc .rs,.sd .rl.missing .rs{color:var(--warn)}
+.sd .rt{color:var(--ink2)}
+@media (max-width:720px){.sd .rl{grid-template-columns:1fr}}
 /* Eight colours, one per seat. Day values read at 4.5:1 on the sunk surface with white inside; night values read on the night card with the night ink inside. */
 .sd .pc{--pc:var(--pc-day)}
 .sd-root[data-mode="night"] .pc{--pc:var(--pc-night)}
