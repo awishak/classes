@@ -625,7 +625,7 @@ export function SheetBody({ config, data, instructor = false, group = "", sheet:
           {SESSIONS.map(s => <a key={s.key} className="jl" href={"#" + s.key}>{shortOf(s)}</a>)}
         </nav>
         <Work sheet={sheet} linkFor={linkFor} />
-        {SESSIONS.map(s => <GroupSheet key={s.key} s={s} table={sheet.tables?.[s.key]} roster={tableOf(s, saved)} linkFor={linkFor} />)}
+        {SESSIONS.map((s, i) => <GroupSheet key={s.key} s={s} table={sheet.tables?.[s.key]} roster={tableOf(s, saved)} linkFor={linkFor} n={i + 1} total={SESSIONS.length} />)}
         <p className="meta">{"Written " + sheet.written + ". Every question is exactly as the student wrote it."}</p>
       </>)}
     </div>
@@ -688,73 +688,100 @@ function Work({ sheet, linkFor }) {
 // about; each person's summary, the good points and whose writing; then every
 // question sorted by who it is for, with the writer's job on each, the picks
 // in bold and marked; then each person's own questions.
-function GroupSheet({ s, table, roster, linkFor }) {
+// Andrew, 2026-10-20: "make it look clearer." Each group is now a band with
+// its number, then four numbered parts, so the eye knows where it is: who is
+// at the table, each person's work, the questions by who they are for, and
+// each person's own questions. A question row is the question first, then
+// who wrote it; a pick has the check and a lighter ground.
+const countQ = (qs) => { const n = qs.length; const k = qs.filter(q => q.ask).length; return (n === 1 ? "1 question" : n + " questions") + (k ? ", " + k + " to ask" : ""); };
+function Question({ q, by, job }) {
+  return (
+    <li className={"qi" + (q.ask ? " ask" : "")}>
+      <span className="ck" aria-hidden="true">{q.ask ? "✓" : ""}</span>
+      <span className="qb">
+        <span className="q">{q.q}</span>
+        {by ? <span className="from">{"From " + first(by) + (job ? ", " + job.toLowerCase() : "")}</span> : null}
+      </span>
+    </li>
+  );
+}
+function GroupSheet({ s, table, roster, linkFor, n, total }) {
   const people = table?.people || [];
   const roleOf = (name) => { const p = people.find(x => same(x.name, name)); if (p?.role) return p.role; const r = roster.find(x => same(x.name, name)); return r?.role?.role || ""; };
   const byFirst = (f) => s.names.find(n => same(first(n), f)) || f;
+  const own = people.filter(p => (p.questions || []).some(q => !q.for));
   return (
-    <section className="sec" id={s.key}>
-      <header className="sh"><h2 className="h2">{whenOf(s)}</h2><span className="meta">{SITDOWN.room}</span></header>
-      <ul className="seats">
-        {s.names.map(name => (
-          <li key={name} className="pc" data-c={seatIn(s, name)}><b>{linkFor(name) ? <a className="rep" href={linkFor(name).link} target="_blank" rel="noopener noreferrer">{name}</a> : name}</b>{roleOf(name) ? <i>{", " + roleOf(name).toLowerCase()}</i> : null}</li>
-        ))}
-      </ul>
-      {!people.length ? <p className="p">No sheet for this group yet.</p> : (<>
-        {table.focus ? <p className="p big">{table.focus}</p> : null}
-        <h3 className="h3">Each person's work</h3>
-        {people.map(p => (
-          <article key={p.name} className={"person pc" + (p.status && p.status !== "read" ? " off" : "")} data-c={seatIn(s, p.name)}>
-            <header className="ph">
-              <h4 className="h4">{p.name}</h4>
-              {p.role ? <span className="dr">{p.role}</span> : null}
-              {STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}
-              {linkFor(p.name) ? <a className="open" href={linkFor(p.name).link} target="_blank" rel="noopener noreferrer">{"Open " + first(p.name) + "'s report"}<span className="dh">{hostOf(linkFor(p.name).link)}</span></a> : null}
-            </header>
-            {p.focus ? <p className="p">{p.focus}</p> : null}
-            {(p.points || []).length ? (<>
-              <h5 className="h5">Good points</h5>
-              <ul className="pts">{p.points.map((x, i) => <li key={i}>{x}</li>)}</ul>
-            </>) : null}
-            {p.voice ? (<>
-              <h5 className="h5">Whose writing</h5>
-              <p className="p voice">{p.voice}</p>
-            </>) : null}
-          </article>
-        ))}
-        <h3 className="h3">The questions, by who they are for</h3>
-        <p className="meta">Bold, with the check, are the ones I would ask. The writer and their job are on each line.</p>
-        {s.names.map(name => {
-          const f = first(name);
-          const qs = people.flatMap(p => (p.questions || []).filter(q => q.for && same(byFirst(q.for), name)).map(q => ({ ...q, by: p.name, job: p.role })));
-          return (
-            <div key={name} className="qfor pc" data-c={seatIn(s, name)}>
-              <h4 className="h4">{"For " + name + (roleOf(name) ? ", " + roleOf(name).toLowerCase() : "")}</h4>
-              {qs.length ? (
-                <ol className="ql">
-                  {qs.map((q, i) => (
-                    <li key={i} className={q.ask ? "ask" : ""}>
-                      <span className="from">{first(q.by) + (q.job ? ", " + q.job.toLowerCase() : "") + ":"}</span>
-                      <span className="q">{q.q}</span>
-                    </li>
-                  ))}
-                </ol>
-              ) : <p className="meta">{"Nobody wrote a question for " + f + ", or the reports that would have one are not in."}</p>}
-            </div>
-          );
-        })}
-        <h3 className="h3">Their own questions</h3>
-        {people.filter(p => (p.questions || []).some(q => !q.for)).map(p => (
-          <div key={p.name} className="qfor pc" data-c={seatIn(s, p.name)}>
-            <h4 className="h4">{p.name + (p.role ? ", " + p.role.toLowerCase() : "")}</h4>
-            <ol className="ql">
-              {p.questions.filter(q => !q.for).map((q, i) => (
-                <li key={i} className={q.ask ? "ask" : ""}><span className="q">{q.q}</span></li>
-              ))}
-            </ol>
-          </div>
-        ))}
-      </>)}
+    <section className="sec grp" id={s.key}>
+      <header className="gh">
+        <div className="eyebrow">{"Group " + n + " of " + total + " · " + SITDOWN.room}</div>
+        <h2 className="h2">{whenOf(s)}</h2>
+      </header>
+      <div className="gin">
+        <h3 className="h3 tag"><span className="num">1</span>Who is at the table</h3>
+        <ul className="seats">
+          {s.names.map(name => (
+            <li key={name} className="pc" data-c={seatIn(s, name)}><b>{linkFor(name) ? <a className="rep" href={linkFor(name).link} target="_blank" rel="noopener noreferrer">{name}</a> : name}</b>{roleOf(name) ? <i>{", " + roleOf(name).toLowerCase()}</i> : null}</li>
+          ))}
+        </ul>
+        {!people.length ? <p className="p">No sheet for this group yet.</p> : (<>
+          {table.focus ? <p className="p big">{table.focus}</p> : null}
+          <h3 className="h3 tag"><span className="num">2</span>Each person's work</h3>
+          {people.map(p => (
+            <article key={p.name} className={"person pc" + (p.status && p.status !== "read" ? " off" : "")} data-c={seatIn(s, p.name)}>
+              <header className="ph">
+                <div className="pwho">
+                  <h4 className="h4">{p.name}</h4>
+                  {p.role ? <span className="dr">{p.role}</span> : null}
+                  {STATUS_WORDS[p.status] ? <span className="st">{STATUS_WORDS[p.status]}</span> : null}
+                </div>
+                {linkFor(p.name) ? <a className="open" href={linkFor(p.name).link} target="_blank" rel="noopener noreferrer">{"Open " + first(p.name) + "'s report"}<span className="dh">{hostOf(linkFor(p.name).link)}</span></a> : null}
+              </header>
+              {p.focus ? <p className="p">{p.focus}</p> : null}
+              {(p.points || []).length ? (<>
+                <h5 className="h5">Good points</h5>
+                <ul className="pts">{p.points.map((x, i) => <li key={i}>{x}</li>)}</ul>
+              </>) : null}
+              {p.voice ? (<>
+                <h5 className="h5">Whose writing</h5>
+                <p className="p voice">{p.voice}</p>
+              </>) : null}
+            </article>
+          ))}
+          <h3 className="h3 tag"><span className="num">3</span>The questions, by who they are for</h3>
+          <p className="meta">The check marks the ones I would ask. Under each question is the writer and the writer's job.</p>
+          {s.names.map(name => {
+            const f = first(name);
+            const qs = people.flatMap(p => (p.questions || []).filter(q => q.for && same(byFirst(q.for), name)).map(q => ({ ...q, by: p.name, job: p.role })));
+            return (
+              <div key={name} className="qfor pc" data-c={seatIn(s, name)}>
+                <header className="qh">
+                  <h4 className="h4">{"For " + name + (roleOf(name) ? ", " + roleOf(name).toLowerCase() : "")}</h4>
+                  {qs.length ? <span className="qc">{countQ(qs)}</span> : null}
+                </header>
+                {qs.length ? (
+                  <ul className="ql">
+                    {qs.map((q, i) => <Question key={i} q={q} by={q.by} job={q.job} />)}
+                  </ul>
+                ) : <p className="meta">{"Nobody wrote a question for " + f + ", or the reports that would have one are not in."}</p>}
+              </div>
+            );
+          })}
+          {own.length ? (<>
+            <h3 className="h3 tag"><span className="num">4</span>Their own questions</h3>
+            {own.map(p => (
+              <div key={p.name} className="qfor pc" data-c={seatIn(s, p.name)}>
+                <header className="qh">
+                  <h4 className="h4">{p.name + (p.role ? ", " + p.role.toLowerCase() : "")}</h4>
+                  <span className="qc">{countQ(p.questions.filter(q => !q.for))}</span>
+                </header>
+                <ul className="ql">
+                  {p.questions.filter(q => !q.for).map((q, i) => <Question key={i} q={q} />)}
+                </ul>
+              </div>
+            ))}
+          </>) : null}
+        </>)}
+      </div>
     </section>
   );
 }
@@ -1017,4 +1044,32 @@ export const CSS = `
 .sd .rep{color:inherit;text-decoration:underline;text-decoration-color:var(--accent);text-decoration-thickness:2px;text-underline-offset:3px;display:inline-flex;align-items:center;min-height:44px;margin:-10px 0}
 .sd .rep:hover{color:var(--accent)}
 .sd .ph .open{margin-left:auto}
+/* Clearer. Andrew, 2026-10-20: "make it look clearer." Each group opens on a filled band with its number; the parts inside are numbered; a person's card has the name and job on the left and the report on the right; a question is the question first, who wrote it under, and a pick sits on the lighter ground with the check. */
+.sd .sec.grp{padding:0;overflow:hidden;gap:0}
+.sd .gh{width:100%;box-sizing:border-box;background:var(--accent);color:var(--on-accent);padding:18px 32px 20px;display:grid;gap:4px}
+.sd .gh .eyebrow,.sd .gh .h2{color:inherit}
+.sd .gh .h2{font-size:clamp(26px,4vw,34px)}
+.sd .gin{width:100%;box-sizing:border-box;padding:24px 32px 32px;display:grid;gap:18px;justify-items:start}
+.sd .gin>*{max-width:100%}
+.sd .gin .h3.tag{margin-top:10px}
+.sd .gin .h3.tag:first-child{margin-top:0}
+.sd .ph{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 20px;align-items:start;width:100%}
+.sd .pwho{display:grid;gap:4px;justify-items:start}
+.sd .pwho .dr{font-size:17px;color:var(--ink);line-height:1.3}
+.sd .pwho .st{margin:4px 0 0;vertical-align:baseline}
+.sd .qh{display:flex;justify-content:space-between;align-items:baseline;gap:8px 16px;flex-wrap:wrap;width:100%}
+.sd .qc{font-size:14px;font-weight:600;color:var(--ink2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sd .ql{list-style:none;padding:0;gap:6px;width:100%}
+.sd .qi{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start;padding:10px 14px 12px;border-radius:10px;color:var(--ink2)}
+.sd .qi.ask{background:var(--card);color:var(--ink)}
+.sd .ck{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;font-size:16px;font-weight:700;line-height:1;color:var(--on-accent);margin-top:2px}
+.sd .qi.ask .ck{background:var(--accent)}
+.sd .qb{display:grid;gap:4px;min-width:0}
+.sd .qb .q{display:block;font-size:17px;line-height:1.5}
+.sd .qi.ask .q{font-weight:600}
+.sd .qi.ask .q::after{content:none}
+.sd .qb .from{display:block;margin:0;font-size:14px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2)}
+.sd .rs{display:inline-block;padding:2px 10px;border-radius:999px;background:var(--sunk);line-height:1.5;white-space:nowrap}
+@media (max-width:640px){.sd .gh{padding:16px 18px 18px}.sd .gin{padding:18px}.sd .ph{grid-template-columns:1fr}.sd .ph .open{margin-left:0}}
+@media print{.sd .gh{background:#fff;color:#000;border-bottom:2px solid #000}.sd .qi.ask{box-shadow:inset 0 0 0 1px #000}}
 `;

@@ -5704,7 +5704,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   // who they are for, with the writer's job, the picks bold.
   const sheeted = html(<SheetBody config={scfg} data={d2} instructor sheet={fixture} />);
   for (const want of ["The sheet", "The work", "22 of 25 turned in. 15 read, 6 locked, 1 not a Doc, 3 missing.", 'href="#wed-915"', "Wed 9:15", "Fri 9:45", "No link turned in.",
-    'id="wed-915"', "Wednesday, October 21, 9:15 AM", "Three of four in.", "Each person", "The bar as a third space.", "Good points", "Streaming at home makes the room more valuable.", "Whose writing", "His own. First person and casual.", "Not turned in", "No report turned in.", "by who they are for", "For Charles Kosinski, head of stadium real estate", "Luke, sports bar owner:", "What would the hardships be?", "Their own questions", "Luke Baird, sports bar owner", "How do I keep a third space full?", "Nobody wrote a question for Luke", "No sheet for this group yet."]) {
+    'id="wed-915"', "Wednesday, October 21, 9:15 AM", "Three of four in.", "Each person", "The bar as a third space.", "Good points", "Streaming at home makes the room more valuable.", "Whose writing", "His own. First person and casual.", "Not turned in", "No report turned in.", "by who they are for", "For Charles Kosinski, head of stadium real estate", "From Luke, sports bar owner", "What would the hardships be?", "Their own questions", "Luke Baird, sports bar owner", "How do I keep a third space full?", "Nobody wrote a question for Luke", "No sheet for this group yet.", "Group 1 of 6 · ", "Group 6 of 6 · ", "Who is at the table", "1 question, 1 to ask"]) {
     if (!sheeted.includes(want)) say("the sheet lacks " + JSON.stringify(want));
   }
   if (!/class="rn"><a class="rep" href="https:\/\/docs.google.com\/document\/d\/luke"[^>]*>Luke Baird<\/a>(<!-- -->)?<i>, sports bar owner<\/i>/.test(sheeted)) say("the roll has no role beside a name, or no link on the name");
@@ -5715,7 +5715,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (sheeted.includes("Open Catherine&#x27;s report")) say("a person with no link got an Open button");
   // Every seat at the top of a group carries a role, from the sheet or the roles page.
   if (!/<li class="pc" data-c="1"><b><a class="rep" href="https:\/\/x.test\/charles-prep"[^>]*>Charles Kosinski<\/a><\/b><i>, head of stadium real estate<\/i>/.test(sheeted) || !/<b>Sophia Alvarenga<\/b><i>, [a-z]/.test(sheeted)) say("a seat at the top of a group has no role");
-  if (!/class="ask"><span class="q">How do I keep a third space full/.test(sheeted) || /class="ask"><span class="from">Luke, sports bar owner:<\/span><span class="q">What would the hardships be/.test(sheeted)) say("the picked question is not the bold one");
+  if (!/class="qi ask"><span class="ck" aria-hidden="true">✓<\/span><span class="qb"><span class="q">How do I keep a third space full/.test(sheeted) || !/class="qi"><span class="ck" aria-hidden="true"><\/span><span class="qb"><span class="q">What would the hardships be\?<\/span><span class="from">From Luke, sports bar owner<\/span>/.test(sheeted)) say("the picked question is not the one with the check, or the writer is not under the question");
   if (html(<SheetBody config={scfg} data={d2} instructor group="wed-915" sheet={fixture} />) !== sheeted) say("a group's address draws a different page");
   // A student never sees the sheet, even when one is handed in.
   for (const g of ["", "wed-915"]) {

@@ -278,7 +278,21 @@ only i have access."
   the seven got a note in their thread that afternoon (`scripts/send-note.mjs`)
   asking for a Google Doc shared to anyone at SCU, turned in again on the
   Sit-Down page.
-- 15 read. The sheet's `overview` carries the read across the class and
+- Tuesday evening, at his ask to "double check if any one has now submitted
+  the work or allowed me to access it": Charles Kosinski's Doc came in at
+  5:09 PM, was read the same way and folded in (16 read, 23 of 25 in; the
+  scratch script was a one-off that edited the JSON and the sheet went up
+  with `scripts/sitdown-sheet.mjs`). The six locked Docs were still locked
+  under `/u/1/`; Chloe's link is still Adobe; Paul and Neel have nothing in.
+  Check the same way before each meeting: `node scripts/sitdown-links.mjs`
+  for new links, then each locked Doc's mobilebasic page for its title
+  ("Access Denied" means still locked).
+- The sheet page got its clearer layout that evening ("make it look clearer
+  and deploy"): a filled band per group with its number, numbered parts
+  inside (who is at the table, each person's work, questions by who they are
+  for, their own questions), the question first and "From Luke, sports bar
+  owner" under it, picks on the lighter ground with a filled check.
+- 15 read that afternoon. The sheet's `overview` carries the read across the class and
   `roll` one line a person; each table has `focus`, and each person `status`
   (read, locked, not-a-doc, missing), `focus`, `relations`, and every
   question with `for` naming who the question is about and `ask` on the
