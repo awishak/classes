@@ -20,6 +20,20 @@
 // through worktopia/store.js, which cuts a long value into 500-character rows.
 // The group is the student signed in plus up to four classmates off the roster.
 // The canvas lives on the sheet of whoever made it.
+//
+// Everyone named on a roll sees it on their own 3x5 page and works on it, and
+// every screen on a roll stays current. Andrew, 2026-10-21: "if two students
+// are working, it should update on both simultaneously," and yes to anyone on
+// a roll removing it, changing its names, or handing it in. The classmates'
+// reads and writes go through /api/threebyfive (shared.js), since the rules
+// keep a student to their own rows; a note on a broadcast channel after each
+// save makes the other screens read again, and a read every ten seconds and
+// on return to the tab covers a note that was missed. A roll is stored whole,
+// so every save first reads what is stored and lays this screen's changes
+// since its last read over it, field by field: two people on one roll never
+// wipe each other's work, and a write-in being typed is never lost.
+
+import { sharedStore, openBus } from "./shared.js";
 
 export const THREE_BY_FIVE_KEY = "3x5";
 export const THREE_BY_FIVE_TITLE = "3x5";
@@ -168,6 +182,7 @@ const STYLE = `
 .tx5 .foot .prog b { color: var(--ok); font-weight: 500; }
 .tx5 .foot .btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .tx5 .btn { min-height: 44px; padding: 0 18px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-weight: 600; font-size: 15px; cursor: pointer; }
+.tx5 .btn.warn { border-color: var(--stamp); color: var(--stamp); }
 .tx5 .btn.primary { background: var(--press); color: var(--press-ink); border-color: var(--press); }
 .tx5 .btn:disabled { cursor: not-allowed; color: var(--ink-3); background: transparent; border-style: dashed; }
 .tx5 .handed { font-size: 15px; color: var(--ok); font-weight: 600; }
@@ -220,7 +235,7 @@ const STYLE = `
  * opts: { store, viewer: { id, name }, classmates: [names], readOnly, theme: "light" | "dark" | undefined }
  * Returns { destroy }.
  */
-export function mountThreeByFive(root, { store, viewer, classmates = [], readOnly = false, theme } = {}) {
+export function mountThreeByFive(root, { store, viewer, classmates = [], readOnly = false, theme, classId = "" } = {}) {
   if (!document.getElementById("tx5-css")) {
     const s = document.createElement("style"); s.id = "tx5-css"; s.textContent = STYLE; document.head.appendChild(s);
   }
@@ -257,10 +272,10 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
           <div class="strips"></div>
           <div class="foot" style="margin-top:20px">
             <span class="prog"></span>
-            <div class="btns">${readOnly ? "" : `<button type="button" class="btn newroll">New roll</button><button type="button" class="btn primary handin" disabled>Hand in</button>`}</div>
+            <div class="btns">${readOnly ? "" : `<button type="button" class="btn rmroll" hidden>Remove roll</button><button type="button" class="btn newroll">New roll</button><button type="button" class="btn primary handin" disabled>Hand in</button>`}</div>
           </div>
           <p class="handed" hidden></p>
-          ${readOnly ? "" : `<p class="note">Drag a photo onto a frame, or click the photo to see it big and put it in a strip from there. Big, in the bar, shows every photo full size to scroll through. Drop a photo on a filled frame to replace it, or press the × on the frame to take it out. Click a filled frame to see it big. Esc shrinks anything big. Return submits a write-in; shift-return starts a new line. Everything saves as you go. Put your group on the roll at the top: the canvas lives on your sheet, so hand it in from here.</p>`}
+          ${readOnly ? "" : `<p class="note">Drag a photo onto a frame, or click the photo to see it big and put it in a strip from there. Big, in the bar, shows every photo full size to scroll through. Drop a photo on a filled frame to replace it, or press the × on the frame to take it out. Click a filled frame to see it big. Esc shrinks anything big. Return submits a write-in; shift-return starts a new line. Everything saves as you go. Put your group on the roll at the top: everyone on it sees this roll on their own 3x5 page, works on it with you, and any of you can hand it in.</p>`}
         </aside>
       </div>
     </div>`;
@@ -271,9 +286,50 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
   // ─── state: every roll, the one on screen, and the view, which is this browser's ───
   let rolls = [];
   let at = 0;
-  let submittedAt = null;
+  let mySubmittedAt = null;
   let photos = [];
   let loaded = false;
+  // What goes with a roll but not into it: { key, owner, ownerName, submittedAt }.
+  // owner is null for a roll on this student's own sheet.
+  const META = new WeakMap();
+  const info = (r) => META.get(r) || {};
+  // What each roll looked like when this screen last read it from the store (LAST).
+  const LAST = new WeakMap();
+  const clone = (r) => JSON.parse(JSON.stringify(r));
+  const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  // Lay theirs under mine: a field this screen changed since base keeps this
+  // screen's value, everything else takes what is stored. Returns whether r changed.
+  function layUnder(r, theirs) {
+    const base = LAST.get(r) || theirs;
+    const before = JSON.stringify(r);
+    const pick = (mine, b, t) => (eq(mine, b) ? clone(t) : mine);
+    r.names = pick(r.names, base.names, theirs.names);
+    r.started = pick(r.started, base.started, theirs.started);
+    for (let c = 0; c < 3; c++) {
+      r.cats[c] = pick(r.cats[c], base.cats[c], theirs.cats[c]);
+      r.options[c] = pick(r.options[c], base.options[c], theirs.options[c]);
+      for (let x = 0; x < 3; x++) r.frames[c][x] = pick(r.frames[c][x], base.frames[c][x], theirs.frames[c][x]);
+      for (let m = 0; m < 2; m++) { r.more[c][m] = pick(r.more[c][m], base.more[c][m], theirs.more[c][m]); r.sent[c][m] = pick(r.sent[c][m], base.sent[c][m], theirs.sent[c][m]); }
+    }
+    LAST.set(r, clone(theirs));
+    return JSON.stringify(r) !== before;
+  }
+  // What the store holds for one roll right now, or null if it is gone.
+  async function storedOf(r) {
+    const m = info(r);
+    if (m.owner) { const o = (await shared.load()).find(x => x.owner === m.owner && x.field === m.key); return o ? parseRoll(o.value, []) : null; }
+    const file = await store.load();
+    return file.answers[m.key] ? parseRoll(file.answers[m.key], [me]) : null;
+  }
+  const subOf = () => (info(R()).owner ? info(R()).submittedAt || null : mySubmittedAt);
+  const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+  const onRoll = (r) => r.names.some(n => same(n, me));
+  const myEmail = String(viewer?.id || "").trim().toLowerCase();
+  const shared = !readOnly && classId && myEmail.includes("@") ? sharedStore({ groupKey: classId }) : null;
+  const parseRoll = (value, names) => { try { return tidyRoll(JSON.parse(value), names); } catch { return null; } };
+  const ownKeys = (answers) => Object.keys(answers || {}).map(k => k.match(/^roll:([a-z]+)$/)).filter(Boolean).map(m => [numberOf(m[1]), m[0]]).sort((a, b) => a[0] - b[0]).map(([, k]) => k);
+  const nextKey = () => { let n = -1; rolls.forEach(r => { const m = info(r); if (!m.owner) n = Math.max(n, numberOf(m.key.slice(5))); }); return "roll:" + letters(n + 1); };
+  const ownFirst = (r) => { if (r.names[0] !== me) r.names = [me, ...r.names.filter(n => n !== me)].slice(0, MAX_NAMES); return r; };
   const view = { sort: "taken", mode: "sheet" };
   try { const v = JSON.parse(localStorage.getItem("tx5-view") || "null"); if (v) { if (v.sort === "colour") view.sort = "colour"; if (v.mode === "big") view.mode = "big"; } } catch { /* no storage */ }
   const keepView = () => { try { localStorage.setItem("tx5-view", JSON.stringify(view)); } catch { /* no storage */ } };
@@ -282,6 +338,8 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
   // ─── saving: each roll whole, a moment after the last change ───
   const dirty = new Set();
   let timer = null, saving = false, failed = false;
+  // A note names the roll's people too, so a student just added to a roll reads it in.
+  const tell = (m, r) => { if (bus) bus.send({ owner: m.owner || myEmail, field: m.key, from: myEmail, names: (r || R()).names }); };
   const showSave = (text, bad) => { saveEl.textContent = text; saveEl.classList.toggle("bad", !!bad); };
   const flush = async () => {
     clearTimeout(timer); timer = null;
@@ -290,11 +348,22 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
     const todo = [...dirty]; dirty.clear();
     showSave("Saving");
     try {
-      for (const i of todo) await store.save("roll:" + letters(i), JSON.stringify(rolls[i]));
+      let redraw = false;
+      for (const r of todo) {
+        const m = info(r);
+        if (shared) { const theirs = await storedOf(r).catch(() => null); if (theirs && layUnder(r, theirs)) redraw = true; }
+        const value = JSON.stringify(r);
+        if (m.owner) await shared.save(m.owner, m.key, value); else await store.save(m.key, value);
+        LAST.set(r, JSON.parse(value));
+        tell(m, r);
+        // Took their own name off a partner's roll: it leaves this page.
+        if (m.owner && !onRoll(r)) { dropRoll(r); redraw = false; }
+      }
+      if (redraw && alive) redrawKeepingFocus();
       failed = false;
       if (alive) showSave(dirty.size ? "Saving" : "Saved");
     } catch {
-      todo.forEach(i => dirty.add(i));
+      todo.forEach(r => dirty.add(r));
       failed = true;
       if (alive) { showSave("Not saved. Trying again", true); timer = setTimeout(flush, 4000); }
     } finally {
@@ -304,7 +373,7 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
   };
   const persist = () => {
     if (readOnly) return;
-    dirty.add(at);
+    dirty.add(R());
     showSave("Saving");
     clearTimeout(timer); timer = setTimeout(flush, 700);
   };
@@ -588,12 +657,15 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
     const placed = R().frames.flat().filter(Boolean).length;
     const w = [0, 1, 2].reduce((n, c) => n + written(c), 0);
     $(".prog").innerHTML = "<b>" + placed + "</b>/9 placed &middot; <b>" + w + "</b>/6 written";
+    const submittedAt = subOf();
     const hand = $(".handin");
     if (hand) {
       hand.disabled = !rollDone() && !submittedAt;
       hand.textContent = submittedAt ? "Take back" : "Hand in";
       hand.title = submittedAt ? "" : rollDone() ? "" : "Fill all three strips and write all six to hand in";
     }
+    const rm = $(".rmroll");
+    if (rm) { rm.hidden = rolls.length < 2; rm.textContent = rmArmed === R() ? "Remove this roll?" : "Remove roll"; rm.classList.toggle("warn", rmArmed === R()); }
     const handed = $(".handed");
     handed.hidden = !submittedAt;
     if (submittedAt) handed.textContent = "Handed in " + new Date(submittedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + (readOnly ? "." : ". Changes still save.");
@@ -644,9 +716,14 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
     rollsEl.innerHTML = "";
     if (rolls.length > 1) {
       const l = document.createElement("span"); l.className = "lbl"; l.textContent = "Roll"; rollsEl.appendChild(l);
+      let n = 0;
+      const ofOwner = (o) => rolls.filter(x => info(x).owner === o);
       rolls.forEach((r, i) => {
-        const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = String(i + 1);
-        b.setAttribute("aria-pressed", String(i === at)); b.setAttribute("aria-label", "Roll " + (i + 1) + (r.cats[0] ? ", " + r.cats[0] : ""));
+        const m = info(r);
+        const first = String(m.ownerName || m.owner || "").split(" ")[0];
+        const say = m.owner ? first + (ofOwner(m.owner).length > 1 ? " " + (ofOwner(m.owner).indexOf(r) + 1) : "") : String(++n);
+        const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.textContent = say;
+        b.setAttribute("aria-pressed", String(i === at)); b.setAttribute("aria-label", (m.owner ? "Roll with " + m.ownerName : "Roll " + n) + (r.cats[0] ? ", " + r.cats[0] : ""));
         b.addEventListener("click", () => { if (i === at) return; flush(); at = i; bigId = null; bigFrame = null; wasOpen = null; primeDone(); renderAll(); });
         rollsEl.appendChild(b);
       });
@@ -744,18 +821,60 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
   const newroll = $(".newroll");
   if (newroll) newroll.addEventListener("click", () => {
     flush();
-    rolls.push(freshRoll(R().names));
+    const r = ownFirst(freshRoll(R().names));
+    META.set(r, { key: nextKey(), owner: null });
+    rolls.push(r);
     at = rolls.length - 1; bigId = null; bigFrame = null; wasOpen = null; primeDone();
     persist(); renderAll();
   });
+  // Remove asks once, then the roll goes. Andrew, 2026-10-21: "students
+  // should be able to delete extra rolls." The last roll on the page stays.
+  let rmArmed = null, rmTimer = null;
+  const rmroll = $(".rmroll");
+  if (rmroll) rmroll.addEventListener("click", async () => {
+    if (rolls.length < 2) return;
+    if (rmArmed !== R()) {
+      rmArmed = R(); renderFoot();
+      clearTimeout(rmTimer); rmTimer = setTimeout(() => { rmArmed = null; if (alive) renderFoot(); }, 6000);
+      return;
+    }
+    clearTimeout(rmTimer); rmArmed = null;
+    const r = R(), m = info(r);
+    dirty.delete(r); rmroll.disabled = true;
+    try {
+      if (m.owner) await shared.remove(m.owner, m.key); else await store.remove(m.key);
+      tell(m, r);
+      dropRoll(r);
+      showSave("Roll removed");
+    } catch { showSave("Could not remove the roll. Try again", true); }
+    rmroll.disabled = false;
+    renderAll();
+  });
+  function dropRoll(r) {
+    const i = rolls.indexOf(r);
+    if (i < 0) return;
+    rolls.splice(i, 1);
+    if (!rolls.length) { const f = freshRoll([me]); META.set(f, { key: "roll:a", owner: null }); rolls = [f]; }
+    at = at > i ? at - 1 : Math.min(at, rolls.length - 1);
+    bigId = null; bigFrame = null; wasOpen = null; primeDone();
+    if (alive) renderAll();
+  }
   const handin = $(".handin");
   if (handin) handin.addEventListener("click", async () => {
     handin.disabled = true;
     try {
       await flush();
-      if (submittedAt) { await store.recall(); submittedAt = null; }
-      else submittedAt = await store.submit();
-      showSave(submittedAt ? "Handed in" : "Taken back");
+      const m = info(R());
+      let now;
+      if (m.owner) {
+        if (m.submittedAt) { await shared.recall(m.owner); now = null; } else now = await shared.submit(m.owner);
+        rolls.forEach(r => { if (info(r).owner === m.owner) info(r).submittedAt = now; });
+      } else {
+        if (mySubmittedAt) { await store.recall(); now = null; } else now = await store.submit();
+        mySubmittedAt = now;
+      }
+      tell({ owner: m.owner, key: "*" });
+      showSave(now ? "Handed in" : "Taken back");
     } catch { showSave("Could not reach the server. Try again", true); }
     renderFoot();
   });
@@ -766,20 +885,21 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
   Promise.all([
     fetch(BASE + "index.json").then(r => r.json()).catch(() => null),
     store.load().catch(() => null),
-  ]).then(([list, file]) => {
+    shared ? shared.load().catch(() => []) : [],
+  ]).then(([list, file, others]) => {
     if (!alive) return;
     if (!file) { showSave("Your canvas could not be read. Reload to try again.", true); return; }
     photos = Array.isArray(list) ? list : [];
-    submittedAt = file.submitted_at || null;
-    const found = Object.keys(file.answers || {}).map(k => k.match(/^roll:([a-z]+)$/)).filter(Boolean)
-      .map(m => [numberOf(m[1]), m[0]]).sort((a, b) => a[0] - b[0]);
-    rolls = found.map(([, k]) => { try { return tidyRoll(JSON.parse(file.answers[k]), [me]); } catch { return null; } }).filter(Boolean);
+    mySubmittedAt = file.submitted_at || null;
+    rolls = [];
+    ownKeys(file.answers).forEach(k => { const r = parseRoll(file.answers[k], [me]); if (r) { META.set(r, { key: k, owner: null }); LAST.set(r, clone(r)); rolls.push(readOnly ? r : ownFirst(r)); } });
+    const mine = rolls.length;
+    others.forEach(o => { const r = parseRoll(o.value, []); if (r) { META.set(r, { key: o.field, owner: o.owner, ownerName: o.ownerName, submittedAt: o.submitted_at || null }); LAST.set(r, clone(r)); rolls.push(r); } });
     if (!rolls.length) {
       if (readOnly) { root.querySelector(".wrap").innerHTML = "<p class=\"msg\">No roll on this sheet yet.</p>"; return; }
-      rolls = [freshRoll([me])];
+      const f = freshRoll([me]); META.set(f, { key: "roll:a", owner: null }); rolls = [f];
     }
-    if (!readOnly) rolls.forEach(r => { if (r.names[0] !== me) r.names = [me, ...r.names.filter(n => n !== me)].slice(0, MAX_NAMES); });
-    at = rolls.length - 1;
+    at = mine ? mine - 1 : rolls.length - 1;
     loaded = true;
     primeDone();
     root.querySelector(".canvas").hidden = false;
@@ -788,10 +908,81 @@ export function mountThreeByFive(root, { store, viewer, classmates = [], readOnl
     renderAll();
   });
 
+  // ─── staying current with the others on a roll ───
+  const bus = shared ? openBus("tx5-" + classId, (note) => {
+    if (!note || note.from === myEmail) return;
+    const named = Array.isArray(note.names) && note.names.some(n => same(n, me));
+    if (note.owner === myEmail || named || rolls.some(r => info(r).owner === note.owner)) wantRefresh();
+  }) : null;
+  let refreshTimer = null, refreshing = false, refreshAgain = false;
+  function wantRefresh() { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 250); }
+  async function refresh() {
+    if (!alive || readOnly || !loaded || !shared) return;
+    if (refreshing) { refreshAgain = true; return; }
+    refreshing = true;
+    try {
+      const [file, others] = await Promise.all([store.load(), shared.load().catch(() => null)]);
+      if (alive && file) merge(file, others);
+    } catch { /* the next note or poll reads again */ }
+    finally { refreshing = false; if (refreshAgain) { refreshAgain = false; wantRefresh(); } }
+  }
+  function redrawKeepingFocus() {
+    const active = document.activeElement && root.contains(document.activeElement) ? document.activeElement : null;
+    const focusId = active && active.id, sel = active && active.selectionStart != null ? [active.selectionStart, active.selectionEnd] : null;
+    renderAll(); checkDone();
+    if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus(); if (sel && el.setSelectionRange) { try { el.setSelectionRange(sel[0], sel[1]); } catch { /* not a text field */ } } } }
+  }
+  // Lay what is stored under what is here, roll by roll. This screen's
+  // changes since its last read stay, including a write-in being typed; a
+  // roll that is gone, or no longer names this student, leaves; a roll new to
+  // this student arrives.
+  function merge(file, others) {
+    mySubmittedAt = file.submitted_at || null;
+    const fresh = new Map();
+    ownKeys(file.answers).forEach(k => { const r = parseRoll(file.answers[k], [me]); if (r) fresh.set("|" + k, { data: ownFirst(r), meta: { key: k, owner: null } }); });
+    (others || []).forEach(o => { const r = parseRoll(o.value, []); if (r) fresh.set(o.owner + "|" + o.field, { data: r, meta: { key: o.field, owner: o.owner, ownerName: o.ownerName, submittedAt: o.submitted_at || null } }); });
+    const current = R();
+    const kept = [];
+    rolls.forEach(r => {
+      const m = info(r);
+      const f = fresh.get((m.owner || "") + "|" + m.key);
+      if (!f) {
+        if ((m.owner && others === null) || (!m.owner && dirty.has(r))) kept.push(r);
+        return;
+      }
+      fresh.delete((m.owner || "") + "|" + m.key);
+      if (m.owner) { m.submittedAt = f.meta.submittedAt; m.ownerName = f.meta.ownerName; }
+      layUnder(r, f.data);
+      kept.push(r);
+    });
+    fresh.forEach(f => { META.set(f.data, f.meta); LAST.set(f.data, clone(f.data)); kept.push(f.data); });
+    kept.sort((a, b) => {
+      const x = info(a), y = info(b);
+      if (!x.owner !== !y.owner) return x.owner ? 1 : -1;
+      if (!x.owner) return numberOf(x.key.slice(5)) - numberOf(y.key.slice(5));
+      return String(x.ownerName || "").localeCompare(String(y.ownerName || "")) || x.key.localeCompare(y.key);
+    });
+    rolls = kept;
+    if (!rolls.length) { const f = freshRoll([me]); META.set(f, { key: "roll:a", owner: null }); rolls = [f]; }
+    const where = rolls.indexOf(current);
+    if (where >= 0) at = where; else { at = Math.min(at, rolls.length - 1); bigId = null; bigFrame = null; wasOpen = null; primeDone(); }
+    redrawKeepingFocus();
+  }
+  const withOthers = () => rolls.some(r => info(r).owner || r.names.length > 1);
+  // Every ten seconds with a partner, every thirty alone, for a note that was missed.
+  let tick = 0;
+  const poll = shared ? setInterval(() => { tick++; if (document.visibilityState === "visible" && (withOthers() || tick % 3 === 0)) refresh(); }, 10000) : null;
+  const onShow = () => { if (document.visibilityState === "visible" && withOthers()) wantRefresh(); };
+  if (shared) document.addEventListener("visibilitychange", onShow);
+
   return {
     destroy() {
       alive = false;
       if (loaded) flush();
+      if (bus) bus.close();
+      if (poll) clearInterval(poll);
+      clearTimeout(refreshTimer); clearTimeout(rmTimer);
+      document.removeEventListener("visibilitychange", onShow);
       document.removeEventListener("visibilitychange", onHide);
       document.removeEventListener("pointermove", onMove);
       document.removeEventListener("pointerup", onUp);
