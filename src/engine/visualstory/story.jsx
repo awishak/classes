@@ -74,19 +74,39 @@ const Linked = ({ text }) => linkParts(text).map((r, i) => r.href
   ? <a key={i} href={r.href} target="_blank" rel="noreferrer">{r.text}</a>
   : <span key={i}>{r.text}</span>);
 
+// The student's file in a frame. Supabase hands an .html object back as plain
+// text (checked 2026-10-21), so the page fetches the words and writes them
+// into the frame itself. The frame has no same-origin right: the student's
+// script runs on its own and can reach nothing of this page or its sign-in.
+// No link opens the file on its own page, because a page made from the words
+// here would carry this site's origin.
+export function HtmlFrame({ url, title }) {
+  const [doc, setDoc] = useState(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setDoc(null); setFailed(false);
+    fetch(url).then(r => { if (!r.ok) throw new Error("refused"); return r.text(); })
+      .then(t => { if (alive) setDoc(t); })
+      .catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [url]);
+  if (failed) return <div className="vsr-img vsr-wait">The story could not be loaded. Reload the page.</div>;
+  if (doc == null) return <div className="vsr-img vsr-wait">Loading the story</div>;
+  return <iframe className="vsr-frame" srcDoc={doc} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" title={title} />;
+}
+
 export function StoryView({ story, urls, showPrivate = false, look, credit }) {
   const images = story.blocks.filter(b => b.type === "image");
   const theme = (look || story.look) === "dark" ? "dark" : "light";
   if (isHtmlStory(story)) {
-    // The file in a frame with no same-origin right, so the student's script runs on its own and sees nothing of this page.
     const url = (story.html && (story.html.url || urls[story.html.path])) || "";
     return (
       <article className={"vsr vsr-" + theme}>
         <h1 className="vsr-h">{story.headline || "Your headline goes here"}</h1>
         {!story.html ? <p className="vsr-empty">Your HTML file shows up here once you upload it on the left.</p> : null}
         {story.html && !url ? <div className="vsr-img vsr-wait">Loading the story</div> : null}
-        {url ? <iframe className="vsr-frame" src={url} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" title={story.headline || "The story"} /> : null}
-        {url ? <p className="vsr-link"><a href={url} target="_blank" rel="noreferrer">Open the story on its own page</a></p> : null}
+        {url ? <HtmlFrame url={url} title={story.headline || "The story"} /> : null}
       </article>
     );
   }

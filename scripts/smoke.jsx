@@ -31,7 +31,7 @@ import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
 import { createSaver } from "../src/engine/visualstory/saver.js";
 import * as vsm from "../src/engine/visualstory/model.js";
 import * as vsp from "../src/engine/visualstory/photos.js";
-import { StoryView } from "../src/engine/visualstory/story.jsx";
+import { StoryView, HtmlFrame } from "../src/engine/visualstory/story.jsx";
 import * as vsr from "../src/engine/visualstory/storyreview.jsx";
 import { PreSheet, missingOf, standing, FIELDS } from "../src/engine/visualstory/pre.jsx";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
@@ -5892,12 +5892,16 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (vsm.stageAt(undefined, t0) !== "building" || vsm.stageAt({ stage: "building", opens_at: null }, t0) !== "building") say("no row or no time is not building");
   {
     const { renderToStaticMarkup } = await import("react-dom/server");
+    // On the server the fetch never runs, so the page waits; the frame itself is checked by hand on the practice class.
     const shown = renderToStaticMarkup(<StoryView story={htmlDone} urls={{ "c/e/x.html": "https://x.test/s.html" }} credit="" />);
-    if (!/<iframe[^>]*sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"/.test(shown) || /allow-same-origin/.test(shown)) say("an HTML story's frame is not sandboxed without same-origin");
-    if (!/https:\/\/x\.test\/s\.html/.test(shown)) say("an HTML story's frame does not point at the file");
-    if (/<img/.test(shown)) say("an HTML story's page draws its picture blocks");
-    const fromServer = renderToStaticMarkup(<StoryView story={{ ...htmlDone, html: { url: "https://x.test/served.html" } }} urls={{}} credit="" />);
-    if (!/served\.html/.test(fromServer)) say("a link sent by the server is not used for the frame");
+    if (!/Loading the story/.test(shown)) say("an HTML story with a link does not wait for the words");
+    if (/<img|<figure/.test(shown)) say("an HTML story's page draws its picture blocks");
+    if (/x\.test\/s\.html/.test(shown)) say("an HTML story's page links straight to the file, which Supabase serves as plain text");
+    const noFile = renderToStaticMarkup(<StoryView story={{ ...htmlDone, html: null }} urls={{}} credit="" />);
+    if (!/shows up here once you upload/.test(noFile)) say("an HTML story with no file does not say so");
+    const src = String(StoryView.toString()) + String(HtmlFrame.toString());
+    if (!/allow-scripts allow-popups allow-popups-to-escape-sandbox/.test(src) || /allow-same-origin/.test(src)) say("the HTML frame is not sandboxed without same-origin");
+    if (!/srcDoc/.test(src)) say("the HTML frame does not take the words as srcdoc");
   }
   // No credit line while the stories are anonymous, Andrew, 2026-10-13.
   {
