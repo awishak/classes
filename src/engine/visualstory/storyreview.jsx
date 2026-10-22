@@ -178,7 +178,7 @@ export function ReadingPanel({ config, section }) {
     setOpensAt(Object.fromEntries(Object.entries(out.opens || {}).map(([k, v]) => [k, localOf(v)])));
   }).catch(e => setError(e.message));
   useEffect(() => { load(); }, [config.id]);
-  if (error) return <p className="vsv-bad">Could not read the reading phase: {error}{/relation|does not exist/.test(error) ? " Run sql/visual-story-reading.sql in Supabase." : ""}</p>;
+  if (error) return <p className="vsv-bad">Could not read the reading phase: {error}{/opens_at|best_where/.test(error) ? " Run sql/visual-story-html.sql in Supabase." : /relation|does not exist/.test(error) ? " Run sql/visual-story-reading.sql in Supabase." : ""}</p>;
   if (!data) return <p className="vsv-muted">Loading the reading phase.</p>;
   const sec = data.sections.includes(section) ? section : (data.sections[0] || "");
   const stage = data.stages[sec] || "building";
