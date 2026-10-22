@@ -9,9 +9,15 @@
 //   feature        the block id of the feature image
 //   look           "light" or "dark": a white or a black page, the student's choice
 //   block:<id>     JSON for one block (ids are letters, the field rule)
+//   kind           "html" when the student made the story as an HTML file;
+//                  anything else, or no row, is a story built here
+//   html           JSON { path, name, size } for the uploaded HTML file
 // An image block: { type: "image", path, w, h, layout, caption, graphic,
 // source, by ("" for the student, "other"), byName, reasons: [...], other }. A text block: { type: "text", text }.
-// The rules are Andrew's, from the planning page, 2026-10-13.
+// The rules are Andrew's, from the planning page, 2026-10-13. An HTML story
+// (Andrew, 2026-10-21: "if they submit an html file, we just need headline,
+// feature image, and html file, and nothing else") answers to three rules
+// and none of the others.
 
 export const MIN_IMAGES = 6, MAX_IMAGES = 8;
 export const MIN_WORDS = 150, MAX_WORDS = 300;
@@ -34,6 +40,7 @@ export const isPortrait = (b) => !!(b && b.w && b.h && b.h > b.w);
 export const layoutOf = (b) => (isPortrait(b) && (b.layout === "left" || b.layout === "right") ? b.layout : "full");
 
 const parse = (v, fallback) => { try { const x = JSON.parse(v); return x == null ? fallback : x; } catch { return fallback; } };
+const htmlOf = (v) => { const x = parse(v, null); return x && typeof x.path === "string" && x.path ? { path: x.path, name: String(x.name || ""), size: Number(x.size) || 0 } : null; };
 
 /** Answers to a story: { headline, link, feature, blocks: [{ id, ...block }] }. */
 export function storyOf(answers) {
@@ -44,8 +51,18 @@ export function storyOf(answers) {
   // saves) is kept, at the end, rather than lost.
   Object.keys(a).forEach(k => { if (k.startsWith("block:") && !ids.includes(k.slice(6))) ids.push(k.slice(6)); });
   const blocks = ids.map(id => ({ id, ...parse(a["block:" + id], {}) })).filter(b => b.type === "image" || b.type === "text");
-  return { headline: a.headline || "", link: a.link || "", feature: a.feature || "", look: a.look === "dark" ? "dark" : "light", blocks };
+  return { headline: a.headline || "", link: a.link || "", feature: a.feature || "", look: a.look === "dark" ? "dark" : "light", blocks, kind: a.kind === "html" ? "html" : "pictures", html: htmlOf(a.html) };
 }
+export const isHtmlStory = (story) => !!story && story.kind === "html";
+/** The feature image block, or the first picture, or null. */
+export const featureImage = (story) => { const images = story.blocks.filter(b => b.type === "image"); return images.find(b => b.id === story.feature) || images[0] || null; };
+
+/** The stage a section is really in: a building section whose open time has
+ * passed reads as reading, so Monday opens on its own. */
+export const stageAt = (row, now = Date.now()) => {
+  const stage = row?.stage || "building";
+  return stage === "building" && row?.opens_at && Date.parse(row.opens_at) <= now ? "reading" : stage;
+};
 
 // A link in a caption or text block is written [words](https://...).
 // Andrew, 2026-10-15: "include links in text." Only the words count.
@@ -70,8 +87,13 @@ export const imageCount = (story) => story.blocks.filter(b => b.type === "image"
 /** What stands between the story and Submit, in sentences a student can act on. */
 export function problemsOf(story) {
   const out = [];
-  const n = imageCount(story), w = wordCount(story);
   if (!story.headline.trim()) out.push("Write a headline.");
+  if (isHtmlStory(story)) {
+    if (!imageCount(story)) out.push("Add your feature image.");
+    if (!story.html) out.push("Upload your HTML file.");
+    return out;
+  }
+  const n = imageCount(story), w = wordCount(story);
   if (n < MIN_IMAGES) out.push(`Add ${MIN_IMAGES - n} more image${MIN_IMAGES - n === 1 ? "" : "s"}. You have ${n}, and the story needs ${MIN_IMAGES} to ${MAX_IMAGES}.`);
   if (n > MAX_IMAGES) out.push(`Take out ${n - MAX_IMAGES} image${n - MAX_IMAGES === 1 ? "" : "s"}. You have ${n}, and the story takes ${MIN_IMAGES} to ${MAX_IMAGES}.`);
   if (w < MIN_WORDS) out.push(`Add ${MIN_WORDS - w} more word${MIN_WORDS - w === 1 ? "" : "s"} in captions or text. You have ${w}, and the story needs ${MIN_WORDS} to ${MAX_WORDS}.`);

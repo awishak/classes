@@ -13,6 +13,10 @@
 //   - Photos go out as links signed for an hour, one story at a time.
 //   - Comments open and close on Andrew's stage buttons, not on the page.
 //   - A student comments on their own story last, after eight others.
+//   - A section opens on its own at its opens_at (Andrew, 2026-10-21: 12:05 AM
+//     Monday for both COMM 3 sections), so nobody has to press the button.
+//   - An HTML story (kind "html") goes out as a signed link to the file, and
+//     the reader says the best image in words instead of tapping one.
 //
 // POST /api/visual-story { groupKey, action, ... } with the student's session
 // in the bearer header, or the PIN or an instructor session for Andrew. In the
@@ -22,7 +26,7 @@ import { pinMatches, callerEmail, readBody } from "./_auth.js";
 import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
-import { storyOf } from "../src/engine/visualstory/model.js";
+import { storyOf, stageAt } from "../src/engine/visualstory/model.js";
 
 const KEY = "visual-story";
 const BUCKET = "visual-story";
@@ -31,6 +35,7 @@ const PRACTICE = new Set(["comm999"]);
 const STAGES = ["building", "reading", "closed", "released"];
 const OTHERS_BEFORE_OWN = 8;
 const MIN_CHARS = 50;
+const MIN_WHERE = 3;
 const PAGE = 1000;
 
 const lower = (s) => String(s || "").trim().toLowerCase();
@@ -81,8 +86,8 @@ async function sign(paths) {
 }
 
 async function stageOf(groupKey, section) {
-  const r = await rows(`/rest/v1/story_stage?select=stage&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&section=eq.${encodeURIComponent(section)}`);
-  return r?.[0]?.stage || "building";
+  const r = await rows(`/rest/v1/story_stage?select=stage,opens_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&section=eq.${encodeURIComponent(section)}`);
+  return stageAt(r?.[0]);
 }
 
 async function dueOf(groupKey) {
@@ -110,9 +115,11 @@ const featurePath = (story) => {
 };
 
 // What a classmate may see of a story: no reasons, and links instead of paths.
-// Someone else's name on a photo waits for release, like the author's.
+// Someone else's name on a photo waits for release, like the author's. An
+// HTML story's file name could carry a name too, so only its link goes out.
 const forReader = (story, urls, released) => ({
-  headline: story.headline, link: story.link, look: story.look,
+  headline: story.headline, link: story.link, look: story.look, kind: story.kind,
+  html: story.html ? { url: urls[story.html.path] || "" } : null,
   blocks: story.blocks.map(b => b.type === "text"
     ? { id: b.id, type: "text", text: b.text || "" }
     : { id: b.id, type: "image", url: urls[b.path] || "", w: b.w, h: b.h, layout: b.layout, caption: b.caption || "", graphic: !!b.graphic, source: b.source || "", by: b.by === "other" ? "other" : "", byName: released && b.by === "other" ? b.byName || "" : "" }),
@@ -131,7 +138,7 @@ export default async function handler(req, res) {
   const instructor = pinMatches(body.pin) || isInstructorEmail(sessionEmail);
 
   // ─── Andrew's controls ───
-  if (["admin", "stage", "pods", "practice-fill", "practice-clear"].includes(action)) {
+  if (["admin", "stage", "opens", "pods", "practice-fill", "practice-clear"].includes(action)) {
     if (!instructor) return res.status(401).json({ ok: false, error: "Only the instructor can do that." });
     const roster = await rosterOf(groupKey);
     // The practice class only: every fake student gets a copy of Andrew's own
@@ -161,12 +168,22 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ ok: true, made });
     }
+    // Pressing a stage button is the word on the stage, so it also clears the open time.
     if (action === "stage") {
       const section = clean(body.section), stage = String(body.stage || "");
       if (!STAGES.includes(stage)) return res.status(400).json({ ok: false, error: "Not a stage." });
       const w = await write("/rest/v1/story_stage?on_conflict=worksheet_key,group_key,section", "POST",
-        { worksheet_key: KEY, group_key: groupKey, section, stage, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
+        { worksheet_key: KEY, group_key: groupKey, section, stage, opens_at: null, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
       return w && w[0] ? res.status(200).json({ ok: true, stage: w[0].stage }) : res.status(502).json({ ok: false, error: "The stage did not save." });
+    }
+    // The time a building section opens for reading on its own; null takes the time away.
+    if (action === "opens") {
+      const section = clean(body.section);
+      const at = body.opensAt ? new Date(body.opensAt) : null;
+      if (at && Number.isNaN(at.getTime())) return res.status(400).json({ ok: false, error: "Not a time." });
+      const w = await write("/rest/v1/story_stage?on_conflict=worksheet_key,group_key,section", "POST",
+        { worksheet_key: KEY, group_key: groupKey, section, opens_at: at ? at.toISOString() : null, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
+      return w && w[0] ? res.status(200).json({ ok: true, opensAt: w[0].opens_at || null }) : res.status(502).json({ ok: false, error: "The time did not save." });
     }
     if (action === "pods") {
       const section = clean(body.section);
@@ -183,8 +200,9 @@ export default async function handler(req, res) {
     }
     // admin: everything, with names.
     const sections = [...new Set(roster.map(s => s.section))];
-    const stages = {};
-    for (const s of sections) stages[s] = await stageOf(groupKey, s);
+    const stageRows = (await rows(`/rest/v1/story_stage?select=section,stage,opens_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}`)) || [];
+    const stages = {}, opens = {};
+    for (const s of sections) { const row = stageRows.find(r => r.section === s); stages[s] = stageAt(row); opens[s] = row?.opens_at || null; }
     const pods = (await rows(`/rest/v1/story_pods?select=section,pod,viewer_id&group_key=eq.${groupKey}`)) || [];
     const nameOf = new Map(roster.map(s => [s.email, s.name]));
     const all = [];
@@ -196,12 +214,12 @@ export default async function handler(req, res) {
     const counts = {};
     comments.forEach(c => { if (ownerOf.get(c.story_sheet) !== c.author) counts[c.author] = (counts[c.author] || 0) + 1; });
     return res.status(200).json({
-      ok: true, sections, stages, due: await dueOf(groupKey),
+      ok: true, sections, stages, opens, due: await dueOf(groupKey),
       people: roster.map(r => ({ name: r.name, email: r.email, section: r.section })),
       pods: pods.map(p => ({ section: p.section, pod: p.pod, email: p.viewer_id, name: nameOf.get(p.viewer_id) || p.viewer_id })),
-      stories: all.map(s => ({ id: s.id, email: s.owner.email, name: s.owner.name, section: s.owner.section, submitted_at: s.submitted_at, headline: s.story.headline })),
+      stories: all.map(s => ({ id: s.id, email: s.owner.email, name: s.owner.name, section: s.owner.section, submitted_at: s.submitted_at, headline: s.story.headline, kind: s.story.kind })),
       counts,
-      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", author: nameOf.get(c.author) || c.author, bestPicture: pictureNo(storyById.get(c.story_sheet), c.best_image), best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
+      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", author: nameOf.get(c.author) || c.author, bestPicture: pictureNo(storyById.get(c.story_sheet), c.best_image), bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
     });
   }
 
@@ -237,7 +255,7 @@ export default async function handler(req, res) {
   const myPod = (podRows || []).find(p => p.viewer_id === email)?.pod || null;
   const podMates = new Set((podRows || []).filter(p => myPod && p.pod === myPod && p.section === me.section).map(p => p.viewer_id));
   const podded = new Set((podRows || []).map(p => p.viewer_id));
-  const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet)).map(c => ({ story_sheet: c.story_sheet, bestImage: c.best_image || "", best: c.best, shone: c.shone, encourage: c.encourage }));
+  const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet)).map(c => ({ story_sheet: c.story_sheet, bestImage: c.best_image || "", bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage }));
   const doneSet = new Set(mineComments.map(c => c.story_sheet));
   const ownId = list.find(s => s.owner.email === email)?.id || null;
   const doneOthers = [...doneSet].filter(id => id !== ownId).length;
@@ -279,12 +297,12 @@ export default async function handler(req, res) {
     const by = await answersFor([story.id]);
     if (!by) return res.status(502).json({ ok: false, error: "Could not read the story." });
     story.story = storyOf(answersOf(by[story.id] || []));
-    const urls = await sign(story.story.blocks.filter(b => b.type === "image").map(b => b.path));
+    const urls = await sign([...story.story.blocks.filter(b => b.type === "image").map(b => b.path), story.story.html?.path]);
     let comments = null;
     if (released && isMine) {
       const nameOf = new Map(roster.map(s => [s.email, s.name]));
       comments = ((await rows(`/rest/v1/story_comments?select=*&story_sheet=eq.${story.id}&order=updated_at`)) || [])
-        .map(c => ({ author: c.author === email ? "You" : (nameOf.get(c.author) || "A classmate"), bestImage: c.best_image || "", best: c.best, shone: c.shone, encourage: c.encourage }));
+        .map(c => ({ author: c.author === email ? "You" : (nameOf.get(c.author) || "A classmate"), bestImage: c.best_image || "", bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage }));
     }
     return res.status(200).json({
       ok: true, stage, story: forReader(story.story, urls, released), mine: isMine, author: released ? story.owner.name : null,
@@ -299,13 +317,21 @@ export default async function handler(req, res) {
     if (isMine && doneOthers < OTHERS_BEFORE_OWN) return res.status(409).json({ ok: false, error: `Comment on ${OTHERS_BEFORE_OWN} classmates' stories first, then on your own.` });
     const c = { best: clean(body.best).slice(0, 3000), shone: clean(body.shone).slice(0, 3000), encourage: clean(body.encourage).slice(0, 3000) };
     const short = Object.entries(c).filter(([, v]) => v.length < MIN_CHARS).map(([k]) => k);
-    // The best image is picked from the story's own pictures, so the pick has to be one of them.
-    const bestImage = String(body.bestImage || "");
-    const picked = /^[a-z]+$/.test(bestImage) && ((await rows(`/rest/v1/worksheet_answers?select=value&sheet_id=eq.${story.id}&field=eq.${encodeURIComponent("block:" + bestImage)}&limit=1`)) || []).length > 0;
-    if (!picked) short.unshift("bestImage");
-    if (short.length) return res.status(400).json({ ok: false, error: !picked && short.length === 1 ? "Tap the best image." : `Each comment needs at least ${MIN_CHARS} characters${picked ? "" : ", and tap the best image"}.`, short });
+    // The best image is picked from the story's own pictures, so the pick has
+    // to be one of them. An HTML story has none to tap, so the reader says
+    // which image and where in words instead.
+    const kindRow = await rows(`/rest/v1/worksheet_answers?select=value&sheet_id=eq.${story.id}&field=eq.kind&limit=1`);
+    const htmlStory = kindRow?.[0]?.value === "html";
+    const bestImage = htmlStory ? "" : String(body.bestImage || "");
+    const bestWhere = htmlStory ? clean(body.bestWhere).slice(0, 1000) : "";
+    const picked = htmlStory
+      ? bestWhere.length >= MIN_WHERE
+      : /^[a-z]+$/.test(bestImage) && ((await rows(`/rest/v1/worksheet_answers?select=value&sheet_id=eq.${story.id}&field=eq.${encodeURIComponent("block:" + bestImage)}&limit=1`)) || []).length > 0;
+    if (!picked) short.unshift(htmlStory ? "bestWhere" : "bestImage");
+    const pickSay = htmlStory ? "say which image was the best, and where it is" : "tap the best image";
+    if (short.length) return res.status(400).json({ ok: false, error: !picked && short.length === 1 ? pickSay[0].toUpperCase() + pickSay.slice(1) + "." : `Each comment needs at least ${MIN_CHARS} characters${picked ? "" : ", and " + pickSay}.`, short });
     const w = await write("/rest/v1/story_comments?on_conflict=story_sheet,author", "POST",
-      { story_sheet: story.id, author: email, best_image: bestImage, ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
+      { story_sheet: story.id, author: email, best_image: bestImage, best_where: bestWhere, ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
     if (!w || !w[0]) return res.status(502).json({ ok: false, error: "The comment did not save." });
     return res.status(200).json({ ok: true, doneOthers: doneOthers + (isMine || doneSet.has(story.id) ? 0 : 1) });
   }

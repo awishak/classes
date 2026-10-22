@@ -32,10 +32,11 @@ export const READING_COPY = {
   "ask.best": "The best image, and why",
   "ask.shone": "One way this story shone",
   "ask.encourage": "One thing you would encourage the author to do",
+  "ask.where": "Which image was the best, and where is it in the story?",
 };
 const FIELDS = ["best", "shone", "encourage"];
 const MIN_CHARS = 50;                                 // the server checks the same number
-const EMPTY = { bestImage: "", best: "", shone: "", encourage: "" };
+const EMPTY = { bestImage: "", bestWhere: "", best: "", shone: "", encourage: "" };
 const charsSay = (n) => (n >= MIN_CHARS ? n + " characters. Long enough!" : n + " characters. Write at least " + MIN_CHARS + ".");
 
 const api = async (config, body) => {
@@ -193,6 +194,8 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
   const story = { ...data.story, feature: "", blocks: data.story.blocks.map(b => (b.type === "image" ? { ...b, path: b.id } : b)) };
   const images = data.story.blocks.filter(b => b.type === "image");
   const urls = Object.fromEntries(images.map(b => [b.id, b.url]));
+  // An HTML story has no pictures to tap, so the best image is said in words.
+  const htmlStory = data.story.kind === "html";
   return (
     <div className="vrd-stack">
       <button type="button" className="vrd-back" onClick={onBack}>Back to all stories</button>
@@ -223,7 +226,13 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
             {FIELDS.map(f => (
               <div key={f} className="vrd-field">
                 <Words k={"ask." + f} copy={copy} editing={editing} className="vrd-ask" />
-                {f === "best" ? (
+                {f === "best" && htmlStory ? (
+                  <>
+                    <Words k="ask.where" copy={copy} editing={editing} className="vrd-muted" />
+                    <input className={"vrd-box" + (short.includes("bestWhere") ? " vrd-box-bad" : "")} maxLength={1000} aria-label={copy.say("ask.where")} value={form.bestWhere || ""} onChange={e => change("bestWhere", e.target.value)} />
+                  </>
+                ) : null}
+                {f === "best" && !htmlStory ? (
                   <div className={"vrd-picks" + (short.includes("bestImage") ? " vrd-picks-bad" : "")} role="radiogroup" aria-label="Tap the best image">
                     {images.map((b, i) => (
                       <button key={b.id} type="button" role="radio" aria-checked={form.bestImage === b.id} aria-label={"Picture " + (i + 1)} className="vrd-pick" onClick={() => change("bestImage", b.id)}>
@@ -263,6 +272,7 @@ function Said({ c, copy, images, urls }) {
     <div key={f} className="vrd-said">
       <span className="vrd-said-k">{copy.say("ask." + f)}</span>
       {f === "best" && n >= 0 ? <span className="vrd-said-pick">{urls[c.bestImage] ? <img src={urls[c.bestImage]} alt={"Picture " + (n + 1)} /> : null}<span>Picture {n + 1}</span></span> : null}
+      {f === "best" && n < 0 && c.bestWhere ? <span className="vrd-said-pick"><span>{c.bestWhere}</span></span> : null}
       {c[f]}
     </div>
   ));

@@ -22,6 +22,9 @@ export const LONG_SIDE = 2000;
 const HEIC = /\.(heic|heif)$/i;
 export const isHeic = (file) => /image\/hei[cf]/i.test(file?.type || "") || HEIC.test(file?.name || "");
 export const looksLikeImage = (file) => /^image\//i.test(file?.type || "") || isHeic(file) || /\.(jpe?g|png|webp|gif)$/i.test(file?.name || "");
+// An HTML story goes up as one self-contained file, into the same folder.
+export const HTML_MAX = 30 * 1024 * 1024;   // the bucket's own cap, sql/visual-story-html.sql
+export const looksLikeHtml = (file) => /^text\/html/i.test(file?.type || "") || /\.html?$/i.test(file?.name || "");
 
 /** The size to draw at: the long side at most `max`, never enlarged. */
 export const fitWithin = (w, h, max = LONG_SIDE) => {
@@ -71,7 +74,7 @@ export async function prepImage(file) {
 }
 
 /** Upload a blob to the student's folder, with progress 0 to 1. Resolves the path. */
-export async function uploadImage({ path, blob, onProgress = () => {} }) {
+export async function uploadImage({ path, blob, type = "image/jpeg", onProgress = () => {} }) {
   const token = await accessToken();
   if (!token) throw new Error("You are signed out. Sign in again, then retry.");
   return new Promise((resolve, reject) => {
@@ -79,7 +82,7 @@ export async function uploadImage({ path, blob, onProgress = () => {} }) {
     xhr.open("POST", SUPABASE_URL + "/storage/v1/object/" + BUCKET + "/" + path.split("/").map(encodeURIComponent).join("/"));
     xhr.setRequestHeader("apikey", SUPABASE_KEY);
     xhr.setRequestHeader("Authorization", "Bearer " + token);
-    xhr.setRequestHeader("Content-Type", "image/jpeg");
+    xhr.setRequestHeader("Content-Type", type);
     xhr.setRequestHeader("x-upsert", "true");
     xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
     xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve(path) : reject(new Error("The upload was refused (" + xhr.status + "). Retry, and if it keeps failing, press Report a problem.")));

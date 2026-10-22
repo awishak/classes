@@ -12,6 +12,12 @@
 // page is two halves: building on the left, and on the right the finished
 // story, live, the way a classmate will read the story.
 //
+// Andrew, 2026-10-21: a student who made the story as an HTML file hands in
+// the headline, one feature image and the file, and nothing else. The file
+// goes into the same private folder as the photos and sits inside the story
+// page in a sandboxed frame, served from Supabase's address and never from
+// this site's, so nothing in it can reach anyone's sign-in here.
+//
 // Every block is its own worksheet answer (model.js), saved through saver.js,
 // so typing is never lost and a save touches one block. Photos go through
 // photos.js into the student's private folder. The lock at the due date is the
@@ -20,8 +26,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { createSaver } from "./saver.js";
-import { storyOf, problemsOf, wordCount, imageCount, linkParts, REASONS, LAYOUTS, isPortrait, layoutOf, MIN_IMAGES, MAX_IMAGES, MIN_WORDS, MAX_WORDS } from "./model.js";
-import { prepImage, uploadImage, signUrls, letterId, looksLikeImage } from "./photos.js";
+import { storyOf, problemsOf, wordCount, imageCount, linkParts, isHtmlStory, featureImage, REASONS, LAYOUTS, isPortrait, layoutOf, MIN_IMAGES, MAX_IMAGES, MIN_WORDS, MAX_WORDS } from "./model.js";
+import { prepImage, uploadImage, signUrls, letterId, looksLikeImage, looksLikeHtml, HTML_MAX } from "./photos.js";
 import { useCopy, Words, standing } from "./pre.jsx";
 import { gameClient } from "../gameClient.js";
 import * as TOKENS from "../tokens.js";
@@ -71,6 +77,19 @@ const Linked = ({ text }) => linkParts(text).map((r, i) => r.href
 export function StoryView({ story, urls, showPrivate = false, look, credit }) {
   const images = story.blocks.filter(b => b.type === "image");
   const theme = (look || story.look) === "dark" ? "dark" : "light";
+  if (isHtmlStory(story)) {
+    // The file in a frame with no same-origin right, so the student's script runs on its own and sees nothing of this page.
+    const url = (story.html && (story.html.url || urls[story.html.path])) || "";
+    return (
+      <article className={"vsr vsr-" + theme}>
+        <h1 className="vsr-h">{story.headline || "Your headline goes here"}</h1>
+        {!story.html ? <p className="vsr-empty">Your HTML file shows up here once you upload it on the left.</p> : null}
+        {story.html && !url ? <div className="vsr-img vsr-wait">Loading the story</div> : null}
+        {url ? <iframe className="vsr-frame" src={url} sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" title={story.headline || "The story"} /> : null}
+        {url ? <p className="vsr-link"><a href={url} target="_blank" rel="noreferrer">Open the story on its own page</a></p> : null}
+      </article>
+    );
+  }
   return (
     <article className={"vsr vsr-" + theme}>
       <h1 className="vsr-h">{story.headline || "Your headline goes here"}</h1>
@@ -156,6 +175,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   const saver = useRef(null);
   const live = useRef({});                             // the latest answers, for saves made from callbacks
   const fileInput = useRef(null);
+  const htmlInput = useRef(null);
   const errors = useRef([]);
 
   useEffect(() => {
@@ -198,7 +218,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   }, [store, viewer?.id, classId, readOnly]);
 
   const story = useMemo(() => storyOf(answers || {}), [answers]);
-  const paths = story.blocks.filter(b => b.type === "image").map(b => b.path).filter(p => p && !urls[p]);
+  const paths = [...story.blocks.filter(b => b.type === "image").map(b => b.path), story.html?.path].filter(p => p && !urls[p]);
   const pathKey = paths.join("|");
   useEffect(() => {
     if (!pathKey) return;
@@ -208,7 +228,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   }, [pathKey]);
   // Signed links last an hour. Ask again before they lapse.
   useEffect(() => {
-    const t = setInterval(() => { const all = storyOf(live.current).blocks.map(b => b.path).filter(Boolean); signUrls(all).then(got => setUrls(u => ({ ...u, ...got }))).catch(() => {}); }, 45 * 60000);
+    const t = setInterval(() => { const cur = storyOf(live.current); const all = [...cur.blocks.map(b => b.path), cur.html?.path].filter(Boolean); signUrls(all).then(got => setUrls(u => ({ ...u, ...got }))).catch(() => {}); }, 45 * 60000);
     return () => clearInterval(t);
   }, []);
 
@@ -256,7 +276,8 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
       await uploadImage({ path, blob, onProgress: (p) => patch({ progress: p }) });
       setUrls(m => ({ ...m, [path]: URL.createObjectURL(blob) }));
       const id = addBlock({ type: "image", path, w, h, layout: "full", caption: "", graphic: false, source: "", reasons: [], other: "" });
-      if (!live.current.feature) set("feature", id);
+      // An HTML story has one picture that matters, so the newest one is the feature image.
+      if (!live.current.feature || live.current.kind === "html") set("feature", id);
       setUploads(list => list.filter(x => x.key !== u.key));
     } catch (e) {
       errors.current = [...errors.current.slice(-9), { at: new Date().toISOString(), name: u.name, error: e.message }];
@@ -265,12 +286,41 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   };
   const addFiles = async (files) => {
     if (!canEdit) return;
-    const list = [...files];
+    let list = [...files];
+    // In an HTML story a dropped .html file is the story, and one picture is the feature image.
+    if (live.current.kind === "html") {
+      const html = list.find(looksLikeHtml);
+      list = list.filter(f => f !== html).slice(0, 1);
+      if (html) await addHtml(html);
+    }
     const fresh = list.map(f => ({ key: letterId(10), name: f.name || "photo", file: f, progress: 0, error: looksLikeImage(f) ? "" : "This file is not a picture. Upload a JPEG, PNG or iPhone photo.", stage: "Waiting" }));
     setUploads(u => [...u, ...fresh]);
     // One at a time, so a slow connection finishes each photo rather than all of them at a crawl.
     for (const u of fresh) if (!u.error) await runUpload(u);
   };
+  // The HTML file: one self-contained file, up as it is, into the same folder as the pictures.
+  const runHtmlUpload = async (u) => {
+    const patch = (p) => setUploads(list => list.map(x => (x.key === u.key ? { ...x, ...p } : x)));
+    patch({ progress: 0, error: "", stage: "Uploading" });
+    try {
+      const path = classId + "/" + viewer.id + "/" + letterId(12) + ".html";
+      await uploadImage({ path, blob: u.file, type: "text/html", onProgress: (p) => patch({ progress: p }) });
+      set("html", JSON.stringify({ path, name: u.file.name || "", size: u.file.size || 0 }));
+      setUploads(list => list.filter(x => x.key !== u.key));
+    } catch (e) {
+      errors.current = [...errors.current.slice(-9), { at: new Date().toISOString(), name: u.name, error: e.message }];
+      patch({ error: e.message || "The upload did not finish.", stage: "" });
+    }
+  };
+  const addHtml = async (file) => {
+    if (!canEdit || !file) return;
+    const error = !looksLikeHtml(file) ? "This file is not an HTML file. Upload the .html file you made."
+      : file.size > HTML_MAX ? "The file has to be under 30 MB. Make the pictures inside it smaller, then try again." : "";
+    const u = { key: letterId(10), name: file.name || "story.html", file, progress: 0, error, stage: "Waiting", html: true };
+    setUploads(list => [...list, u]);
+    if (!error) await runHtmlUpload(u);
+  };
+  const setKind = (kind) => set("kind", kind === "html" ? "html" : "");
 
   const submit = async () => {
     if (problemsOf(story).length) { setSubmitting("problems"); return; }
@@ -288,12 +338,14 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   if (readOnly) return <div className="vss"><style>{CSS}</style><div className="vss-solo"><StoryView story={story} urls={urls} showPrivate credit={viewer?.name || ""} /></div></div>;
 
   const words = wordCount(story), images = imageCount(story);
+  const htmlMode = isHtmlStory(story);
+  const feature = featureImage(story);
   const problems = problemsOf(story);
   const imagesOk = images >= MIN_IMAGES && images <= MAX_IMAGES, wordsOk = words >= MIN_WORDS && words <= MAX_WORDS;
   const toggleSteps = () => { const next = !stepsOpen; setStepsOpen(next); remember("visual-story-steps", next ? "open" : "hidden"); };
   const imageNo = (b) => story.blocks.filter(x => x.type === "image").indexOf(b) + 1;
 
-  const counts = (
+  const counts = htmlMode ? null : (
     <div className="vss-counts">
       <Meter label="images" n={images} min={MIN_IMAGES} max={MAX_IMAGES} ok={imagesOk} />
       <Meter label="words" n={words} min={MIN_WORDS} max={MAX_WORDS} ok={wordsOk} />
@@ -367,6 +419,14 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
           </label>
 
           <div className="vss-field">
+            <span className="vss-label">How are you making your story?</span>
+            <div className="vss-looks">
+              <button type="button" className="vss-look vss-kind" aria-pressed={!htmlMode} disabled={!canEdit} onClick={() => setKind("")}>Build it here</button>
+              <button type="button" className="vss-look vss-kind" aria-pressed={htmlMode} disabled={!canEdit} onClick={() => setKind("html")}>Upload an HTML file</button>
+            </div>
+          </div>
+
+          <div className="vss-field">
             <span className="vss-label">Your look</span>
             <div className="vss-looks">
               {[["light", "White page"], ["dark", "Black page"]].map(([id, name]) => (
@@ -377,13 +437,32 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
             </div>
           </div>
 
-          <div className={"vss-drop" + (fileOver ? " vss-drop-on" : "")}>
-            <p className="vss-drop-h">Drop your pictures here</p>
-            <p className="vss-drop-p">or</p>
-            <button type="button" className="vss-go" disabled={!canEdit} onClick={() => fileInput.current && fileInput.current.click()}>Choose pictures</button>
-            <input ref={fileInput} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={e => { addFiles(e.target.files); e.target.value = ""; }} />
-            <p className="vss-drop-small">JPEG, PNG or iPhone photos. Want to crop or brighten a photo? Do that in Canva or on your phone first.</p>
-          </div>
+          {htmlMode ? (
+            <div className="vss-two">
+              <div className={"vss-drop" + (fileOver ? " vss-drop-on" : "")}>
+                <p className="vss-drop-h">Your feature image</p>
+                {feature && urls[feature.path] ? <img className="vss-feature" src={urls[feature.path]} alt="" /> : null}
+                <button type="button" className="vss-go" disabled={!canEdit} onClick={() => fileInput.current && fileInput.current.click()}>{feature ? "Replace the picture" : "Choose a picture"}</button>
+                <input ref={fileInput} type="file" accept="image/*,.heic,.heif" hidden onChange={e => { addFiles(e.target.files); e.target.value = ""; }} />
+                <p className="vss-drop-small">One JPEG, PNG or iPhone photo. Your headline and this picture are what classmates see first.</p>
+              </div>
+              <div className={"vss-drop" + (fileOver ? " vss-drop-on" : "")}>
+                <p className="vss-drop-h">Your HTML file</p>
+                {story.html ? <p className="vss-file">{story.html.name || "Your file"}{story.html.size ? " · " + (story.html.size / 1048576).toFixed(1) + " MB" : ""}</p> : null}
+                <button type="button" className="vss-go" disabled={!canEdit} onClick={() => htmlInput.current && htmlInput.current.click()}>{story.html ? "Replace the file" : "Choose the file"}</button>
+                <input ref={htmlInput} type="file" accept=".html,.htm,text/html" hidden onChange={e => { addHtml(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                <p className="vss-drop-small">One self-contained .html file. Put the pictures inside the file or link them from the web, since the file goes up alone.</p>
+              </div>
+            </div>
+          ) : (
+            <div className={"vss-drop" + (fileOver ? " vss-drop-on" : "")}>
+              <p className="vss-drop-h">Drop your pictures here</p>
+              <p className="vss-drop-p">or</p>
+              <button type="button" className="vss-go" disabled={!canEdit} onClick={() => fileInput.current && fileInput.current.click()}>Choose pictures</button>
+              <input ref={fileInput} type="file" accept="image/*,.heic,.heif" multiple hidden onChange={e => { addFiles(e.target.files); e.target.value = ""; }} />
+              <p className="vss-drop-small">JPEG, PNG or iPhone photos. Want to crop or brighten a photo? Do that in Canva or on your phone first.</p>
+            </div>
+          )}
 
           {uploads.length ? (
             <ul className="vss-ups">
@@ -394,7 +473,8 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
                     <>
                       <span className="vss-bad">{u.error}</span>
                       <span className="vss-row">
-                        {looksLikeImage(u.file) ? <button type="button" className="vss-btn" onClick={() => runUpload(u)}>Try again</button> : null}
+                        {u.html && looksLikeHtml(u.file) ? <button type="button" className="vss-btn" onClick={() => runHtmlUpload(u)}>Try again</button> : null}
+                        {!u.html && looksLikeImage(u.file) ? <button type="button" className="vss-btn" onClick={() => runUpload(u)}>Try again</button> : null}
                         <button type="button" className="vss-btn" onClick={() => setUploads(l => l.filter(x => x.key !== u.key))}>Dismiss</button>
                       </span>
                     </>
@@ -409,6 +489,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
             </ul>
           ) : null}
 
+          {htmlMode ? null : (<>
           <ol className="vss-cards">
             {story.blocks.map((b, i) => (
               <li key={b.id}
@@ -451,6 +532,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
             <span className="vss-muted">If you want to include a link, it will go at the top of your story as an alternate way to read your work.</span>
             <input className="vss-input" value={answers.link || ""} maxLength={500} placeholder="https://" readOnly={!canEdit} onChange={e => set("link", e.target.value.trim())} />
           </label>
+          </>)}
         </section>
 
         <section className="vss-see" aria-label="Story preview">
@@ -690,6 +772,11 @@ const CSS = `
 .vss-look-swatch{width:44px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-family:${SERIF};font-size:16px;font-weight:600;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
 .vss-look-light .vss-look-swatch{background:#fff;color:#111}
 .vss-look-dark .vss-look-swatch{background:#0b0b0c;color:#f4f4f2}
+.vss-kind{padding:10px 16px}
+.vss-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vss-feature{display:block;width:100%;max-width:220px;max-height:220px;object-fit:contain;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.vss-file{margin:0;font-size:15px;font-weight:600;word-break:break-all}
+@media (max-width:560px){ .vss-two{grid-template-columns:1fr} }
 
 .vss-drop{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:30px 18px;border:2px dashed ${L.strong};border-radius:18px;background:${S.sunk};transition:background .15s,border-color .15s}
 .vss-drop-on{border-color:${T.primary};background:${S.card};transform:scale(1.01)}
@@ -771,6 +858,7 @@ const CSS = `
 .vsr-h{margin:-14px 0 0;font-family:${SERIF};font-size:40px;font-weight:600;line-height:1.12;letter-spacing:-.01em}
 .vsr-link{margin:0;font-size:14.5px;opacity:.75}
 .vsr-link a{color:inherit}
+.vsr-frame{display:block;width:100%;height:78vh;min-height:520px;border:0;border-radius:3px;background:#fff}
 .vsr-empty{margin:0;font-family:${SERIF};font-size:19px;font-style:italic;opacity:.55}
 .vsr-text{margin:0;font-family:${SERIF};font-size:19px;line-height:1.7;white-space:pre-line;max-width:62ch}
 .vsr a{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}

@@ -5874,6 +5874,31 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!vsm.problemsOf(other).some(p => /Other/.test(p))) say("Other with no words passes");
   const byNobody = vsm.storyOf({ ...base, ...Object.fromEntries([img("dd", { by: "other", byName: " " })]) });
   if (!vsm.problemsOf(byNobody).some(p => /Image 4: you marked Someone else/.test(p))) say("Someone else with no name passes");
+  // An HTML story: headline, feature image and the file, and nothing else. Andrew, 2026-10-21.
+  const htmlDone = vsm.storyOf({ headline: "Run club", kind: "html", feature: "aa", order: JSON.stringify(["aa"]), ...Object.fromEntries([img("aa", { reasons: [] })]), html: JSON.stringify({ path: "c/e/x.html", name: "story.html", size: 2048 }) });
+  if (!vsm.isHtmlStory(htmlDone)) say("kind html is not an HTML story");
+  if (vsm.problemsOf(htmlDone).length) say("a finished HTML story still has problems: " + vsm.problemsOf(htmlDone).join(" | "));
+  if (vsm.featureImage(htmlDone)?.id !== "aa") say("the feature image of an HTML story is not its picture");
+  const htmlBare = vsm.storyOf({ headline: "Run club", kind: "html" });
+  const bareProblems = vsm.problemsOf(htmlBare);
+  if (!bareProblems.some(p => /feature image/.test(p)) || !bareProblems.some(p => /HTML file/.test(p)) || bareProblems.length !== 2) say("a bare HTML story asks for the wrong things: " + bareProblems.join(" | "));
+  if (vsm.storyOf({ kind: "html", html: "not json" }).html !== null) say("a broken html answer is not dropped");
+  if (vsm.storyOf({ kind: "pictures" }).kind !== "pictures" || vsm.storyOf({}).kind !== "pictures") say("a story with no kind is not a pictures story");
+  // A section opens on its own once its time has passed, and only from building.
+  const t0 = Date.parse("2026-10-26T07:05:00Z");
+  if (vsm.stageAt({ stage: "building", opens_at: "2026-10-26T07:05:00Z" }, t0) !== "reading") say("a section past its open time is not reading");
+  if (vsm.stageAt({ stage: "building", opens_at: "2026-10-26T07:05:00Z" }, t0 - 1000) !== "building") say("a section before its open time is already reading");
+  if (vsm.stageAt({ stage: "closed", opens_at: "2026-10-26T07:05:00Z" }, t0) !== "closed") say("an open time reopens a closed section");
+  if (vsm.stageAt(undefined, t0) !== "building" || vsm.stageAt({ stage: "building", opens_at: null }, t0) !== "building") say("no row or no time is not building");
+  {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const shown = renderToStaticMarkup(<StoryView story={htmlDone} urls={{ "c/e/x.html": "https://x.test/s.html" }} credit="" />);
+    if (!/<iframe[^>]*sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"/.test(shown) || /allow-same-origin/.test(shown)) say("an HTML story's frame is not sandboxed without same-origin");
+    if (!/https:\/\/x\.test\/s\.html/.test(shown)) say("an HTML story's frame does not point at the file");
+    if (/<img/.test(shown)) say("an HTML story's page draws its picture blocks");
+    const fromServer = renderToStaticMarkup(<StoryView story={{ ...htmlDone, html: { url: "https://x.test/served.html" } }} urls={{}} credit="" />);
+    if (!/served\.html/.test(fromServer)) say("a link sent by the server is not used for the frame");
+  }
   // No credit line while the stories are anonymous, Andrew, 2026-10-13.
   {
     const { renderToStaticMarkup } = await import("react-dom/server");

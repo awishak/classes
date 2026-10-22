@@ -16,7 +16,7 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { idOf } from "../roster.js";
 import { gameClient } from "../gameClient.js";
-import { storyOf, problemsOf, wordCount, imageCount } from "./model.js";
+import { storyOf, problemsOf, wordCount, imageCount, stageAt } from "./model.js";
 import { VISUAL_STORY_KEY } from "./story.jsx";
 import * as TOKENS from "../tokens.js";
 
@@ -120,7 +120,7 @@ function Row({ config, name, email, link, sheet, due, past, onUnlock }) {
         <span className="vsv-grow" />
         {started && link ? <a className="vsv-link" href={"/" + config.id + "/worksheets/" + VISUAL_STORY_KEY + "?s=" + encodeURIComponent(link)}>Open story</a> : null}
       </div>
-      {started ? <p className="vsv-muted">{story.headline ? "“" + story.headline + "”, " : ""}{imageCount(story)} pictures, {wordCount(story)} words{left ? ", " + left + " thing" + (left === 1 ? "" : "s") + " left before Submit" : ""}.</p> : null}
+      {started ? <p className="vsv-muted">{story.headline ? "“" + story.headline + "”, " : ""}{story.kind === "html" ? "HTML story, " + (story.html ? "file up" : "no file yet") + ", feature image " + (imageCount(story) ? "set" : "missing") : imageCount(story) + " pictures, " + wordCount(story) + " words"}{left ? ", " + left + " thing" + (left === 1 ? "" : "s") + " left before Submit" : ""}.</p> : null}
       {past && sheet ? (
         <div className="vsv-row">
           {unlocked ? <span className="vsv-muted">Unlocked until {when(sheet.unlockedUntil)}.</span> : null}
@@ -148,6 +148,8 @@ const storyApi = async (config, body) => {
 const NEXT = { building: ["reading", "Open the stories for reading"], reading: ["closed", "Close comments"], closed: ["released", "Release the names"] };
 const STAGE_SAY = { building: "Students are still building. Classmates cannot see any story yet.", reading: "The stories are open with no names. Students are reading and commenting.", closed: "Comments are closed. Names are still hidden.", released: "Names are out. Each student sees the comments on their own story." };
 const BACK = { reading: "building", closed: "reading", released: "closed" };
+// A time for the datetime-local box, in this computer's zone, and back to ISO.
+const localOf = (iso) => { if (!iso) return ""; const d = new Date(iso); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 
 /** Pods of about five from a list already sorted so similar topics sit together. */
 export function suggestPods(people, size = 5) {
@@ -169,9 +171,11 @@ export function ReadingPanel({ config, section }) {
   const [error, setError] = useState("");
   const [pods, setPods] = useState({});            // email -> pod number
   const [busy, setBusy] = useState("");
+  const [opensAt, setOpensAt] = useState({});      // section -> the datetime-local box
   const load = () => storyApi(config, { action: "admin" }).then(out => {
     setData(out);
     setPods(Object.fromEntries(out.pods.map(p => [p.email, p.pod])));
+    setOpensAt(Object.fromEntries(Object.entries(out.opens || {}).map(([k, v]) => [k, localOf(v)])));
   }).catch(e => setError(e.message));
   useEffect(() => { load(); }, [config.id]);
   if (error) return <p className="vsv-bad">Could not read the reading phase: {error}{/relation|does not exist/.test(error) ? " Run sql/visual-story-reading.sql in Supabase." : ""}</p>;
@@ -194,6 +198,8 @@ export function ReadingPanel({ config, section }) {
   const podCount = Math.max(1, ...people.map(p => pods[p.email] || 0), Math.round(people.length / 5));
   const stories = data.stories.filter(s => s.section === sec);
   const nextStage = NEXT[stage];
+  const opens = (data.opens || {})[sec] || null;
+  const saveOpens = (at) => run("opens", () => storyApi(config, { action: "opens", section: sec, opensAt: at ? new Date(at).toISOString() : null }));
   return (
     <section className="vsv-reading">
       <h2 className="vsv-h2">Reading and comments{sec ? ", " + sec : ""}</h2>
@@ -204,6 +210,14 @@ export function ReadingPanel({ config, section }) {
         <a className="vsv-link" href={"/" + config.id + "/stories"} target="_blank" rel="noreferrer">The students' page</a>
         {busy && busy.startsWith("Not") ? <span className="vsv-bad">{busy}</span> : null}
       </div>
+      {stage === "building" ? (
+        <div className="vsv-row">
+          <label className="vsv-row">Opens for reading on its own at <input className="vsv-time" type="datetime-local" value={opensAt[sec] || ""} onChange={e => setOpensAt(o => ({ ...o, [sec]: e.target.value }))} /></label>
+          <button type="button" className="vsv-btn" disabled={busy === "opens" || !opensAt[sec]} onClick={() => saveOpens(opensAt[sec])}>Save the time</button>
+          {opens ? <button type="button" className="vsv-btn" disabled={busy === "opens"} onClick={() => saveOpens(null)}>Take the time away</button> : null}
+          {opens ? <span className="vsv-muted">Set for {when(opens)}.</span> : null}
+        </div>
+      ) : null}
 
       <h3 className="vsv-h3">Pods</h3>
       <p className="vsv-muted">Pods of about five, inside this section. Suggest groups students by the prompt and topic from pre-production; move anyone, then save.</p>
@@ -242,7 +256,7 @@ export function ReadingPanel({ config, section }) {
           return (
             <div key={s.id} className="vsv-cgroup">
               <b>{s.name}: {s.headline || "Untitled"}</b>
-              {list.map((c, i) => <p key={i} className="vsv-msg"><i>{c.author}</i> Best image{c.bestPicture ? ", picture " + c.bestPicture : ""}: {c.best} Shone: {c.shone} Encourage: {c.encourage}</p>)}
+              {list.map((c, i) => <p key={i} className="vsv-msg"><i>{c.author}</i> Best image{c.bestPicture ? ", picture " + c.bestPicture : c.bestWhere ? ", " + c.bestWhere : ""}: {c.best} Shone: {c.shone} Encourage: {c.encourage}</p>)}
             </div>
           );
         })}
@@ -314,9 +328,10 @@ function StageBanner({ config }) {
     const today = (STAGE_DAYS[config.id] || []).filter(([from, to]) => now >= Date.parse(from) && now < Date.parse(to));
     if (!today.length) return;
     let alive = true;
-    gameClient.from("story_stage").select("section,stage").eq("worksheet_key", VISUAL_STORY_KEY).eq("group_key", config.id).then(r => {
+    // The stage as the route sees it: a section past its open time is reading, button or no button.
+    gameClient.from("story_stage").select("section,stage,opens_at").eq("worksheet_key", VISUAL_STORY_KEY).eq("group_key", config.id).then(r => {
       if (!alive) return;
-      const stages = (r.data || []).map(x => x.stage);
+      const stages = (r.data || []).map(x => stageAt(x));
       const at = stages.length ? stages : ["building"];
       const hit = today.find(([, , when]) => when === "pods" ? at.every(s => s === "building") : at.includes(when));
       if (hit) setSay(hit[3]);
@@ -372,6 +387,7 @@ const CSS = `
 .vsv-none{color:${T.muted}}
 .vsv-link{font-size:15px;font-weight:600;color:${T.primary}}
 .vsv-btn{font:inherit;font-size:14px;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.vsv-time{font:inherit;font-size:14px;padding:5px 8px;border-radius:8px;border:1px solid ${L.strong};background:${S.card};color:${T.primary}}
 .vsv-btn:disabled{opacity:.5;cursor:default}
 .vsv-btn-main{background:${T.primary};color:${S.page};border-color:${T.primary}}
 .vsv-reading{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:14px;background:${S.card};box-shadow:0 0 0 1px ${L.soft}}
