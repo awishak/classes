@@ -753,8 +753,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // The student's own code, read off the row only they can see, for the menu.
   const [ownCode, setOwnCode] = useState("");
   const [pinOpen, setPinOpen] = useState(false);
-  // My work opens on the Flow; List is a press away and stays until the page is left.
-  const [workView, setWorkView] = useState("flow");
+  // My work opens on the List; Flow is a press away and stays until the page is left.
+  const [workView, setWorkView] = useState("list");
   // Whether the welcome cards are up, latched.
   //
   // The gate is "this student has answered nothing", and every keystroke on a
