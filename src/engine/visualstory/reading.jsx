@@ -5,7 +5,8 @@
 // own marked My story, and a green check on every story they have commented
 // on. Each story opens on its own white or black page with three comment
 // boxes. Everything comes through /api/visual-story, which decides what a
-// student may see; this page only shows it.
+// student may see; this page only shows it. Signed in as the instructor, the
+// same page is every story in the class with names, submitted or not.
 //
 // Andrew, 2026-10-13, on how it looks: "a grid of stories, maybe 6 across on
 // laptop, 2 across on phone, and the 4 stories they have to read have a red
@@ -77,7 +78,7 @@ export default function ClassmatesStories({ config }) {
 
   let body;
   if (!session && !savedPin()) body = <p className="vrd-p">Sign in to read your classmates' stories. <a className="vrd-link" href={"/login?next=" + encodeURIComponent(window.location.pathname)}>Sign in</a></p>;
-  else if ((instructor || savedPin()) && !as && config.id !== "comm999") body = <p className="vrd-p">This is the students' page. Your view of every story, with names, is on <a className="vrd-link" href={"/" + config.id + "/worksheets/visual-story?review"}>the stories page</a>.</p>;
+  else if ((instructor || savedPin()) && !as && config.id !== "comm999") body = open ? <EveryStory config={config} id={open} onBack={() => go("")} /> : <EveryGrid config={config} onOpen={go} />;
   else if ((instructor || savedPin()) && !as) body = <PracticePicker config={config} />;
   else body = open ? <OneStory config={config} as={as} id={open} copy={copy} editing={editing} onBack={() => go("")} /> : <Grid config={config} as={as} copy={copy} editing={editing} onOpen={go} />;
 
@@ -98,6 +99,69 @@ export default function ClassmatesStories({ config }) {
           </div>
         ) : null}
         {body}
+      </div>
+    </div>
+  );
+}
+
+// Andrew's grid: every story in the class, in progress or submitted, with
+// names, split by section. Students see nothing until the section opens;
+// this is his look at what is coming. Andrew, 2026-10-23: "let me as the
+// instructor see all the student stories in progress on that page, and you
+// can give me a chip for not yet submitted."
+const when = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+function EveryGrid({ config, onOpen }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [section, setSection] = useState("");
+  useEffect(() => { api(config, { action: "every" }).then(d => { setData(d); setSection(d.sections[0] || ""); }).catch(e => setError(e.message)); }, [config]);
+  if (error) return <p className="vrd-p">{error}</p>;
+  if (!data) return <p className="vrd-p">Loading the stories.</p>;
+  const stories = data.stories.filter(t => !section || t.section === section);
+  const notStarted = data.notStarted.filter(p => !section || p.section === section);
+  const submitted = stories.filter(t => t.submitted_at).length;
+  return (
+    <div className="vrd-stack">
+      <h1 className="vrd-title">Classmates' stories</h1>
+      <p className="vrd-lead">{submitted} submitted, {stories.length - submitted} in progress, {notStarted.length} not started.</p>
+      {data.sections.length > 1 ? (
+        <div className="vrd-row" role="tablist">
+          {data.sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} aria-pressed={s === section} className="vrd-btn" onClick={() => setSection(s)}>{s}</button>)}
+        </div>
+      ) : null}
+      <ul className="vrd-grid">
+        {stories.map(t => (
+          <li key={t.id}>
+            <button type="button" className={"vrd-tile" + (t.submitted_at ? " vrd-done" : "")} onClick={() => onOpen(t.id)}>
+              <span className={"vrd-tile-img vrd-look-" + (t.look || "light")}>{t.image ? <img src={t.image} alt="" loading="lazy" /> : null}</span>
+              <span className="vrd-tile-h">{t.headline || "Untitled story"}</span>
+              <span className="vrd-tile-by">{t.author}</span>
+              <span className="vrd-chips">
+                {t.submitted_at ? <span className={"vrd-chip " + (t.late ? "vrd-chip-red" : "vrd-chip-done")}>{t.late ? "Submitted late" : "Submitted"}</span> : <span className="vrd-chip">Not yet submitted</span>}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {notStarted.length ? <p className="vrd-muted">Not started: {notStarted.map(p => p.name).join(", ")}.</p> : null}
+    </div>
+  );
+}
+
+function EveryStory({ config, id, onBack }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => { api(config, { action: "peek", id }).then(setData).catch(e => setError(e.message)); }, [config, id]);
+  if (error) return <div className="vrd-stack"><button type="button" className="vrd-back" onClick={onBack}>Back to all stories</button><p className="vrd-p">{error}</p></div>;
+  if (!data) return <p className="vrd-p">Loading the story.</p>;
+  const story = { ...data.story, feature: "", blocks: data.story.blocks.map(b => (b.type === "image" ? { ...b, path: b.id } : b)) };
+  const urls = Object.fromEntries(data.story.blocks.filter(b => b.type === "image").map(b => [b.id, b.url]));
+  return (
+    <div className="vrd-stack">
+      <button type="button" className="vrd-back" onClick={onBack}>Back to all stories</button>
+      <p className="vrd-p"><b>{data.author}</b>{data.section ? ", " + data.section : ""}. {data.submitted_at ? (data.late ? "Submitted late, " : "Submitted ") + when(data.submitted_at) + "." : "Not yet submitted."}</p>
+      <div className={"vrd-story vrd-look-" + (data.story.look || "light")}>
+        <StoryView story={story} urls={urls} credit={data.author || ""} />
       </div>
     </div>
   );

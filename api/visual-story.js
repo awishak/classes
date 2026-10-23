@@ -106,6 +106,25 @@ async function sectionStories(groupKey, roster, section) {
   return mine.map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at, story: storyOf(answersOf(by[s.id] || [])) }));
 }
 
+// Only what a tile needs: the headline, the look, and the star picture, as a
+// signed link. Shared by the students' grid and Andrew's.
+async function tilesOf(ids) {
+  const head = {};
+  if (ids.length) {
+    const top = (await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${ids.join(",")})&field=in.(headline,look,feature,order)&order=position&limit=${PAGE * 4}`)) || [];
+    top.forEach(r => { const m = (head[r.sheet_id] = head[r.sheet_id] || {}); m[r.field] = (m[r.field] || "") + r.value; });
+    const want = ids.map(id => { const m = head[id] || {}; let first = ""; try { first = (JSON.parse(m.order || "[]") || [])[0] || ""; } catch { /* no order */ } return [id, m.feature || first]; }).filter(([, b]) => /^[a-z]+$/.test(b));
+    if (want.length) {
+      const blocks = (await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${want.map(w => w[0]).join(",")})&field=in.(${want.map(w => '"block:' + w[1] + '"').join(",")})&order=position&limit=${PAGE}`)) || [];
+      const joined = {};
+      blocks.forEach(r => { const k = r.sheet_id + " " + r.field; joined[k] = (joined[k] || "") + r.value; });
+      want.forEach(([id, b]) => { try { head[id].path = JSON.parse(joined[id + " block:" + b] || "{}").path || ""; } catch { /* no picture */ } });
+    }
+  }
+  const urls = await sign(ids.map(id => head[id]?.path));
+  return { head, urls };
+}
+
 /** The picture's place in the story, 1 for the first picture, or null. */
 const pictureNo = (story, id) => { const i = story && id ? story.blocks.filter(b => b.type === "image").findIndex(b => b.id === id) : -1; return i < 0 ? null : i + 1; };
 
@@ -223,6 +242,44 @@ export default async function handler(req, res) {
     });
   }
 
+  // ─── Andrew's grid: every story, in progress or not, with names ───
+  // Andrew, 2026-10-23: "let me as the instructor see all the student stories
+  // in progress on that page, and you can give me a chip for not yet
+  // submitted. students won't see anything until monday." The stage stays
+  // whatever it is for students; this branch is his alone.
+  if (action === "every" || action === "peek") {
+    if (!instructor) return res.status(401).json({ ok: false, error: "Only the instructor can see every story." });
+    const roster = await rosterOf(groupKey);
+    const byEmail = new Map(roster.map(s => [s.email, s]));
+    const due = await dueOf(groupKey);
+    if (action === "every") {
+      const sheets = (await rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&limit=${PAGE}`)) || [];
+      const list = sheets.filter(s => byEmail.has(s.viewer_id));
+      const { head, urls } = await tilesOf(list.map(s => s.id));
+      const started = new Set(list.map(s => s.viewer_id));
+      const sections = [...new Set(roster.map(s => s.section))];
+      return res.status(200).json({
+        ok: true, sections, due,
+        stories: list.map(s => {
+          const who = byEmail.get(s.viewer_id);
+          return { id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "",
+            author: who.name, section: who.section, submitted_at: s.submitted_at, late: !!(s.submitted_at && due && Date.parse(s.submitted_at) > Date.parse(due)) };
+        }).sort((a, b) => a.author.localeCompare(b.author)),
+        notStarted: roster.filter(s => !started.has(s.email)).map(s => ({ name: s.name, section: s.section })),
+      });
+    }
+    const id = String(body.id || "");
+    if (!/^[0-9a-f-]{36}$/.test(id)) return res.status(400).json({ ok: false, error: "Not a story." });
+    const sheet = (await rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&id=eq.${id}&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}`))?.[0];
+    if (!sheet) return res.status(404).json({ ok: false, error: "That story is not in this class." });
+    const by = await answersFor([sheet.id]);
+    if (!by) return res.status(502).json({ ok: false, error: "Could not read the story." });
+    const story = storyOf(answersOf(by[sheet.id] || []));
+    const urls = await sign([...story.blocks.filter(b => b.type === "image").map(b => b.path), story.html?.path]);
+    const who = byEmail.get(sheet.viewer_id);
+    return res.status(200).json({ ok: true, story: forReader(story, urls, true), author: who?.name || sheet.viewer_id, section: who?.section || "", submitted_at: sheet.submitted_at, late: !!(sheet.submitted_at && due && Date.parse(sheet.submitted_at) > Date.parse(due)) });
+  }
+
   // ─── a student, or Andrew acting as one in the practice class ───
   // The queries that do not depend on each other go out together: a class of
   // 35 opening the grid at once should wait on one round trip, not ten.
@@ -263,20 +320,7 @@ export default async function handler(req, res) {
 
   if (action === "list") {
     // Only what a tile needs: the headline, the look, and the star picture.
-    const ids = list.map(s => s.id);
-    const head = {};
-    if (ids.length) {
-      const top = (await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${ids.join(",")})&field=in.(headline,look,feature,order)&order=position&limit=${PAGE * 4}`)) || [];
-      top.forEach(r => { const m = (head[r.sheet_id] = head[r.sheet_id] || {}); m[r.field] = (m[r.field] || "") + r.value; });
-      const want = ids.map(id => { const m = head[id] || {}; let first = ""; try { first = (JSON.parse(m.order || "[]") || [])[0] || ""; } catch { /* no order */ } return [id, m.feature || first]; }).filter(([, b]) => /^[a-z]+$/.test(b));
-      if (want.length) {
-        const blocks = (await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${want.map(w => w[0]).join(",")})&field=in.(${want.map(w => '"block:' + w[1] + '"').join(",")})&order=position&limit=${PAGE}`)) || [];
-        const joined = {};
-        blocks.forEach(r => { const k = r.sheet_id + " " + r.field; joined[k] = (joined[k] || "") + r.value; });
-        want.forEach(([id, b]) => { try { head[id].path = JSON.parse(joined[id + " block:" + b] || "{}").path || ""; } catch { /* no picture */ } });
-      }
-    }
-    const urls = await sign(ids.map(id => head[id]?.path));
+    const { head, urls } = await tilesOf(list.map(s => s.id));
     const tiles = list.map(s => ({
       id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "",
       mine: s.owner.email === email, required: s.owner.email !== email && podMates.has(s.owner.email),
