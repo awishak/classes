@@ -22,7 +22,7 @@ import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
 import { StoriesRow, useStoriesStage, storiesHref, STORIES_CLASSES } from "../visualstory/door.jsx";
 import { portalHref } from "../visualstory/portal.jsx";
-import { PreRow } from "../visualstory/prerow.jsx";
+import { PreRow, usePreStanding } from "../visualstory/prerow.jsx";
 import { TEAM_TOPICS_KEY, topicsHref } from "../teamtopics/sheet.jsx";
 import { assignmentsOf } from "../profileTask.js";
 import { deadlineOf } from "../DueCard.jsx";
@@ -58,19 +58,47 @@ export function SitdownDoor({ config, data, name, now = Date.now() }) {
 // not have to go into the assignment to reach the builder, so a green box
 // opens it straight away, from when the builder opens to the class until the
 // story's due date, read from the assignment so a moved date follows.
+//
+// Andrew, 2026-10-23: "if they have to complete something, it should be
+// pinned at the top." So a sheet not yet submitted is a bright green bar at
+// the very top of the home (DueBar), and once the student's sheet is
+// submitted the bar turns into a quiet green row that says so.
 export function StoryDoor({ config, data, now = Date.now() }) {
   const sheet = localWorksheet(VISUAL_STORY_KEY);
+  const standing = usePreStanding(config, VISUAL_STORY_KEY);
   if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
   const asg = assignmentsOf(config, data).find(a => a.id === "visual");
   const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
   if (!end || now > end) return null;
+  return <DueBar href={"/" + config.id + "/worksheets/" + VISUAL_STORY_KEY} name="Work on your visual story" say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
+    done={submittedOf(standing)} doneName="Your visual story is in" doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
+}
+
+// A sheet's standing says submitted once it has a hand-in time (waiting), or
+// a review on a hand-in (approved, needs). Nothing known yet reads as not.
+const submittedOf = (standing) => !!(standing && standing.kind !== "open");
+
+// The bar for something to complete: bright green at the top until the
+// student's sheet is in, then the quiet green row.
+export function DueBar({ href, name, say, done, doneName, doneSay }) {
+  if (done) {
+    return (
+      <a className="pt-door pt-focus" href={href}>
+        <span className="pt-door-main">
+          <span className="pt-door-name">{doneName}</span>
+          <span className="pt-door-say">{doneSay}</span>
+        </span>
+        <span className="pt-door-go" aria-hidden="true">Open</span>
+      </a>
+    );
+  }
   return (
-    <a className="pt-door pt-focus" href={"/" + config.id + "/worksheets/" + VISUAL_STORY_KEY}>
-      <span className="pt-door-main">
-        <span className="pt-door-name">Work on your visual story</span>
-        <span className="pt-door-say">Due {dueWords(asg.due, asg.dueTime)}. Your work saves as you go.</span>
+    <a className="pt-gobar pt-focus" href={href}>
+      <span className="pt-gobar-main">
+        <span className="pt-gobar-name">{name}</span>
+        <span className="pt-gobar-say">{say}</span>
       </span>
-      <span className="pt-door-go" aria-hidden="true">Open</span>
+      <span className="pt-gobar-go" aria-hidden="true">Open</span>
     </a>
   );
 }
@@ -104,16 +132,11 @@ export function StoryPhaseBar({ config }) {
 const TOPICS_LAST = new Date(2026, 9, 28, 23, 59, 59).getTime();
 export function TopicsDoor({ config, data, now = Date.now() }) {
   const sheet = localWorksheet(TEAM_TOPICS_KEY);
+  const standing = usePreStanding(config, TEAM_TOPICS_KEY);
   if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now) || now > TOPICS_LAST) return null;
-  return (
-    <a className="pt-door pt-focus" href={topicsHref(config.id)}>
-      <span className="pt-door-main">
-        <span className="pt-door-name">Concepts in Team Communication</span>
-        <span className="pt-door-say">Read either chapter, choose five concepts, and for each note something you noticed, something you think, and something you wonder about. Due end of day Tuesday, October 27.</span>
-      </span>
-      <span className="pt-door-go" aria-hidden="true">Open</span>
-    </a>
-  );
+  return <DueBar href={topicsHref(config.id)} name="Concepts in Team Communication"
+    say="Read either chapter, choose five concepts, and for each note something you noticed, something you think, and something you wonder about. Due end of day Tuesday, October 27."
+    done={submittedOf(standing)} doneName="Concepts in Team Communication: submitted" doneSay="You can keep editing until class on Wednesday." />;
 }
 
 // The week the class is in: its number and its first and last class day.
@@ -258,11 +281,12 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
   return (
     <div className="pt-body">
       <style>{DOOR_CSS}</style>
+      {/* Things to complete first, bright green; then the pin and the quieter doors. */}
       <StoryPhaseBar config={config} />
-      <PinBar data={data} go={go} />
-      <SitdownDoor config={config} data={data} name={name} />
       <StoryDoor config={config} data={data} />
       <TopicsDoor config={config} data={data} />
+      <PinBar data={data} go={go} />
+      <SitdownDoor config={config} data={data} name={name} />
       <Hero config={config} data={data} blockOf={blockOf} section={section} me={name} mark={mark} go={go} />
       {fresh.length ? <div className="pt-day"><Sec name="New" sub="Today" /><div className="pt-stack">{fresh}</div></div> : null}
       <div className="pt-day">
