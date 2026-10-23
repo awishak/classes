@@ -327,6 +327,15 @@ export default async function handler(req, res) {
   const roster = await rosterOf(groupKey);
   let email = instructor ? "" : sessionEmail;
   if (instructor && body.as && PRACTICE.has(groupKey)) email = lower(body.as);
+  // Andrew's own home shows the students' bars. Andrew, 2026-10-23: "if it's
+  // there for the students, i want to see it too." With no student to be, the
+  // status is the furthest along any section is.
+  if (instructor && !email && action === "status") {
+    const sections = [...new Set(roster.map(s => s.section))];
+    const stages = await Promise.all(sections.map(s => stageOf(groupKey, s)));
+    const furthest = stages.sort((a, b) => STAGES.indexOf(b) - STAGES.indexOf(a))[0] || "building";
+    return res.status(200).json({ ok: true, stage: furthest, stages: Object.fromEntries(sections.map((s, i) => [s, stages[i]])) });
+  }
   if (!email) return res.status(instructor ? 400 : 401).json({ ok: false, error: instructor ? "Open the stories as a student in the practice class with ?as=<email>." : "Not signed in." });
   const me = roster.find(s => s.email === email);
   if (!me) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });

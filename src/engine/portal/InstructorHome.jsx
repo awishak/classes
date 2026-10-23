@@ -22,7 +22,7 @@ import { Days } from "./MyWork.jsx";
 import { opensState, opensWords } from "./work.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { waitingOnInstructor } from "../YouCard.jsx";
-import { Hero } from "./StudentHome.jsx";
+import { Hero, StoryPhaseBar, StoryDoor, TopicsDoor, DOOR_CSS } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
 import { ToolsPanel } from "./Tools.jsx";
 
@@ -183,6 +183,12 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
   const facts = nextClassFacts(config, data, blockOf, "");
   return (
     <div className="pt-body">
+      {/* The bars students see at the top of their home, on his too. Andrew,
+          2026-10-23: "if it's there for the students, i want to see it too." */}
+      <style>{DOOR_CSS}</style>
+      <StoryPhaseBar config={config} />
+      <StoryDoor config={config} data={data} />
+      <TopicsDoor config={config} data={data} />
       <PinnedLinks data={data} update={update} instructor seat={{ background: "var(--surface-sunk)", borderRadius: 16 }} />
       <Hero config={config} data={data} blockOf={blockOf} section="" go={go} instructor>
         {facts ? <div style={{ background: "var(--surface-card)", color: "var(--text-primary)", borderRadius: 12, padding: "10px 12px" }}><NoteEditor key={facts.date} date={facts.date} value={facts.note} update={update} saving={saving} online={online} /></div> : null}

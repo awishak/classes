@@ -312,7 +312,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
   );
 }
 
-const DOOR_CSS = `
+export const DOOR_CSS = `
 .pt-door{display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:16px;background:var(--pt-done);color:var(--pt-done-ink);text-decoration:none;box-shadow:0 0 0 1.5px var(--pt-done-ink)}
 .pt-door:hover{filter:brightness(.97)}
 .pt-door-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
