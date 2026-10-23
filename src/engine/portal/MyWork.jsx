@@ -40,10 +40,11 @@ const STORY_LINK = /^(?:https?:\/\/[^/]+)?\/(comm\w+)\/(?:worksheets\/)?visual-s
 
 // ─── a challenge as a row ───
 const tintOf = (st) => st.state === "graded" || st.state === "turnedIn" ? "done"
-  : st.state === "closed-until" ? "off" : st.state === "missed" ? "late" : st.state === "open" ? "due" : "";
+  : st.state === "closed-until" || st.state === "none" ? "off" : st.state === "missed" ? "late" : st.state === "open" ? "due" : "";
 const lineOf = (asg, st) => st.state === "graded" ? "Graded " + st.letter
   : st.state === "turnedIn" ? "Turned in " + whenWords(st.last?.ts)
   : st.state === "closed-until" ? st.opens
+  : st.state === "none" ? "No submission needed · " + dueWords(asg.due, asg.dueTime)
   : st.state === "missed" ? "Missed, was due " + dueWords(asg.due, asg.dueTime)
   : st.state === "ongoing" ? "Ongoing, all quarter"
   : "Due " + dueWords(asg.due, asg.dueTime);

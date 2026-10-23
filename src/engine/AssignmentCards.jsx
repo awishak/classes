@@ -96,6 +96,14 @@ export function statusOf(config, data, asg, name, unseen, now = Date.now()) {
     ? [htmlToText(grade.html), ...log.filter(e => e.type === "comment" && e.from !== "student" && e.ts > grade.ts).map(e => htmlToText(e.html || e.text))].filter(Boolean)
     : [];
   const last = subs[subs.length - 1] || null;
+  // A challenge that takes nothing in: the grade comes from the room, not
+  // from a submission, so the day going by is not a miss and nothing is owed.
+  // Andrew, 2026-10-23: "students do not submit anything for sit down #1 ...
+  // No submission needed." `submission: "none"` on the challenge.
+  if (asg.submission === "none") {
+    return { state: letter ? "graded" : "none", letter, grade, comments, last: null, deadline: at,
+      isNew: !!letter && unseen.has(asg.id), soon: false, late: false };
+  }
   const state = isOngoing(asg) ? (letter ? "graded" : "ongoing")
     : letter ? "graded"
     : subs.length ? "turnedIn"
