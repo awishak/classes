@@ -12,6 +12,8 @@
 // laptop, 2 across on phone, and the 4 stories they have to read have a red
 // box around them with a required reading chip ... when they read and
 // comment, a story gets a green box and a checkmark."
+// Then on 2026-10-23, "make all photos and stories twice as big on that
+// page": 3 across on a laptop, 1 across on a phone.
 
 import { useEffect, useState } from "react";
 import { useSession, authHeaders } from "../session.js";
@@ -365,8 +367,8 @@ const CSS = `
 .vrd-back{align-self:flex-start;font:inherit;font-size:15px;font-weight:600;background:none;border:0;padding:0;color:${T.secondary};cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .vrd-progress{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:${S.card};box-shadow:0 0 0 1px ${L.soft};font-size:16px}
 .vrd-big{font-size:34px;font-weight:700;color:${GREEN};line-height:1}
-.vrd-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
-.vrd-tile{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left;font:inherit;color:inherit;background:${S.card};border:3px solid transparent;border-radius:14px;padding:8px 8px 12px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .12s,box-shadow .12s}
+.vrd-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.vrd-tile{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:${S.card};border:3px solid transparent;border-radius:16px;padding:10px 10px 14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .12s,box-shadow .12s}
 .vrd-tile:hover{transform:translateY(-2px);box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}
 .vrd-tile:focus-visible,.vrd-go:focus-visible,.vrd-btn:focus-visible,.vrd-box:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
 .vrd-red{border-color:${RED}}
@@ -375,9 +377,9 @@ const CSS = `
 .vrd-tile-img img{width:100%;height:100%;object-fit:cover;display:block}
 .vrd-look-light{background:#fff;color:#141414}
 .vrd-look-dark{background:#0b0b0c;color:#f2f1ee}
-.vrd-tile-h{font-family:${SERIF};font-size:16.5px;font-weight:600;line-height:1.3;padding:0 4px}
-.vrd-tile-by{font-size:13px;color:${T.muted};padding:0 4px}
-.vrd-chips{display:flex;flex-wrap:wrap;gap:5px;padding:0 4px}
+.vrd-tile-h{font-family:${SERIF};font-size:24px;font-weight:600;line-height:1.25;padding:0 6px}
+.vrd-tile-by{font-size:15px;color:${T.muted};padding:0 6px}
+.vrd-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 6px}
 .vrd-chip{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;border:1px solid ${L.strong};color:${T.secondary}}
 .vrd-chip-red{background:${RED};border-color:${RED};color:#fff}
 .vrd-chip-done{background:${GREEN};border-color:${GREEN};color:#fff}
@@ -405,6 +407,6 @@ const CSS = `
 .vrd-chars{font-size:13px;color:${T.muted}}
 .vrd-chars-ok{color:${GREEN};font-weight:600}
 .vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.45;padding:4px 8px;margin:0;border:1.5px dashed ${L.strong};border-radius:8px;background:${S.card};resize:none;overflow:hidden}
-@media (max-width:1100px){ .vrd-grid{grid-template-columns:repeat(4,1fr)} }
-@media (max-width:760px){ .vrd-grid{grid-template-columns:repeat(2,1fr);gap:12px} .vrd-title{font-size:30px} }
+@media (max-width:1100px){ .vrd-grid{grid-template-columns:repeat(2,1fr)} }
+@media (max-width:760px){ .vrd-grid{grid-template-columns:1fr;gap:16px} .vrd-title{font-size:30px} }
 `;
