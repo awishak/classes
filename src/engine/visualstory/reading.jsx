@@ -38,10 +38,6 @@ export const READING_COPY = {
 const FIELDS = ["best", "shone", "encourage"];
 const MIN_CHARS = 50;                                 // the server checks the same number
 const EMPTY = { bestImage: "", bestWhere: "", best: "", shone: "", encourage: "" };
-// The tile's picture box follows the photo: a portrait stays 4:5, a landscape
-// gets a shorter box and shows its whole frame, nothing wider than 3:2.
-// Andrew, 2026-10-23: "make the photo wrapper dynamic for portrait vs landscape".
-const tileRatio = (t) => (t.w > 0 && t.h > 0 ? Math.min(1.5, Math.max(0.8, t.w / t.h)) : 0.8);
 const charsSay = (n) => (n >= MIN_CHARS ? n + " characters. Long enough!" : n + " characters. Write at least " + MIN_CHARS + ".");
 
 const api = async (config, body) => {
@@ -137,7 +133,7 @@ function EveryGrid({ config, onOpen }) {
         {stories.map(t => (
           <li key={t.id}>
             <button type="button" className={"vrd-tile" + (t.submitted_at ? " vrd-done" : "")} onClick={() => onOpen(t.id)}>
-              <span className={"vrd-tile-img vrd-look-" + (t.look || "light")} style={{ aspectRatio: tileRatio(t) }}>{t.image ? <img src={t.image} alt="" loading="lazy" /> : null}</span>
+              <span className={"vrd-tile-img vrd-look-" + (t.look || "light")}>{t.image ? <img src={t.image} alt="" loading="lazy" /> : null}</span>
               <span className="vrd-tile-h">{t.headline || "Untitled story"}</span>
               <span className="vrd-tile-by">{t.author}</span>
               <span className="vrd-chips">
@@ -213,7 +209,7 @@ function Grid({ config, as, copy, editing, onOpen }) {
           {data.stories.map(t => (
             <li key={t.id}>
               <button type="button" className={"vrd-tile" + (t.done ? " vrd-done" : t.required || t.mine ? " vrd-red" : "")} onClick={() => onOpen(t.id)}>
-                <span className={"vrd-tile-img vrd-look-" + (t.look || "light")} style={{ aspectRatio: tileRatio(t) }}>{t.image ? <img src={t.image} alt="" loading="lazy" /> : null}</span>
+                <span className={"vrd-tile-img vrd-look-" + (t.look || "light")}>{t.image ? <img src={t.image} alt="" loading="lazy" /> : null}</span>
                 <span className="vrd-tile-h">{t.headline || "Untitled story"}</span>
                 {t.author ? <span className="vrd-tile-by">by {t.author}</span> : null}
                 <span className="vrd-chips">
@@ -369,13 +365,13 @@ const CSS = `
 .vrd-back{align-self:flex-start;font:inherit;font-size:15px;font-weight:600;background:none;border:0;padding:0;color:${T.secondary};cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .vrd-progress{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:${S.card};box-shadow:0 0 0 1px ${L.soft};font-size:16px}
 .vrd-big{font-size:34px;font-weight:700;color:${GREEN};line-height:1}
-.vrd-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:16px;align-items:start}
+.vrd-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
 .vrd-tile{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left;font:inherit;color:inherit;background:${S.card};border:3px solid transparent;border-radius:14px;padding:8px 8px 12px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .12s,box-shadow .12s}
 .vrd-tile:hover{transform:translateY(-2px);box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}
 .vrd-tile:focus-visible,.vrd-go:focus-visible,.vrd-btn:focus-visible,.vrd-box:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
 .vrd-red{border-color:${RED}}
 .vrd-done{border-color:${GREEN}}
-.vrd-tile-img{display:block;aspect-ratio:4/5;border-radius:8px;overflow:hidden;background:${S.sunk}}
+.vrd-tile-img{display:block;aspect-ratio:4/5;border-radius:8px;overflow:hidden}
 .vrd-tile-img img{width:100%;height:100%;object-fit:cover;display:block}
 .vrd-look-light{background:#fff;color:#141414}
 .vrd-look-dark{background:#0b0b0c;color:#f2f1ee}
