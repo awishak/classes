@@ -334,12 +334,12 @@ const CSS = `
 .tt .chip.read{text-decoration:none;background:var(--accent-light);border-color:transparent;color:var(--accent);font-weight:600}
 .tt .chip.read:hover{filter:brightness(.97)}
 .tt .readedit{display:grid;gap:4px;min-width:280px}
-.tt .progress .pl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tt .progress .pl{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
 .tt .chead .n{overflow-wrap:anywhere}
-.tt .progress{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:0 28px}
+.tt .progress{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:0 28px}
 .tt .progress .p{background:var(--sunk);border-radius:16px;padding:12px 16px;display:grid;gap:8px}
-.tt .progress .l{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:15px;font-weight:500;color:var(--ink)}
-.tt .progress .l span{color:var(--secondary);font-weight:400}
+.tt .progress .l{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;font-size:15px;font-weight:500;color:var(--ink)}
+.tt .progress .l span:last-child{color:var(--secondary);font-weight:400;white-space:nowrap}
 .tt .progress .bar{height:6px;border-radius:999px;background:var(--line-soft);overflow:hidden}
 .tt .progress .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s ease}
 .tt .concept{display:grid;gap:14px;padding:20px 28px 24px;border-top:1px solid var(--line-soft)}
@@ -387,6 +387,6 @@ const CSS = `
 .tt .vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.45;padding:4px 8px;margin:0;border:1.5px dashed var(--line-strong);border-radius:8px;background:var(--card);resize:none;overflow:hidden}
 .tt .vsp-edit.name{font-size:26px;font-weight:600}
 .tt .vsp-edit.intro{font-size:17px}
-@media (max-width:860px){.tt .ntw{grid-template-columns:1fr}.tt .progress{grid-template-columns:repeat(2,1fr)}.tt .head,.tt .concept,.tt .foot{padding-inline:18px}.tt .progress{padding-inline:18px}}
+@media (max-width:860px){.tt .ntw{grid-template-columns:1fr}.tt .progress{grid-template-columns:repeat(2,minmax(0,1fr))}.tt .head,.tt .concept,.tt .foot{padding-inline:18px}.tt .progress{padding-inline:18px}}
 @media (prefers-reduced-motion: reduce){.tt *{transition:none!important}}
 `;
