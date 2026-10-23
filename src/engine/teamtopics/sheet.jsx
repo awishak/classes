@@ -19,6 +19,13 @@
 // through saver.js so nothing typed is lost. Fields are letters with a part:
 // topic:a, finding:a, opinion:a, wonder:a, through e. The field names are the
 // October 22 ones, so nothing already written is lost.
+//
+// Each box takes more than one line. Andrew, 2026-10-23: "when they enter
+// something and press enter, it should feel like a speech bubble (they can
+// still edit it) that way it feels complete and they can enter more than one.
+// like a chip like last time, with an x." A box's lines live in its one field,
+// one per line; Enter adds a chip, × takes a chip away, and tapping a chip
+// puts its words back in the box to edit.
 
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -26,7 +33,13 @@ import { createSaver } from "../visualstory/saver.js";
 import { useCopy, Words } from "../visualstory/pre.jsx";
 
 export const TEAM_TOPICS_KEY = "team-topics";
-export const TEAM_TOPICS_TITLE = "Five concepts from the Ishak chapters";
+// The assignment's name. Andrew, 2026-10-23: "change it to Concepts in Team
+// Communication (the name of the assignment)."
+export const TEAM_TOPICS_TITLE = "Concepts in Team Communication";
+// One more box at the end, not required. Andrew, 2026-10-23: "include a
+// question at the end: what topics are not covered here that you think would
+// be interesting?"
+export const MORE_FIELD = "more";
 export const topicsHref = (classId) => "/" + classId + "/worksheets/" + TEAM_TOPICS_KEY;
 
 export const SLOTS = ["a", "b", "c", "d", "e"];
@@ -46,6 +59,8 @@ export const TOPICS = [
 const slotFields = (s) => ["topic:" + s, ...PARTS.map(p => p.field + ":" + s)];
 export const FIELDS = SLOTS.flatMap(slotFields);
 const blank = (answers, f) => !String((answers || {})[f] || "").trim();
+// A box's lines, from its field; blank lines are nothing.
+export const linesOf = (value) => String(value || "").split("\n").map(l => l.trim()).filter(Boolean);
 export const missingOf = (answers) => FIELDS.filter(f => blank(answers, f));
 export const doneOf = (answers, s) => slotFields(s).filter(f => !blank(answers, f)).length;
 
@@ -55,8 +70,17 @@ export const DEFAULT_COPY = {
   title: TEAM_TOPICS_TITLE,
   credit: "COMM 118 · Due end of day Tuesday, October 27",
   intro: "Before class on Wednesday, October 28, please read some of the article and/or chapter I've written and posted for you here: Communication in Sports Teams: A Review (2017) or Communicating in Sports Teams (2021). The second one is based on the first one, so you'll see some overlap.\n\nThere are a number of concepts relating to team communication and culture. Peruse the different concepts and choose five that you are interested in. Read those sections. Then, please note three things for each chapter:\n\n1. Something you noticed (an interesting finding)\n2. Something you think (an opinion about that finding or another one)\n3. Something you wonder about (a question that you would want to explore on this concept.\n\nThe goal here is to be observant, opinionated, and most of all, curious. Please complete this by end of day on Tuesday.",
+  readings: "The readings",
+  // The 2017 review is the file he attached to its block on October 23. The
+  // 2021 chapter has no file yet, so its link goes to Wednesday on the
+  // schedule, where the file shows up once attached; the line is his to edit.
+  "read.2017.title": "Communication in Sports Teams: A Review (Ishak, 2017)",
+  "read.2017.url": "https://ybuchgebudixbyrcxpik.supabase.co/storage/v1/object/public/notes/comm118/2026-10/mvll4dr9-communication-in-sports-teams-a-review.pdf",
+  "read.2021.title": "Communicating in Sports Teams (Ishak, 2021)",
+  "read.2021.url": "/comm118/schedule/oct-28",
   conceptAsk: "Concept",
   conceptHint: "Name the concept, or tap one from the chapters.",
+  moreAsk: "What topics are not covered here that you think would be interesting?",
   "box.finding": "Observations",
   "desc.finding": "Something you noticed (an interesting finding)",
   "start.finding": "Start with: I notice…",
@@ -153,6 +177,14 @@ export function TopicsSheet({ store, viewer, classId, readOnly = false, storage,
               </div>
             ) : null}
             <Words k="intro" copy={copy} editing={editing} as="p" className="intro" />
+            <div className="readings">
+              <Words k="readings" copy={copy} editing={editing} className="sub" />
+              <div className="chips">
+                {["2017", "2021"].map(y => editing
+                  ? <span key={y} className="readedit"><Words k={"read." + y + ".title"} copy={copy} editing /><Words k={"read." + y + ".url"} copy={copy} editing /></span>
+                  : <a key={y} className="chip read focusable" href={copy.say("read." + y + ".url")} target="_blank" rel="noreferrer">{copy.say("read." + y + ".title")} ↗</a>)}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -161,7 +193,7 @@ export function TopicsSheet({ store, viewer, classId, readOnly = false, storage,
             const n = doneOf(answers, s);
             return (
               <div key={s} className="p">
-                <div className="l">Concept {i + 1}<span>{n} of 4</span></div>
+                <div className="l"><span className="pl">{blank(answers, "topic:" + s) ? "Concept " + (i + 1) : answers["topic:" + s]}</span><span>{n} of 4</span></div>
                 <div className="bar"><i style={{ width: (n / 4) * 100 + "%" }} /></div>
               </div>
             );
@@ -173,7 +205,8 @@ export function TopicsSheet({ store, viewer, classId, readOnly = false, storage,
           return (
             <section key={s} className="concept" aria-label={"Concept " + (i + 1)}>
               <div className="chead">
-                <span className="n">Concept {i + 1}</span>
+                {/* The concept's own name once there is one. Andrew, 2026-10-23: "when they choose a topic, change 'concept 1' to the topic name." */}
+                <span className="n">{named ? answers["topic:" + s] : "Concept " + (i + 1)}</span>
                 <span className="sub">{doneOf(answers, s)} of 4</span>
               </div>
               <label className="field">
@@ -195,8 +228,8 @@ export function TopicsSheet({ store, viewer, classId, readOnly = false, storage,
                       <span className="sub">{blank(answers, p.field + ":" + s) ? "" : "✓"}</span>
                     </div>
                     <Words k={"desc." + p.field} copy={copy} editing={editing} as="p" className="desc" />
-                    <textarea className="focusable" id={"tt-" + p.field + "-" + s} rows={3} value={answers[p.field + ":" + s] || ""} readOnly={readOnly} maxLength={4000}
-                      aria-label={copy.say("box." + p.field) + ", concept " + (i + 1)} onChange={e => set(p.field + ":" + s, e.target.value)} />
+                    <Lines id={"tt-" + p.field + "-" + s} label={copy.say("box." + p.field) + ", concept " + (i + 1)} value={answers[p.field + ":" + s] || ""} readOnly={readOnly}
+                      onChange={v => set(p.field + ":" + s, v)} />
                     <Words k={"start." + p.field} copy={copy} editing={editing} as="p" className="start" />
                   </div>
                 ))}
@@ -204,6 +237,14 @@ export function TopicsSheet({ store, viewer, classId, readOnly = false, storage,
             </section>
           );
         })}
+
+        <section className="concept more" aria-label="More topics">
+          <div className="chead"><span className="n">One more</span></div>
+          <div className="box">
+            <Words k="moreAsk" copy={copy} editing={editing} as="h2" />
+            <Lines id={"tt-" + MORE_FIELD} label={copy.say("moreAsk")} value={answers[MORE_FIELD] || ""} readOnly={readOnly} onChange={v => set(MORE_FIELD, v)} />
+          </div>
+        </section>
 
         {!readOnly ? (
           <div className="foot">
@@ -215,6 +256,51 @@ export function TopicsSheet({ store, viewer, classId, readOnly = false, storage,
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// One box's lines: the chips already said, and a row to say the next one.
+// Enter or the + adds; × removes; tapping a chip's words brings them back
+// into the row to edit, the chip gone until Enter puts it back.
+function Lines({ id, label, value, readOnly, onChange }) {
+  const [draft, setDraft] = useState("");
+  const lines = linesOf(value);
+  const write = (next) => onChange(next.join("\n"));
+  const add = () => {
+    const t = draft.trim();
+    if (!t) return;
+    write([...lines, t]);
+    setDraft("");
+  };
+  const remove = (k) => write(lines.filter((_, i) => i !== k));
+  const edit = (k) => {
+    if (draft.trim()) write([...lines.filter((_, i) => i !== k), draft.trim()]);
+    else write(lines.filter((_, i) => i !== k));
+    setDraft(lines[k]);
+  };
+  return (
+    <div className="lines">
+      {lines.length ? (
+        <div className="chips said" aria-label={label}>
+          {lines.map((l, k) => (
+            <span key={k} className="chip bubble">
+              {readOnly ? <span className="chip-text">{l}</span>
+                : <button type="button" className="chip-text focusable" title="Edit" onClick={() => edit(k)}>{l}</button>}
+              {readOnly ? null : <button type="button" className="chip-x focusable" aria-label={"Remove: " + l} onClick={() => remove(k)}>×</button>}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      {readOnly ? null : (
+        <div className="row">
+          <input className="focusable" id={id} value={draft} maxLength={1000} aria-label={label} placeholder={lines.length ? "Add another" : ""}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+            onBlur={() => { if (draft.trim()) add(); }} />
+          <button type="button" className="save focusable" aria-label="Add" onClick={add}>+</button>
+        </div>
+      )}
     </div>
   );
 }
@@ -244,6 +330,12 @@ const CSS = `
 .tt .credit{font-family:var(--mono);font-size:13px;color:var(--muted)}
 .tt .intro{margin:0;font-size:17px;line-height:1.5;color:var(--ink);padding-top:6px;max-width:72ch;white-space:pre-line}
 .tt .editbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:6px}
+.tt .readings{display:grid;gap:8px;padding-top:10px}
+.tt .chip.read{text-decoration:none;background:var(--accent-light);border-color:transparent;color:var(--accent);font-weight:600}
+.tt .chip.read:hover{filter:brightness(.97)}
+.tt .readedit{display:grid;gap:4px;min-width:280px}
+.tt .progress .pl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tt .chead .n{overflow-wrap:anywhere}
 .tt .progress{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;padding:0 28px}
 .tt .progress .p{background:var(--sunk);border-radius:16px;padding:12px 16px;display:grid;gap:8px}
 .tt .progress .l{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:15px;font-weight:500;color:var(--ink)}
@@ -268,7 +360,16 @@ const CSS = `
 .tt .box h2{margin:0;font-size:20px;font-weight:500}
 .tt .box .bh .sub{color:var(--ok)}
 .tt .box .desc{margin:0;font-size:15px;color:var(--secondary);line-height:1.4}
-.tt .box textarea{width:100%;font-family:var(--font);font-size:16px;line-height:1.5;min-height:96px;padding:10px 12px;border:1px solid var(--line-strong);border-radius:10px;background:var(--card);color:var(--ink);outline:none;resize:vertical}
+.tt .lines{display:grid;gap:10px}
+.tt .lines .row input{max-width:none;font-size:16px;min-height:44px;padding:0 12px}
+.tt .save{width:44px;height:44px;border-radius:10px;border:0;background:var(--accent);color:var(--on-accent);font-size:20px;display:grid;place-items:center;cursor:pointer;flex:none}
+.tt .save:hover{filter:brightness(1.08)}
+.tt .chips.said{gap:8px}
+.tt .chip.bubble{background:var(--card);border:1px solid var(--line-strong);border-radius:16px 16px 16px 4px;padding:6px 6px 6px 12px;gap:4px;align-items:flex-start;max-width:100%;font-size:15px;line-height:1.4;cursor:default}
+.tt .chip.bubble:hover{border-color:var(--line-strong);color:var(--ink)}
+.tt .chip-text{font:inherit;color:inherit;background:none;border:0;padding:0;text-align:left;cursor:text;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.tt .chip-x{font:inherit;width:28px;height:28px;flex:none;border-radius:999px;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;display:grid;place-items:center}
+.tt .chip-x:hover{color:var(--ink);background:var(--sunk)}
 .tt .box .start{margin:0;font-size:15px;color:var(--muted);font-style:italic}
 .tt .foot{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:8px 28px 24px;flex-wrap:wrap;min-height:76px;border-top:1px solid var(--line-soft)}
 .tt .foot .say{font-size:17px;color:var(--secondary);flex:1;min-width:200px}

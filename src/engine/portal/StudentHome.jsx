@@ -108,7 +108,7 @@ export function TopicsDoor({ config, data, now = Date.now() }) {
   return (
     <a className="pt-door pt-focus" href={topicsHref(config.id)}>
       <span className="pt-door-main">
-        <span className="pt-door-name">Five concepts from the Ishak chapters</span>
+        <span className="pt-door-name">Concepts in Team Communication</span>
         <span className="pt-door-say">Read either chapter, choose five concepts, and for each note something you noticed, something you think, and something you wonder about. Due end of day Tuesday, October 27.</span>
       </span>
       <span className="pt-door-go" aria-hidden="true">Open</span>

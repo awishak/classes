@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { SLOTS, PARTS, missingOf, DEFAULT_COPY } from "./sheet.jsx";
+import { SLOTS, PARTS, MORE_FIELD, missingOf, DEFAULT_COPY } from "./sheet.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -115,6 +115,7 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
                 {PARTS.map(p => t[p.field] ? <p key={p.field} className="ttr-line"><span className="ttr-k">{DEFAULT_COPY["box." + p.field]}</span>{t[p.field]}</p> : null)}
               </div>
             ))}
+            {String(sheet.answers?.[MORE_FIELD] || "").trim() ? <p className="ttr-line"><span className="ttr-k">{DEFAULT_COPY.moreAsk}</span>{sheet.answers[MORE_FIELD]}</p> : null}
             {missingOf(sheet.answers).length ? <p className="ttr-muted">{missingOf(sheet.answers).length} boxes empty.</p> : null}
           </>) : null}
         </article>
