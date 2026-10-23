@@ -22,6 +22,8 @@ import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import VisualEssayPlan from "./engine/VisualEssayPlan.jsx";
 import VisualStoryInstructions from "./engine/visualstory/instructions.jsx";
+import VisualStoryPortal from "./engine/visualstory/portal.jsx";
+import StoryReviews from "./engine/visualstory/reviews.jsx";
 import ClassmatesStories from "./engine/visualstory/reading.jsx";
 import SampleStory from "./engine/visualstory/sample.jsx";
 import GradeView from "./engine/GradeView.jsx";
@@ -252,9 +254,21 @@ export default function App() {
     );
   }
 
-  // The visual story's full instructions, for students: /comm3/visual-story.
-  const vsi = path.match(/^\/(comm3|comm999)\/visual-story\/?$/);
+  // The visual story portal, the one place for all three parts: /comm3/visual-story.
+  const vsp = path.match(/^\/(comm3|comm999)\/visual-story\/?$/);
+  if (vsp && ENGINE[vsp[1]]) return <VisualStoryPortal config={ENGINE[vsp[1]]} />;
+  // The visual story's full instructions, for students: /comm3/visual-story/instructions.
+  const vsi = path.match(/^\/(comm3|comm999)\/visual-story\/instructions\/?$/);
   if (vsi && ENGINE[vsi[1]]) return <VisualStoryInstructions config={ENGINE[vsi[1]]} />;
+  // Who reviewed what, for the instructor: /comm3/reviews.
+  const vsw = path.match(/^\/(comm3|comm999)\/reviews\/?$/);
+  if (vsw && ENGINE[vsw[1]]) {
+    return (
+      <InstructorGate what={ENGINE[vsw[1]].code + " story reviews"}>
+        <InstructorBar config={ENGINE[vsw[1]]} always><StoryReviews config={ENGINE[vsw[1]]} /></InstructorBar>
+      </InstructorGate>
+    );
+  }
   // A sample story, so students see how a finished one could look: /comm3/visual-story/sample.
   const vsx = path.match(/^\/(comm3|comm999)\/visual-story\/sample\/?$/);
   if (vsx && ENGINE[vsx[1]]) return <SampleStory config={ENGINE[vsx[1]]} />;

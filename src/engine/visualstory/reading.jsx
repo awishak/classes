@@ -20,6 +20,7 @@ import { useSession, authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { useCopy, Words } from "./pre.jsx";
 import { StoryView, STORY_CSS } from "./story.jsx";
+import { PortalBar } from "./portal.jsx";
 import * as TOKENS from "../tokens.js";
 import TopNav, { NAV_STUDENT } from "../TopNav.jsx";
 import { useStudentTheme, useDayNight, ThemeStyle } from "../ThemeShell.jsx";
@@ -28,9 +29,15 @@ export const READING_COPY_ROW = "worksheet-stories-plan";
 export const READING_COPY = {
   title: "Classmates' stories",
   building: "The stories open on Monday, October 26. Come back then!",
-  reading: "Read the four stories marked Required reading first. Then pick four more that look interesting. On each story, leave three comments. Save your own story for last.",
-  closed: "Comments are closed. Names come out in class on Wednesday, October 28.",
-  released: "The names are out! Open your own story to read what your classmates said.",
+  // Andrew's words, 2026-10-23, with the joins written in.
+  reading: "You've completed your story. Now it's your turn to review your classmates' work. Please review at least 8 stories. You must review the 4 stories outlined in red. Then choose at least 4 other stories to review. You can review as many as you want.",
+  anon: "While the stories are currently anonymous, each student will receive non-anonymized comments (your name will be attached) on Tuesday. Check back then to see what people think of your work.",
+  closed: "Comments are closed. The comments on your story, with names attached, come out on Tuesday, October 27.",
+  released: "The comments are out! Open your own story, or the visual story portal, to read what your classmates said.",
+  "count.required": "Outlined in red",
+  "count.others": "Your choice",
+  "count.total": "Total",
+  "count.done": "That's at least 8. Keep going if you like, and comment on your own story too.",
   prompt: "Please make sure your comments are substantial. A well-crafted sentence is acceptable, and longer than that is also okay.",
   "ask.best": "The best image, and why",
   "ask.shone": "One way this story shone",
@@ -38,6 +45,7 @@ export const READING_COPY = {
   "ask.where": "Which image was the best, and where is it in the story?",
 };
 const FIELDS = ["best", "shone", "encourage"];
+const NEED_TOTAL = 8;                                 // the server's OTHERS_BEFORE_OWN
 const MIN_CHARS = 50;                                 // the server checks the same number
 const EMPTY = { bestImage: "", bestWhere: "", best: "", shone: "", encourage: "" };
 const charsSay = (n) => (n >= MIN_CHARS ? n + " characters. Long enough!" : n + " characters. Write at least " + MIN_CHARS + ".");
@@ -93,6 +101,7 @@ export default function ClassmatesStories({ config }) {
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
       <div className="vrd-in">
+        <PortalBar config={config} here="read" as={as} />
         {session && instructor ? (
           <div className="vrd-row">
             <button type="button" className="vrd-btn" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
@@ -196,14 +205,24 @@ function Grid({ config, as, copy, editing, onOpen }) {
   const stage = data.stage;
   const required = data.stories.filter(t => t.required);
   const requiredDone = required.filter(t => t.done).length;
+  // The counter. Andrew, 2026-10-23: "8 out of 8, even like, if they go
+  // more, like, 8 out of 8 plus one, 8 out of 8 plus two, equals 10." Normal
+  // sized numbers, his words again.
+  const othersDone = data.stories.filter(t => t.done && !t.required && !t.mine).length;
+  const needOthers = Math.max(0, NEED_TOTAL - required.length);
+  const total = requiredDone + othersDone;
+  const totalSay = total > NEED_TOTAL ? `${NEED_TOTAL} of ${NEED_TOTAL} + ${total - NEED_TOTAL} = ${total}` : `${total} of ${NEED_TOTAL}`;
   return (
     <div className="vrd-stack">
       <Words k="title" copy={copy} editing={editing} as="h1" className="vrd-title" />
       <Words k={stage} copy={copy} editing={editing} as="p" className="vrd-lead" />
+      {stage === "reading" ? <Words k="anon" copy={copy} editing={editing} as="p" className="vrd-lead" /> : null}
       {stage === "reading" ? (
-        <div className="vrd-progress">
-          <span className="vrd-big">{data.read}</span>
-          <span>{data.read === 1 ? "story read" : "stories read"}. {required.length ? `Required: ${requiredDone} of ${required.length}. ` : ""}{data.read >= data.needed ? "You can comment on your own story now, and you can keep reading more!" : `${data.needed - data.read} more before your own story.`}</span>
+        <div className="vrd-count" role="status" aria-label="Your reviews so far">
+          {required.length ? <span className="vrd-count-item"><Words k="count.required" copy={copy} editing={editing} /> <b>{requiredDone} of {required.length}</b></span> : null}
+          <span className="vrd-count-item"><Words k="count.others" copy={copy} editing={editing} /> <b>{othersDone >= needOthers ? othersDone + " \u2713" : othersDone + " of " + needOthers}</b></span>
+          <span className="vrd-count-item vrd-count-total"><Words k="count.total" copy={copy} editing={editing} /> <b>{totalSay}</b></span>
+          {total >= NEED_TOTAL ? <Words k="count.done" copy={copy} editing={editing} className="vrd-good" /> : null}
         </div>
       ) : null}
       {stage !== "building" ? (
@@ -365,8 +384,10 @@ const CSS = `
 .vrd-go{font:inherit;font-size:16px;font-weight:700;padding:11px 24px;border-radius:999px;border:0;background:${T.primary};color:${S.page};cursor:pointer}
 .vrd-go:disabled{opacity:.5}
 .vrd-back{align-self:flex-start;font:inherit;font-size:15px;font-weight:600;background:none;border:0;padding:0;color:${T.secondary};cursor:pointer;text-decoration:underline;text-underline-offset:3px}
-.vrd-progress{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:${S.card};box-shadow:0 0 0 1px ${L.soft};font-size:16px}
-.vrd-big{font-size:34px;font-weight:700;color:${GREEN};line-height:1}
+.vrd-count{display:flex;align-items:center;flex-wrap:wrap;gap:8px 24px;padding:12px 16px;border-radius:14px;background:${S.card};box-shadow:0 0 0 1px ${L.soft};font-size:16px}
+.vrd-count-item{display:inline-flex;align-items:baseline;gap:8px;color:${T.secondary}}
+.vrd-count-item b{font-size:17px;font-weight:700;color:${T.primary}}
+.vrd-count-total b{color:${GREEN}}
 .vrd-grid{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
 .vrd-tile{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left;font:inherit;color:inherit;background:${S.card};border:3px solid transparent;border-radius:16px;padding:10px 10px 14px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08);transition:transform .12s,box-shadow .12s}
 .vrd-tile:hover{transform:translateY(-2px);box-shadow:0 8px 20px -8px rgba(0,0,0,.3)}

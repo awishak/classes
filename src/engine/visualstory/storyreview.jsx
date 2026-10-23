@@ -16,7 +16,7 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { idOf } from "../roster.js";
 import { gameClient } from "../gameClient.js";
-import { storyOf, problemsOf, wordCount, imageCount, stageAt } from "./model.js";
+import { storyOf, problemsOf, wordCount, imageCount, stageAt, RELEASES_AT } from "./model.js";
 import { VISUAL_STORY_KEY } from "./story.jsx";
 import * as TOKENS from "../tokens.js";
 
@@ -220,7 +220,7 @@ export function ReadingPanel({ config, section }) {
       ) : null}
 
       <h3 className="vsv-h3">Pods</h3>
-      <p className="vsv-muted">Pods of about five, inside this section. Suggest groups students by the prompt and topic from pre-production; move anyone, then save.</p>
+      <p className="vsv-muted">Pods of about five, inside this section. Suggest groups students by the prompt and topic from pre-production; move anyone, then save. A section that opens with no pods saved makes them on its own, the same way, from the stories in at that moment.</p>
       <div className="vsv-row">
         <button type="button" className="vsv-btn" onClick={suggest}>Suggest pods</button>
         <button type="button" className="vsv-btn vsv-btn-main" disabled={busy === "pods"} onClick={() => run("pods", () => storyApi(config, { action: "pods", section: sec, pods: people.filter(p => pods[p.email] > 0).map(p => ({ email: p.email, pod: pods[p.email] })) }))}>Save pods</button>
@@ -315,10 +315,13 @@ export function ReportsBanner({ config }) {
 // button?" and then "A banner on your dashboard with the button on the right day".
 const STAGE_DAYS = {
   comm3: [
-    ["2026-10-21T00:00:00-07:00", "2026-10-26T00:00:00-07:00", "pods", "Pods are due today. Suggest and save the pods on the stories page."],
+    ["2026-10-21T00:00:00-07:00", "2026-10-26T00:00:00-07:00", "pods", "No pods are saved yet. Pods are made on their own when the stories open Monday, from the stories in by then; save your own on the stories page before then if you want to choose."],
     ["2026-10-26T00:00:00-07:00", "2026-10-27T00:00:00-07:00", "building", "The stories open for reading today. Press Open the stories for reading on the stories page."],
-    ["2026-10-27T00:00:00-07:00", "2026-10-28T00:00:00-07:00", "reading", "Comments were due last night. Press Close comments on the stories page."],
-    ["2026-10-28T00:00:00-07:00", "2026-10-30T00:00:00-07:00", "closed", "Names come out in class today. Press Release the names on the stories page."],
+    // The comments come out on their own at 12:05 AM Tuesday (RELEASES_AT in
+    // model.js), so a section still reading or closed on Tuesday means the
+    // release did not happen and the button is the way out.
+    ["2026-10-27T00:00:00-07:00", "2026-10-30T00:00:00-07:00", "reading", "The comments should have come out on their own at 12:05 AM. This section is still reading. Press Release the names on the stories page."],
+    ["2026-10-27T00:00:00-07:00", "2026-10-30T00:00:00-07:00", "closed", "The comments should have come out on their own at 12:05 AM. This section is still closed. Press Release the names on the stories page."],
   ],
 };
 function StageBanner({ config }) {
@@ -331,7 +334,7 @@ function StageBanner({ config }) {
     // The stage as the route sees it: a section past its open time is reading, button or no button.
     gameClient.from("story_stage").select("section,stage,opens_at").eq("worksheet_key", VISUAL_STORY_KEY).eq("group_key", config.id).then(r => {
       if (!alive) return;
-      const stages = (r.data || []).map(x => stageAt(x));
+      const stages = (r.data || []).map(x => stageAt(x, Date.now(), RELEASES_AT[config.id] || null));
       const at = stages.length ? stages : ["building"];
       const hit = today.find(([, , when]) => when === "pods" ? at.every(s => s === "building") : at.includes(when));
       if (hit) setSay(hit[3]);

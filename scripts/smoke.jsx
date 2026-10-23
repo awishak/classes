@@ -34,6 +34,11 @@ import * as vsp from "../src/engine/visualstory/photos.js";
 import { StoryView, HtmlFrame } from "../src/engine/visualstory/story.jsx";
 import * as vsr from "../src/engine/visualstory/storyreview.jsx";
 import { PreSheet, missingOf, standing, FIELDS } from "../src/engine/visualstory/pre.jsx";
+import { TopicsSheet, missingOf as topicsMissing, FIELDS as TOPIC_FIELDS, SLOTS as TOPIC_SLOTS } from "../src/engine/teamtopics/sheet.jsx";
+import { topicsOf, byTopic } from "../src/engine/teamtopics/review.jsx";
+import VisualStoryPortal, { PortalBar, partOf, PARTS as PORTAL_PARTS } from "../src/engine/visualstory/portal.jsx";
+import { tally as reviewTally } from "../src/engine/visualstory/reviews.jsx";
+import { stageAt as storyStageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
 import { Group as AnswersGroup } from "../src/engine/WorktopiaAnswersPage.jsx";
@@ -1276,7 +1281,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", VisualStoryPortal: "engine/visualstory/portal.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
   const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
@@ -5975,6 +5980,64 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
   if (!renderToString(<DecisionsBody config={dcfg} data={{}} update={() => {}} sets={sets} />).includes("Nothing answered yet.")) say("an empty set does not say so");
   if (!renderToString(<DecisionsBody config={dcfg} data={d} update={() => {}} sets={[]} />).includes("No questions are waiting for you.")) say("a class with no sets does not say so");
 }
+
+// Five topics from the Ishak chapter, 2026-10-22: a chapter, five topic
+// cards with three boxes each, and the review folding the same topic across
+// students.
+{
+  const say = (m) => { console.error("  FAIL  team topics: " + m); failedEarly++; };
+  if (TOPIC_FIELDS.length !== 1 + TOPIC_SLOTS.length * 4) say("the field list is not a chapter plus four a slot");
+  if (TOPIC_FIELDS.some(f => !/^[a-z]+(:[a-z])?$/.test(f))) say("a field name breaks the table's rule");
+  const full = Object.fromEntries(TOPIC_FIELDS.map(f => [f, f === "chapter" ? "2017" : "x"]));
+  if (topicsMissing(full).length) say("a full sheet reads as missing something");
+  if (topicsMissing({ ...full, "wonder:c": " " }).length !== 1) say("a blank wonder is not missing");
+  const a = { chapter: "2021", "topic:a": "Cohesion", "finding:a": "f1", "opinion:a": "o1", "wonder:a": "w1", "topic:b": "Power", "finding:b": "f2" };
+  if (topicsOf(a).length !== 2 || topicsOf(a)[1].topic !== "Power" || topicsOf(a)[1].opinion !== "") say("a student's topics do not read off the answers");
+  const grouped = byTopic([{ answers: a, student: { name: "Ann", email: "ann@x" } }, { answers: { "topic:a": "cohesion.", "finding:a": "f3" }, student: { name: "Ben", email: "ben@x" } }]);
+  if (grouped.length !== 2 || grouped[0].topic !== "Cohesion" || grouped[0].entries.length !== 2) say("the same topic spelled two ways is not one topic, or is not first");
+  const { localWorksheet, listedFor, openTo } = await import("../src/engine/localWorksheets.js");
+  const tt = localWorksheet("team-topics");
+  if (!tt || !tt.review) say("team-topics is not a local worksheet with a review");
+  if (tt && (!listedFor(tt, "comm118") || listedFor(tt, "comm3"))) say("team-topics is not COMM 118's, or is COMM 3's");
+  if (tt && !openTo(tt, "comm118", {})) say("team-topics is not open to COMM 118");
+}
+cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
+
+// The visual story portal, 2026-10-23: three parts, today's from the stage;
+// the comments come out on their own on Tuesday; four topics are required
+// and a fifth only once it is started; the reviews page's numbers.
+{
+  const say = (m) => { console.error("  FAIL  visual story portal: " + m); failedEarly++; };
+  if (PORTAL_PARTS.map(p => p.id).join(",") !== "submit,read,comments") say("the parts are not submit, read, comments");
+  if (partOf("") !== "submit" || partOf("building") !== "submit" || partOf("reading") !== "read" || partOf("closed") !== "comments" || partOf("released") !== "comments") say("a stage does not land on its part");
+  const row = { stage: "building", opens_at: "2026-10-26T07:05:00.000Z" };
+  const sun = Date.parse("2026-10-25T20:00:00.000Z"), mon = Date.parse("2026-10-26T20:00:00.000Z"), tue = Date.parse("2026-10-27T20:00:00.000Z");
+  if (storyStageAt(row, sun, RELEASES_AT.comm3) !== "building") say("Sunday is not building");
+  if (storyStageAt(row, mon, RELEASES_AT.comm3) !== "reading") say("Monday does not open on its own");
+  if (storyStageAt(row, tue, RELEASES_AT.comm3) !== "released") say("Tuesday does not release on its own");
+  if (storyStageAt({ stage: "closed" }, tue, RELEASES_AT.comm3) !== "released") say("a closed section does not release on Tuesday");
+  if (storyStageAt({ stage: "reading" }, tue, null) !== "reading") say("a class with no release time released anyway");
+  if (storyStageAt({ stage: "released" }, sun, RELEASES_AT.comm3) !== "released") say("a released section went back");
+  const fields = (s) => ({ ["topic:" + s]: "t", ["finding:" + s]: "f", ["opinion:" + s]: "o", ["wonder:" + s]: "w" });
+  const four = { chapter: "2017", ...fields("a"), ...fields("b"), ...fields("c"), ...fields("d") };
+  if (topicsMissing(four).length) say("four full topics still read as missing something");
+  if (topicsMissing({ ...four, "topic:e": "Power" }).length !== 3) say("a started fifth topic does not ask for its three boxes");
+  const bar = renderToString(<PortalBar config={{ id: "comm3" }} here="comments" />);
+  if (!bar.includes("Visual story portal") || !bar.includes("/comm3/stories") || !bar.includes("/comm3/worksheets/visual-story") || !bar.includes("aria-current=\"page\"")) say("the strip does not name the portal and the other parts");
+  const feed = {
+    people: [{ name: "Ann", email: "ann@x", section: "8:00" }, { name: "Ben", email: "ben@x", section: "8:00" }, { name: "Cy", email: "cy@x", section: "8:00" }],
+    stories: [{ id: "s1", email: "ann@x", name: "Ann", section: "8:00", headline: "A" }, { id: "s2", email: "ben@x", name: "Ben", section: "8:00", headline: "B" }, { id: "s3", email: "cy@x", name: "Cy", section: "8:00", headline: "C" }],
+    pods: [{ section: "8:00", pod: 1, email: "ann@x" }, { section: "8:00", pod: 1, email: "ben@x" }],
+    comments: [{ story: "s2", authorEmail: "ann@x", author: "Ann" }, { story: "s3", authorEmail: "ann@x", author: "Ann" }, { story: "s1", authorEmail: "ann@x", author: "Ann" }, { story: "s1", authorEmail: "cy@x", author: "Cy" }],
+  };
+  const t = reviewTally(feed, "8:00");
+  const ann = t.rows.find(r => r.name === "Ann"), ben = t.rows.find(r => r.name === "Ben");
+  if (!ann || ann.requiredDone !== 1 || ann.requiredNeed !== 1 || ann.othersDone !== 1 || ann.total !== 2 || !ann.own || ann.complete) say("Ann's numbers are wrong: " + JSON.stringify(ann));
+  if (!ben || ben.total !== 0 || ben.complete) say("Ben's numbers are wrong");
+  if (t.perStory.find(s => s.id === "s1").reviews !== 1) say("Ann's own comment counted as a review of her story");
+  if (t.commentCount !== 3) say("comments by others are " + t.commentCount);
+}
+cases.push(["Visual story portal", <VisualStoryPortal config={{ id: "comm3", code: "COMM 3", name: "Digital Storytelling", path: "/comm3", students: [] }} />, "Visual story portal"]);
 
 let failed = failedEarly;
 for (const [name, el, must] of cases) {

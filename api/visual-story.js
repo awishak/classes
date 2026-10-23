@@ -15,6 +15,11 @@
 //   - A student comments on their own story last, after eight others.
 //   - A section opens on its own at its opens_at (Andrew, 2026-10-21: 12:05 AM
 //     Monday for both COMM 3 sections), so nobody has to press the button.
+//   - A section that opens with no pods saved gets pods on its own, pods of
+//     about five from the stories in at that moment, similar topics together
+//     (Andrew, 2026-10-23, from out of town: "I want this all to work
+//     automatically"). Pods he saved himself before then stand.
+//   - The comments come out on their own on Tuesday (RELEASES_AT in model.js).
 //   - An HTML story (kind "html") goes out as a signed link to the file, and
 //     the reader says the best image in words instead of tapping one.
 //
@@ -26,7 +31,7 @@ import { pinMatches, callerEmail, readBody } from "./_auth.js";
 import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
-import { storyOf, stageAt } from "../src/engine/visualstory/model.js";
+import { storyOf, stageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
 
 const KEY = "visual-story";
 const BUCKET = "visual-story";
@@ -87,12 +92,48 @@ async function sign(paths) {
 
 async function stageOf(groupKey, section) {
   const r = await rows(`/rest/v1/story_stage?select=stage,opens_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&section=eq.${encodeURIComponent(section)}`);
-  return stageAt(r?.[0]);
+  return stageAt(r?.[0], Date.now(), RELEASES_AT[groupKey] || null);
 }
 
 async function dueOf(groupKey) {
   const r = await rows(`/rest/v1/worksheet_deadlines?select=due_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}`);
   return r?.[0]?.due_at || null;
+}
+
+// Pods of about five, the same arithmetic as the review page's Suggest pods,
+// from a list already sorted so similar topics sit together.
+function podsOf(emails, size = 5) {
+  const n = emails.length;
+  if (!n) return [];
+  const k = Math.max(1, Math.round(n / size));
+  const out = [];
+  let at = 0;
+  for (let i = 0; i < k; i++) {
+    const take = Math.floor(n / k) + (i < n % k ? 1 : 0);
+    emails.slice(at, at + take).forEach(email => out.push({ email, pod: i + 1 }));
+    at += take;
+  }
+  return out;
+}
+
+// Pods for a section that opened with none saved: the students whose stories
+// are in, sorted by the prompt and topic on their pre-production page so a
+// pod reads similar stories, then cut into fives. Written with the table's
+// own key (group_key, viewer_id), so two students opening the page in the
+// same second cannot make two sets.
+async function autoPods(groupKey, section, emails) {
+  if (!emails.length) return [];
+  const pre = (await rows(`/rest/v1/worksheet_sheets?select=id,viewer_id&worksheet_key=eq.visual-pre&group_key=eq.${groupKey}&limit=${PAGE}`)) || [];
+  const mine = pre.filter(p => emails.includes(p.viewer_id));
+  const by = mine.length ? (await answersFor(mine.map(p => p.id))) || {} : {};
+  const answers = new Map(mine.map(p => [p.viewer_id, answersOf(by[p.id] || [])]));
+  const sorted = emails.slice().sort((a, b) => {
+    const A = answers.get(a) || {}, B = answers.get(b) || {};
+    return String(A.prompt || "~").localeCompare(String(B.prompt || "~")) || String(A.topic || "").localeCompare(String(B.topic || "")) || a.localeCompare(b);
+  });
+  const list = podsOf(sorted).map(p => ({ group_key: groupKey, section, pod: p.pod, viewer_id: p.email }));
+  const w = await write("/rest/v1/story_pods?on_conflict=group_key,viewer_id", "POST", list, "return=representation,resolution=merge-duplicates");
+  return w ? list.map(p => ({ section, pod: p.pod, viewer_id: p.viewer_id })) : [];
 }
 
 // The submitted stories of one section, with their owners and their stories.
@@ -221,7 +262,7 @@ export default async function handler(req, res) {
     const sections = [...new Set(roster.map(s => s.section))];
     const stageRows = (await rows(`/rest/v1/story_stage?select=section,stage,opens_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}`)) || [];
     const stages = {}, opens = {};
-    for (const s of sections) { const row = stageRows.find(r => r.section === s); stages[s] = stageAt(row); opens[s] = row?.opens_at || null; }
+    for (const s of sections) { const row = stageRows.find(r => r.section === s); stages[s] = stageAt(row, Date.now(), RELEASES_AT[groupKey] || null); opens[s] = row?.opens_at || null; }
     const pods = (await rows(`/rest/v1/story_pods?select=section,pod,viewer_id&group_key=eq.${groupKey}`)) || [];
     const nameOf = new Map(roster.map(s => [s.email, s.name]));
     const all = [];
@@ -233,12 +274,12 @@ export default async function handler(req, res) {
     const counts = {};
     comments.forEach(c => { if (ownerOf.get(c.story_sheet) !== c.author) counts[c.author] = (counts[c.author] || 0) + 1; });
     return res.status(200).json({
-      ok: true, sections, stages, opens, due: await dueOf(groupKey),
+      ok: true, sections, stages, opens, due: await dueOf(groupKey), releasesAt: RELEASES_AT[groupKey] || null,
       people: roster.map(r => ({ name: r.name, email: r.email, section: r.section })),
       pods: pods.map(p => ({ section: p.section, pod: p.pod, email: p.viewer_id, name: nameOf.get(p.viewer_id) || p.viewer_id })),
       stories: all.map(s => ({ id: s.id, email: s.owner.email, name: s.owner.name, section: s.owner.section, submitted_at: s.submitted_at, headline: s.story.headline, kind: s.story.kind })),
       counts,
-      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", author: nameOf.get(c.author) || c.author, bestPicture: pictureNo(storyById.get(c.story_sheet), c.best_image), bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
+      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", ownerEmail: ownerOf.get(c.story_sheet) || "", author: nameOf.get(c.author) || c.author, authorEmail: c.author, bestPicture: pictureNo(storyById.get(c.story_sheet), c.best_image), bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
     });
   }
 
@@ -296,7 +337,7 @@ export default async function handler(req, res) {
   // 2026-10-16: "it needs to be a link under My work when appropriate."
   if (action === "status") return res.status(200).json({ ok: true, stage: await stageOf(groupKey, me.section) });
 
-  const [stage, sheets, podRows, myRows, due] = await Promise.all([
+  let [stage, sheets, podRows, myRows, due] = await Promise.all([
     stageOf(groupKey, me.section),
     rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&submitted_at=not.is.null&limit=${PAGE}`),
     rows(`/rest/v1/story_pods?select=section,pod,viewer_id&group_key=eq.${groupKey}`),
@@ -309,6 +350,11 @@ export default async function handler(req, res) {
   const inSection = new Map(roster.filter(s => s.section === me.section).map(s => [s.email, s]));
   const list = sheets.filter(s => inSection.has(s.viewer_id)).map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at }));
   const byId = new Map(list.map(s => [s.id, s]));
+  // The section is open and nobody made pods: make them now, from the stories in.
+  if (!(podRows || []).some(p => p.section === me.section)) {
+    const made = await autoPods(groupKey, me.section, list.map(s => s.owner.email));
+    podRows = [...(podRows || []), ...made];
+  }
   const myPod = (podRows || []).find(p => p.viewer_id === email)?.pod || null;
   const podMates = new Set((podRows || []).filter(p => myPod && p.pod === myPod && p.section === me.section).map(p => p.viewer_id));
   const podded = new Set((podRows || []).map(p => p.viewer_id));

@@ -58,11 +58,21 @@ export const isHtmlStory = (story) => !!story && story.kind === "html";
 export const featureImage = (story) => { const images = story.blocks.filter(b => b.type === "image"); return images.find(b => b.id === story.feature) || images[0] || null; };
 
 /** The stage a section is really in: a building section whose open time has
- * passed reads as reading, so Monday opens on its own. */
-export const stageAt = (row, now = Date.now()) => {
+ * passed reads as reading, so Monday opens on its own. And a section that is
+ * reading or closed reads as released once its release time has passed, so
+ * Tuesday opens on its own too. Andrew, 2026-10-23, from out of town: "each
+ * student will receive non-anonymized comments ... on Tuesday", and "I want
+ * this all to work automatically." */
+export const stageAt = (row, now = Date.now(), releasesAt = null) => {
   const stage = row?.stage || "building";
-  return stage === "building" && row?.opens_at && Date.parse(row.opens_at) <= now ? "reading" : stage;
+  const open = stage === "building" && row?.opens_at && Date.parse(row.opens_at) <= now ? "reading" : stage;
+  return (open === "reading" || open === "closed") && releasesAt && Date.parse(releasesAt) <= now ? "released" : open;
 };
+
+/** When each class's comments come out on their own: Tuesday, October 27,
+ * 12:05 AM Pacific for COMM 3. The practice class has no release time, so
+ * Andrew's stage buttons are the only word there. */
+export const RELEASES_AT = { comm3: "2026-10-27T07:05:00.000Z" };
 
 // A link in a caption or text block is written [words](https://...).
 // Andrew, 2026-10-15: "include links in text." Only the words count.

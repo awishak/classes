@@ -29,6 +29,8 @@ import { createSaver } from "./saver.js";
 import { storyOf, problemsOf, wordCount, imageCount, linkParts, isHtmlStory, featureImage, REASONS, LAYOUTS, isPortrait, layoutOf, MIN_IMAGES, MAX_IMAGES, MIN_WORDS, MAX_WORDS } from "./model.js";
 import { prepImage, uploadImage, signUrls, letterId, looksLikeImage, looksLikeHtml, HTML_MAX } from "./photos.js";
 import { useCopy, Words, standing } from "./pre.jsx";
+import { PortalBar } from "./portal.jsx";
+import { storiesHref } from "./door.jsx";
 import { gameClient } from "../gameClient.js";
 import * as TOKENS from "../tokens.js";
 
@@ -49,7 +51,16 @@ export const STEPS = [
 ];
 export const STORY_COPY = {
   hello: "Let's make your visual story!",
-  sub: "Due Friday, October 23, at 11:59 PM. Your work saves by itself as you go.",
+  sub: "Due Sunday, October 25, at 11:59 PM. Your work saves by itself as you go.",
+  // The card after Submit. Andrew, 2026-10-23: "hey, thanks for submitting
+  // your story. Make sure to check back on Monday. We don't have class. And
+  // your goal is to view and comment on at least 8 other student stories ...
+  // save this link. This is where you're going to go look at the stories on
+  // Monday."
+  "done.h": "Thanks for submitting your story!",
+  "done.p": "Make sure to check back on Monday. We don't have class. Your goal is to view and comment on at least 8 other students' stories.",
+  "done.save": "Save this link. This is where you'll go to look at the stories on Monday:",
+  "done.later": "On Monday, your classmates' stories are here:",
   ...Object.fromEntries(STEPS.flatMap(([k, name, say]) => [["step." + k + ".name", name], ["step." + k + ".say", say]])),
 };
 
@@ -182,6 +193,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
   const [uploads, setUploads] = useState([]);        // { key, name, progress, error, file, stage }
   const [pane, setPane] = useState("build");          // on a narrow screen, one half at a time
   const [submitting, setSubmitting] = useState("");
+  const [done, setDone] = useState(false);            // the card after a submit lands
   const [lock, setLock] = useState(null);
   const [pre, setPre] = useState(null);
   const [pre2, setPre2] = useState(null);   // the second topic's page, when the student started one
@@ -351,6 +363,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
       const at = await store.submit();
       setSubmitted(at || new Date().toISOString());
       setSubmitting("");
+      setDone(true);
     } catch { setSubmitting("failed"); }
   };
 
@@ -377,6 +390,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
       onDrop={e => { if (e.dataTransfer?.files?.length) { e.preventDefault(); setFileOver(false); addFiles(e.dataTransfer.files); } }}>
       <style>{CSS}</style>
 
+      <PortalBar config={{ id: classId }} here="submit" />
       <header className="vss-hello">
         <div className="vss-hello-top">
           <Words k="hello" copy={copy} editing={editing} as="h1" className="vss-hello-h" />
@@ -384,7 +398,7 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
         </div>
         <Words k="sub" copy={copy} editing={editing} as="p" className="vss-hello-sub" />
         <nav className="vss-doors" aria-label="More for your story">
-          <a className="vss-door" href={"/" + classId + "/visual-story"} target="_blank" rel="noreferrer">
+          <a className="vss-door" href={"/" + classId + "/visual-story/instructions"} target="_blank" rel="noreferrer">
             <span className="vss-door-name">More instructions</span>
             <span className="vss-door-say">Everything the story needs, in full.</span>
           </a>
@@ -579,8 +593,43 @@ export function StorySheet({ store, viewer, classId, readOnly = false, editor = 
         {submitting === "unsaved" ? <span className="vss-bad">Your story is not saved yet, so the submission did not go through. Try again in a moment.</span> : null}
         {submitting === "failed" ? <span className="vss-bad">The submission did not go through. Check your connection and try again.</span> : null}
         {submitted && !submitting ? <span className="vss-good-text">Submitted {when(submitted)}. You can keep editing until the due date.</span> : null}
+        {submitted ? <span className="vss-muted"><Words k="done.later" copy={copy} editing={editing} /> <a className="vss-later" href={storiesHref(classId)}>{pageHost() + storiesHref(classId)}</a></span> : null}
         <ReportProblem classId={classId} saver={saver} status={status} errors={errors} />
       </footer>
+      {done ? <DoneCard classId={classId} copy={copy} onClose={() => setDone(false)} /> : null}
+    </div>
+  );
+}
+
+const pageHost = () => (typeof window !== "undefined" ? window.location.host : "classes.andrewishak.com");
+
+// The card after Submit: thanks, Monday, the link to save.
+function DoneCard({ classId, copy, onClose }) {
+  const href = storiesHref(classId);
+  const full = (typeof window !== "undefined" ? window.location.origin : "https://classes.andrewishak.com") + href;
+  const [copied, setCopied] = useState("");
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(full); setCopied("Copied!"); }
+    catch { setCopied("Select the link and copy it."); }
+  };
+  useEffect(() => {
+    const key = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [onClose]);
+  return (
+    <div className="vss-pop" role="dialog" aria-modal="true" aria-labelledby="vss-pop-h" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="vss-pop-card">
+        <h2 id="vss-pop-h" className="vss-pop-h">{copy.say("done.h")}</h2>
+        <p className="vss-pop-p">{copy.say("done.p")}</p>
+        <p className="vss-pop-p">{copy.say("done.save")}</p>
+        <a className="vss-pop-link" href={href}>{full.replace(/^https?:\/\//, "")}</a>
+        <div className="vss-pop-row">
+          <button type="button" className="vss-go" onClick={copyLink}>Copy the link</button>
+          <button type="button" className="vss-btn" onClick={onClose}>Back to my story</button>
+          {copied ? <span className="vss-good-text" aria-live="polite">{copied}</span> : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -861,6 +910,13 @@ const CSS = `
 
 .vss-end{display:flex;flex-direction:column;align-items:flex-start;gap:12px;margin-top:28px;padding-top:22px;border-top:1px solid ${L.soft}}
 .vss-submit{font-size:18px;padding:14px 34px}
+.vss-later{font-weight:600;color:inherit;word-break:break-all}
+.vss-pop{position:fixed;inset:0;z-index:60;background:rgba(20,16,12,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.vss-pop-card{width:100%;max-width:520px;background:#fff;color:#141414;border-radius:20px;padding:28px 26px;display:flex;flex-direction:column;gap:12px;box-shadow:0 30px 80px -20px rgba(0,0,0,.5)}
+.vss-pop-h{margin:0;font-size:26px;font-weight:700;letter-spacing:-.01em}
+.vss-pop-p{margin:0;font-size:17px;line-height:1.55}
+.vss-pop-link{display:block;font-size:17px;font-weight:700;color:#15803d;background:#e3f1e7;border-radius:12px;padding:12px 14px;word-break:break-all;text-decoration:none}
+.vss-pop-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .vss-fix{border-radius:14px;padding:12px 16px;font-size:15.5px;background:${S.sunk};box-shadow:inset 4px 0 0 ${ST.warn}}
 .vss-list{margin:6px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
 .vss-report{margin-top:10px}

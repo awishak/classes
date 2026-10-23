@@ -1,4 +1,5 @@
-// The visual story's full instructions, for students: /comm3/visual-story.
+// The visual story's full instructions, for students: /comm3/visual-story/instructions.
+// The portal (portal.jsx) took the shorter address on 2026-10-23.
 //
 // Andrew chose a short version in the portal and the full version on a page
 // (planning, 2026-10-13), drafted from his planning answers for him to edit in
@@ -10,6 +11,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { useCopy, Words } from "./pre.jsx";
+import { PortalBar } from "./portal.jsx";
 import * as TOKENS from "../tokens.js";
 import TopNav, { NAV_STUDENT } from "../TopNav.jsx";
 import { useStudentTheme, useDayNight, ThemeStyle } from "../ThemeShell.jsx";
@@ -24,8 +26,8 @@ export const SECTIONS = [
   ["words", "Your words", "150 to 300 words in captions and text blocks. A counter on the page keeps track. Your headline and your one sentence do not count toward the total.\n\nYou can put links in your captions and text blocks. Select the words you want readers to click, press Add a link, and paste the web address. The link shows up underlined in your story."],
   ["layout", "Your layout", "Your story scrolls. Drag blocks into the order you want: a photo with a caption under the photo, a portrait photo with text beside the photo on the left or the right, or a block of text on its own."],
   ["link", "A link, if you have one", "If you want to include a link, it will go at the top of your story as an alternate way to read your work."],
-  ["submit", "Submitting", "Press Preview to see your story the way a classmate will. When you're done, press Submit. You can keep editing until the due date, Friday, October 23, at 11:59 PM, and then your story locks.\n\nIf you submit late: because your work is submitted late, it's not a guarantee that students will be assigned to offer comments on your story."],
-  ["read", "Reading and commenting", "On Monday, October 26, the stories open with no names on them. You're in a pod of five. Read the four other stories in your pod, marked Required reading, then choose four more. You can read as many more as you like.\n\nOn each story, leave three comments: the best image and why, one way the story shone, and one thing you would encourage the author to do. Comment on your own story last, with the same three. Please make sure your comments are substantial. A well-crafted sentence is acceptable, and longer than that is also okay.\n\nComments are due Monday, October 26, at 11:59 PM. On Wednesday, October 28, in class, the names come out, and you see the comments on your own story."],
+  ["submit", "Submitting", "Press Preview to see your story the way a classmate will. When you're done, press Submit. You can keep editing until the due date, Sunday, October 25, at 11:59 PM, and then your story locks.\n\nIf you submit late: because your work is submitted late, it's not a guarantee that students will be assigned to offer comments on your story."],
+  ["read", "Reading and commenting", "On Monday, October 26, the stories open with no names on them. We don't have class that day. Your goal is to view and comment on at least 8 other students' stories: the 4 stories outlined in red, then at least 4 more that you choose. You can review as many as you want.\n\nOn each story, leave three comments: the best image and why, one way the story shone, and one thing you would encourage the author to do. Comment on your own story last, with the same three. Please make sure your comments are substantial. A well-crafted sentence is acceptable, and longer than that is also okay.\n\nComments are due Monday, October 26, at 11:59 PM. While the stories are anonymous, each student receives non-anonymized comments (your name will be attached) on Tuesday, October 27. Check back then to see what people think of your work."],
   ["grade", "Grading", "A - Excellent\nB - Very Good\nC - Complete\nD - Complete, with issues\nPlease revise\nNot submitted\nUnacceptable work"],
   ["help", "Getting help", "If an upload fails or something looks wrong, press Report a problem, and the details come to me."],
 ];
@@ -50,6 +52,7 @@ export default function VisualStoryInstructions({ config }) {
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
       <div className="vsi-in">
+        <PortalBar config={config} here="" />
         <Words k="title" copy={copy} editing={editing} as="h1" className="vsi-title" />
         {editor ? (
           <div className="vsi-bar">

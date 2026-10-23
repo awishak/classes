@@ -141,6 +141,22 @@ export function nextClassFacts(config, data, blockOf, section, now = Date.now())
   };
 }
 
+// The first class day after a given day, skipping days the class does not
+// meet, so a no-class Monday can say what Wednesday holds. Andrew,
+// 2026-10-23: "no class today, but please do your readings for Wednesday."
+export function followingClassFacts(config, data, blockOf, section, afterDate) {
+  const plans = data?.dayPlans || {};
+  const endOf = (date) => { const d = dateOf(date); return d ? new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime() : null; };
+  let at = endOf(afterDate);
+  for (let i = 0; at && i < 12; i++) {
+    const facts = nextClassFacts(config, data, blockOf, section, at);
+    if (!facts) return null;
+    if (kindOf(plans[facts.date]) !== "off") return facts;
+    at = endOf(facts.date);
+  }
+  return null;
+}
+
 // The note an instructor leaves for the next class, written on the front page.
 //
 // It saved when the box lost focus, with no Save button and no word back, and

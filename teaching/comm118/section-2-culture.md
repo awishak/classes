@@ -5,6 +5,11 @@ from Wednesday, October 28 to Sit-Down 2 in week 8, then one day in week 9
 to connect each student's concept to the job they chose for Sit-Down 1.
 Everything here is a proposal for him to cut.
 
+Andrew answered the five questions on October 22 at 6:27 PM (the copy
+from the questions page). His answers are folded in below and marked
+**Settled** where he decided and **My call** where he said he was not
+sure; a My call stands until he changes it.
+
 ## The days we actually have
 
 From the class store's day plans, as of October 22:
@@ -17,30 +22,36 @@ From the class store's day plans, as of October 22:
 | Sun Nov 1 | due | Weekly Challenge 3: Former coach interview |
 | Mon Nov 2 | guest speaker, Brendan Shanahan | slot: Small groups and team interaction; Chapter 4 required |
 | Wed Nov 4 | class, Trivia | Team culture |
-| Fri Nov 6 | no meeting | TBD |
+| Fri Nov 6 | no meeting, work day | TBD |
 | Sun Nov 8 | due | Sit-Down 2 memo |
-| Mon Nov 9 | no meeting | TBD |
-| Wed Nov 11, Fri Nov 13 | Sit-Down 2 | |
+| Mon Nov 9 | no meeting, work day | TBD |
+| Wed Nov 11, Thu Nov 12, Fri Nov 13 | Sit-Down 2, one student at a time | |
 | Mon Nov 16 | class | Power: protest, organizations, money |
 | Wed Nov 18, Fri Nov 20 | no meeting, NCA | Leadership Guide and Field Guide topic due Fri |
 | Nov 23 to 27 | Thanksgiving, off | |
 
 So three teaching days before Sit-Down 2 (Oct 28, Oct 30, Nov 4), one
-guest day, and one day after (Nov 16). The Thursday 9:15 group from
+guest day, and one day after (Nov 16). **Settled:** the three no-meeting
+days are right, and Nov 6 and Nov 9 can carry work ("i can give them work
+during nov 6 and 9"). So Nov 6 is the day to write the memo and Nov 9 the
+day to prepare for the sit-down, each with a short task on the site. The Thursday 9:15 group from
 Sit-Down 1 meets Thursday, October 29.
 
 ## The arc
 
-1. **Wed Oct 28.** The Ishak chapter. What a team has to communicate
-   before the ball is in play. Hand out the concept list.
+1. **Wed Oct 28.** What a team is: individual, team, organization.
+   Culture first (motivational climate, cohesion, role clarity), then the
+   Knicks' ring night as the organizational example. The Ishak chapter
+   is the reading. Hand out the concept list. Day plan in
+   oct-28-what-a-team-is.md.
 2. **Fri Oct 30.** Coaching: climate, power, the edge of chaos. The coach
    interview is due Sunday.
 3. **Mon Nov 2.** Brendan Shanahan. Students send questions built on the
    concepts, the way the Francisco questions worked in the spring.
 4. **Wed Nov 4.** Culture, cohesion, conflict and dissent. They pick their
    one concept. Memo due Sunday.
-5. **Nov 11 and 13.** Sit-Down 2, one student at a time. He quizzes the
-   concepts, then digs into their one.
+5. **Nov 11, 12 and 13.** Sit-Down 2, one student at a time, ten minutes
+   each. He quizzes the concepts, then digs into their one.
 6. **Mon Nov 16.** The concept meets the job. Leadership Guide due Friday.
 
 ## The concept list
@@ -63,8 +74,13 @@ can define in two sentences and attach an example to.
 | 11 | Emotion and time | Choking; coaches regulate emotion through culture; Dweck's mindset. Time is epochal: teams plan backward from the game and talk about scenarios in advance. Time-outs. | 2021 p. 512; 2017 §5A, §5D |
 | 12 | Sports as a model for work | Baseball is pooled, football sequential, basketball reciprocal (Keidel and Katz). Do not confuse coaching with managing. Business is not "in bounds." | 2017 §7 |
 
-Concept 12 is the bridge to week 9. If he cuts to ten, 1 and 11 are the
-ones that overlap most with the rest.
+Concept 12 is the bridge to week 9. **My call** (he said "not sure yet"):
+cut 1 and 11. Coordination folds into knowledge sharing (the "same page"
+idea and the signs), and emotion and time fold into culture and coaching
+(a coach regulates emotion through the culture; time-outs are coaching).
+The ten that stay: knowledge sharing, role clarity, goal setting,
+motivational climate, culture, conflict and dissent, cohesion, power,
+coaching as complexity, sports as a model for work.
 
 ## The readings
 
@@ -117,8 +133,21 @@ Metaphors in Business" (The Atlantic, 2016), both already on the list.
 
 ## The one assignment
 
-Keep Weekly Challenge 3, the former coach interview, due Sunday, November
-1, and point it at the concepts. The student picks four concepts from the
+**Settled:** the coach interview stays, "as part of a larger thing of
+like: what do I care about in teams." So Weekly Challenge 3 becomes
+**What I care about in teams**, in two parts, and the Sit-Down 2 memo is
+its second part rather than a separate assignment:
+
+- **Part 1, the interview, due Sunday, November 1.** Four concepts from
+  the list, one question each to a former coach, and a page on what the
+  coach said and which concept each answer shows.
+- **Part 2, what I care about, due Sunday, November 8.** The ten concepts
+  in two sentences and an example each (the interview supplies four), then
+  a half page on the one concept they care about most and why. Nov 6 is
+  the work day for this.
+
+The original shape, for the record: keep Weekly Challenge 3, the former
+coach interview, due Sunday, November 1, and point it at the concepts. The student picks four concepts from the
 list and interviews a former coach with one question per concept, then
 writes a page: what the coach said, and which concept it is an example of.
 That gives every student four live examples for the memo a week later, and
@@ -137,20 +166,22 @@ one example, from a team they were on, a team they follow, or the coach
 interview. Then a half page on their one concept: why this one, and the
 best example they have. Two pages.
 
-**The room.** Individual, in Vari 206 like Sit-Down 1, on audio. The math:
+**The room.** Individual, in Vari 206 like Sit-Down 1, on audio.
+**Settled:** ten minutes a student, class time on Wednesday and Friday,
+and two and a half hours on Thursday.
 
-| | |
-| --- | --- |
-| Students | 25 |
-| Class minutes, Nov 11 and Nov 13 | 130 |
-| Minutes each with no gaps | 5.2 |
+| Block | Minutes | Students |
+| --- | --- | --- |
+| Wed Nov 11, class time | 65 | 6 |
+| Thu Nov 12, 2.5 hours | 150 | 13 |
+| Fri Nov 13, class time | 65 | 6 |
 
-Five minutes is a quiz, not a conversation. Two ways to get to eight:
-use Thursday, November 12 for a third block of slots, or run Monday,
-November 9 (now a no-meeting day) as sign-up slots in his office. With
-three blocks, eight minutes each.
+Six on Wednesday and six on Friday is ten minutes each with a five-minute
+slack in each period; thirteen on Thursday is ten each with twenty
+minutes to spare. The sign-up goes on the Sit-Down page the way the
+groups did, with the Thursday slots first so the class days fill last.
 
-**The eight minutes.** Two concepts drawn at random from the ten (define
+**The ten minutes.** Two concepts drawn at random from the ten (define
 it, give me an example that is not in your memo), then their one concept
 (the three questions below), then one question that points at week 9:
 which job from Sit-Down 1 does this concept matter most for, and why.
@@ -177,9 +208,17 @@ The HBR and Atlantic pieces are the pushback to argue with.
 
 ## Changes this needs on the site
 
-- Wed Oct 28 day title and the two Ishak schedule items moved from Fri to
-  Wed, required; PDFs uploaded to the class site.
-- Weekly Challenge 3 text rewritten to the four-concept interview.
-- Sit-Down 2 memo and Sit-Down 2 assignments get the words above.
+- Wed Oct 28: the day is now planned in oct-28-what-a-team-is.md (Oct 22
+  evening). Done Oct 23: the title changed, the two Ishak schedule items
+  moved from Fri to Wed as required, the topics worksheet (four topics, I
+  notice, I think, I wonder) is open to the class with a door on the home,
+  and Monday says no class, read for Wednesday. Still to do: the Game to
+  the last ten minutes, the Athletic ring-night piece on the schedule, the
+  PDFs on the class site.
+- Nov 6 and Nov 9 get a task each on the site: write Part 2, prepare for
+  the sit-down.
+- The Sit-Down 2 sign-up: 25 ten-minute slots across Nov 11, 12 and 13.
+- Weekly Challenge 3 renamed What I care about in teams, Part 1 the
+  interview; the Sit-Down 2 memo assignment becomes Part 2.
 - Nov 11 and 13 day plans become individual sit-downs; a sign-up for the
   third block if he wants one.

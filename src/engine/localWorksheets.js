@@ -33,6 +33,8 @@ import { VISUAL_PRE_KEY, VISUAL_PRE_TITLE, mountVisualPre, VISUAL_PRE_2_KEY, VIS
 import PreReview from "./visualstory/review.jsx";
 import { VISUAL_STORY_KEY, VISUAL_STORY_TITLE, mountVisualStory } from "./visualstory/story.jsx";
 import StoryReview from "./visualstory/storyreview.jsx";
+import { TEAM_TOPICS_KEY, TEAM_TOPICS_TITLE, mountTeamTopics } from "./teamtopics/sheet.jsx";
+import TopicsReview from "./teamtopics/review.jsx";
 
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
@@ -49,6 +51,10 @@ export const LOCAL_WORKSHEETS = [
   // to do a whole second preproduction on a different topic." Open wherever
   // the first is, from the start.
   { key: VISUAL_PRE_2_KEY, title: VISUAL_PRE_2_TITLE, mount: mountVisualPre2, review: PreReview, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  // Five topics from the Ishak chapter, for Wednesday, October 28. Andrew,
+  // 2026-10-22: "come to class ready to dicuss five of them with: a finding
+  // they thought was interesting, an opnion they have, and a wondrer."
+  { key: TEAM_TOPICS_KEY, title: TEAM_TOPICS_TITLE, mount: mountTeamTopics, review: TopicsReview, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
   { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },
 ];

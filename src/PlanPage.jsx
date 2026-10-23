@@ -47,6 +47,27 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "oct23-monday-from-away", date: "Friday, October 23", title: "Monday from out of town: the visual story portal, the Monday link, who reviewed what, and the COMM 118 topics sheet",
+    blurb: "Andrew, away for the weekend: \"Students are gonna submit their visual story on Sunday ... On Monday, they have to go and review the other stories ... there should be one place students are going for this ... a visual story portal ... make it easy for students to figure out how to go from part to part.\" And for COMM 118: no class Monday, read for Wednesday, and the topics worksheet with I notice, I think, I wonder.",
+    groups: [
+      { name: "What changed", items: [
+        ["The portal", "/comm3/visual-story is now the one place: the three parts in order (submit by Sunday, read and comment Monday, see your comments Tuesday), today's part filled in green with its button, the other two a line each with a link. The same three parts sit in a strip at the top of the builder, the stories page and the instructions, which moved to /comm3/visual-story/instructions."],
+        ["After Submit", "A card: thanks for submitting, check back Monday, no class, at least 8 other stories, and the stories link to save, with a Copy button. The same link stays under the Submit button once a story is in."],
+        ["Monday's link", "A bright green bar at the top of the COMM 3 home while the stories are open: Read and comment on your classmates' stories. On Tuesday the bar turns to Your classmates' comments are in and opens the portal."],
+        ["The stories page", "His instructions at the top (the 4 outlined in red, then at least 4 more, as many as you want), the line that the stories are anonymous now and the comments come back with names on Tuesday, and a counter in normal-sized numbers: outlined in red 4 of 4, your choice, total 8 of 8 + 2 = 10."],
+        ["On their own", "The stories open Monday at 12:05 AM as before. New: a section that opens with no pods saved makes pods of about five from the stories in by then (none were saved on Friday), and the comments come out with names on Tuesday, October 27, at 12:05 AM, no button needed. The lock moved to Sunday, October 25, 11:59 PM."],
+        ["Who reviewed what", "/comm3/reviews, his only: per student the red ones done, their choice, the total and Complete or what is missing; per story how many times it was reviewed and by whom; counts; JSON of everything and a CSV of the comments. Asks again every minute."],
+        ["Your comments, arranged", "Part three on the portal: the comments on the student's own story by reviewer or by question, with the picture each reviewer picked as best."],
+        ["No class Monday", "Both homes: the next-class card reads No class with his words as the title (COMM 3: No class. Please read other students' stories. COMM 118: No class. Please read for Wednesday.), then Next class with Wednesday's title and its readings, and buttons to the stories or the topics worksheet. Wednesday's titles: Audio story introduction, and Introduction to teams, culture and team communication."],
+        ["COMM 118 topics sheet", "Four topics required, a fifth if they want; the three boxes are I notice, I think, I wonder; the intro in his words from Friday. The two Ishak readings moved from Friday to Wednesday as required. A green door on the COMM 118 home opens the sheet until Wednesday is over. His review page asks again every half minute and names who is not in."],
+      ] },
+      { name: "Still to do", items: [
+        ["Deploy", "None of the code is live until a deploy. The store changes (titles, readings, the Sunday lock) are live now."],
+        ["The Ishak PDFs", "The two readings have no file on the site yet; the links on Wednesday's schedule are titles only."],
+      ] },
+    ],
+  },
+  {
     id: "oct20-sitdown-sheet", date: "Tuesday, October 20", title: "Sit-Down 1: the Scouting Reports read, and the sheet only he can open",
     blurb: "Andrew: \"i want a summary of all the work. did they do it? is it good in your opinion? who was working hard? who is thin? and then for each group meeting, I want a cheat sheet with what they focused on, as well as all of their questions, and who wrote them for whom. deploy and make sure only i have access.\"",
     groups: [

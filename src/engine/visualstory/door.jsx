@@ -13,38 +13,41 @@
 
 import { useState, useEffect } from "react";
 import { authHeaders } from "../session.js";
+import { savedPin } from "../../InstructorGate.jsx";
 import { Row, Io, Lnk } from "../portal/bits.jsx";
 
 // The classes with a stories page, the same list App.jsx routes /<class>/stories for.
 export const STORIES_CLASSES = ["comm3", "comm999"];
-export const storiesHref = (config) => "/" + config.id + "/stories";
+export const storiesHref = (config) => "/" + (config.id || config) + "/stories";
 
 const asked = new Map();   // class id -> the stage, as a promise
 
-export function storiesStage(config) {
+export function storiesStage(config, as = "") {
   if (!config || !STORIES_CLASSES.includes(config.id)) return Promise.resolve("");
-  if (!asked.has(config.id)) asked.set(config.id, (async () => {
+  const key = config.id + "|" + as;
+  if (!asked.has(key)) asked.set(key, (async () => {
     try {
-      // No PIN goes along: the door is the student's, and the route answers
-      // for the session's own email.
+      // No PIN goes along for a student: the door is theirs, and the route
+      // answers for the session's own email. Andrew seeing the practice class
+      // as someone (?as=) sends the PIN, the way the stories page does.
       const r = await fetch("/api/visual-story", {
         method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-        body: JSON.stringify({ groupKey: config.id, action: "status" }),
+        body: JSON.stringify({ groupKey: config.id, action: "status", ...(as ? { as, pin: savedPin() } : {}) }),
       });
       const out = await r.json().catch(() => null);
       return r.ok && out && out.ok ? String(out.stage || "") : "";
     } catch { return ""; }
   })());
-  return asked.get(config.id);
+  return asked.get(key);
 }
 
-export function useStoriesStage(config) {
+export function useStoriesStage(config, as = "") {
   const [stage, setStage] = useState("");
   useEffect(() => {
     let alive = true;
-    storiesStage(config).then(s => { if (alive) setStage(s); });
+    storiesStage(config, as).then(s => { if (alive) setStage(s); });
     return () => { alive = false; };
-  }, [config?.id]);
+  }, [config?.id, as]);
   return stage;
 }
 
@@ -52,7 +55,7 @@ export function useStoriesStage(config) {
 const WORDS = {
   reading: { title: "Read your classmates' stories", line: "Comments are open.", tint: "due" },
   closed: { title: "Your classmates' stories", line: "Comments are closed.", tint: "done" },
-  released: { title: "Your classmates' stories", line: "The names are out.", tint: "done" },
+  released: { title: "Your classmates' comments are in", line: "Open the portal to read the comments.", tint: "done" },
 };
 
 // A row under My work, on the home and on the My work page.
@@ -60,7 +63,7 @@ export function StoriesRow({ config }) {
   const stage = useStoriesStage(config);
   const w = WORDS[stage];
   if (!w) return null;
-  const href = storiesHref(config);
+  const href = stage === "released" ? "/" + config.id + "/visual-story#comments" : storiesHref(config);
   const open = () => { window.location.href = href; };
   return (
     <Row tint={w.tint} onOpen={open} side={<Io kind="go" href={href}>Open</Io>}>
