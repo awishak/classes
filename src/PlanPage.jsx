@@ -62,8 +62,8 @@ const SESSIONS = [
         ["COMM 118 topics sheet", "Four topics required, a fifth if they want; the three boxes are I notice, I think, I wonder; the intro in his words from Friday. The two Ishak readings moved from Friday to Wednesday as required. A green door on the COMM 118 home opens the sheet until Wednesday is over. His review page asks again every half minute and names who is not in."],
       ] },
       { name: "Still to do", items: [
-        ["Deploy", "None of the code is live until a deploy. The store changes (titles, readings, the Sunday lock) are live now."],
-        ["The Ishak PDFs", "The two readings have no file on the site yet; the links on Wednesday's schedule are titles only."],
+        ["The Ishak PDFs", "The two readings have no file on the site yet; the links on Wednesday's schedule are titles only. The files are in his Downloads."],
+        ["Sit-Down 1", "Marked as taking no submission that evening: \"students do not submit anything for sit down #1 ... No submission needed.\" The row on My work says so, and nothing is owed or missed."],
       ] },
     ],
   },
