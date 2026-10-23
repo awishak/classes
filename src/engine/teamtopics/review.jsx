@@ -8,7 +8,7 @@
 // Two views of the same sheets. By topic: every topic anyone chose, most
 // chosen first, with each student's finding, opinion and wonder under the
 // topic, which is the view for running Wednesday's discussion. By student:
-// one row each, their chapter and their five. Reads through
+// one row each, their five. Reads through
 // /api/worksheet-submits (all: true), the way the pre-production review does.
 // Nothing is written here.
 
@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { SLOTS, PARTS, CHAPTERS, missingOf, DEFAULT_COPY } from "./sheet.jsx";
+import { SLOTS, PARTS, missingOf, DEFAULT_COPY } from "./sheet.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -31,7 +31,6 @@ const call = async (body) => {
 
 const lower = (s) => String(s || "").trim().toLowerCase();
 const when = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-const chapterName = (id) => (CHAPTERS.find(c => c.id === id) || {}).name || "No chapter chosen";
 
 // A student's five, from their answers: the slots with a topic written.
 export const topicsOf = (answers) => SLOTS.map(s => ({
@@ -81,16 +80,16 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
 
   return (
     <Shell>
-      <h1 className="ttr-title">Topics, every sheet</h1>
+      <h1 className="ttr-title">Five concepts, every sheet</h1>
       {sections.length > 1 ? (
         <div className="ttr-tabs" role="tablist">
           {sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"ttr-tab" + (s === section ? " ttr-on" : "")} onClick={() => setSection(s)}>{s}</button>)}
         </div>
       ) : null}
-      <p className="ttr-p">{submitted + " submitted, " + (withSheets.length - submitted) + " started, " + (rows.length - withSheets.length) + " not opened. " + topics.length + " different topics. This page asks again every half minute."}</p>
+      <p className="ttr-p">{submitted + " submitted, " + (withSheets.length - submitted) + " started, " + (rows.length - withSheets.length) + " not opened. " + topics.length + " different concepts. This page asks again every half minute."}</p>
       {notIn.length ? <p className="ttr-muted">Not submitted yet: {notIn.join(", ")}.</p> : <p className="ttr-muted">Everyone is in.</p>}
       <div className="ttr-tabs" role="tablist" aria-label="View">
-        <button type="button" role="tab" aria-selected={view === "topic"} className={"ttr-tab" + (view === "topic" ? " ttr-on" : "")} onClick={() => setView("topic")}>By topic</button>
+        <button type="button" role="tab" aria-selected={view === "topic"} className={"ttr-tab" + (view === "topic" ? " ttr-on" : "")} onClick={() => setView("topic")}>By concept</button>
         <button type="button" role="tab" aria-selected={view === "student"} className={"ttr-tab" + (view === "student" ? " ttr-on" : "")} onClick={() => setView("student")}>By student</button>
       </div>
       {view === "topic" ? topics.map(t => (
@@ -99,7 +98,7 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
           {t.entries.map(e => (
             <div key={e.student.email + e.slot} className="ttr-entry">
               <span className="ttr-who">{e.student.name}</span>
-              {PARTS.map(p => e[p.field] ? <p key={p.field} className="ttr-line"><span className="ttr-k">{DEFAULT_COPY["part." + p.field]}</span>{e[p.field]}</p> : null)}
+              {PARTS.map(p => e[p.field] ? <p key={p.field} className="ttr-line"><span className="ttr-k">{DEFAULT_COPY["box." + p.field]}</span>{e[p.field]}</p> : null)}
             </div>
           ))}
         </section>
@@ -110,11 +109,10 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
             <span className={"ttr-chip" + (sheet?.submitted_at ? " ttr-ok" : "")}>{sheet ? (sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started") : "Not opened"}</span>
           </div>
           {sheet ? (<>
-            <p className="ttr-line"><span className="ttr-k">Chapter</span>{chapterName(sheet.answers?.chapter)}</p>
             {topicsOf(sheet.answers).map(t => (
               <div key={t.slot} className="ttr-entry">
                 <span className="ttr-who">{t.topic}</span>
-                {PARTS.map(p => t[p.field] ? <p key={p.field} className="ttr-line"><span className="ttr-k">{DEFAULT_COPY["part." + p.field]}</span>{t[p.field]}</p> : null)}
+                {PARTS.map(p => t[p.field] ? <p key={p.field} className="ttr-line"><span className="ttr-k">{DEFAULT_COPY["box." + p.field]}</span>{t[p.field]}</p> : null)}
               </div>
             ))}
             {missingOf(sheet.answers).length ? <p className="ttr-muted">{missingOf(sheet.answers).length} boxes empty.</p> : null}

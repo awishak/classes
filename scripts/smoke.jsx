@@ -5986,12 +5986,12 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
 // students.
 {
   const say = (m) => { console.error("  FAIL  team topics: " + m); failedEarly++; };
-  if (TOPIC_FIELDS.length !== 1 + TOPIC_SLOTS.length * 4) say("the field list is not a chapter plus four a slot");
+  if (TOPIC_FIELDS.length !== TOPIC_SLOTS.length * 4) say("the field list is not four a slot");
   if (TOPIC_FIELDS.some(f => !/^[a-z]+(:[a-z])?$/.test(f))) say("a field name breaks the table's rule");
-  const full = Object.fromEntries(TOPIC_FIELDS.map(f => [f, f === "chapter" ? "2017" : "x"]));
+  const full = Object.fromEntries(TOPIC_FIELDS.map(f => [f, "x"]));
   if (topicsMissing(full).length) say("a full sheet reads as missing something");
   if (topicsMissing({ ...full, "wonder:c": " " }).length !== 1) say("a blank wonder is not missing");
-  const a = { chapter: "2021", "topic:a": "Cohesion", "finding:a": "f1", "opinion:a": "o1", "wonder:a": "w1", "topic:b": "Power", "finding:b": "f2" };
+  const a = { "topic:a": "Cohesion", "finding:a": "f1", "opinion:a": "o1", "wonder:a": "w1", "topic:b": "Power", "finding:b": "f2" };
   if (topicsOf(a).length !== 2 || topicsOf(a)[1].topic !== "Power" || topicsOf(a)[1].opinion !== "") say("a student's topics do not read off the answers");
   const grouped = byTopic([{ answers: a, student: { name: "Ann", email: "ann@x" } }, { answers: { "topic:a": "cohesion.", "finding:a": "f3" }, student: { name: "Ben", email: "ben@x" } }]);
   if (grouped.length !== 2 || grouped[0].topic !== "Cohesion" || grouped[0].entries.length !== 2) say("the same topic spelled two ways is not one topic, or is not first");
@@ -6019,9 +6019,9 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (storyStageAt({ stage: "reading" }, tue, null) !== "reading") say("a class with no release time released anyway");
   if (storyStageAt({ stage: "released" }, sun, RELEASES_AT.comm3) !== "released") say("a released section went back");
   const fields = (s) => ({ ["topic:" + s]: "t", ["finding:" + s]: "f", ["opinion:" + s]: "o", ["wonder:" + s]: "w" });
-  const four = { chapter: "2017", ...fields("a"), ...fields("b"), ...fields("c"), ...fields("d") };
-  if (topicsMissing(four).length) say("four full topics still read as missing something");
-  if (topicsMissing({ ...four, "topic:e": "Power" }).length !== 3) say("a started fifth topic does not ask for its three boxes");
+  const four = { ...fields("a"), ...fields("b"), ...fields("c"), ...fields("d") };
+  if (topicsMissing(four).length !== 4) say("four full concepts do not leave the fifth's four boxes missing");
+  if (topicsMissing({ ...four, ...fields("e") }).length) say("five full concepts still read as missing something");
   const bar = renderToString(<PortalBar config={{ id: "comm3" }} here="comments" />);
   if (!bar.includes("Visual story portal") || !bar.includes("/comm3/stories") || !bar.includes("/comm3/worksheets/visual-story") || !bar.includes("aria-current=\"page\"")) say("the strip does not name the portal and the other parts");
   const feed = {

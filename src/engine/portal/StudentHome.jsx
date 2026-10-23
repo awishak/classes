@@ -108,8 +108,8 @@ export function TopicsDoor({ config, data, now = Date.now() }) {
   return (
     <a className="pt-door pt-focus" href={topicsHref(config.id)}>
       <span className="pt-door-main">
-        <span className="pt-door-name">Topics worksheet for Wednesday</span>
-        <span className="pt-door-say">Read Ishak 2017 or 2021, pick four topics, and write I notice, I think and I wonder for each. Bring it to class Wednesday, October 28.</span>
+        <span className="pt-door-name">Five concepts from the Ishak chapters</span>
+        <span className="pt-door-say">Read either chapter, choose five concepts, and for each note something you noticed, something you think, and something you wonder about. Due end of day Tuesday, October 27.</span>
       </span>
       <span className="pt-door-go" aria-hidden="true">Open</span>
     </a>
@@ -192,7 +192,7 @@ export function Hero({ config, data, blockOf, section, me, mark, go, instructor,
       ) : off ? (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {STORIES_CLASSES.includes(config.id) ? <Btn kind="light" href={storiesHref(config)}>Read your classmates' stories</Btn> : null}
-          {localWorksheet(TEAM_TOPICS_KEY) && listedFor(localWorksheet(TEAM_TOPICS_KEY), config.id) && openTo(localWorksheet(TEAM_TOPICS_KEY), config.id, data) ? <Btn kind="light" href={topicsHref(config.id)}>Topics worksheet</Btn> : null}
+          {localWorksheet(TEAM_TOPICS_KEY) && listedFor(localWorksheet(TEAM_TOPICS_KEY), config.id) && openTo(localWorksheet(TEAM_TOPICS_KEY), config.id, data) ? <Btn kind="light" href={topicsHref(config.id)}>Concepts worksheet</Btn> : null}
           {after && afterReadings ? <Btn kind="glass" onClick={() => go("schedule/" + daySlug(after.date))}>{afterReadings + " for " + after.weekday}</Btn> : null}
           <Btn kind="glass" onClick={() => go("schedule")}>Schedule</Btn>
         </div>
