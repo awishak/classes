@@ -118,7 +118,7 @@ async function tilesOf(ids) {
       const blocks = (await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${want.map(w => w[0]).join(",")})&field=in.(${want.map(w => '"block:' + w[1] + '"').join(",")})&order=position&limit=${PAGE}`)) || [];
       const joined = {};
       blocks.forEach(r => { const k = r.sheet_id + " " + r.field; joined[k] = (joined[k] || "") + r.value; });
-      want.forEach(([id, b]) => { try { head[id].path = JSON.parse(joined[id + " block:" + b] || "{}").path || ""; } catch { /* no picture */ } });
+      want.forEach(([id, b]) => { try { const blk = JSON.parse(joined[id + " block:" + b] || "{}"); head[id].path = blk.path || ""; head[id].w = Number(blk.w) || 0; head[id].h = Number(blk.h) || 0; } catch { /* no picture */ } });
     }
   }
   const urls = await sign(ids.map(id => head[id]?.path));
@@ -262,7 +262,7 @@ export default async function handler(req, res) {
         ok: true, sections, due,
         stories: list.map(s => {
           const who = byEmail.get(s.viewer_id);
-          return { id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "",
+          return { id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "", w: head[s.id]?.w || 0, h: head[s.id]?.h || 0,
             author: who.name, section: who.section, submitted_at: s.submitted_at, late: !!(s.submitted_at && due && Date.parse(s.submitted_at) > Date.parse(due)) };
         }).sort((a, b) => a.author.localeCompare(b.author)),
         notStarted: roster.filter(s => !started.has(s.email)).map(s => ({ name: s.name, section: s.section })),
@@ -322,7 +322,7 @@ export default async function handler(req, res) {
     // Only what a tile needs: the headline, the look, and the star picture.
     const { head, urls } = await tilesOf(list.map(s => s.id));
     const tiles = list.map(s => ({
-      id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "",
+      id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "", w: head[s.id]?.w || 0, h: head[s.id]?.h || 0,
       mine: s.owner.email === email, required: s.owner.email !== email && podMates.has(s.owner.email),
       done: doneSet.has(s.id), late: !!(due && Date.parse(s.submitted_at) > Date.parse(due)) || (podded.size > 0 && !podded.has(s.owner.email)),
       author: released ? s.owner.name : null,
