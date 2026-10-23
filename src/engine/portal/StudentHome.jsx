@@ -174,12 +174,10 @@ export function Hero({ config, data, blockOf, section, me, mark, go, instructor,
       {off && after ? (
         <div className="pt-heroThen">
           <span className="pt-eyebrow">Next class</span>
+          {/* The readings are a button below, not a list here. Andrew,
+              2026-10-23, on a card with eight titles in it: "this is bad for
+              comm 118. have a link that takes them to the list of readings." */}
           <div className="pt-heroWhat">{after.weekday}, {after.longDate}{after.title ? ": " + after.title : ""}</div>
-          {after.readings.length ? (
-            <ul className="pt-heroList" aria-label={"Readings for " + after.weekday}>
-              {after.readings.map(r => <li key={r.id}>{r.url ? <a href={r.url} target="_blank" rel="noreferrer">{r.title}</a> : r.title}</li>)}
-            </ul>
-          ) : null}
         </div>
       ) : null}
       {children}
@@ -304,8 +302,6 @@ const DOOR_CSS = `
 .pt-gobar-say{font-size:15px;line-height:1.4;opacity:.95}
 .pt-gobar-go{flex:none;font-size:15px;font-weight:700;padding:10px 18px;border-radius:999px;background:#fff;color:#15803d}
 .pt-heroThen{border-top:1px solid rgba(255,255,255,.28);padding-top:12px;display:flex;flex-direction:column;gap:6px}
-.pt-heroList{margin:0;padding-left:20px;font-size:15.5px;line-height:1.55}
-.pt-heroList a{color:#fff;font-weight:600}
 `;
 
 export { Row, dueWords };
