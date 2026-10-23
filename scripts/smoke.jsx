@@ -1276,7 +1276,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
   const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
@@ -5937,6 +5937,44 @@ cases.push(["Visual story, someone else's photo, named", <StoryView story={vsm.s
 cases.push(["Visual story, someone else's photo, anonymous", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn", by: "other", byName: "Maria Lopez" }) })} urls={{ p: "x.jpg" }} credit="" />, "Dawn"]);
 cases.push(["Visual story, anonymous credit", <StoryView story={vsm.storyOf({ headline: "Run club", order: JSON.stringify(["aa"]), "block:aa": JSON.stringify({ type: "image", path: "p", w: 800, h: 600, caption: "Dawn" }) })} urls={{ p: "x.jpg" }} credit="" />, "Dawn"]);
 cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
+
+// Questions for Andrew, on the site. 2026-10-22: a set in decisions.js, one
+// card a question on /<class>/decisions, the answers on the plan row, and the
+// page in his menu only.
+{
+  const say = (m) => { console.error("  FAIL  decisions: " + m); failedEarly++; };
+  const { DecisionsBody } = await import("../src/engine/DecisionsPage.jsx");
+  const { setsFor, withAnswer, answersOf, answerLines, answeredCount } = await import("../src/engine/decisions.js");
+  const { appsFor } = await import("../src/engine/apps.js");
+  const { PLAN_KEYS } = await import("../src/engine/plan-keys.js");
+  const dcfg = { ...cfg0, id: "comm118", path: "/comm118", code: "COMM 118", storageKey: "smoke-decisions" };
+  const sets = setsFor("comm118");
+  const s2 = sets.find(s => s.id === "section-2");
+  if (!s2) say("COMM 118 has no section-2 set");
+  if (!PLAN_KEYS.has("decisions")) say("decisions is not on the plan row");
+  if (!appsFor(dcfg, "instructor").some(a => a.href === "/comm118/decisions")) say("his menu has no Decisions");
+  if (appsFor(dcfg, "student").some(a => a.href === "/comm118/decisions")) say("a student's menu has Decisions");
+  let d = { decisions: {} };
+  d = withAnswer(d, "section-2", "block", { pick: "thu-nov-12" });
+  d = withAnswer(d, "section-2", "cut", { picks: ["coordination", "emotion-time"] });
+  d = withAnswer(d, "section-2", "cut", { notes: "Rename power." });
+  const a = answersOf(d, "section-2");
+  if (a.block?.pick !== "thu-nov-12" || a.cut?.picks?.length !== 2 || a.cut?.notes !== "Rename power.") say("an answer did not land, or a note replaced the picks");
+  if (!d.decisions["section-2"].updatedAt) say("the set has no updatedAt");
+  if (s2 && answeredCount(s2, a) !== 2) say("the answered count is " + answeredCount(s2, a) + ", wanted 2");
+  const lines = s2 ? answerLines(s2, a) : [];
+  if (!lines.some(l => l.includes("Thursday, November 12")) || !lines.some(l => l.includes("Rename power."))) say("the lines do not carry the answer or the note");
+  const page = renderToString(<DecisionsBody config={dcfg} data={d} update={() => {}} sets={sets} />);
+  for (const want of ["Five calls on the culture section", "Where does the third block", "Thursday, November 12", "Cut 2 of 2", "Copy my answers", "2 of 6 answered", 'placeholder="A concept to add, or a rename"']) {
+    if (!page.includes(want)) say("the page lacks " + JSON.stringify(want));
+  }
+  if (!/id="dc-section-2-block-thu-nov-12"[^>]*checked=""/.test(page)) say("the picked option is not checked");
+  if (/id="dc-section-2-block-none"[^>]*checked=""/.test(page)) say("an option he did not pick is checked");
+  if (!/id="dc-section-2-cut-coordination"[^>]*checked=""/.test(page) || /id="dc-section-2-cut-power"[^>]*checked=""/.test(page)) say("the cut list does not show his two");
+  if (!page.includes("Rename power.")) say("the note is not in its box");
+  if (!renderToString(<DecisionsBody config={dcfg} data={{}} update={() => {}} sets={sets} />).includes("Nothing answered yet.")) say("an empty set does not say so");
+  if (!renderToString(<DecisionsBody config={dcfg} data={d} update={() => {}} sets={[]} />).includes("No questions are waiting for you.")) say("a class with no sets does not say so");
+}
 
 let failed = failedEarly;
 for (const [name, el, must] of cases) {

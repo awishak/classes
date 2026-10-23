@@ -16,6 +16,7 @@ import ReadoutPage from "./engine/ReadoutPage.jsx";
 import WorktopiaAnswersPage from "./engine/WorktopiaAnswersPage.jsx";
 import SitdownRolesPage from "./engine/SitdownRolesPage.jsx";
 import SitdownPage from "./engine/SitdownPage.jsx";
+import DecisionsPage from "./engine/DecisionsPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
@@ -318,6 +319,14 @@ export default function App() {
         <SitdownRolesPage key={wsRoles[1]} config={ENGINE[wsRoles[1]]} />
       </InstructorGate>
     );
+  }
+  // Questions for the instructor, answered on the site: /<class>/decisions,
+  // or one set at /<class>/decisions/<set id>. Andrew, 2026-10-22: "use my
+  // html style for asking me questions ... i want it within
+  // classes.andrewishak.com." The page gates itself on the instructor session.
+  const dec = path.match(/^\/(comm\w+)\/decisions(?:\/([a-z0-9-]+))?\/?$/);
+  if (dec && ENGINE[dec[1]]) {
+    return <DecisionsPage key={dec[1] + (dec[2] || "")} config={ENGINE[dec[1]]} setId={dec[2] || ""} />;
   }
   // What the class wrote on it, for the class: /<class>/worksheets/<key>/readout.
   const wsRead = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/readout\/?$/);

@@ -345,6 +345,21 @@ on the sheet. Speaker separation needs his Hugging Face token in
 plain transcript. The recordings are audio voice memos, and the first two
 (Wed Oct 21, 9:15 and 9:45) exist as of that afternoon.
 
+Thursday Oct 22: the 9:45 meeting came as a pasted transcript, the voice
+memo's own, with no speaker labels and no timestamps, so that table's
+`meeting` on the sheet has `notes` and no `talk` chips (the page renders
+without them), and the transcript is saved beside the others as
+`private/sitdowns/thu-945.pasted.md`. The same morning seven more Scouting
+Reports became readable and went on the sheet: Mailin's new Doc and Chloe's
+Google Doc (Wednesday evening, after the deadline, in place of the locked
+Doc and the Adobe link), Audrey's (Wednesday morning) and Neel's (Thursday
+9:40 AM, after his group's sit-down started), and Gianna's, Jameson's and
+Will's locked Docs, which opened without a new link. Yoyo's is still locked
+and Paul has nothing in, so 23 of 25 are read. The Thursday 9:15 group (Jameson, Will, Neel, Katie) did not meet on
+Oct 22: Andrew pushed that sit-down to Thursday, October 29 ("they were not
+ready in my opinion"). The student page and `SITDOWN` in
+`src/engine/worktopia/sitdown.js` still say October 22 for that group.
+
 ## Open
 
 - Whether a student can replace a link after the deadline. The page lets

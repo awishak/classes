@@ -62,7 +62,7 @@ const STATUS_WORDS = { locked: "Doc locked to its owner", "not-a-doc": "Adobe li
 // more like the skylight view." The seaglass is a shade darker here than on
 // the features page, because it is text and a button here and the lighter
 // one sits at 4.2:1 on the page.
-const FONTS = <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Outfit:wght@400;500;600&display=swap" />;
+export const FONTS = <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Outfit:wght@400;500;600&display=swap" />;
 
 const first = (name) => String(name || "").split(" ")[0];
 const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
