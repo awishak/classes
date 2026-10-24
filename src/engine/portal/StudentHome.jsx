@@ -135,7 +135,7 @@ export function TopicsDoor({ config, data, now = Date.now() }) {
   const standing = usePreStanding(config, TEAM_TOPICS_KEY);
   if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now) || now > TOPICS_LAST) return null;
   return <DueBar href={topicsHref(config.id)} name="Concepts in Team Communication"
-    say="Read either chapter, choose five concepts, and for each note something you noticed, something you think, and something you wonder about. Due end of day Tuesday, October 27."
+    say="Please complete this on Monday and Tuesday."
     done={submittedOf(standing)} doneName="Concepts in Team Communication: submitted" doneSay="You can keep editing until class on Wednesday." />;
 }
 
