@@ -334,7 +334,7 @@ const CSS = `
 .tt .chip.read{text-decoration:none;background:var(--accent-light);border-color:transparent;color:var(--accent);font-weight:600}
 .tt .chip.read:hover{filter:brightness(.97)}
 .tt .readedit{display:grid;gap:4px;min-width:280px}
-.tt .progress .pl{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.tt .progress .pl{display:block;max-width:100%;white-space:normal;overflow-wrap:anywhere;line-height:1.3;color:var(--ink)}
 .tt .chead .n{overflow-wrap:anywhere}
 .tt .progress{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;padding:0 28px}
 .tt .progress .p{background:var(--sunk);border-radius:16px;padding:12px 16px;display:grid;gap:8px}
