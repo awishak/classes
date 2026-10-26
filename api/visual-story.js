@@ -31,7 +31,7 @@ import { pinMatches, callerEmail, readBody } from "./_auth.js";
 import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
-import { storyOf, stageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
+import { storyOf, stageAt, RELEASES_AT, mostlyDone } from "../src/engine/visualstory/model.js";
 
 const KEY = "visual-story";
 const BUCKET = "visual-story";
@@ -50,9 +50,24 @@ const rows = async (path) => {
   const r = await fetch(SUPABASE_URL + path, { headers: serviceHeaders() });
   return r.ok ? await r.json().catch(() => null) : null;
 };
-const write = async (path, method, body, prefer = "return=representation") => {
+// A write answers with the rows, or with what the database said went wrong.
+// 2026-10-26: every comment in COMM 3 failed for a day with "The comment did
+// not save" and nothing more, because the error was thrown away here. The
+// cause was a column the live table never got (best_image, from
+// sql/visual-story-best-image.sql, which was never run).
+const writeOrError = async (path, method, body, prefer = "return=representation") => {
   const r = await fetch(SUPABASE_URL + path, { method, headers: { ...serviceHeaders(), Prefer: prefer }, body: body === undefined ? undefined : JSON.stringify(body) });
-  return r.ok ? await r.json().catch(() => []) : null;
+  if (r.ok) return { rows: await r.json().catch(() => []), error: "" };
+  const said = await r.json().catch(() => null);
+  return { rows: null, error: said?.message || said?.error || ("HTTP " + r.status) };
+};
+const write = async (path, method, body, prefer) => (await writeOrError(path, method, body, prefer)).rows;
+
+// The best image a reader picked, from the column when the live table has
+// one, or from best_where where the pick rode while the column was missing.
+const pickOf = (c) => {
+  const m = /^image:([a-z]+)$/.exec(c.best_where || "");
+  return { bestImage: c.best_image || (m ? m[1] : ""), bestWhere: m ? "" : (c.best_where || "") };
 };
 
 async function rosterOf(groupKey) {
@@ -279,7 +294,7 @@ export default async function handler(req, res) {
       pods: pods.map(p => ({ section: p.section, pod: p.pod, email: p.viewer_id, name: nameOf.get(p.viewer_id) || p.viewer_id })),
       stories: all.map(s => ({ id: s.id, email: s.owner.email, name: s.owner.name, section: s.owner.section, submitted_at: s.submitted_at, headline: s.story.headline, kind: s.story.kind })),
       counts,
-      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", ownerEmail: ownerOf.get(c.story_sheet) || "", author: nameOf.get(c.author) || c.author, authorEmail: c.author, bestPicture: pictureNo(storyById.get(c.story_sheet), c.best_image), bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
+      comments: comments.map(c => ({ story: c.story_sheet, owner: nameOf.get(ownerOf.get(c.story_sheet)) || "", ownerEmail: ownerOf.get(c.story_sheet) || "", author: nameOf.get(c.author) || c.author, authorEmail: c.author, bestPicture: pictureNo(storyById.get(c.story_sheet), pickOf(c).bestImage), bestWhere: pickOf(c).bestWhere, best: c.best, shone: c.shone, encourage: c.encourage, updated_at: c.updated_at })),
     });
   }
 
@@ -348,7 +363,7 @@ export default async function handler(req, res) {
 
   let [stage, sheets, podRows, myRows, due] = await Promise.all([
     stageOf(groupKey, me.section),
-    rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&submitted_at=not.is.null&limit=${PAGE}`),
+    rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&limit=${PAGE}`),
     rows(`/rest/v1/story_pods?select=section,pod,viewer_id&group_key=eq.${groupKey}`),
     rows(`/rest/v1/story_comments?select=*&author=eq.${encodeURIComponent(email)}&limit=${PAGE}`),
     dueOf(groupKey),
@@ -357,7 +372,14 @@ export default async function handler(req, res) {
   if (!sheets) return res.status(502).json({ ok: false, error: "Could not read the stories." });
 
   const inSection = new Map(roster.filter(s => s.section === me.section).map(s => [s.email, s]));
-  const list = sheets.filter(s => inSection.has(s.viewer_id)).map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at }));
+  // A story that is most of the way there goes out with the submitted ones.
+  // Andrew, 2026-10-26: "if a student didn't complete their story, but has
+  // most of it done, publish it anyway." mostlyDone in model.js says how much.
+  const own = sheets.filter(s => inSection.has(s.viewer_id));
+  const unfinished = own.filter(s => !s.submitted_at);
+  const byUnfinished = unfinished.length ? await answersFor(unfinished.map(s => s.id)) : {};
+  const published = new Set(unfinished.filter(s => byUnfinished && mostlyDone(storyOf(answersOf(byUnfinished[s.id] || [])))).map(s => s.id));
+  const list = own.filter(s => s.submitted_at || published.has(s.id)).map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at }));
   const byId = new Map(list.map(s => [s.id, s]));
   // The section is open and nobody made pods: make them now, from the stories in.
   if (!(podRows || []).some(p => p.section === me.section)) {
@@ -367,7 +389,7 @@ export default async function handler(req, res) {
   const myPod = (podRows || []).find(p => p.viewer_id === email)?.pod || null;
   const podMates = new Set((podRows || []).filter(p => myPod && p.pod === myPod && p.section === me.section).map(p => p.viewer_id));
   const podded = new Set((podRows || []).map(p => p.viewer_id));
-  const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet)).map(c => ({ story_sheet: c.story_sheet, bestImage: c.best_image || "", bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage }));
+  const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet)).map(c => ({ story_sheet: c.story_sheet, ...pickOf(c), best: c.best, shone: c.shone, encourage: c.encourage }));
   const doneSet = new Set(mineComments.map(c => c.story_sheet));
   const ownId = list.find(s => s.owner.email === email)?.id || null;
   const doneOthers = [...doneSet].filter(id => id !== ownId).length;
@@ -401,7 +423,7 @@ export default async function handler(req, res) {
     if (released && isMine) {
       const nameOf = new Map(roster.map(s => [s.email, s.name]));
       comments = ((await rows(`/rest/v1/story_comments?select=*&story_sheet=eq.${story.id}&order=updated_at`)) || [])
-        .map(c => ({ author: c.author === email ? "You" : (nameOf.get(c.author) || "A classmate"), bestImage: c.best_image || "", bestWhere: c.best_where || "", best: c.best, shone: c.shone, encourage: c.encourage }));
+        .map(c => ({ author: c.author === email ? "You" : (nameOf.get(c.author) || "A classmate"), ...pickOf(c), best: c.best, shone: c.shone, encourage: c.encourage }));
     }
     return res.status(200).json({
       ok: true, stage, story: forReader(story.story, urls, released), mine: isMine, author: released ? story.owner.name : null,
@@ -429,9 +451,17 @@ export default async function handler(req, res) {
     if (!picked) short.unshift(htmlStory ? "bestWhere" : "bestImage");
     const pickSay = htmlStory ? "say which image was the best, and where it is" : "tap the best image";
     if (short.length) return res.status(400).json({ ok: false, error: !picked && short.length === 1 ? pickSay[0].toUpperCase() + pickSay.slice(1) + "." : `Each comment needs at least ${MIN_CHARS} characters${picked ? "" : ", and " + pickSay}.`, short });
-    const w = await write("/rest/v1/story_comments?on_conflict=story_sheet,author", "POST",
-      { story_sheet: story.id, author: email, best_image: bestImage, best_where: bestWhere, ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
-    if (!w || !w[0]) return res.status(502).json({ ok: false, error: "The comment did not save." });
+    const path = "/rest/v1/story_comments?on_conflict=story_sheet,author", prefer = "return=representation,resolution=merge-duplicates";
+    const row = { story_sheet: story.id, author: email, best_image: bestImage, best_where: bestWhere, ...c, updated_at: new Date().toISOString() };
+    let w = await writeOrError(path, "POST", row, prefer);
+    // The live table has no best_image column until sql/visual-story-best-image.sql
+    // runs. Until then the pick rides in best_where as image:<id>, which
+    // pickOf reads back, so no comment waits on the schema.
+    if (w.error && /best_image/.test(w.error)) {
+      const { best_image, ...without } = row;
+      w = await writeOrError(path, "POST", { ...without, best_where: best_image ? "image:" + best_image : bestWhere }, prefer);
+    }
+    if (!w.rows || !w.rows[0]) return res.status(502).json({ ok: false, error: "The comment did not save. " + w.error });
     return res.status(200).json({ ok: true, doneOthers: doneOthers + (isMine || doneSet.has(story.id) ? 0 : 1) });
   }
 

@@ -94,6 +94,17 @@ export const wordsIn = (s) => (String(s || "").replace(LINK, "$1").trim().match(
 export const wordCount = (story) => story.blocks.reduce((n, b) => n + wordsIn(b.type === "text" ? b.text : b.caption), 0);
 export const imageCount = (story) => story.blocks.filter(b => b.type === "image").length;
 
+// Most of the way there: enough to publish to classmates unsubmitted.
+// Andrew, 2026-10-26: "if a student didn't complete their story, but has most
+// of it done, publish it anyway." A headline, and either the HTML file with
+// its feature image, or at least four pictures and 75 words.
+export const MOSTLY_IMAGES = 4, MOSTLY_WORDS = 75;
+export function mostlyDone(story) {
+  if (!story || !story.headline.trim()) return false;
+  if (isHtmlStory(story)) return !!story.html && imageCount(story) > 0;
+  return imageCount(story) >= MOSTLY_IMAGES && wordCount(story) >= MOSTLY_WORDS;
+}
+
 /** What stands between the story and Submit, in sentences a student can act on. */
 export function problemsOf(story) {
   const out = [];
