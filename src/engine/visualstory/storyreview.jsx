@@ -317,11 +317,11 @@ const STAGE_DAYS = {
   comm3: [
     ["2026-10-21T00:00:00-07:00", "2026-10-26T00:00:00-07:00", "pods", "No pods are saved yet. Pods are made on their own when the stories open Monday, from the stories in by then; save your own on the stories page before then if you want to choose."],
     ["2026-10-26T00:00:00-07:00", "2026-10-27T00:00:00-07:00", "building", "The stories open for reading today. Press Open the stories for reading on the stories page."],
-    // The comments come out on their own at 12:05 AM Tuesday (RELEASES_AT in
+    // The comments come out on their own at 12:05 PM Tuesday (RELEASES_AT in
     // model.js), so a section still reading or closed on Tuesday means the
     // release did not happen and the button is the way out.
-    ["2026-10-27T00:00:00-07:00", "2026-10-30T00:00:00-07:00", "reading", "The comments should have come out on their own at 12:05 AM. This section is still reading. Press Release the names on the stories page."],
-    ["2026-10-27T00:00:00-07:00", "2026-10-30T00:00:00-07:00", "closed", "The comments should have come out on their own at 12:05 AM. This section is still closed. Press Release the names on the stories page."],
+    ["2026-10-27T12:05:00-07:00", "2026-10-30T00:00:00-07:00", "reading", "The comments should have come out on their own at 12:05 PM. This section is still reading. Press Release the names on the stories page."],
+    ["2026-10-27T12:05:00-07:00", "2026-10-30T00:00:00-07:00", "closed", "The comments should have come out on their own at 12:05 PM. This section is still closed. Press Release the names on the stories page."],
   ],
 };
 function StageBanner({ config }) {

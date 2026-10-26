@@ -31,8 +31,8 @@ export const READING_COPY = {
   building: "The stories open on Monday, October 26. Come back then!",
   // Andrew's words, 2026-10-23, with the joins written in.
   reading: "You've completed your story. Now it's your turn to review your classmates' work. Please review at least 8 stories. You must review the 4 stories outlined in red. Then choose at least 4 other stories to review. You can review as many as you want.",
-  anon: "While the stories are currently anonymous, each student will receive non-anonymized comments (your name will be attached) on Tuesday. Check back then to see what people think of your work.",
-  closed: "Comments are closed. The comments on your story, with names attached, come out on Tuesday, October 27.",
+  anon: "While the stories are currently anonymous, each student will receive non-anonymized comments (your name will be attached) on Tuesday afternoon. Comments are due Tuesday, October 27, at 11:59 AM. Check back after that to see what people think of your work.",
+  closed: "Comments are closed. The comments on your story, with names attached, come out on Tuesday, October 27, after noon.",
   released: "The comments are out! Open your own story, or the visual story portal, to read what your classmates said.",
   "count.required": "Outlined in red",
   "count.others": "Your choice",

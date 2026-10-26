@@ -70,9 +70,10 @@ export const stageAt = (row, now = Date.now(), releasesAt = null) => {
 };
 
 /** When each class's comments come out on their own: Tuesday, October 27,
- * 12:05 AM Pacific for COMM 3. The practice class has no release time, so
+ * 12:05 PM Pacific for COMM 3 (Andrew, 2026-10-26: comments due Tuesday at
+ * 11:59 AM, after Monday's technical issue). The practice class has no release time, so
  * Andrew's stage buttons are the only word there. */
-export const RELEASES_AT = { comm3: "2026-10-27T07:05:00.000Z" };
+export const RELEASES_AT = { comm3: "2026-10-27T19:05:00.000Z" };
 
 // A link in a caption or text block is written [words](https://...).
 // Andrew, 2026-10-15: "include links in text." Only the words count.
