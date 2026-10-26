@@ -154,12 +154,15 @@ async function autoPods(groupKey, section, emails) {
 // The submitted stories of one section, with their owners and their stories.
 async function sectionStories(groupKey, roster, section) {
   const inSection = new Map(roster.filter(s => s.section === section).map(s => [s.email, s]));
-  const sheets = await rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&submitted_at=not.is.null&limit=${PAGE}`);
+  const sheets = await rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&limit=${PAGE}`);
   if (!sheets) return null;
   const mine = sheets.filter(s => inSection.has(s.viewer_id));
   const by = mine.length ? await answersFor(mine.map(s => s.id)) : {};
   if (!by) return null;
-  return mine.map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at, story: storyOf(answersOf(by[s.id] || [])) }));
+  // Submitted, or most of the way there and published unsubmitted, the same
+  // stories the students' grid shows.
+  return mine.map(s => ({ id: s.id, owner: inSection.get(s.viewer_id), submitted_at: s.submitted_at, story: storyOf(answersOf(by[s.id] || [])) }))
+    .filter(s => s.submitted_at || mostlyDone(s.story));
 }
 
 // Only what a tile needs: the headline, the look, and the star picture, as a
@@ -388,7 +391,6 @@ export default async function handler(req, res) {
   }
   const myPod = (podRows || []).find(p => p.viewer_id === email)?.pod || null;
   const podMates = new Set((podRows || []).filter(p => myPod && p.pod === myPod && p.section === me.section).map(p => p.viewer_id));
-  const podded = new Set((podRows || []).map(p => p.viewer_id));
   const mineComments = (myRows || []).filter(c => byId.has(c.story_sheet)).map(c => ({ story_sheet: c.story_sheet, ...pickOf(c), best: c.best, shone: c.shone, encourage: c.encourage }));
   const doneSet = new Set(mineComments.map(c => c.story_sheet));
   const ownId = list.find(s => s.owner.email === email)?.id || null;
@@ -401,7 +403,7 @@ export default async function handler(req, res) {
     const tiles = list.map(s => ({
       id: s.id, headline: head[s.id]?.headline || "", look: head[s.id]?.look === "dark" ? "dark" : "light", image: urls[head[s.id]?.path] || "",
       mine: s.owner.email === email, required: s.owner.email !== email && podMates.has(s.owner.email),
-      done: doneSet.has(s.id), late: !!(due && Date.parse(s.submitted_at) > Date.parse(due)) || (podded.size > 0 && !podded.has(s.owner.email)),
+      done: doneSet.has(s.id), late: !!(s.submitted_at && due && Date.parse(s.submitted_at) > Date.parse(due)),
       author: released ? s.owner.name : null,
     }));
     // The pod first, then the student's own, then everyone else in a fixed order that is not the roster's.
