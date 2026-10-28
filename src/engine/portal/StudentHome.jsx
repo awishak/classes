@@ -135,8 +135,8 @@ export function TopicsDoor({ config, data, now = Date.now() }) {
   const standing = usePreStanding(config, TEAM_TOPICS_KEY);
   if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now) || now > TOPICS_LAST) return null;
   return <DueBar href={topicsHref(config.id)} name="Concepts in Team Communication"
-    say="Please complete this on Monday and Tuesday."
-    done={submittedOf(standing)} doneName="Concepts in Team Communication: submitted" doneSay="You can keep editing until class on Wednesday." />;
+    say="Please complete this by end of day Wednesday."
+    done={submittedOf(standing)} doneName="Concepts in Team Communication: submitted" doneSay="You can keep editing until end of day Wednesday." />;
 }
 
 // The week the class is in: its number and its first and last class day.

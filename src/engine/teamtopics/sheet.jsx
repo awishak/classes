@@ -68,8 +68,8 @@ export const doneOf = (answers, s) => slotFields(s).filter(f => !blank(answers, 
 export const COPY_ROW = "worksheet-team-topics-plan";
 export const DEFAULT_COPY = {
   title: TEAM_TOPICS_TITLE,
-  credit: "COMM 118 · Due end of day Tuesday, October 27",
-  intro: "Before class on Wednesday, October 28, please read some of the article and/or chapter I've written and posted for you here: Communication in Sports Teams: A Review (2017) or Communicating in Sports Teams (2021). The second one is based on the first one, so you'll see some overlap.\n\nThere are a number of concepts relating to team communication and culture. Peruse the different concepts and choose five that you are interested in. Read those sections. Then, please note three things for each chapter:\n\n1. Something you noticed (an interesting finding)\n2. Something you think (an opinion about that finding or another one)\n3. Something you wonder about (a question that you would want to explore on this concept.\n\nThe goal here is to be observant, opinionated, and most of all, curious. Please complete this by end of day on Tuesday.",
+  credit: "COMM 118 · Due end of day Wednesday, October 28",
+  intro: "Before class on Wednesday, October 28, please read some of the article and/or chapter I've written and posted for you here: Communication in Sports Teams: A Review (2017) or Communicating in Sports Teams (2021). The second one is based on the first one, so you'll see some overlap.\n\nThere are a number of concepts relating to team communication and culture. Peruse the different concepts and choose five that you are interested in. Read those sections. Then, please note three things for each chapter:\n\n1. Something you noticed (an interesting finding)\n2. Something you think (an opinion about that finding or another one)\n3. Something you wonder about (a question that you would want to explore on this concept.\n\nThe goal here is to be observant, opinionated, and most of all, curious. Please complete this by end of day on Wednesday.",
   readings: "The readings",
   // The 2017 review is the file he attached to its block on October 23. The
   // 2021 chapter has no file yet, so its link goes to Wednesday on the
@@ -156,7 +156,7 @@ export function TopicsSheet({ store, viewer, classId, readOnly = false, storage,
   if (!answers) return <div {...root}><style>{CSS}</style><div className="sheet"><div className="foot"><span className="status">{STATUS[status] || "Loading…"}</span></div></div></div>;
   const left = missingOf(answers);
   const complete = SLOTS.filter(s => doneOf(answers, s) === 4).length;
-  const say = submitted && !handing ? <>Submitted <b>{when(submitted)}</b>. You can keep editing until class.</>
+  const say = submitted && !handing ? <>Submitted <b>{when(submitted)}</b>. You can keep editing until end of day Wednesday.</>
     : handing === "missing" && left.length ? <span className="bad">Every box needs an answer first. {left.length === 1 ? "One is" : left.length + " are"} still empty.</span>
     : handing === "unsaved" ? <span className="bad">Your answers are not saved yet, so the submission did not go through. Try again in a moment.</span>
     : handing === "failed" ? <span className="bad">The submission did not go through. Check your connection and try again.</span>
