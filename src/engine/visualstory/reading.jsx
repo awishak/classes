@@ -217,7 +217,7 @@ function Grid({ config, as, copy, editing, onOpen }) {
       <Words k="title" copy={copy} editing={editing} as="h1" className="vrd-title" />
       <Words k={stage} copy={copy} editing={editing} as="p" className="vrd-lead" />
       {stage === "reading" ? <Words k="anon" copy={copy} editing={editing} as="p" className="vrd-lead" /> : null}
-      {stage === "reading" ? (
+      {stage === "reading" || data.commentsOpen ? (
         <div className="vrd-count" role="status" aria-label="Your reviews so far">
           {required.length ? <span className="vrd-count-item"><Words k="count.required" copy={copy} editing={editing} /> <b>{requiredDone} of {required.length}</b></span> : null}
           <span className="vrd-count-item"><Words k="count.others" copy={copy} editing={editing} /> <b>{othersDone >= needOthers ? othersDone + " \u2713" : othersDone + " of " + needOthers}</b></span>
@@ -301,7 +301,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
         </section>
       ) : null}
 
-      {data.stage === "reading" ? (
+      {data.stage === "reading" || data.commentsOpen ? (
         data.mine && !data.canComment ? (
           <p className="vrd-note">Comment on {data.needed} classmates' stories first, then come back to your own. You've done {data.doneOthers}.</p>
         ) : (

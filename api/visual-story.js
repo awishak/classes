@@ -31,7 +31,7 @@ import { pinMatches, callerEmail, readBody } from "./_auth.js";
 import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
-import { storyOf, stageAt, RELEASES_AT, mostlyDone } from "../src/engine/visualstory/model.js";
+import { storyOf, stageAt, RELEASES_AT, mostlyDone, commentsOpen } from "../src/engine/visualstory/model.js";
 
 const KEY = "visual-story";
 const BUCKET = "visual-story";
@@ -396,6 +396,7 @@ export default async function handler(req, res) {
   const ownId = list.find(s => s.owner.email === email)?.id || null;
   const doneOthers = [...doneSet].filter(id => id !== ownId).length;
   const released = stage === "released";
+  const open = commentsOpen(stage, groupKey);
 
   if (action === "list") {
     // Only what a tile needs: the headline, the look, and the star picture.
@@ -409,7 +410,7 @@ export default async function handler(req, res) {
     // The pod first, then the student's own, then everyone else in a fixed order that is not the roster's.
     const rank = (t) => (t.required ? 0 : t.mine ? 1 : 2);
     tiles.sort((a, b) => rank(a) - rank(b) || (a.id < b.id ? -1 : 1));
-    return res.status(200).json({ ok: true, stage, stories: tiles, doneOthers, needed: OTHERS_BEFORE_OWN, read: doneOthers });
+    return res.status(200).json({ ok: true, stage, commentsOpen: open, stories: tiles, doneOthers, needed: OTHERS_BEFORE_OWN, read: doneOthers });
   }
 
   const story = byId.get(String(body.id || ""));
@@ -430,13 +431,13 @@ export default async function handler(req, res) {
     return res.status(200).json({
       ok: true, stage, story: forReader(story.story, urls, released), mine: isMine, author: released ? story.owner.name : null,
       myComment: mineComments.find(c => c.story_sheet === story.id) || null,
-      canComment: stage === "reading" && (!isMine || doneOthers >= OTHERS_BEFORE_OWN),
+      commentsOpen: open, canComment: open && (!isMine || doneOthers >= OTHERS_BEFORE_OWN),
       doneOthers, needed: OTHERS_BEFORE_OWN, comments,
     });
   }
 
   if (action === "comment") {
-    if (stage !== "reading") return res.status(409).json({ ok: false, error: "Comments are closed." });
+    if (!open) return res.status(409).json({ ok: false, error: "Comments are closed." });
     if (isMine && doneOthers < OTHERS_BEFORE_OWN) return res.status(409).json({ ok: false, error: `Comment on ${OTHERS_BEFORE_OWN} classmates' stories first, then on your own.` });
     const c = { best: clean(body.best).slice(0, 3000), shone: clean(body.shone).slice(0, 3000), encourage: clean(body.encourage).slice(0, 3000) };
     const short = Object.entries(c).filter(([, v]) => v.length < MIN_CHARS).map(([k]) => k);

@@ -75,6 +75,13 @@ export const stageAt = (row, now = Date.now(), releasesAt = null) => {
  * Andrew's stage buttons are the only word there. */
 export const RELEASES_AT = { comm3: "2026-10-27T19:05:00.000Z" };
 
+/** A window after the release in which comments save again, names still out.
+ * Andrew, 2026-10-28: "open up comments again until end of day today. 11:59 pm
+ * pacific wednesday." Null or past means only a reading section takes comments. */
+export const COMMENTS_UNTIL = { comm3: "2026-10-29T06:59:59.000Z" };
+export const commentsOpen = (stage, groupKey, now = Date.now()) =>
+  stage === "reading" || (stage === "released" && !!COMMENTS_UNTIL[groupKey] && now < Date.parse(COMMENTS_UNTIL[groupKey]));
+
 // A link in a caption or text block is written [words](https://...).
 // Andrew, 2026-10-15: "include links in text." Only the words count.
 export const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
