@@ -19,6 +19,7 @@ import { sectionsOf } from "../sections.js";
 import * as TOKENS from "../tokens.js";
 
 const NEED_TOTAL = 8;
+const ASK = { best: "The best image, and why", shone: "One way this story shone", encourage: "One thing you would encourage the author to do" };
 const lower = (s) => String(s || "").trim().toLowerCase();
 const when = (t) => (t ? new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
 
@@ -94,6 +95,7 @@ export default function StoryReviews({ config }) {
   const sections = sectionsOf(config);
   const [section, setSection] = useState(sections[0] || "");
   const [sort, setSort] = useState("name");
+  const [group, setGroup] = useState("story");
 
   useEffect(() => {
     let alive = true;
@@ -114,6 +116,14 @@ export default function StoryReviews({ config }) {
   const notStarted = rows.filter(r => r.total === 0);
   const storiesSorted = [...perStory].sort((a, b) => a.reviews - b.reviews || a.name.localeCompare(b.name));
   const stage = feed.stages?.[section] || feed.stages?.[""] || "";
+  const headlineOf = new Map(perStory.map(s => [s.id, s]));
+  const inSection = (feed.comments || []).filter(c => headlineOf.has(c.story));
+  const groups = group === "story"
+    ? perStory.map(s => ({ key: s.id, title: s.headline, sub: "by " + s.name, comments: inSection.filter(c => c.story === s.id) }))
+    : rows.map(r => ({ key: r.email, title: r.name, sub: "", comments: inSection.filter(c => lower(c.authorEmail) === r.email) }));
+  const shown = groups.filter(g => g.comments.length)
+    .map(g => ({ ...g, comments: [...g.comments].sort((a, b) => a.author.localeCompare(b.author)) }))
+    .sort((a, b) => a.title.localeCompare(b.title));
 
   return (
     <Shell>
@@ -187,6 +197,37 @@ export default function StoryReviews({ config }) {
           </tbody>
         </table>
       </section>
+
+      <section className="vrw-sec" aria-label="Every comment">
+        <div className="vrw-row">
+          <h2 className="vrw-h2">Every comment</h2>
+          <div className="vrw-seg" role="tablist" aria-label="Group">
+            {[["story", "By story"], ["author", "By reviewer"]].map(([k, label]) => (
+              <button key={k} type="button" role="tab" aria-selected={group === k} className="vrw-segbtn" onClick={() => setGroup(k)}>{label}</button>
+            ))}
+          </div>
+        </div>
+        {shown.map(g => (
+          <div className="vrw-group" key={g.key}>
+            <h3 className="vrw-h3">{g.title}{g.sub ? <span className="vrw-muted"> {g.sub}</span> : null}<span className="vrw-muted"> · {g.comments.length}</span></h3>
+            {g.comments.map(c => (
+              <article className="vrw-c" key={c.story + c.authorEmail}>
+                <div className="vrw-c-top">
+                  <strong>{group === "story" ? c.author : headlineOf.get(c.story)?.headline}</strong>
+                  {group === "author" ? <span className="vrw-muted"> by {c.owner}</span> : null}
+                  {lower(c.authorEmail) === lower(c.ownerEmail) ? <span className="vrw-own">own story</span> : null}
+                  <span className="vrw-muted vrw-c-when">{when(c.updated_at)}</span>
+                </div>
+                <dl className="vrw-dl">
+                  <dt>{ASK.best}</dt><dd>{c.bestPicture ? <span className="vrw-pick">Picture {c.bestPicture}</span> : null}{c.bestWhere ? <span className="vrw-pick">{c.bestWhere}</span> : null}{c.best}</dd>
+                  <dt>{ASK.shone}</dt><dd>{c.shone}</dd>
+                  <dt>{ASK.encourage}</dt><dd>{c.encourage}</dd>
+                </dl>
+              </article>
+            ))}
+          </div>
+        ))}
+      </section>
     </Shell>
   );
 }
@@ -232,6 +273,17 @@ const CSS = `
 .vrw-warn td:last-child{color:${ST.warn};font-weight:600}
 .vrw-late td:last-child{color:${ST.late};font-weight:600}
 .vrw-small{font-size:13.5px;color:${T.secondary}}
+.vrw-group{display:flex;flex-direction:column;gap:10px;padding-top:6px}
+.vrw-h3{margin:8px 0 0;font-size:18px;font-weight:700}
+.vrw-c{background:${S.card};border-radius:12px;box-shadow:0 0 0 1px ${L.soft};padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.vrw-c-top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font-size:15px}
+.vrw-c-when{margin-left:auto;font-size:13px}
+.vrw-own{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:${ST.warn}}
+.vrw-dl{margin:0;display:grid;grid-template-columns:minmax(140px,220px) 1fr;gap:6px 14px;font-size:15px}
+.vrw-dl dt{font-size:13px;color:${T.muted};line-height:1.4;padding-top:2px}
+.vrw-dl dd{margin:0;white-space:pre-wrap;line-height:1.45}
+.vrw-pick{display:inline-block;font-size:13px;font-weight:700;padding:1px 8px;border-radius:999px;background:${S.sunk};margin:0 8px 4px 0}
+@media (max-width:600px){ .vrw-dl{grid-template-columns:1fr} }
 .vrw button:focus-visible,.vrw a:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
 @media (max-width:760px){ .vrw-table{display:block;overflow-x:auto} .vrw-seg{margin-left:0} }
 `;
