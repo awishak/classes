@@ -77,8 +77,10 @@ export const RELEASES_AT = { comm3: "2026-10-27T19:05:00.000Z" };
 
 /** A window after the release in which comments save again, names still out.
  * Andrew, 2026-10-28: "open up comments again until end of day today. 11:59 pm
- * pacific wednesday." Null or past means only a reading section takes comments. */
-export const COMMENTS_UNTIL = { comm3: "2026-10-29T06:59:59.000Z" };
+ * pacific wednesday." Then 2026-10-28: "push the comment deadline back ... before
+ * Thursday 11:59 am. That's 11:59 am as in noon." Null or past means only a
+ * reading section takes comments. */
+export const COMMENTS_UNTIL = { comm3: "2026-10-29T18:59:00.000Z" };
 export const commentsOpen = (stage, groupKey, now = Date.now()) =>
   stage === "reading" || (stage === "released" && !!COMMENTS_UNTIL[groupKey] && now < Date.parse(COMMENTS_UNTIL[groupKey]));
 
