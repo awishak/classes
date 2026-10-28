@@ -32,6 +32,8 @@ import { deadlineOf } from "./DueCard.jsx";
 import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
 import { genId } from "../utils.jsx";
 import { swatch } from "./colors.js";
+import { hasPage } from "./submissionPages.js";
+import { SubmissionForm } from "./SubmissionPage.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -354,13 +356,16 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
   const accent = "var(--ca-accent)";
   const feed = feedOf(config, data, asg, name);
   const prev = ordered[i - 1], next = ordered[i + 1];
+  // A challenge with a submission page takes the work there, and the box
+  // under the page is for messages only. See submissionPages.js.
+  const paged = hasPage(asg, config);
 
   // A message with a web address in it is work turned in; anything else is a
   // note. Either way the student wrote one thing in one box.
   const send = () => {
     const text = draft.trim();
     if (!text || !update) return;
-    const link = (text.match(LINK) || [])[0] || "";
+    const link = paged ? "" : (text.match(LINK) || [])[0] || "";
     update(prev2 => {
       const al = { ...(prev2.assignmentLog || {}) };
       const byStudent = { ...(al[asg.id] || {}) };
@@ -396,9 +401,15 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
           Your card
         </button>
       ) : (
+      <>
+      {paged ? (
+        <section style={{ background: CARD, border: "1px solid " + LINE_STRONG, borderRadius: 16, padding: 18 }}>
+          <SubmissionForm config={config} data={data} asg={asg} name={name} />
+        </section>
+      ) : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <textarea aria-label="Send a message or a link" value={draft} onChange={e => setDraft(e.target.value)}
-          placeholder="A message, a link, or both"
+        <textarea aria-label={paged ? "Send a message" : "Send a message or a link"} value={draft} onChange={e => setDraft(e.target.value)}
+          placeholder={paged ? "A message" : "A message, a link, or both"}
           style={{ fontFamily: F, fontSize: 16, minHeight: 72, padding: 12, borderRadius: 12, border: "1px solid " + LINE_STRONG,
             background: CARD, color: TEXT_PRIMARY, lineHeight: 1.5, resize: "vertical" }} />
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -407,9 +418,10 @@ export function AssignmentPage({ config, data, update, name, id, go }) {
               fontFamily: F, fontSize: 16, fontWeight: 600, cursor: draft.trim() ? "pointer" : "default", opacity: draft.trim() ? 1 : .5 }}>
             Send
           </button>
-          <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>
+          {paged ? null : <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>{config.instructor?.email || "Your instructor"} needs access to your link.</span>}
         </div>
       </div>
+      </>
       )}
 
       {/* The conversation, newest first. */}

@@ -24,6 +24,8 @@ import { hasNight } from "./themes.js";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
 import { isLurker } from "./sections.js";
+import { assignmentSheet } from "./SubmissionPage.jsx";
+import { SHEET_PREFIX } from "./submissionPages.js";
 
 // The sheet is told day or night only when the page is holding one. Auto
 // leaves it to follow the machine, which is what the page does. A theme with
@@ -127,7 +129,10 @@ export default function WorksheetPage({ config, worksheetKey }) {
   const [data] = useClassState(config.storageKey);
   const { session, email, instructor } = useSession();
   // A local sheet that belongs to other classes has no address in this one.
-  const found = localWorksheet(worksheetKey);
+  // An assignment's submission page is a sheet of this class too, built from
+  // the class's assignments (SubmissionPage.jsx), so it waits for the class.
+  const found = localWorksheet(worksheetKey) || assignmentSheet(config, data, worksheetKey);
+  const waiting = !found && worksheetKey.startsWith(SHEET_PREFIX) && data === null;
   const local = found && listedFor(found, config.id) ? found : null;
   const pkg = found ? null : WORKSHEETS.find(w => w.key === worksheetKey);
   const sheet = local || (pkg && listedFor(pkg, config.id) ? pkg : null);
@@ -171,6 +176,8 @@ export default function WorksheetPage({ config, worksheetKey }) {
     body = them && them.email ? (local && local.read && !(session && instructor) && !savedPin() ? <p style={{ fontSize: 17, margin: 0 }}>Only the instructor can open a student's sheet. <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next + "?s=" + encodeURIComponent(want))} style={{ color: config.accent, fontWeight: 600 }}>Sign in</a></p> : "theirs")
       : data === null ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : <p style={{ fontSize: 17, margin: 0 }}>There is no student {want} on the {config.code} roster.</p>;
+  } else if (waiting) {
+    body = <p style={{ fontSize: 17, margin: 0 }}>Loading the class.</p>;
   } else if (!sheet) {
     body = <p style={{ fontSize: 17, margin: 0 }}>There is no worksheet at this address.</p>;
   } else if (!session) {

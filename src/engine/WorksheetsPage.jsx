@@ -25,6 +25,7 @@ import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { hasNight } from "./themes.js";
 import { setClassFavicon } from "./favicon.js";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
+import { assignmentSheets } from "./SubmissionPage.jsx";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
 // See WorksheetPage: the grid is held to day or night only when the page is.
@@ -112,8 +113,10 @@ function Completion({ config, sheet, people, studentUrl }) {
 export default function WorksheetsPage({ config }) {
   const [data, update] = useClassData(config.storageKey);
   const { session, instructor } = useSession();
-  // This class's worksheets, by listedFor. A sheet made for this class opens first.
-  const mine = ALL_WORKSHEETS.filter(w => listedFor(w, config.id));
+  // This class's worksheets, by listedFor, then every assignment that takes
+  // its work on a submission page (SubmissionPage.jsx). A sheet made for this
+  // class opens first.
+  const mine = [...ALL_WORKSHEETS.filter(w => listedFor(w, config.id)), ...assignmentSheets(config, data)];
   // ?w=<key> lands on one sheet, for the Tools panel's Who is done button.
   const asked = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("w") : "";
   const [key, setKey] = useState((mine.find(w => w.key === asked) || mine.find(w => w.classes && w.classes.includes(config.id)) || mine[0])?.key || "");
@@ -129,7 +132,10 @@ export default function WorksheetsPage({ config }) {
   const [mode] = useDayNight(config);
   // The address students open, in full, for the Details link on an assignment.
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const studentUrl = sheet ? origin + config.path + "/worksheets/" + sheet.key : "";
+  // A submission page's students open the assignment itself; the worksheet
+  // address is where one student's answers are read.
+  const readUrl = sheet ? origin + config.path + "/worksheets/" + sheet.key : "";
+  const studentUrl = sheet ? (sheet.paged ? origin + sheet.studentPath : readUrl) : "";
   // And what the class wrote on it, to share with them, where there is a readout.
   const readoutUrl = sheet && hasReadout(config.id, sheet.key) ? studentUrl + "/readout" : "";
   // And everyone's file by question, live. Names for me, none for the class.
@@ -215,11 +221,11 @@ export default function WorksheetsPage({ config }) {
             </div>
           ) : null}
           {reviewUrl ? addressBox("Review every sheet, each on its own page", reviewUrl, "") : null}
-          {addressBox("Students open this worksheet at", studentUrl, "Paste the address into the Details link on the assignment.")}
+          {addressBox(sheet.paged ? "Students turn this challenge in at" : "Students open this worksheet at", studentUrl, sheet.paged ? "" : "Paste the address into the Details link on the assignment.")}
           {answersUrl ? addressBox("Everyone's answers, by question", answersUrl, "You see names. A student who opens the same address sees the answers with no names.") : null}
           {readoutUrl ? addressBox("What the class wrote, to share with them", readoutUrl, "") : null}
-          <Completion key={"c-" + sheet.key} config={config} sheet={sheet} people={people} studentUrl={studentUrl} />
-          {local ? null : <div style={{ marginTop: 20 }}>
+          <Completion key={"c-" + sheet.key} config={config} sheet={sheet} people={people} studentUrl={readUrl} />
+          {local || sheet.paged ? null : <div style={{ marginTop: 20 }}>
             <WorksheetReview key={sheet.key} supabase={gameClient} worksheetKey={sheet.key} groupKey={config.id}
               roster={roster} hide={INSTRUCTOR_EMAILS} title={sheet.title} accent={config.accent} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />
           </div>}

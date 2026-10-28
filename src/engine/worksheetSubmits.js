@@ -22,13 +22,22 @@ import { gameClient } from "./gameClient.js";
 import { rosterOf, idOf } from "./roster.js";
 import { authHeaders } from "./session.js";
 import { savedPin } from "../InstructorGate.jsx";
+import { hasPage, sheetKeyOf } from "./submissionPages.js";
 
 // The worksheet an assignment points at, from its details link:
 // /<class>/worksheets/<key>, on this site or written as a full address.
+//
+// With the class given, an assignment that carries a submission page
+// (submissionPages.js) is a worksheet too, keyed asg-<term>-<id>, and its
+// base is the worksheet address on this site. Without the class only the
+// linked kind is found, which is what MyWork wants: a page assignment's own
+// page is the student's way in, not a worksheet address.
 const SHEET = /\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/?(?:[?#].*)?$/;
-export const worksheetOf = (asg) => {
+export const worksheetOf = (asg, config) => {
   const m = String(asg?.instructionsUrl || "").trim().match(SHEET);
-  return m ? { classId: m[1], key: m[2] } : null;
+  if (m) return { classId: m[1], key: m[2], base: String(asg.instructionsUrl).trim().replace(/[?#].*$/, "").replace(/\/$/, "") };
+  if (config && hasPage(asg, config)) { const key = sheetKeyOf(config, asg); return { classId: config.id, key, base: "/" + config.id + "/worksheets/" + key }; }
+  return null;
 };
 
 const alive = (log) => (log || []).filter(e => !e.deleted);
@@ -48,9 +57,9 @@ export function withWorksheetSubmits(data, config, sheets) {
   const byEmail = new Map(rosterOf(config, data).filter(s => s.email).map(s => [String(s.email).trim().toLowerCase(), s]));
   let al = null;
   assignments.forEach(asg => {
-    const ws = worksheetOf(asg);
+    const ws = worksheetOf(asg, config);
     if (!ws || ws.classId !== config.id) return;
-    const base = String(asg.instructionsUrl).trim().replace(/[?#].*$/, "").replace(/\/$/, "");
+    const base = ws.base;
     const theirs = (s) => base + "?s=" + encodeURIComponent(idOf(s));
     const toSheet = (link) => String(link || "").replace(/[?#].*$/, "").replace(/\/$/, "") === base;
     const byName = new Map(rosterOf(config, data).map(s => [String(s.name || "").trim().toLowerCase(), s]));
@@ -81,7 +90,7 @@ export function withWorksheetSubmits(data, config, sheets) {
 // the page sat open shows up on return.
 export function useWorksheetSheets(config, data) {
   const keys = useMemo(() => {
-    const list = (data?.assignments || config.assignments || []).map(worksheetOf).filter(w => w && w.classId === config.id).map(w => w.key);
+    const list = (data?.assignments || config.assignments || []).map(a => worksheetOf(a, config)).filter(w => w && w.classId === config.id).map(w => w.key);
     return [...new Set(list)].sort().join(",");
   }, [data?.assignments, config]);
   const [sheets, setSheets] = useState(null);

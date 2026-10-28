@@ -19,6 +19,8 @@ import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
 import { gradeText, scaleOf, SCALES, alive, bucketsFor, bucketOf } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
+import { PageEditor } from "./SubmissionPage.jsx";
+import { withFields } from "./submissionPages.js";
 import * as TOKENS from "./tokens.js";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
@@ -896,10 +898,18 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   const [visible, setVisible] = useState(asg?.visible !== false);
   const [opens, setOpens] = useState(asg?.opens === "date" || asg?.opens === "never" ? asg.opens : "now");
   const [opensAt, setOpensAt] = useState(asg?.opensAt || "");
+  // The submission page: undefined leaves the due date to decide, false is
+  // none, an object is the page. Andrew, 2026-10-25: every submission
+  // "should feel like a worksheet submission." See submissionPages.js.
+  const [page, setPage] = useState(asg?.page);
 
 
   const save = () => {
     if (!title.trim()) return;
+    // A question typed in gets its field name here, once, and keeps it.
+    const pageOut = page && typeof page === "object"
+      ? { ...page, questions: withFields((page.questions || []).filter(q => String(q.ask || "").trim())) }
+      : page;
     // Starts from the assignment as stored, so a field this form has no box
     // for survives a save. Saving used to rebuild the object from the boxes,
     // and every COMM 118 assignment lost its 11:59 PM the first time it was
@@ -909,6 +919,7 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       id: asg?.id || genId(), title: title.trim(), due: due.trim(), dueTime: dueTime.trim(), weight: Number(weight) || 0, scale,
       description: description.trim(), instructionsUrl: instructionsUrl.trim(), closeAt: closeAt || "",
       visible, opens, opensAt: opens === "date" ? opensAt : "",
+      ...(pageOut === undefined ? {} : { page: pageOut }),
     });
   };
 
@@ -962,6 +973,7 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       <div style={fieldL}>Submissions close (optional)</div>
       <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />
       <Muted style={{ marginTop: 6 }}>Comments stay open after the deadline.</Muted>
+      <PageEditor config={config} asg={asg} value={page} onChange={setPage} />
 
 
       <div style={{ display: "flex", gap: 8, marginTop: 18, alignItems: "center" }}>

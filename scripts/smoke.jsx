@@ -28,6 +28,9 @@ import LoginPage from "../src/LoginPage.jsx";
 import { whereTo, studentFor } from "../src/engine/session.js";
 import { parseRoster, mergeRoster } from "../src/engine/roster.js";
 import { withWorksheetSubmits } from "../src/engine/worksheetSubmits.js";
+import * as sp from "../src/engine/submissionPages.js";
+import { SubmissionSheet, PageEditor } from "../src/engine/SubmissionPage.jsx";
+import { memoryStore } from "../src/engine/worktopia/store.js";
 import { createSaver } from "../src/engine/visualstory/saver.js";
 import * as vsm from "../src/engine/visualstory/model.js";
 import * as vsp from "../src/engine/visualstory/photos.js";
@@ -234,6 +237,33 @@ let failedEarly = 0;
   if (ws("Cy C").length !== 1 || ws("Cy C")[0].id !== "h2" || !/\?s=cy-c$/.test(ws("Cy C")[0].link)) { console.error("  FAIL  worksheet submits: a hand entry on the worksheet does not open that student's sheet"); failedEarly++; }
   if (JSON.stringify(data) !== before) { console.error("  FAIL  worksheet submits: the stored class was changed"); failedEarly++; }
   if (withWorksheetSubmits(data, cfg, null) !== data) { console.error("  FAIL  worksheet submits: no sheets should leave the class as it is"); failedEarly++; }
+}
+
+// Submission pages: which assignments get one, their keys, and a submitted
+// page counting on the assignment. Andrew, 2026-10-25: "just build it for
+// assignments from after next week."
+{
+  const cfg = { id: "comm999", path: "/comm999", quarter: "Fall 2026", students: [{ name: "Ann A", email: "ann@x.edu" }], assignments: [] };
+  const late = { id: "wc4", title: "Weekly Challenge 4", due: "Nov 20", dueTime: "11:59 PM" };
+  const early = { id: "wc3", title: "Weekly Challenge 3", due: "Nov 1", dueTime: "11:59 PM" };
+  const ws = { id: "wc2", title: "Worktopia", due: "Dec 1", instructionsUrl: "/comm999/worksheets/worktopia" };
+  if (!sp.hasPage(late, cfg)) { console.error("  FAIL  submission pages: a challenge due after the cutover has no page"); failedEarly++; }
+  if (sp.hasPage(early, cfg)) { console.error("  FAIL  submission pages: a challenge due before the cutover got a page"); failedEarly++; }
+  if (sp.hasPage(ws, cfg)) { console.error("  FAIL  submission pages: a challenge with its own worksheet got a page"); failedEarly++; }
+  if (!sp.hasPage({ ...early, page: { intro: "" } }, cfg) || sp.hasPage({ ...late, page: false }, cfg)) { console.error("  FAIL  submission pages: an explicit page is not honoured"); failedEarly++; }
+  if (sp.sheetKeyOf(cfg, late) !== "asg-fall26-wc4") { console.error("  FAIL  submission pages: the key is " + sp.sheetKeyOf(cfg, late)); failedEarly++; }
+  const page = sp.pageOf(late);
+  if (page.questions.length !== 4 || page.questions[0].field !== "link") { console.error("  FAIL  submission pages: the defaults are not the usual four"); failedEarly++; }
+  const named = sp.withFields([{ ask: "What surprised you?", kind: "text" }, { ask: "Surprised again?", kind: "text" }, { ask: "Your headline", kind: "line" }]);
+  if (!named.every(q => /^[a-z]+$/.test(q.field)) || new Set(named.map(q => q.field)).size !== 3) { console.error("  FAIL  submission pages: fields are not unique letters: " + named.map(q => q.field).join(",")); failedEarly++; }
+  if (sp.missingOf(page, { headline: "x" }).length !== 1 || sp.missingOf(page, { link: "https://a.b" }).length) { console.error("  FAIL  submission pages: only the link is required"); failedEarly++; }
+  const data = { assignments: [late, early], assignmentLog: {} };
+  const out = withWorksheetSubmits(data, cfg, { "asg-fall26-wc4": [{ viewer_id: "ann@x.edu", submitted_at: "2026-11-19T00:00:00Z" }] });
+  const sub = (out.assignmentLog.wc4?.["Ann A"] || []).filter(e => e.type === "submission");
+  if (sub.length !== 1 || sub[0].link !== "/comm999/worksheets/asg-fall26-wc4?s=ann-a") { console.error("  FAIL  submission pages: a submitted page does not count on the challenge: " + JSON.stringify(sub)); failedEarly++; }
+  const html = renderToString(<SubmissionSheet asg={late} page={page} store={memoryStore()} viewer={{ id: "ann@x.edu", name: "Ann A" }} />);
+  if (!html.includes("Loading")) { console.error("  FAIL  submission pages: the sheet does not say Loading before the store answers"); failedEarly++; }
+  cases.push(["submission page editor", <PageEditor config={{ ...cfg, accent: "#9f1239" }} asg={late} value={undefined} onChange={() => {}} />, "A link to your work"]);
 }
 
 // Worktopia's Index: a thousand jobs, forty a category, none twice, and the

@@ -47,6 +47,24 @@ const Pill = ({ children, tone }) => (
 // Add to the top of this array; the page takes care of the rest.
 const SESSIONS = [
   {
+    id: "oct25-submission-pages", date: "Saturday, October 25", title: "Every challenge turned in like a worksheet",
+    blurb: "Andrew: \"moving forward, for all my classes, every assignment submission should feel like a worksheet submission. we have that now with most assignments, but even something like a google doc submission: let's make students a beautiful submission page, with instructions, maybe images, and ask them a couple of questions, like headline, what did you think of this assignment, biggest finding. so we can store this for later if we want, esp for winter 2026 classes.\" And on which ones: \"just build it for assignments from after next week.\"",
+    groups: [
+      { name: "What changed", items: [
+        ["A page on the assignment", "An assignment carries page: { intro, images, questions }. The student's page at /<class>/assignments/<id> draws the intro, the pictures and the questions as boxes under the title card, with Submit under them. The one box under it is for messages now; a link pasted there is a message, not work turned in. src/engine/SubmissionPage.jsx, src/engine/submissionPages.js."],
+        ["The usual four", "A link to your work, Your headline, What did you think of this assignment?, Your biggest finding. Every page starts with them and each one is editable per assignment in Manage: reword, change the kind (one line, a paragraph, a link), remove, add. Only the link is required to submit."],
+        ["Answers are rows, not the blob", "Each answer is a worksheet_answers row on a worksheet_sheets row keyed asg-<term>-<id>, so Winter COMM 3 reusing ex1 never lands on Fall's. Saved as typed through the visual story's saver; Submit sets submitted_at; a student can edit and submit again until submissions close. The submit counts on the assignment through worksheetSubmits.js, so To grade, Grade view and the cards needed nothing."],
+        ["Reading them", "Grade view's Open their file lands on /<class>/worksheets/asg-<term>-<id>?s=<roster id>, one student's answers with the link live. The Worksheets page lists every paged assignment with submitted, started and not opened per student."],
+        ["Which assignments", "An assignment saved with the page switch On has one, Off has none, and anything untouched goes by its due date: November 2 or later. A challenge with a worksheet of its own (Worktopia, 3x5, the visual story) takes no second page. Under that rule today: COMM 118's Sit-Down 2 memo, Sit-Down 2, Weekly Challenge 4, Field Guide topic and The Field Guide; COMM 3's Audio story, Final pre-production document and Final project."],
+        ["Pictures", "Add a picture in the editor sends the file up the same trip a clip on the day takes, /api/upload into the notes bucket, with a caption box under each."],
+      ] },
+      { name: "Still to do", items: [
+        ["Sit-Down 2", "An in-class sit-down probably wants the switch Off; one press in Manage."],
+        ["A readout", "The headlines and biggest findings across a class or a quarter are a query over the rows now, not a page yet."],
+      ] },
+    ],
+  },
+  {
     id: "oct23-monday-from-away", date: "Friday, October 23", title: "Monday from out of town: the visual story portal, the Monday link, who reviewed what, and the COMM 118 topics sheet",
     blurb: "Andrew, away for the weekend: \"Students are gonna submit their visual story on Sunday ... On Monday, they have to go and review the other stories ... there should be one place students are going for this ... a visual story portal ... make it easy for students to figure out how to go from part to part.\" And for COMM 118: no class Monday, read for Wednesday, and the topics worksheet with I notice, I think, I wonder.",
     groups: [

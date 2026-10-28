@@ -301,6 +301,24 @@ only i have access."
   sheet, and run `scripts/sitdown-sheet.mjs --file private/comm118-sitdown-1.json --write`.
   No deploy is needed for a sheet change.
 
+- Thursday, October 22, 11 AM, from campus: `node scripts/sitdown-links.mjs`
+  says 25 of 25 in. New or changed since Tuesday night: Paul Beaven (Wed
+  9:26 AM), Audrey Graham (new link, Wed 10:50 AM), Mailin Orozco (new link,
+  Wed 6:52 PM), Chloe Shim (new link, Wed 9:04 PM, a Google Doc now), Neel
+  Namburar (Thu 9:40 AM). Jameson, Will, Gianna and Yoyo kept their links.
+  None of the nine opens on a Gmail account, so none is shared to anyone
+  with the link. The SCU account could not be checked: Chrome's slots have
+  moved (`/u/0/` andrewishak@gmail.com, `/u/1/` drewishak@gmail.com, `/u/2/`
+  aishak@scu.edu, `/u/3/` aishak@lgll.org), and `/u/2/` now sends to
+  login.scu.edu to sign in again, which timed out from the campus network
+  for the whole hour. He said "we'll do this at home." The laptop now has
+  `.env.local` (pulled by `npx vercel env pull`) and
+  `private/comm118-sitdown-1.json` (downloaded from the bucket, unchanged);
+  both are ignored by git. At home: sign in to the SCU account in Chrome,
+  open each of the nine under `/u/2/.../mobilebasic`, read the ones that
+  open, fold them into the sheet, and put it up with `scripts/sitdown-sheet.mjs
+  --file private/comm118-sitdown-1.json --write`.
+
 ## After each sit-down: the recording
 
 His ask: "I'm gonna take those recordings, and I'm gonna feed them to you.

@@ -1196,3 +1196,31 @@ Reopen your second topic. The builder shows a Second topic door once the
 page exists and starts the headline from whichever page is approved, the
 first when both or neither are. The My Work challenge counts only the first
 page's submit.
+
+## Submission pages, 2026-10-25
+
+Every assignment can be turned in like a worksheet. Andrew, 2026-10-25:
+"every assignment submission should feel like a worksheet submission ... a
+beautiful submission page, with instructions, maybe images, and ask them a
+couple of questions, like headline, what did you think of this assignment,
+biggest finding. so we can store this for later." Built for assignments due
+November 2 or later ("just build it for assignments from after next week").
+
+- An assignment carries `page: { intro, images, questions }`, edited in
+  Manage. `page: false` is none; `page` unset goes by the due date against
+  `CUTOVER` in `src/engine/submissionPages.js`. A challenge whose details
+  link is a worksheet on this site takes no page.
+- The student's page is the assignment's own, `/<class>/assignments/<id>`:
+  `SubmissionForm` in `src/engine/SubmissionPage.jsx`, under the title card.
+  The box under it is messages only.
+- Answers are `worksheet_sheets` and `worksheet_answers` rows (the
+  worksheets package's tables, through `worktopia/store.js`), one sheet per
+  student per assignment, keyed `asg-<term>-<id>` (`fall26` from
+  `config.quarter`). Saved as typed with `visualstory/saver.js`.
+- A submit counts on the assignment through `worksheetSubmits.js`, so
+  nothing in grading changed. The instructor reads one student at
+  `/<class>/worksheets/<key>?s=<roster id>` (`TheirSubmission`), which is
+  where Grade view's Open their file lands, and the Worksheets page lists
+  every paged assignment (`assignmentSheets`).
+- Default questions and field names are in `submissionPages.js`. A field is
+  letters only, built from the question once and kept when reworded.
