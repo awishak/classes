@@ -7,7 +7,8 @@
 import { useState, useEffect } from "react";
 import { realStudents, hasSections, studentsIn, sectionFor, sectionsOf, MASCOT } from "./sections.js";
 import { nameShown, rosterOf } from "./roster.js";
-import { computeGrade } from "./AssignmentsCard.jsx";
+import { computeGrade, getAssignments } from "./AssignmentsCard.jsx";
+import { statusOf } from "./AssignmentCards.jsx";
 import { gradeText } from "./grades.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { StudentThread } from "./YouCard.jsx";
@@ -258,19 +259,41 @@ function StudentPage({ config, data, name, email, code, onBack, update }) {
           {(() => {
             // Words only. Andrew, 2026-10-06: "please remove scores from the
             // classes. only need grades at the moment."
+            // The record: every challenge, the grade, when it went in and how
+            // late, and the comment. Andrew, 2026-10-28: "here's a student's
+            // profile. Here's all the work they've done, and how they've done
+            // it, and they turn things in late. And if it was complete or not."
             const { rows } = computeGrade(config, data, name);
+            const asgOf = new Map(getAssignments(data, config).map(a => [a.id, a]));
+            const none = new Set();
+            const fmtIn = (ts) => { try { return new Date(ts).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch { return ""; } };
             return (
               <div style={{ marginTop: 22, paddingTop: 18, borderTop: "1px solid " + BORDER }}>
                 <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 8 }}>
                   <div style={label}>Grades & challenges</div>
                 </div>
-                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {rows.map(r => (
-                    <div key={r.id} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 15 }}>
-                      <span style={{ color: TEXT_PRIMARY, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title} <span style={{ color: TEXT_MUTED, fontSize: 13 }}>· {r.weight}%</span></span>
-                      <span style={{ flexShrink: 0, fontWeight: 600, color: gradeText(r) ? TEXT_PRIMARY : TEXT_MUTED }}>{gradeText(r) || "—"}</span>
-                    </div>
-                  ))}
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {rows.map(r => {
+                    const asg = asgOf.get(r.id);
+                    const st = asg ? statusOf(config, data, asg, name, none) : null;
+                    const when = st?.last ? "Turned in " + fmtIn(st.first ? st.first.ts : st.last.ts) : st?.state === "missed" ? "Not turned in" : "";
+                    return (
+                      <div key={r.id} style={{ fontSize: 15 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                          <span style={{ color: TEXT_PRIMARY, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.title} <span style={{ color: TEXT_MUTED, fontSize: 13 }}>· {r.weight}%</span></span>
+                          <span style={{ flexShrink: 0, fontWeight: 600, color: gradeText(r) ? TEXT_PRIMARY : TEXT_MUTED }}>{gradeText(r) || "—"}</span>
+                        </div>
+                        {when ? (
+                          <div style={{ fontSize: 13, color: st.late || st.state === "missed" ? TOKENS.STATE.late : TEXT_MUTED, fontWeight: st.late ? 700 : 400 }}>
+                            {when}{st.late ? " · " + st.lateText : ""}
+                          </div>
+                        ) : null}
+                        {st?.comments?.[0] ? (
+                          <div style={{ fontSize: 14, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap", marginTop: 2 }}>{st.comments[0]}</div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );

@@ -15,7 +15,8 @@ import { withIds } from "./roster.js";
 import { sectionOf } from "./sections.js";
 import { checkinTasksOf, isCheckin, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { schedulingLinkOf } from "../instructors.js";
-import { isLate, unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
+import { unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
+import { latenessOf } from "./lateness.js";
 import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
@@ -93,7 +94,7 @@ const fmtDay = (ts) => ts ? new Date(ts).toLocaleDateString("en-US", { month: "s
 
 // The latest thing a student turned in, and whether a grade from the old
 // grading flow is already on the log.
-const workOf = (data, aid, name) => {
+const workOf = (data, aid, name, asg) => {
   const log = alive(data?.assignmentLog?.[aid]?.[name]);
   const subs = log.filter(e => e.type === "submission");
   const last = subs[subs.length - 1] || null;
@@ -108,7 +109,7 @@ const workOf = (data, aid, name) => {
   const comments = log.filter(e => e.type === "comment")
     .map(e => ({ id: e.id, text: htmlToText(e.html || e.text), at: e.ts, mine: e.from !== "student", liked: e.appreciatedBy })).filter(c => c.text);
   return { last, link: linked?.link || "", earlier: grades[grades.length - 1] || null, count: subs.length, comments, waiting: unanswered(log),
-    regrade: regradePending(log) ? regrade : null };
+    regrade: regradePending(log) ? regrade : null, lateness: latenessOf(asg, log) };
 };
 
 export default function GradeView({ config }) {
@@ -193,7 +194,7 @@ export default function GradeView({ config }) {
 
   const cardOf = (s) => {
     const card = board.cards?.[s.name] || {};
-    return <Card key={s.name} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name)} accent={a}
+    return <Card key={s.name} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name, asg)} accent={a}
       checkin={isCheckin(asg) ? { answers: answersOf(data, aid, s.name), href: config.path + "/checkins?w=" + asg.week + "&s=" + encodeURIComponent(s.name) } : null}
       columns={columns}
       dragging={dragging === s.name} picked={picked === s.name} editing={editing === s.name}
@@ -385,11 +386,12 @@ function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, 
   const name = names[i];
   const student = roster.find(s => s.name === name) || { name };
   const card = board.cards?.[name] || {};
-  const work = workOf(data, aid, name);
+  const work = workOf(data, aid, name, asg);
   const [comment, setComment] = useState(card.comment || "");
   useEffect(() => { setComment((board.cards?.[name] || {}).comment || ""); }, [name]);   // eslint-disable-line react-hooks/exhaustive-deps
   const embed = embedOf(work.link);
-  const late = work.last ? isLate(work.last.ts, asg?.due) : false;
+  const lateness = latenessOf(asg, data?.assignmentLog?.[aid]?.[name]);
+  const late = lateness.late;
   const grade = card.bucket ? bucketOf(card.bucket) : null;
   const last = i >= names.length - 1;
   const go = (d) => setI(n => Math.max(0, Math.min(names.length - 1, n + d)));
@@ -426,7 +428,7 @@ function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, 
           ) : null}
         </span>
         <span style={{ fontSize: 15, color: late ? LATE : TEXT_MUTED, fontWeight: late ? 700 : 400 }}>
-          {work.last ? fmtDay(work.last.ts) + (late ? " · late" : "") : "Nothing turned in"}
+          {work.last ? fmtDay(work.last.ts) + (late ? " · " + lateness.text : "") : "Nothing turned in"}
         </span>
         {grade ? <span style={{ fontSize: 15, fontWeight: 700, color: accent }}>{grade.label}</span> : null}
         {work.link ? (
@@ -496,7 +498,7 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
   const [bucket, setBucket] = useState(card.bucket || null);
   useEffect(() => { if (editing) { setComment(card.comment || ""); setBucket(card.bucket || null); } }, [editing]);   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const late = work.last ? isLate(work.last.ts, due) : false;
+  const late = !!work.lateness?.late;
   const link = work.link;
   const grade = card.bucket ? bucketOf(card.bucket) : null;
 
@@ -544,7 +546,7 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
           ? <a className="gv-focus" href={link} target="_blank" rel="noreferrer" style={{ color: accent, fontWeight: 600, fontSize: 15, textDecoration: "none" }}>Open their file ↗ <span style={{ fontWeight: 400, color: TEXT_MUTED, fontSize: 13 }}>{hostOf(link)}</span></a>
           : work.last ? <span>Turned in a note, no link</span>
           : <span>Nothing turned in</span>}
-        {work.last ? <span>{fmtDay(work.last.ts)}{late ? " · late" : ""}</span> : null}
+        {work.last ? <span>{fmtDay(work.last.ts)}{late ? " · " + work.lateness.text : ""}</span> : null}
       </div>
       )}
       {work.last?.why ? <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.45, whiteSpace: "pre-wrap" }}><span style={{ fontWeight: 700, color: LATE }}>Late: </span>{work.last.why}</div> : null}

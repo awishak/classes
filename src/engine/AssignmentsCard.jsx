@@ -10,6 +10,7 @@
 // A grade is a word, never a number on the screen: Andrew, 2026-10-06, "please
 // remove scores from the classes." Weight is the percent of the final grade.
 
+import { latenessOf } from "./lateness.js";
 import { useState, useRef, useEffect } from "react";
 import { assignmentsOf, isProfileTask, profileComplete, PROFILE_TASK_OFF } from "./profileTask.js";
 import { realStudents, studentsIn, hasSections, sectionsOf } from "./sections.js";
@@ -69,7 +70,7 @@ export function DetailsLink({ href, accent, style }) {
 const inputStyle = { width: "100%", padding: "11px 12px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, fontFamily: F, fontSize: 16, minHeight: TAP, background: SURFACE_CARD, color: TEXT_PRIMARY };
 
 // ─── data ───
-const getAssignments = (data, config) => assignmentsOf(config, data);
+export const getAssignments = (data, config) => assignmentsOf(config, data);
 const logOf = (data, aid, name) => alive(data?.assignmentLog?.[aid]?.[name]);
 const lastOf = (log, type) => { for (let i = log.length - 1; i >= 0; i--) if (log[i].type === type) return log[i]; return null; };
 const currentGrade = (log) => lastOf(log, "grade");
@@ -359,13 +360,16 @@ function AssignmentLog({ asg, log, accent, studentName, actor, onLike, onDelete 
       <div style={{ textAlign: "center" }}><span style={{ fontSize: 13, color: TEXT_MUTED, background: BG, padding: "4px 12px", borderRadius: 999 }}>Challenge posted · Due {asg.due || "TBD"}</span></div>
       {log.map(e => {
         if (e.type === "submission") {
-          const late = isLate(e.ts, asg.due);
+          // The first submission is the one judged; a resubmit after an on-time
+          // one is on time. lateness.js.
+          const lt = latenessOf(asg, log);
+          const late = !!(lt.late && lt.first && lt.first.id === e.id);
           return (
             <Wrap key={e.id} right={false}>
               <div style={{ background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, padding: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                   <div style={{ ...label, color: TEXT_SECONDARY }}>Submitted</div>
-                  <div style={{ fontSize: 13, color: late ? "#dc2626" : TEXT_MUTED }}>{fmtTime(e.ts)}{late ? " · Late" : ""}</div>
+                  <div style={{ fontSize: 13, color: late ? "#dc2626" : TEXT_MUTED }}>{fmtTime(e.ts)}{late ? " · " + lt.text : ""}</div>
                 </div>
                 {e.link && <div style={{ marginTop: 6 }}><a href={e.link} target="_blank" rel="noreferrer" style={{ fontSize: 15, fontWeight: 600, color: accent, wordBreak: "break-all" }}>{e.link}</a></div>}
                 {e.text && <div style={{ fontSize: 15, color: TEXT_PRIMARY, lineHeight: 1.5, marginTop: 6, whiteSpace: "pre-wrap" }}>{e.text}</div>}

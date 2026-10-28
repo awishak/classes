@@ -139,8 +139,12 @@ export default async function handler(req, res) {
 
   const sheets = {};
   for (const key of keys) {
-    const q = `/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${key}&group_key=eq.${groupKey}&submitted_at=not.is.null`;
-    const r = await fetch(SUPABASE_URL + q, { headers: serviceHeaders() });
+    // first_submitted_at dates the submit for lateness (lateness.js). The
+    // read falls back without the column until
+    // sql/worksheet-first-submitted.sql has run on the live table.
+    const tail = `&worksheet_key=eq.${key}&group_key=eq.${groupKey}&submitted_at=not.is.null`;
+    let r = await fetch(SUPABASE_URL + `/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at,first_submitted_at` + tail, { headers: serviceHeaders() });
+    if (!r.ok) r = await fetch(SUPABASE_URL + `/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at` + tail, { headers: serviceHeaders() });
     if (!r.ok) return res.status(502).json({ ok: false, error: "Could not read the worksheet." });
     const list = await r.json();
     // 3x5 is group work: a roll on one sheet names up to five students, and

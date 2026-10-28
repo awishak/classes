@@ -76,7 +76,7 @@ export function withWorksheetSubmits(data, config, sheets) {
         al = al || { ...(data.assignmentLog || {}) };
         const kept = (log || []).map(e => e.type === "submission" && toSheet(e.link) ? { ...e, link: theirs(owner) } : e);
         al[asg.id] = { ...(al[asg.id] || {}), [s.name]: live.length ? kept : [...kept, {
-          id: "ws-" + asg.id + "-" + sh.viewer_id, ts: Date.parse(sh.submitted_at), type: "submission",
+          id: "ws-" + asg.id + "-" + sh.viewer_id, ts: Date.parse(sh.first_submitted_at || sh.submitted_at), type: "submission",
           link: theirs(owner), worksheet: ws.key,
         }].sort((a, b) => (a.ts || 0) - (b.ts || 0)) };
       });
@@ -110,7 +110,11 @@ export function useWorksheetSheets(config, data) {
       // A student: their own sheet, under the rules.
       const out = {};
       for (const key of keys.split(",")) {
-        const r = await gameClient.from("worksheet_sheets").select("viewer_id,submitted_at")
+        // first_submitted_at dates the submit (lateness.js); the read falls
+        // back without it until sql/worksheet-first-submitted.sql has run.
+        let r = await gameClient.from("worksheet_sheets").select("viewer_id,submitted_at,first_submitted_at")
+          .eq("worksheet_key", key).eq("group_key", config.id).not("submitted_at", "is", "null");
+        if (r.error) r = await gameClient.from("worksheet_sheets").select("viewer_id,submitted_at")
           .eq("worksheet_key", key).eq("group_key", config.id).not("submitted_at", "is", "null");
         if (r.error) return;   // keep what is showing; the next focus tries again
         out[key] = r.data || [];

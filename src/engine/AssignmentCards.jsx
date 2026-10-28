@@ -25,7 +25,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import * as TOKENS from "./tokens.js";
-import { dueText, dueState, isLate, deletePatch, DetailsLink } from "./AssignmentsCard.jsx";
+import { dueText, dueState, deletePatch, DetailsLink } from "./AssignmentsCard.jsx";
+import { latenessOf } from "./lateness.js";
 import { unseenGrades, markSeen, bucketOf, htmlToText, letterOf, alive } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import { deadlineOf } from "./DueCard.jsx";
@@ -112,11 +113,13 @@ export function statusOf(config, data, asg, name, unseen, now = Date.now()) {
     : at && at < now ? "missed"
     : "open";
   const tone = dueState(asg.due)?.tone;
+  // Late is judged on the first time it went in, not the last. lateness.js.
+  const lateness = latenessOf(asg, log);
   return {
     state, letter, grade, comments, last, deadline: at,
     isNew: !!letter && unseen.has(asg.id),
     soon: state === "open" && (tone === "soon" || tone === "now"),
-    late: last ? isLate(last.ts, asg.due) : false,
+    late: lateness.late, lateText: lateness.text, first: lateness.first,
   };
 }
 
@@ -272,6 +275,7 @@ function AssignmentCard({ asg, st, current, onOpen }) {
         {!ongoing && (graded || st.state === "turnedIn") ? (
           <span style={{ fontSize: 15, color: TEXT_PRIMARY }}>
             {st.last ? "Turned in " + when(st.last.ts) + " \u00b7 " : ""}{due}
+            {st.late ? <span style={{ color: LATE, fontWeight: 700 }}>{" \u00b7 " + st.lateText}</span> : null}
           </span>
         ) : null}
         {graded && st.comments[0] ? (
