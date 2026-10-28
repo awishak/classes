@@ -1224,3 +1224,34 @@ November 2 or later ("just build it for assignments from after next week").
   every paged assignment (`assignmentSheets`).
 - Default questions and field names are in `submissionPages.js`. A field is
   letters only, built from the question once and kept when reworded.
+
+## Late, the record, and the morning messages, 2026-10-28
+
+**Late is the first submission.** Andrew, 2026-10-28: "no grace window but you
+tell me if they are 3 min late vs 3 days," and a resubmit of on-time complete
+work stays on time. `src/engine/lateness.js` judges the first submission
+against `deadlineOf` (date and time) and says how late: "3 min late", "2 hr
+10 min late", "3 days late". `statusOf` carries `late`, `lateText` and
+`first`; the grade view, the instructor's log row, the student's card and the
+student page all read it. Worksheets lose the first submit time on a resubmit,
+so `sql/worksheet-first-submitted.sql` adds `first_submitted_at`, set once by a
+trigger; the reads fall back to `submitted_at` until it has run. The student
+page's Grades & challenges rows now say when it went in, how late, and the
+comment, which is the record he asked for.
+
+**Messages in two places.** Andrew, 2026-10-28: the front page does nothing
+with messages but count. His home page has no Messages tile and the needs-you
+list says nothing about messages; the envelope in the top bar is the count.
+Threads live in the inbox and on the student's page, as before.
+
+**The morning digest.** `api/digest.js` gathers every thread whose last word is
+a student's (later than `inboxSeen`) and every challenge comment with no reply,
+has Claude (`claude-opus-5-5`) triage them high, normal or none and draft a
+reply in his voice, and emails it weekdays at 6 AM Pacific (Vercel cron,
+`0 14 * * 1-5`, UTC, so 7 AM until the clocks change November 1) to
+`aishak@scu.edu` through Resend. `/digest` is the same list on a page with a
+Send under each draft; nothing reaches a student until he presses it. Standing
+facts the drafts may use are `STANDING` in the route; update them as the term
+moves. Env still owed: `CRON_SECRET` (the cron is refused without it),
+`RESEND_API_KEY` and `DIGEST_FROM` on a verified domain. Without the Resend key
+the page works and the email is skipped.

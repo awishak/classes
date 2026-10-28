@@ -20,6 +20,7 @@ import DecisionsPage from "./engine/DecisionsPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
+import DigestPage from "./engine/DigestPage.jsx";
 import VisualEssayPlan from "./engine/VisualEssayPlan.jsx";
 import VisualStoryInstructions from "./engine/visualstory/instructions.jsx";
 import VisualStoryPortal from "./engine/visualstory/portal.jsx";
@@ -241,6 +242,15 @@ export default function App() {
     return (
       <InstructorGate what="Ideas for the repository">
         <InstructorBar always><RepoIdeas /></InstructorBar>
+      </InstructorGate>
+    );
+  }
+
+  // The morning messages, with a Send under each draft. api/digest.js.
+  if (path === "/digest" || path === "/digest/") {
+    return (
+      <InstructorGate what="Messages">
+        <InstructorBar always><DigestPage /></InstructorBar>
       </InstructorGate>
     );
   }

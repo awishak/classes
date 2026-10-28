@@ -23,7 +23,7 @@ import { YouDetail, MessagesDetail, MessagesSummary, unreadNotes, inboxWaiting }
 import { ScheduleSummary, ScheduleDetail } from "./ScheduleCard.jsx";
 import { RosterSummary, RosterDetail } from "./RosterCard.jsx";
 import { QuestionsSummary, QuestionsDetail } from "./QuestionsCard.jsx";
-import { AssignmentsSummary, AssignmentsDetail, ungradedCount, waitingCount } from "./AssignmentsCard.jsx";
+import { AssignmentsSummary, AssignmentsDetail, ungradedCount } from "./AssignmentsCard.jsx";
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
@@ -373,11 +373,11 @@ function needsYou(config, data, role, asStudent) {
   if (role === "instructor") {
     const n = ungradedCount(config, data);
     if (n) out.push({ id: "grade", card: "assignments", text: n + " submission" + (n === 1 ? "" : "s") + " waiting to be graded" });
-    // A message on a challenge is as easy to miss as a submission.
-    const said = waitingCount(data, assignmentsOf(config, data)).messages;
-    if (said) out.push({ id: "said", card: "assignments", text: said + " message" + (said === 1 ? "" : "s") + " on challenges waiting for a reply" });
-    const waiting = inboxWaiting(config, data);
-    if (waiting) out.push({ id: "inbox", card: "messages", text: waiting + " student" + (waiting === 1 ? "" : "s") + " waiting on a reply" });
+    // Messages are not said here any more. Andrew, 2026-10-28: "The only
+    // thing I want the front page to do with messages is, like, count ... a
+    // little folder that kind of sits in my face with a number." That is the
+    // envelope in the top bar; the threads are in the inbox and on the
+    // student's page, and the morning digest at /digest.
     const asks = openRequests(data);
     if (asks) out.push({ id: "requests", card: "more", text: asks + " request" + (asks === 1 ? "" : "s") + " and bugs waiting" });
     return out;
@@ -734,7 +734,9 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // links. Andrew, 2026-09-15: schedule first, then assignments, then class,
   // grades toward the bottom, and games at the very bottom. Messages sit
   // under Challenges since 2026-09-17, a card of their own off the profile.
-  const HOME = ["assignments", "messages", "questions", "class", "games"].filter(k => enabledCards.includes(k));
+  // His own home page carries no Messages tile; the envelope's count is the
+  // whole of it there. Andrew, 2026-10-28. Students keep theirs.
+  const HOME = ["assignments", "messages", "questions", "class", "games"].filter(k => enabledCards.includes(k) && !(view === "instructor" && k === "messages"));
   // What lives inside Class, and lights the Class tab when open.
   const IN_CLASS = new Set(["you", "roster", "instructor", "syllabus"]);
 
