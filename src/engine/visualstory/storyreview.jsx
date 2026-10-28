@@ -208,6 +208,7 @@ export function ReadingPanel({ config, section }) {
         {nextStage ? <button type="button" className="vsv-btn vsv-btn-main" disabled={!!busy && !busy.startsWith("Not")} onClick={() => run("stage", () => storyApi(config, { action: "stage", section: sec, stage: nextStage[0] }))}>{nextStage[1]}</button> : null}
         {BACK[stage] ? <button type="button" className="vsv-btn" disabled={!!busy && !busy.startsWith("Not")} onClick={() => run("stage", () => storyApi(config, { action: "stage", section: sec, stage: BACK[stage] }))}>Go back a step</button> : null}
         <a className="vsv-link" href={"/" + config.id + "/stories"} target="_blank" rel="noreferrer">The students' page</a>
+        <a className="vsv-link" href={"/" + config.id + "/reviews"}>Every comment, and who reviewed what</a>
         {busy && busy.startsWith("Not") ? <span className="vsv-bad">{busy}</span> : null}
       </div>
       {stage === "building" ? (
