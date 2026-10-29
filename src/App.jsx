@@ -234,7 +234,7 @@ export default function App() {
   // visitor id through api/locker-room-public. Andrew, 2026-10-29: "give me
   // the link to do a practice version (one that anyone can do)."
   if (path === "/lockerroom" || path === "/lockerroom/") {
-    return <LockerRoomPage />;
+    return <InstructorBar><LockerRoomPage /></InstructorBar>;
   }
 
   // The long view of September 14 and 15: what was built, with its links.
