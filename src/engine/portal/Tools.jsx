@@ -136,8 +136,9 @@ export function useSubmitCounts(config, keys) {
   return counts;
 }
 
+// The buttons wrap rather than scroll, so every one is on the screen.
 export const Links = ({ links }) => (
-  <div className="pt-chips" style={{ paddingTop: 4 }}>
+  <div className="pt-chips" style={{ paddingTop: 4, flexWrap: "wrap", overflow: "visible" }}>
     {links.filter(l => !l.main).map(l => <Chip key={l.href} href={l.href}>{l.say}</Chip>)}
   </div>
 );
