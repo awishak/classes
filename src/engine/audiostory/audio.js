@@ -50,20 +50,24 @@ export function durationOf(blob) {
   });
 }
 
-/** Why a file cannot go up, or "" when it can. */
-export function refuse(file, seconds) {
+/** Why a file cannot go up, or "" when it can. maxSeconds is the exercise's
+ * 60 unless a sheet says otherwise (the audio story takes five minutes). */
+export function refuse(file, seconds, maxSeconds = MAX_SECONDS) {
   if (!formatOf(file)) return "That is not one of the formats this sheet takes. Send an " + FORMAT_SAY + " file.";
   if (file.size > MAX_BYTES) return "The file has to be under 30 MB.";
   if (!Number.isFinite(seconds) || seconds <= 0) return "This file could not be read as audio.";
   // Rounding: a file a phone calls 60 seconds can read as 60.4.
-  if (seconds > MAX_SECONDS + 0.9) return "Your story runs " + Math.round(seconds) + " seconds. The limit is " + MAX_SECONDS + ".";
+  if (seconds > maxSeconds + 0.9) return "Your story runs " + clockOf(seconds) + ". The limit is " + clockOf(maxSeconds) + ".";
   return "";
 }
 
+// Seconds the way a student reads them: 58 seconds, or 4:12 past a minute.
+const clockOf = (s) => (s < 60 ? Math.round(s) + " seconds" : Math.floor(s / 60) + ":" + String(Math.round(s) % 60).padStart(2, "0"));
+
 /** Check and upload one file into <class>/<email>/audio-<id>.<ext>. Resolves the field's value. */
-export async function sendAudio({ file, classId, viewerId, onProgress }) {
+export async function sendAudio({ file, classId, viewerId, onProgress, maxSeconds = MAX_SECONDS }) {
   const seconds = await durationOf(file).catch(() => NaN);
-  const why = refuse(file, seconds);
+  const why = refuse(file, seconds, maxSeconds);
   if (why) throw new Error(why);
   const fmt = formatOf(file);
   const type = FORMATS.find(f => f.types.includes(String(file.type || "").toLowerCase())) ? file.type : fmt.types[0];

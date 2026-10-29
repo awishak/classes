@@ -11,6 +11,8 @@ import { THREE_BY_FIVE_KEY } from "./threebyfive/sheet.js";
 import { VISUAL_PRE_KEY, FIELDS as PRE_FIELDS } from "./visualstory/pre.jsx";
 import { VISUAL_STORY_KEY } from "./visualstory/story.jsx";
 import { storyOf, wordCount, imageCount, MIN_IMAGES, MIN_WORDS } from "./visualstory/model.js";
+import { AUDIO_STORY_KEY } from "./audiostory/story.jsx";
+import { audioStoryOf, progressOf as audioProgress } from "./audiostory/storymodel.js";
 
 const has = (a, f) => !!String(a?.[f] ?? "").trim();
 const clamp = (x) => Math.max(0, Math.min(1, x));
@@ -42,6 +44,8 @@ const MEASURES = {
   [THREE_BY_FIVE_KEY]: threeByFive,
   [VISUAL_PRE_KEY]: (a) => PRE_FIELDS.filter(f => has(a, f)).length / PRE_FIELDS.length,
   [VISUAL_STORY_KEY]: visualStory,
+  // The audio story: the file, the cover, the headline, the listen line, a voice.
+  [AUDIO_STORY_KEY]: (a) => audioProgress(audioStoryOf(a || {})),
 };
 
 const answered = (a) => Object.keys(a || {}).filter(f => has(a, f)).length;

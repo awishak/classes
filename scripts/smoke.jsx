@@ -43,6 +43,8 @@ import { IdeasSheet, FIELDS as IDEA_FIELDS, REQUIRED as IDEA_REQUIRED, missingOf
 import { ideasOf } from "../src/engine/audiostory/board.jsx";
 import { ResearchSheet, FIELDS as RESEARCH_FIELDS, missingOf as researchMissing } from "../src/engine/audiostory/research.jsx";
 import { audioOf, refuse as refuseAudio, formatOf as audioFormat } from "../src/engine/audiostory/audio.js";
+import { audioStoryOf, problemsOf as audioProblems, progressOf as audioProgress, clock as audioClock, wordsIn as audioWords, MAX_STORY_SECONDS } from "../src/engine/audiostory/storymodel.js";
+import { AudioStorySheet, AudioStoryView, STEPS as AUDIO_STEPS } from "../src/engine/audiostory/story.jsx";
 import { suggest as suggestPairs, join as joinPairs, split as splitPairs, storyFor, parseWant, wantKey } from "../src/engine/audiostory/pairs.js";
 import VisualStoryPortal, { PortalBar, partOf, PARTS as PORTAL_PARTS } from "../src/engine/visualstory/portal.jsx";
 import { tally as reviewTally } from "../src/engine/visualstory/reviews.jsx";
@@ -6091,6 +6093,61 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
 }
 cases.push(["Audio ideas, loading", <IdeasSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 cases.push(["Audio research, loading", <ResearchSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
+
+// The audio story builder, 2026-10-29: the rules Submit checks, the five
+// minute limit through audio.js, the story page, and the registry.
+{
+  const say = (m) => { console.error("  FAIL  audio story builder: " + m); failedEarly++; };
+  const memo = { name: "story.m4a", type: "audio/x-m4a", size: 9000000 };
+  if (refuseAudio(memo, 240, MAX_STORY_SECONDS)) say("a four-minute story is refused at the story's limit");
+  if (!refuseAudio(memo, 330, MAX_STORY_SECONDS)) say("a five-and-a-half-minute story is not refused");
+  if (refuseAudio(memo, 300.4, MAX_STORY_SECONDS)) say("a file a phone calls five minutes is refused");
+  if (!refuseAudio(memo, 62)) say("the exercise's own limit moved");
+  if (audioClock(252) !== "4:12" || audioClock(0) !== "0:00" || audioClock(300) !== "5:00") say("the clock does not read m:ss");
+  const empty = audioStoryOf({});
+  if (empty.audio || empty.cover || empty.look !== "light" || empty.voices.length || empty.sounds.length) say("an empty story is not empty");
+  if (audioProblems(empty).length < 5) say("an empty story has too few problems: " + audioProblems(empty).join(" | "));
+  const full = audioStoryOf({
+    audio: JSON.stringify({ path: "comm3/a@b/audio-x.m4a", seconds: 252, name: "story.m4a" }),
+    cover: JSON.stringify({ path: "comm3/a@b/c.jpg", w: 1000, h: 1000 }),
+    headline: "Nobody talks on the 5 a.m. deck", listen: "Thirty swimmers, one coach, and forty minutes before anyone says a word.",
+    voices: JSON.stringify([{ id: "a", name: "Sam Okafor", role: "Narrator", knew: true }, { id: "b", name: "Coach Dana Ruiz", role: "Interview at 1:40", knew: true }]),
+    sounds: JSON.stringify([{ id: "a", what: "Water, lane 4", kind: "mine", from: "" }, { id: "b", what: "Early Lanes", kind: "music", from: "Free Music Archive, CC BY" }]),
+    look: "dark",
+  });
+  if (audioProblems(full).length) say("a complete story has problems: " + audioProblems(full).join(" | "));
+  if (audioProgress(full) !== 1 || audioProgress(empty) !== 0) say("progress is not 0 for empty and 1 for full");
+  if (full.look !== "dark" || full.voices.length !== 2 || full.sounds[1].kind !== "music") say("a full story does not read back");
+  const unmarked = audioStoryOf({ ...full, voices: JSON.stringify([{ id: "a", name: "A swimmer", role: "", knew: null }]), audio: JSON.stringify(full.audio), cover: JSON.stringify(full.cover), sounds: "[]" });
+  if (!audioProblems(unmarked).some(p => /knew they were being recorded/.test(p))) say("an unmarked voice is not a problem");
+  const long = audioStoryOf({ ...unmarked, listen: Array.from({ length: 45 }, () => "word").join(" ") });
+  if (!audioProblems(long).some(p => /^Cut 5 words/.test(p))) say("a 45-word listen line is not told to cut 5");
+  const over = audioStoryOf({ audio: JSON.stringify({ path: "p", seconds: 400, name: "x" }) });
+  if (!audioProblems(over).some(p => /6:40/.test(p) && /5:00/.test(p))) say("an over-long file is not named in m:ss");
+  const found = audioStoryOf({ sounds: JSON.stringify([{ id: "a", what: "Whistle", kind: "found", from: "" }]) });
+  if (!audioProblems(found).some(p => /Whistle: found audio needs/.test(p))) say("found audio with no source is not a problem");
+  if (audioWords(" a  b\nc ") !== 3) say("words are not counted");
+  if (AUDIO_STEPS.length !== 8 || AUDIO_STEPS.some(([k, name, s]) => !k || !name || !s)) say("the steps are not eight, each with a name and a line");
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const urls = { "comm3/a@b/audio-x.m4a": "https://x.test/a.m4a", "comm3/a@b/c.jpg": "https://x.test/c.jpg" };
+  const page = renderToStaticMarkup(<AudioStoryView story={full} urls={urls} by="Sam Okafor" />);
+  if (!/Nobody talks/.test(page) || !/4:12/.test(page) || !/https:\/\/x.test\/a.m4a/.test(page) || !/Coach Dana Ruiz/.test(page) || !/Free Music Archive/.test(page)) say("the story page is missing a part");
+  if (/knew|did not know|not marked/.test(page)) say("a classmate's page shows the knew mark");
+  const mine = renderToStaticMarkup(<AudioStoryView story={unmarked} urls={urls} showPrivate by="" />);
+  if (!/not marked/.test(mine)) say("the instructor's read does not show the knew mark");
+  const bare = renderToStaticMarkup(<AudioStoryView story={empty} urls={{}} />);
+  if (!/Your headline goes here/.test(bare)) say("an empty story page has no stand-in headline");
+  const { localWorksheet, listedFor, openTo } = await import("../src/engine/localWorksheets.js");
+  const w = localWorksheet("audio-story");
+  if (!w || !w.review || !w.control) say("audio-story is not a local worksheet with a review and a control page");
+  if (w && (!listedFor(w, "comm3") || listedFor(w, "comm118"))) say("audio-story is not COMM 3's, or is COMM 118's");
+  if (w && !openTo(w, "comm3", {})) say("audio-story is not open to COMM 3");
+  if (w && openTo(w, "comm3", { worksheetsOpen: { "audio-story": false } })) say("the Worksheets page switch does not close audio-story");
+  const { progressOf } = await import("../src/engine/worksheetProgress.js");
+  const prog = progressOf("audio-story", [{ viewer_id: "a", answers: {} }, { viewer_id: "b", answers: { headline: "x" } }]);
+  if (prog.a !== 0 || prog.b !== 0.2) say("the worksheets page's progress does not use the story's measure");
+}
+cases.push(["Audio story, loading", <AudioStorySheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 
 // Takeover, 2026-10-29: the culture game. The engine is pure, so the whole

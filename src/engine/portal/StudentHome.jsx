@@ -20,6 +20,7 @@ import { QuestionsSection } from "./Questions.jsx";
 import { DrCard, DrSheet } from "./ClassPage.jsx";
 import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
+import { AUDIO_STORY_KEY } from "../audiostory/story.jsx";
 import { StoriesRow, useStoriesStage, storiesHref, STORIES_CLASSES } from "../visualstory/door.jsx";
 import { portalHref } from "../visualstory/portal.jsx";
 import { PreRow, usePreStanding } from "../visualstory/prerow.jsx";
@@ -72,6 +73,20 @@ export function StoryDoor({ config, data, now = Date.now() }) {
   if (!end || now > end) return null;
   return <DueBar href={"/" + config.id + "/worksheets/" + VISUAL_STORY_KEY} name="Work on your visual story" say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
     done={submittedOf(standing)} doneName="Your visual story is in" doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
+}
+
+// The audio story's door, the same way: bright green until the student's
+// story is in, from when the builder is open to the class until the Audio
+// story assignment's due date.
+export function AudioStoryDoor({ config, data, now = Date.now() }) {
+  const sheet = localWorksheet(AUDIO_STORY_KEY);
+  const standing = usePreStanding(config, AUDIO_STORY_KEY);
+  if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
+  const asg = assignmentsOf(config, data).find(a => a.id === "audio");
+  const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
+  if (!end || now > end) return null;
+  return <DueBar href={"/" + config.id + "/worksheets/" + AUDIO_STORY_KEY} name="Work on your audio story" say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
+    done={submittedOf(standing)} doneName="Your audio story is in" doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
 }
 
 // A sheet's standing says submitted once it has a hand-in time (waiting), or
@@ -284,6 +299,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
       {/* Things to complete first, bright green; then the pin and the quieter doors. */}
       <StoryPhaseBar config={config} />
       <StoryDoor config={config} data={data} />
+      <AudioStoryDoor config={config} data={data} />
       <TopicsDoor config={config} data={data} />
       <PinBar data={data} go={go} />
       <SitdownDoor config={config} data={data} name={name} />
