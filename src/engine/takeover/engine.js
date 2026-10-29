@@ -204,12 +204,14 @@ export function conceptsFor(topicsAnswers) {
 
 // ─── what an action is for ───
 
+// Andrew, 2026-10-29: "work on these descriptions to make them in my voice
+// like talking to a 12 year old." Claude's draft in his voice, his to edit.
 export const TAGS = {
-  same: { label: "Keep things the same", line: "Costs nothing. Skills creep up from reps. Culture does not move on its own." },
-  culture: { label: "Culture", line: "The team on each other. Costs practice time." },
-  skills: { label: "Skills and strategy", line: "Reps, film, systems. The scoreboard notices first." },
-  standards: { label: "Standards", line: "Rules and consequences. Clear, and not free." },
-  care: { label: "Care", line: "One player at a time. Slow and remembered." },
+  same: { label: "Keep things the same", line: "Free. Your skills go up a tiny bit because you still practiced. Culture doesn't move." },
+  culture: { label: "Culture", line: "Stuff that gets the team to actually like each other. Costs practice time." },
+  skills: { label: "Skills and strategy", line: "Reps, film, plays. You get better at the game, and you see that first in the score." },
+  standards: { label: "Standards", line: "Rules, and what happens when someone breaks one. Everyone knows where they stand. Costs coins." },
+  care: { label: "Care", line: "Helping one player at a time. Slow, and that player doesn't forget." },
 };
 
 // ─── what happens each week, and what the coach can do ───
@@ -700,14 +702,14 @@ export const DEFAULT_COPY = {
   title: TAKEOVER_TITLE,
   credit: "COMM 118 · Weekly Challenge 3 · Due Tuesday, November 3",
   start: "You are the new head coach. The team is not yours yet.",
-  intro: "You have seven weeks. Each week something happens, and you decide what to do about it. The players react. Some of them are people you know.",
+  intro: "You've got seven weeks. Every week something happens and you decide what to do about it. Then the players react. And some of them are people you know.",
   pickSport: "Pick your sport.",
   pickTeam: "Pick your team.",
   pickTeamLine: "None of these names make sense. Pick one anyway.",
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",
-  how: "You are taking over this team.\n\nTwo numbers are yours to raise. Culture is how the team treats each other. Skills and strategy is how well they play. Both run from 0 to 100, and both start wherever the last coach left them.\n\nThose two numbers together set your chance of winning each week. Winning raises the third number, Success.\n\nYou have capital: five coins to start. Every action costs some, from nothing up to four or five later in the season. After each week your five players react. A plus gives you a coin back. An equals gives you half a coin. A minus gives you nothing.\n\nFrom week 3 on you can do more than one thing in a week, as many as you can pay for, and there are standing purchases, each once a season. From week 4 on, prices go up by one. You can hold eight coins at most, so spend them.\n\nSuccess follows culture and skills, halfway each week, and moves with every result: a win adds, a loss takes a little.",
+  how: "You're the new coach. The team doesn't know you yet.\n\nYou have two numbers to get up. Culture is how the team treats each other. Skills and strategy is how good they actually are at the game. Both go from 0 to 100, and both start wherever the old coach left them.\n\nPut those two together and that's your chance of winning each week. Win, and your third number, Success, goes up.\n\nYou also have coins. Five to start. Everything you do costs some coins, and a few things are free. After every week your five players tell you how they feel about what you did. A plus means you get a coin back. An equals means you get half a coin back. A minus means that coin is gone.\n\nStarting in week 3 you can do more than one thing in a week, if you can pay for all of it. There are also some bigger things you can buy once a season, like a film room or a team trip. Starting in week 4 everything costs one coin more. And you can only hold eight coins, so don't sit on them.\n\nSuccess moves a little differently. Every week it drifts toward your culture and skills, so if those two go up, Success follows. A win bumps it up. A loss knocks it down a little.",
   howGo: "Start the season",
   capital: "Capital",
   culture: "Culture",
@@ -721,7 +723,7 @@ export const DEFAULT_COPY = {
   also: "Also this week, once a season",
   wrap: "Final whistle",
   total: "Total",
-  chooseNote: "Costs are in coins. A plus from a player gives one back, an equals gives half, a minus gives nothing.",
+  chooseNote: "Everything's priced in coins. After the week, a plus gets you a coin back, an equals gets you half, and a minus gets you nothing.",
   cannot: "Not enough capital.",
   matchDay: "VS",
   chat: "Team chat",
