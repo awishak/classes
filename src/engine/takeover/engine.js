@@ -731,7 +731,7 @@ export const DEFAULT_COPY = {
   cannot: "Not enough Trust Coins.",
   matchDay: "VS",
   chat: "Team chat",
-  reflect: "You wrote: {wonder}. Based on your experiences and what you know, how would you answer that question? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
+  reflect: "In your concepts worksheet, you wrote: {wonder}. Based on your experiences and what you know, how would you answer that question? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
   reflectPress: "Lisa Davis printed what you said. Based on your experiences and what you know, what should a coach say in public about a player who had a bad night? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
   reflectFinal: "After this season, what do you think makes for a good team culture? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
   pressName: "Lisa Davis, Pacifica Times",
