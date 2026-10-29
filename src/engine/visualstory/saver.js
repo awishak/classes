@@ -65,6 +65,9 @@ export function createSaver({ store, draftKey, storage, onStatus = () => {}, del
     },
     flush,
     pending: () => ({ ...pending }),
+    // Forget what is waiting: a file the student just started over has no
+    // old words to send (takeover/game.jsx restart).
+    clear() { pending = {}; writeDraft(storage, draftKey, pending); },
     destroy() { dead = true; clearTimeout(timer); },
   };
 }
