@@ -21,6 +21,7 @@ import { useClassState } from "../store.js";
 import * as I from "./ideas.jsx";
 import * as R from "./research.jsx";
 import { linesOf } from "./bits.jsx";
+import { audioOf } from "./audio.js";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -34,6 +35,20 @@ const call = async (body) => {
 };
 const lower = (s) => String(s || "").trim().toLowerCase();
 const when = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+// Signed links for the clips on a set of sheets, through the server, so the
+// PIN sign-in can play them too. { [path]: url }.
+function useClipUrls(config, worksheetKey, sheets) {
+  const [urls, setUrls] = useState({});
+  const paths = (sheets || []).map(s => audioOf(s.answers?.audio)?.path).filter(Boolean).sort().join("\n");
+  useEffect(() => {
+    if (!paths) return undefined;
+    let alive = true;
+    call({ groupKey: config.id, key: worksheetKey, sign: paths.split("\n") }).then(out => { if (alive) setUrls(out.urls || {}); }).catch(() => {});
+    return () => { alive = false; };
+  }, [config.id, worksheetKey, paths]);
+  return urls;
+}
 
 function useAllSheets(config, worksheetKey, every = 30000) {
   const [sheets, setSheets] = useState(null);
@@ -52,6 +67,7 @@ function useAllSheets(config, worksheetKey, every = 30000) {
 
 export function ResearchReview({ config, worksheetKey, roster }) {
   const [sheets, error] = useAllSheets(config, worksheetKey);
+  const urls = useClipUrls(config, worksheetKey, sheets);
   const sections = sectionsOf(config);
   const [section, setSection] = useState(sections[0] || "");
   if (error) return <Shell><p className="aic-p">Could not read the sheets: {error}</p></Shell>;
@@ -77,18 +93,26 @@ export function ResearchReview({ config, worksheetKey, roster }) {
             <b className="aic-name">{student.name}</b>
             <span className={"aic-chip" + (sheet.submitted_at ? " aic-ok" : "")}>{sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started"}</span>
           </div>
-          <ResearchAnswers answers={sheet.answers} />
+          <ResearchAnswers answers={sheet.answers} urls={urls} />
         </article>
       ))}
     </Shell>
   );
 }
 
-function ResearchAnswers({ answers }) {
+function ResearchAnswers({ answers, urls = {} }) {
   const a = answers || {};
+  const clip = audioOf(a.audio);
   const line = (k, v) => (String(v || "").trim() ? <p key={k} className="aic-line"><span className="aic-k">{R.DEFAULT_COPY[k]}</span>{v}</p> : null);
   return (
     <div className="aic-entry">
+      {clip ? (
+        <div className="aic-clip">
+          <span className="aic-k">{R.DEFAULT_COPY.audioAsk}</span>
+          {urls[clip.path] ? <audio controls preload="metadata" src={urls[clip.path]} /> : <span className="aic-muted">Signing the link.</span>}
+          <span className="aic-muted">{clip.name}{clip.seconds ? " · " + Math.round(clip.seconds) + " s" : ""}</span>
+        </div>
+      ) : null}
       {line("storyAsk", a.story)}
       {line("treatmentAsk", a.treatment)}
       {line("includesAsk", linesOf(a.includes).join("\n"))}
@@ -126,6 +150,7 @@ export default function AudioControl({ config, worksheetKey, roster }) {
   const ideas = worksheetKey === I.AUDIO_IDEAS_KEY;
   const [data] = useClassState(config.storageKey);
   const [sheets, error] = useAllSheets(config, worksheetKey);
+  const urls = useClipUrls(config, worksheetKey, sheets);
   const people = roster.filter(s => s.email && !isLurker(s.name));
   const [who, setWho] = useState("");
   const local = localWorksheet(worksheetKey);
@@ -159,6 +184,8 @@ export default function AudioControl({ config, worksheetKey, roster }) {
         <h2 className="aic-h2">The board and the review</h2>
         <p className="aic-p">Both ask /api/worksheet-submits for every sheet on this key every {I.POLL / 1000} seconds while the tab is showing, and stop asking while the tab is hidden. The board shows no names and no strengths, only ideas and marks, newest sheet first. The review shows names, strengths, work preference, and the two general answers under a fold. Sections: the 8:00 and the 10:30 are tabs, off the student's section on the roster.</p>
       </>) : (<>
+        <h2 className="aic-h2">The audio story</h2>
+        <p className="aic-p">One file, m4a, mp3, wav or aac, at most 60 seconds (a file that reads as 60.9 passes, for rounding) and under 30 MB. The browser reads the length off the file first and refuses a longer one or another format before anything goes up. The file goes straight into the private visual-story bucket at comm3/(email)/audio-(id).(ext) as the student; the bucket's rules keep a student to their own folder and let the instructor read every folder. The field <code>audio</code> holds JSON with the path, the seconds and the file's name. Remove clears the field and leaves the file in the bucket. The student plays the clip back through a signed link an hour long made with their own token; this page and the review sign links through the server. The bucket takes audio only once sql/audio-exercise-bucket.sql has run; before that the upload is refused and the sheet says so.</p>
         <h2 className="aic-h2">The okayed idea</h2>
         <p className="aic-p">At the top of the sheet the student sees their ideas marked Top idea or Okay on the ideas sheet, read under the rules from their own ideas sheet and review row once on load, as chips that fill the story line when tapped. A student with no okayed idea sees no chips and types the story line.</p>
       </>)}
@@ -177,7 +204,7 @@ export default function AudioControl({ config, worksheetKey, roster }) {
       </select>
       {who && sheets ? (sheet ? (<>
         <p className="aic-p">{sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) + "." : "Started, not submitted."} {Object.keys(sheet.answers || {}).length} fields on the server.</p>
-        {ideas ? <IdeasAnswers answers={sheet.answers} review={sheet.review} /> : <ResearchAnswers answers={sheet.answers} />}
+        {ideas ? <IdeasAnswers answers={sheet.answers} review={sheet.review} /> : <ResearchAnswers answers={sheet.answers} urls={urls} />}
       </>) : <p className="aic-p">No sheet opened yet.</p>) : null}
     </Shell>
   );
@@ -189,7 +216,7 @@ const ideaFieldSay = (f) => {
   const [part, slot] = f.split(":");
   return " idea " + (I.SLOTS.indexOf(slot) + 1) + ", " + ({ idea: "the idea, a line", why: "why someone would want to hear the story, lines", plan: "what this story takes, lines" })[part];
 };
-const researchFieldSay = (f) => ({ story: " the story, a line", treatment: " the paragraph treatment", includes: " what the story includes, lines", article: " articles, lines", media: " other media, lines", person: " people to interview, lines", place: " places to capture audio, lines", example: " a good audio story found, lines" })[f] || "";
+const researchFieldSay = (f) => ({ audio: " the 60-second audio story, JSON { path, seconds, name }", story: " the story, a line", treatment: " the paragraph treatment", includes: " what the story includes, lines", article: " articles, lines", media: " other media, lines", person: " people to interview, lines", place: " places to capture audio, lines", example: " a good audio story found, lines" })[f] || "";
 
 function Shell({ children }) {
   return <div className="aic"><style>{CSS}</style><div className="aic-in">{children}</div></div>;
@@ -215,6 +242,8 @@ const CSS = `
 .aic-chip{font-size:13px;font-weight:600;border-radius:999px;padding:3px 10px;border:1px solid ${L.strong};color:${T.secondary}}
 .aic-ok{border-color:${ST.ok};color:${ST.ok}}
 .aic-entry{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;background:${S.sunk}}
+.aic-clip{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.aic-clip audio{width:min(100%,480px)}
 .aic-idea{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;background:${S.card}}
 .aic-line{margin:0;font-size:15.5px;line-height:1.5;white-space:pre-wrap}
 .aic-k{display:block;font-size:13px;font-weight:600;color:${T.muted}}

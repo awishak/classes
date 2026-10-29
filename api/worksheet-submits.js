@@ -56,6 +56,21 @@ export default async function handler(req, res) {
     });
   }
 
+  // Signed links for files students put in the visual-story bucket, for the
+  // instructor's pages, which may be signed in by PIN alone. Only paths in
+  // the class's own folder.
+  // { groupKey, key, sign: [paths] } -> { ok, urls: { [path]: url } }
+  if (Array.isArray(body.sign)) {
+    if (!SLUG.test(groupKey)) return res.status(400).json({ ok: false, error: "A class is needed." });
+    const paths = body.sign.map(String).filter(p => p.startsWith(groupKey + "/") && !p.includes("..")).slice(0, 500);
+    if (!paths.length) return res.status(200).json({ ok: true, urls: {} });
+    const r = await fetch(SUPABASE_URL + "/storage/v1/object/sign/visual-story", { method: "POST", headers: { ...serviceHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ expiresIn: 3600, paths }) });
+    if (!r.ok) return res.status(502).json({ ok: false, error: "The links could not be signed." });
+    const urls = {};
+    for (const x of await r.json()) if (x && x.signedURL && !x.error) urls[x.path] = SUPABASE_URL + "/storage/v1" + x.signedURL;
+    return res.status(200).json({ ok: true, urls });
+  }
+
   // Problem reports students filed from a worksheet, newest first.
   // { groupKey, key, reports: true } -> { ok, reports: [{ viewer_id, message, details, created_at }] }
   if (body.reports) {

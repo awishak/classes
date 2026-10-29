@@ -1,5 +1,10 @@
-// Audio story research: COMM 3's second sheet, at
+// The audio exercise: COMM 3's second sheet, at
 // /comm3/worksheets/audio-research, due Tuesday, November 3, at 11:59 PM.
+// Built 2026-10-29 as Audio story research; later that day Andrew folded the
+// audio exercise into it: "i want to combine audio exercise and audio story
+// research and this second part is basically that assignment," and added
+// "a 60 second audio story to go with their idea" (audio.js). The address
+// kept its first name.
 //
 // Andrew, 2026-10-29: "We're not going to have class on Monday. The work
 // that they do on Monday is they have to do research." On the idea okayed
@@ -22,9 +27,10 @@ import { useCopy, Words } from "../visualstory/pre.jsx";
 import { supabaseStore } from "../worktopia/store.js";
 import { CSS, STATUS, when, blank, useSheet, handIn, handSay, Lines, Line, Para } from "./bits.jsx";
 import { AUDIO_IDEAS_KEY, SLOTS, marksOf, markOf, reviewFor, Mark } from "./ideas.jsx";
+import { audioOf, sendAudio, linkFor, FORMAT_SAY, MAX_SECONDS } from "./audio.js";
 
 export const AUDIO_RESEARCH_KEY = "audio-research";
-export const AUDIO_RESEARCH_TITLE = "Audio story research";
+export const AUDIO_RESEARCH_TITLE = "Audio exercise";
 export const researchHref = (classId) => "/" + classId + "/worksheets/" + AUDIO_RESEARCH_KEY;
 
 // The research, four things, each its own field.
@@ -34,7 +40,7 @@ export const RESEARCH = [
   { field: "person", ask: "One person you could interview" },
   { field: "place", ask: "Another place you could go to capture some audio" },
 ];
-export const FIELDS = ["story", "treatment", "includes", ...RESEARCH.map(r => r.field), "example"];
+export const FIELDS = ["story", "treatment", "includes", ...RESEARCH.map(r => r.field), "example", "audio"];
 export const REQUIRED = FIELDS;
 export const missingOf = (answers) => REQUIRED.filter(f => blank(answers, f));
 
@@ -51,7 +57,9 @@ export const DEFAULT_COPY = {
   ...Object.fromEntries(RESEARCH.map(r => ["ask." + r.field, r.ask])),
   exampleAsk: "A good audio story you found",
   exampleHint: "The name, and the link",
-  submit: "submit research",
+  audioAsk: "A 60-second audio story to go with your idea",
+  audioHint: FORMAT_SAY + ", up to " + MAX_SECONDS + " seconds",
+  submit: "submit",
   again: "submit again",
 };
 
@@ -141,6 +149,15 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
           </div>
         </section>
 
+        <section className="part" aria-label="Your audio story">
+          <div className="phead"><span className="n">Your audio story</span>{tick("audio")}</div>
+          <div className="field">
+            <Words k="audioAsk" copy={copy} editing={editing} className="ask" />
+            <Words k="audioHint" copy={copy} editing={editing} as="p" className="hint" />
+            <AudioBox value={answers.audio} readOnly={readOnly} classId={classId} viewerId={viewer?.id} onChange={v => set("audio", v)} />
+          </div>
+        </section>
+
         {!readOnly ? (
           <div className="foot">
             <div className="say" aria-live="polite">{say}</div>
@@ -151,6 +168,56 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+// The clip: pick a file, see the upload go, then play the clip back. The
+// length is read before anything goes up, and a file over the limit or in
+// another format is refused with the reason. Remove clears the field; a
+// new file goes up under a new name.
+export function AudioBox({ value, readOnly, classId, viewerId, onChange, url: givenUrl }) {
+  const clip = audioOf(value);
+  const [progress, setProgress] = useState(-1);   // -1 idle, 0..1 sending
+  const [why, setWhy] = useState("");
+  const [url, setUrl] = useState(givenUrl || "");
+  useEffect(() => {
+    if (givenUrl) { setUrl(givenUrl); return undefined; }
+    if (!clip?.path) { setUrl(""); return undefined; }
+    let alive = true;
+    linkFor(clip.path).then(u => { if (alive) setUrl(u); }).catch(() => {});
+    return () => { alive = false; };
+  }, [clip?.path, givenUrl]);
+  const pick = async (file) => {
+    if (!file) return;
+    setWhy(""); setProgress(0);
+    try {
+      const v = await sendAudio({ file, classId, viewerId, onProgress: setProgress });
+      onChange(v);
+    } catch (e) {
+      const m = String(e.message || "");
+      setWhy(/refused \(415\)/.test(m) ? "Audio files are not switched on for this sheet yet. Tell Dr. Ishak." : m);
+    }
+    setProgress(-1);
+  };
+  return (
+    <div className="audio">
+      {clip ? (
+        <div className="clip">
+          {url ? <audio controls preload="metadata" src={url} /> : null}
+          <span className="sub">{clip.name}{clip.seconds ? " · " + Math.round(clip.seconds) + " s" : ""}</span>
+          {readOnly ? null : <button type="button" className="btn small focusable" onClick={() => { onChange(""); setUrl(""); }}>Remove</button>}
+        </div>
+      ) : null}
+      {readOnly ? null : progress >= 0 ? (
+        <div className="bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: Math.round(progress * 100) + "%" }} /></div>
+      ) : (
+        <label className="btn primary pick focusable">
+          {clip ? "Send a different file" : "Send your audio file"}
+          <input type="file" accept=".m4a,.mp3,.wav,.aac,audio/*" onChange={e => { pick(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+        </label>
+      )}
+      {why ? <p className="hint bad">{why}</p> : null}
     </div>
   );
 }
