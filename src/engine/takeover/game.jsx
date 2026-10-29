@@ -208,7 +208,8 @@ export function weekLines({ plan, result, cast, sport, team, name, bench }) {
   lines.push({ who: "coach", text: options.map(o => E.tell(o.label, ctx) + ". " + E.tell(o.line, ctx)).join(" ") });
   const tag = E.TAGS[result.tag] ? result.tag : (options[0] || {}).tag || "same";
   E.CHARACTERS.forEach(c => lines.push({ who: cast[c.id], text: E.LINES[c.id][tag][result.moods[c.id]], mood: result.moods[c.id] }));
-  lines.push({ who: "", text: (result.won ? "Won " : "Lost ") + E.scoreOf(sport, result.won, name, plan.week) + " to the " + opp + ".", match: result.won ? "won" : "lost" });
+  // Andrew, 2026-10-29: "won 'over' a team, not 'to'."
+  lines.push({ who: "", text: (result.won ? "Won " + E.scoreOf(sport, true, name, plan.week) + " over the " : "Lost " + E.scoreOf(sport, false, name, plan.week) + " to the ") + opp + ".", match: result.won ? "won" : "lost" });
   lines.push({ who: "", text: "Culture " + (result.culture - result.dCulture) + " to " + result.culture + ". Skills " + (result.skills - result.dSkills) + " to " + result.skills + ". Success " + (result.success - result.dSuccess) + " to " + result.success + ". " + result.back + " capital back, " + result.capital + " now.", meter: true });
   return { lines, opp, ctx };
 }
