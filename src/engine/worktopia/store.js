@@ -109,9 +109,9 @@ export function readStore(rows, submittedAt) {
 }
 
 /** A visitor's file on the public page, through /api/worktopia-public, which holds the service key. */
-export function publicStore({ visitorId }) {
+export function publicStore({ visitorId, endpoint = "/api/worktopia-public" }) {
   const call = async (what, args) => {
-    const r = await fetch("/api/worktopia-public", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitor: visitorId, ...args }) });
+    const r = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ visitor: visitorId, ...args }) });
     const out = await r.json().catch(() => null);
     if (!r.ok || !out || !out.ok) throw new Error(what + ": " + (out?.error || "nothing came back"));
     return out;

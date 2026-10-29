@@ -36,6 +36,7 @@ import PlanPage from "./PlanPage.jsx";
 import ProgressPage from "./ProgressPage.jsx";
 import FeaturesPage from "./FeaturesPage.jsx";
 import WorktopiaPage from "./WorktopiaPage.jsx";
+import LockerRoomPage from "./LockerRoomPage.jsx";
 import RetreatPage from "./RetreatPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
@@ -227,6 +228,13 @@ export default function App() {
   // with a ? that explains. Nothing a visitor types is kept.
   if (path === "/worktopia" || path === "/worktopia/") {
     return <InstructorBar><WorktopiaPage /></InstructorBar>;
+  }
+
+  // Locker Room, open to the public: a season under a typed name, saved by
+  // visitor id through api/locker-room-public. Andrew, 2026-10-29: "give me
+  // the link to do a practice version (one that anyone can do)."
+  if (path === "/lockerroom" || path === "/lockerroom/") {
+    return <LockerRoomPage />;
   }
 
   // The long view of September 14 and 15: what was built, with its links.
