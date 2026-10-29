@@ -81,7 +81,7 @@ export async function reviewFor({ worksheetKey, classId, viewerId }) {
 export const COPY_ROW = "worksheet-audio-ideas-plan";
 export const DEFAULT_COPY = {
   title: AUDIO_IDEAS_TITLE,
-  credit: "COMM 3 · Friday, October 30, in class",
+  credit: "COMM 3. Friday, October 30, in class.",
   intro: "",
   anyAsk: "What will you have to do to make any audio story successful?",
   toolsAsk: "What do you think you should use to put together your audio story?",
@@ -90,7 +90,6 @@ export const DEFAULT_COPY = {
   otherHint: "Other",
   workAsk: "How do you want to work? Click all that you're okay with.",
   ideaAsk: "The idea",
-  ideaHint: "The story, in a line",
   whyAsk: "Why would someone want to hear this story?",
   planAsk: "What will you have to do to make this story (specifically this story) successful?",
   submit: "submit ideas",
@@ -170,7 +169,7 @@ export function IdeasSheet({ store, viewer, classId, readOnly = false, storage, 
             <Words k="strengthAsk" copy={copy} editing={editing} className="ask" />
             <Choices label={copy.say("strengthAsk")} options={STRENGTHS} value={answers.strength || ""} readOnly={readOnly} onChange={v => set("strength", v)} />
             {linesOf(answers.strength).includes("Other") || !blank(answers, "other")
-              ? <Line id="ai-other" label={copy.say("otherHint")} value={answers.other} readOnly={readOnly} placeholder={copy.say("otherHint")} onChange={v => set("other", v)} />
+              ? <Line id="ai-other" label={copy.say("otherHint")} value={answers.other} readOnly={readOnly} onChange={v => set("other", v)} />
               : null}
           </div>
           <div className="field">
@@ -190,7 +189,7 @@ export function IdeasSheet({ store, viewer, classId, readOnly = false, storage, 
                 </div>
                 <label className="field">
                   <Words k="ideaAsk" copy={copy} editing={editing} className="ask" />
-                  <Line id={"ai-idea-" + s} label={copy.say("ideaAsk") + ", idea " + (i + 1)} value={answers["idea:" + s]} readOnly={readOnly} placeholder={copy.say("ideaHint")} onChange={v => set("idea:" + s, v)} />
+                  <Line id={"ai-idea-" + s} label={copy.say("ideaAsk") + ", idea " + (i + 1)} value={answers["idea:" + s]} readOnly={readOnly} onChange={v => set("idea:" + s, v)} />
                 </label>
                 <div className="field">
                   <Words k="whyAsk" copy={copy} editing={editing} className="ask" />

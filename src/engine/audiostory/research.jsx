@@ -45,20 +45,24 @@ export const REQUIRED = FIELDS;
 export const missingOf = (answers) => REQUIRED.filter(f => blank(answers, f));
 
 export const COPY_ROW = "worksheet-audio-research-plan";
+// Andrew's words, 2026-10-29, by voice, for every line a student reads.
+// "Only give hints if I say you should give hints."
 export const DEFAULT_COPY = {
   title: AUDIO_RESEARCH_TITLE,
-  credit: "COMM 3 · Due Tuesday, November 3, at 11:59 PM",
-  intro: "",
+  credit: "COMM 3. Due Tuesday, November 3, at 11:59 PM.",
+  intro: "Please fill in the information below as a sort of pre-production for your audio story.",
   storyAsk: "Your story",
-  storyHint: "The idea that got okayed on Friday, in a line",
   treatmentAsk: "A paragraph treatment",
-  includesAsk: "What does the story actually include? We do this first, then this, then this. What would we talk about?", // voice-ok: his words
+  treatmentSay: "Share a preview of this story in 2 to 4 sentences.",
+  includesAsk: "What does the story actually include?",
+  includesSay: "Explain the parts of the story that are likely to be included within your allotted 5 minutes.",
   researchHead: "Research",
   ...Object.fromEntries(RESEARCH.map(r => ["ask." + r.field, r.ask])),
-  exampleAsk: "A good audio story you found",
-  exampleHint: "The name, and the link",
-  audioAsk: "A 60-second audio story to go with your idea",
-  audioHint: FORMAT_SAY + ", up to " + MAX_SECONDS + " seconds",
+  exampleHead: "A good audio story",
+  exampleSay: "I'd like you to share with me an audio story that you think is high quality. This could be a podcast, a news story, or something else. It's always good for us to consume high quality media because what we take in is often what we put out.",
+  audioHead: "Your audio story",
+  audioSay: "I'd like you to give me a practice idea or a preview of what this audio story might be like. You don't have to include sound effects, music, or interviews here, but give me 40 to 60 seconds of what your voice might sound like and what type of ideas you might be covering. Again, this is just a preview or practice and can be partial. You can take a particular part of your story and explain it here. It does not have to be your entire story. We're doing this as a practice exercise.",
+  audioHint: FORMAT_SAY + ". Up to " + MAX_SECONDS + " seconds.",
   submit: "submit",
   again: "submit again",
 };
@@ -111,7 +115,6 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
         </div>
 
         <section className="part" aria-label="Your story">
-          <div className="phead"><span className="n">Your story</span>{tick("story")}</div>
           {okayed.length && !readOnly ? (
             <div className="chips" aria-label="Your okayed ideas">
               {okayed.map(x => <button key={x.slot} type="button" className="chip focusable" onClick={() => set("story", x.idea)}><Mark id={x.mark} />&nbsp;{x.idea}</button>)}
@@ -119,15 +122,17 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
           ) : null}
           <label className="field">
             <Words k="storyAsk" copy={copy} editing={editing} className="ask" />
-            <Line id="ar-story" label={copy.say("storyAsk")} value={answers.story} readOnly={readOnly} placeholder={copy.say("storyHint")} onChange={v => set("story", v)} />
+            <Line id="ar-story" label={copy.say("storyAsk")} value={answers.story} readOnly={readOnly} onChange={v => set("story", v)} />
           </label>
           <label className="field">
             <Words k="treatmentAsk" copy={copy} editing={editing} className="ask" />
-            <Para id="ar-treatment" label={copy.say("treatmentAsk")} value={answers.treatment} readOnly={readOnly} rows={6} onChange={v => set("treatment", v)} />
+            <Words k="treatmentSay" copy={copy} editing={editing} as="p" className="hint" />
+            <Para id="ar-treatment" label={copy.say("treatmentAsk")} value={answers.treatment} readOnly={readOnly} rows={5} onChange={v => set("treatment", v)} />
           </label>
           <div className="field">
             <Words k="includesAsk" copy={copy} editing={editing} className="ask" />
-            <Lines id="ar-includes" label={copy.say("includesAsk")} value={answers.includes || ""} readOnly={readOnly} placeholder="First" onChange={v => set("includes", v)} />
+            <Words k="includesSay" copy={copy} editing={editing} as="p" className="hint" />
+            <Lines id="ar-includes" label={copy.say("includesAsk")} value={answers.includes || ""} readOnly={readOnly} onChange={v => set("includes", v)} />
           </div>
         </section>
 
@@ -142,18 +147,18 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
         </section>
 
         <section className="part" aria-label="A good audio story">
-          <div className="phead"><span className="n">A good audio story</span>{tick("example")}</div>
+          <div className="phead"><Words k="exampleHead" copy={copy} editing={editing} className="n" />{tick("example")}</div>
           <div className="field">
-            <Words k="exampleAsk" copy={copy} editing={editing} className="ask" />
-            <Lines id="ar-example" label={copy.say("exampleAsk")} value={answers.example || ""} readOnly={readOnly} placeholder={copy.say("exampleHint")} onChange={v => set("example", v)} />
+            <Words k="exampleSay" copy={copy} editing={editing} as="p" className="hint" />
+            <Lines id="ar-example" label={copy.say("exampleHead")} value={answers.example || ""} readOnly={readOnly} onChange={v => set("example", v)} />
           </div>
         </section>
 
         <section className="part" aria-label="Your audio story">
-          <div className="phead"><span className="n">Your audio story</span>{tick("audio")}</div>
+          <div className="phead"><Words k="audioHead" copy={copy} editing={editing} className="n" />{tick("audio")}</div>
           <div className="field">
-            <Words k="audioAsk" copy={copy} editing={editing} className="ask" />
-            <Words k="audioHint" copy={copy} editing={editing} as="p" className="hint" />
+            <Words k="audioSay" copy={copy} editing={editing} as="p" className="hint" />
+            <Words k="audioHint" copy={copy} editing={editing} as="p" className="sub" />
             <AudioBox value={answers.audio} readOnly={readOnly} classId={classId} viewerId={viewer?.id} onChange={v => set("audio", v)} />
           </div>
         </section>

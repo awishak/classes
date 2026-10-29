@@ -108,7 +108,7 @@ function ResearchAnswers({ answers, urls = {} }) {
     <div className="aic-entry">
       {clip ? (
         <div className="aic-clip">
-          <span className="aic-k">{R.DEFAULT_COPY.audioAsk}</span>
+          <span className="aic-k">{R.DEFAULT_COPY.audioHead}</span>
           {urls[clip.path] ? <audio controls preload="metadata" src={urls[clip.path]} /> : <span className="aic-muted">Signing the link.</span>}
           <span className="aic-muted">{clip.name}{clip.seconds ? " · " + Math.round(clip.seconds) + " s" : ""}</span>
         </div>
@@ -117,7 +117,7 @@ function ResearchAnswers({ answers, urls = {} }) {
       {line("treatmentAsk", a.treatment)}
       {line("includesAsk", linesOf(a.includes).join("\n"))}
       {R.RESEARCH.map(r => line("ask." + r.field, linesOf(a[r.field]).join("\n")))}
-      {line("exampleAsk", linesOf(a.example).join("\n"))}
+      {line("exampleHead", linesOf(a.example).join("\n"))}
       {R.missingOf(a).length ? <p className="aic-muted">{R.missingOf(a).length} boxes empty.</p> : null}
     </div>
   );

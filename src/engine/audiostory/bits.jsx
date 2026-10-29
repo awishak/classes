@@ -85,7 +85,9 @@ export function handSay(handing, left) {
 // One box's lines: the chips already said, and a row to say the next one.
 // Enter or the + adds; × removes; tapping a chip's words brings them back
 // into the row to edit, the chip gone until Enter puts it back.
-export function Lines({ id, label, value, readOnly, onChange, placeholder = "" }) {
+// Nothing is written inside a box. Andrew, 2026-10-29: "Don't put things in
+// the boxes unless I say so."
+export function Lines({ id, label, value, readOnly, onChange }) {
   const [draft, setDraft] = useState("");
   const lines = linesOf(value);
   const write = (next) => onChange(next.join("\n"));
@@ -116,7 +118,7 @@ export function Lines({ id, label, value, readOnly, onChange, placeholder = "" }
       ) : null}
       {readOnly ? null : (
         <div className="row">
-          <input className="focusable" id={id} value={draft} maxLength={1000} aria-label={label} placeholder={lines.length ? "Add another" : placeholder}
+          <input className="focusable" id={id} value={draft} maxLength={1000} aria-label={label}
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
             onBlur={() => { if (draft.trim()) add(); }} />
@@ -146,10 +148,10 @@ export function Choices({ label, options, value, readOnly, onChange }) {
 }
 
 /** One line of text, saved as typed. */
-export function Line({ id, label, value, readOnly, onChange, placeholder = "", max = 300 }) {
+export function Line({ id, label, value, readOnly, onChange, max = 300 }) {
   return (
     <div className="row">
-      <input className="focusable" id={id} value={value || ""} readOnly={readOnly} maxLength={max} aria-label={label} placeholder={placeholder} onChange={e => onChange(e.target.value)} />
+      <input className="focusable" id={id} value={value || ""} readOnly={readOnly} maxLength={max} aria-label={label} onChange={e => onChange(e.target.value)} />
     </div>
   );
 }
@@ -175,17 +177,17 @@ export const CSS = `
 .as .head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:24px 28px 0;flex-wrap:wrap}
 .as .title{display:grid;gap:6px;width:100%}
 .as .name{font-size:26px;font-weight:600;line-height:1.2;margin:0;letter-spacing:-.01em}
-.as .credit{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.as .credit{font-size:17px;color:var(--secondary)}
 .as .intro{margin:0;font-size:17px;line-height:1.5;color:var(--ink);padding-top:6px;max-width:72ch;white-space:pre-line}
 .as .intro:empty{display:none}
 .as .editbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:6px}
 .as .part{display:grid;gap:14px;padding:20px 28px 24px;border-top:1px solid var(--line-soft)}
 .as .phead{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
-.as .phead .n{font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);overflow-wrap:anywhere}
-.as .sub{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.as .phead .n{font-size:23px;font-weight:600;line-height:1.2;color:var(--ink);overflow-wrap:anywhere}
+.as .sub{font-size:15px;color:var(--secondary)}
 .as .field{display:grid;gap:8px}
 .as .ask{font-size:20px;font-weight:500;line-height:1.3;color:var(--ink)}
-.as .hint{margin:0;font-size:15px;color:var(--secondary);line-height:1.4}
+.as .hint{margin:0;font-size:17px;color:var(--secondary);line-height:1.5;max-width:72ch;white-space:pre-line}
 .as .row{display:flex;gap:8px;align-items:center}
 .as .row input{font-family:var(--font);font-size:17px;min-height:48px;padding:0 14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--card);color:var(--ink);outline:none;min-width:0;flex:1;max-width:640px}
 .as .row input::placeholder{color:var(--muted)}
@@ -201,6 +203,7 @@ export const CSS = `
 .as .box h2{margin:0;font-size:20px;font-weight:500}
 .as .box .bh .sub{color:var(--ok)}
 .as .box .ask{font-size:17px}
+.as .box .sub{font-size:14px}
 .as .box .row input{max-width:none;background:var(--card)}
 .as .box .para{max-width:none;background:var(--card)}
 .as .lines{display:grid;gap:10px}
@@ -227,7 +230,7 @@ export const CSS = `
 .as .foot .say{font-size:17px;color:var(--secondary);flex:1;min-width:200px}
 .as .foot .say b{color:var(--ink);font-weight:600}
 .as .bad{color:var(--bad)}
-.as .status{font-family:var(--mono);font-size:13px;color:var(--muted);min-height:1.4em}
+.as .status{font-size:14px;color:var(--secondary);min-height:1.4em}
 .as .status.bad{color:var(--bad)}
 .as .btn{font-family:var(--font);font-size:15px;font-weight:600;min-height:44px;padding:0 20px;border-radius:10px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);cursor:pointer}
 .as .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
