@@ -6159,7 +6159,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
         let state = E.startState(name);
         const answers = { [E.F.sport]: sport.id, [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(concepts), [E.F.cast]: E.packCast(cast) };
         sim.weeks.forEach(({ week, sit, result, lines }, i) => {
-          if (!sit.options.some(o => o.cost <= state.capital)) say(name + " week " + (i + 1) + ": nothing affordable at " + state.capital);
+          if (!sit.options.some(o => E.costOf(o, week.week) <= state.capital)) say(name + " week " + (i + 1) + ": nothing affordable at " + state.capital);
           if (result.capital < 0 || result.culture < 0 || result.culture > 100 || result.skills < 0 || result.skills > 100 || result.success < 0 || result.success > 100 || [result.dCulture, result.dSkills, result.back].some(Number.isNaN)) say(name + " week " + (i + 1) + ": " + JSON.stringify(result));
           if (result.back < 0 || result.back > 5 || (result.back * 2) % 1) say(name + " week " + (i + 1) + ": " + result.back + " coins back");
           if (lines.length !== 2 + E.CHARACTERS.length + 2 || lines.some(l => !l.text || /\{/.test(l.text))) say(name + " week " + (i + 1) + ": the chat is short or has a blank: " + lines.map(l => l.text).join(" | "));
@@ -6188,7 +6188,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (E.unpackResult("not json") || E.unpackResult('{"w":"a"}')) say("a bad result row reads as a result");
   if (E.replay({ "result:a": "junk" }, "Ann").results.length) say("a junk week replays");
   if (!G.missingOf({}).includes("a sport") || !G.missingOf({}).includes("week 1")) say("an empty file is not missing a sport and week 1");
-  if (Math.abs(E.winChance(50, 50) - 0.5) > 0.001 || Math.abs(E.winChance(0, 0) - 0.08) > 0.001 || Math.abs(E.winChance(100, 100) - 0.92) > 0.001) say("the win chance is off: " + E.winChance(50, 50) + ", " + E.winChance(100, 100));
+  if (Math.abs(E.winChance(50, 50) - 0.5) > 0.001 || Math.abs(E.winChance(0, 0) - 0.05) > 0.001 || Math.abs(E.winChance(100, 100) - 0.95) > 0.001) say("the win chance is off: " + E.winChance(50, 50) + ", " + E.winChance(100, 100));
   if (E.gradeOf(80) !== "A" || E.gradeOf(34) !== "F") say("the grades are off");
   if (E.coins(3.5) !== "●●●◐" || E.coins(0) !== "") say("coins draw wrong: " + E.coins(3.5));
   // Pixels, without a window.
@@ -6205,6 +6205,23 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (twoEarly) say("week 1 took two choices");
   const two = E.resolve({ name: "Ann Example", week: "c", state: E.startState("Ann Example"), situationId: "press", optionIds: ["honest", "own"] });
   if (two.cost !== 3 || two.options.length !== 2 || two.tag !== "care" || JSON.stringify(E.unpackResult(E.packResult(two))) !== JSON.stringify(two)) say("two choices in week 3 do not add up or round-trip: " + E.packResult(two));
+  // Extras: once a season, from week 3, never alone, never in week 1.
+  if (new Set(E.EXTRAS.map(o => o.id)).size !== E.EXTRAS.length || E.EXTRAS.some(o => !o.id.startsWith("x-") || !E.TAGS[o.tag] || o.cost < 1 || o.cost > 5)) say("the extras bank is off");
+  if (E.SITUATIONS.some(sit => sit.options.some(o => E.extraOf(o.id)))) say("a week's option shares an id with an extra");
+  const withExtra = E.resolve({ name: "Ann Example", week: "c", state: E.startState("Ann Example"), situationId: "press", optionIds: ["nocomment", "x-gym"] });
+  if (withExtra.cost !== 1 || E.boughtOf([withExtra]).join() !== "x-gym") say("an extra in week 3 does not buy: " + E.packResult(withExtra));
+  const refused = (args) => { try { E.resolve(args); return false; } catch { return true; } };
+  if (!refused({ name: "Ann Example", week: "a", state: E.startState("Ann Example"), situationId: "opener", optionIds: ["x-gym"] })) say("week 1 took an extra");
+  if (!refused({ name: "Ann Example", week: "c", state: E.startState("Ann Example"), situationId: "press", optionIds: ["x-gym"] })) say("a week went by on extras alone");
+  if (!refused({ name: "Ann Example", week: "d", state: E.startState("Ann Example"), situationId: "cohesion", optionIds: ["same", "x-gym"], bought: ["x-gym"] })) say("an extra was bought twice");
+  // The purse: capped, and dearer from week 4.
+  const rich = E.resolve({ name: "Ann Example", week: "c", state: { ...E.startState("Ann Example"), capital: 8 }, situationId: "press", optionIds: ["nocomment"] });
+  if (rich.capital > E.CAP) say("the purse went over the cap: " + rich.capital);
+  if (E.costOf(E.optionOf(E.situationOf("cohesion"), "dinner"), "d") !== 2 || E.costOf(E.optionOf(E.situationOf("cohesion"), "dinner"), "b") !== 1 || E.costOf(E.optionOf(E.situationOf("cohesion"), "same"), "d") !== 0 || E.costOf(E.extraOf("x-gym"), "d") !== 1) say("the markup is off");
+  // Success follows the numbers: a run of wins at 60/60 climbs, a run of losses at 40/40 falls, and neither runs away.
+  let su = 50; for (let i = 0; i < 7; i++) su = E.successAfter(su, 60, 60, true);
+  let sd = 50; for (let i = 0; i < 7; i++) sd = E.successAfter(sd, 40, 40, false);
+  if (su <= 60 || su > 80 || sd >= 40 || sd < 20) say("success does not follow the numbers: " + su + " after wins, " + sd + " after losses");
   if (tk && (!listedFor(tk, "comm118") || listedFor(tk, "comm3"))) say("takeover is not COMM 118's, or is COMM 3's");
   if (tk && (!openTo(tk, "comm999", {}) || openTo(tk, "comm118", {}))) say("takeover is not COMM 999's to try, or is already open to COMM 118");
   cases.push(["Takeover, loading", <G.TakeoverGame store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" topicsStore={{ load: async () => ({ answers: {} }) }} />, "Loading"]);

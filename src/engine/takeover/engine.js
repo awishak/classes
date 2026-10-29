@@ -49,6 +49,14 @@ export const POLL_WEEKS = ["b", "d", "f"];
 // week 3 on, give them the instruction that they are allowed to do more
 // than one thing ... they can choose as many as they want."
 export const MULTI_FROM = 3;
+// Coins pile up on a coach who buys nothing. Andrew: "i have too much
+// capital and not enough to spend it on." So the purse holds CAP at most,
+// and from MARKUP_FROM on every week option that costs anything costs one
+// more.
+export const CAP = 8;
+export const MARKUP_FROM = 4;
+/** What an option costs in a given week: its price, plus one from MARKUP_FROM on if it is the week's own and not free. */
+export const costOf = (option, weekLetter) => option.cost + (option.cost > 0 && !String(option.id).startsWith("x-") && LETTERS.indexOf(weekLetter) + 1 >= MARKUP_FROM ? 1 : 0);
 // What a player's reaction gives back, in coins. Andrew's rule.
 export const RETURN = { up: 1, flat: 0.5, down: 0 };
 
@@ -405,6 +413,28 @@ export const situationOf = (id) => SITUATIONS.find(s => s.id === id) || null;
 export const situationFor = (conceptId) => SITUATIONS.find(s => s.concept === conceptId) || null;
 export const optionOf = (situation, id) => (situation ? situation.options.find(o => o.id === id) : null) || null;
 
+// ─── the standing purchases ───
+//
+// Andrew, 2026-10-29: "i have too much capital and not enough to spend it
+// on." From MULTI_FROM on, these sit under the week's options, each buyable
+// once a season, priced 1 to 5. Claude's draft.
+
+export const EXTRAS = [
+  opt("x-film", "Film room", "A projector and a couch in the locker room.", 2, 1, 4, "skills", ["star", "veteran"], [], "Film on demand. The players who watch most gain most."),
+  opt("x-gym", "Open gym Sundays", "The gym is open Sunday afternoons. Nobody has to come.", 1, 1, 2, "skills", ["rookie"], ["veteran"], "Reps for whoever wants them. The veteran sees a sixth day."),
+  opt("x-strength", "Strength coach", "A strength coach three mornings a week.", 3, 0, 5, "skills", ["star"], ["quiet"], "Skills up fast. The quiet one is already running on empty."),
+  opt("x-council", "Captains' council", "Two captains, a weekly meeting, a real say.", 2, 3, 1, "care", ["veteran", "star"], [], "Shared power, on purpose. The leaders are in the room."),
+  opt("x-psych", "Sports psychologist", "A sports psychologist, one session a week, for anyone.", 3, 4, 2, "care", ["quiet", "rookie"], [], "Mental health communication, which four sheets asked for. Costs what it costs."),
+  opt("x-uniforms", "New uniforms", "New uniforms with the names on the back.", 2, 3, 0, "culture", ["rookie", "transfer", "star"], [], "Belonging you can wear. The new players feel it most."),
+  opt("x-assistant", "Assistant coach", "An assistant who runs the second group so nobody waits.", 4, 2, 5, "skills", ["rookie", "transfer"], [], "More coaching per player. The expensive thing that helps everyone a little."),
+  opt("x-trip", "Team trip", "A weekend away, no practice, everyone.", 5, 8, -1, "culture", ALL, [], "The dearest thing on the list, and the one everyone is up for."),
+];
+export const extraOf = (id) => EXTRAS.find(o => o.id === id) || null;
+/** Any option by id: the week's, or a standing purchase. */
+export const anyOptionOf = (situation, id) => optionOf(situation, id) || extraOf(id);
+/** The extras already bought, from the weeks on file. */
+export const boughtOf = (results) => (results || []).flatMap(r => (r.options || [])).filter(id => extraOf(id));
+
 /** The words of a situation or an option, with the names in. */
 export function tell(text, { cast, sport, team, opp, bench, who }) {
   const name = (who && cast[who]) || "a player";
@@ -550,9 +580,13 @@ export function startState(name) {
 export const start = startState;
 
 /** The chance of winning, from the two numbers and the action, as a fraction. */
-export const winChance = (culture, skills, win = 0) => Math.max(0.05, Math.min(0.95, 0.08 + 0.84 * ((culture + skills) / 200) + 0.05 * win));
-// What a win and a loss do to success.
-export const WIN_SUCCESS = 8, LOSS_SUCCESS = -6;
+export const winChance = (culture, skills, win = 0) => Math.max(0.05, Math.min(0.95, 0.05 + 0.9 * ((culture + skills) / 200) + 0.05 * win));
+// Success follows the two numbers and moves with the result. Andrew,
+// 2026-10-29: "success keeps going down. i think we need to mess with the
+// formula." Each week success goes halfway to the average of culture and
+// skills, then a win adds WIN_SUCCESS and a loss takes LOSS_SUCCESS.
+export const WIN_SUCCESS = 6, LOSS_SUCCESS = 3;
+export const successAfter = (success, culture, skills, won) => clamp((success + (culture + skills) / 2) / 2 + (won ? WIN_SUCCESS : -LOSS_SUCCESS));
 
 // A swing of -2 to +2 on culture, most weeks near zero: a week of real
 // life. Skills swing one either way one week in two.
@@ -564,14 +598,17 @@ const nudgeOf = (r) => r < 0.25 ? -1 : r > 0.75 ? 1 : 0;
  * number of them. state is before; the answer carries the state after and
  * everything the screen shows. Pure.
  */
-export function resolve({ name, week, state, situationId, optionIds }) {
+export function resolve({ name, week, state, situationId, optionIds, bought = [] }) {
   const situation = situationOf(situationId);
   const ids = Array.from(new Set((Array.isArray(optionIds) ? optionIds : [optionIds]).filter(Boolean)));
-  const options = ids.map(id => optionOf(situation, id));
+  const options = ids.map(id => situation ? anyOptionOf(situation, id) : null);
   if (!situation || !ids.length || options.some(o => !o)) throw new Error("Takeover: no such situation or option: " + situationId + ", " + ids.join(","));
   const n = LETTERS.indexOf(week) + 1;
   if (options.length > 1 && n < MULTI_FROM) throw new Error("Takeover: week " + n + " takes one choice");
-  const cost = options.reduce((t, o) => t + o.cost, 0);
+  if (n < MULTI_FROM && ids.some(id => extraOf(id))) throw new Error("Takeover: week " + n + " has no extras");
+  if (ids.some(id => extraOf(id) && bought.includes(id))) throw new Error("Takeover: an extra was bought twice");
+  if (!ids.some(id => optionOf(situation, id))) throw new Error("Takeover: the week needs an answer, not only extras");
+  const cost = options.reduce((t, o) => t + costOf(o, week), 0);
   if (cost > state.capital) throw new Error("Takeover: " + ids.join("+") + " costs " + cost + " and the coach has " + state.capital);
   // The chat answers the dearest thing done this week.
   const tag = [...options].sort((x, y) => y.cost - x.cost)[0].tag;
@@ -593,8 +630,8 @@ export function resolve({ name, week, state, situationId, optionIds }) {
   const win = Math.max(-2, Math.min(2, options.reduce((t, o) => t + o.win, 0)));
   const p = winChance(culture, skills, win);
   const won = roll(name, "match", week, key) < p;
-  const success = clamp(state.success + (won ? WIN_SUCCESS : LOSS_SUCCESS));
-  const capital = Math.round((state.capital - cost + back) * 2) / 2;
+  const success = successAfter(state.success, culture, skills, won);
+  const capital = Math.min(CAP, Math.round((state.capital - cost + back) * 2) / 2);
   return {
     week, situation: situation.id, options: ids, option: ids[0], tag, cost, swing, nudge,
     culture, skills, success, dCulture: culture - state.culture, dSkills: skills - state.skills, dSuccess: success - state.success,
@@ -670,7 +707,7 @@ export const DEFAULT_COPY = {
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",
-  how: "You are taking over this team.\n\nTwo numbers are yours to raise. Culture is how the team treats each other. Skills and strategy is how well they play. Both run from 0 to 100, and both start wherever the last coach left them.\n\nThose two numbers together set your chance of winning each week. Winning raises the third number, Success.\n\nYou have capital: five coins to start. Every action costs some, from nothing up to four or five later in the season. After each week your five players react. A plus gives you a coin back. An equals gives you half a coin. A minus gives you nothing.\n\nFrom week 3 on you can do more than one thing in a week, as many as you can pay for.",
+  how: "You are taking over this team.\n\nTwo numbers are yours to raise. Culture is how the team treats each other. Skills and strategy is how well they play. Both run from 0 to 100, and both start wherever the last coach left them.\n\nThose two numbers together set your chance of winning each week. Winning raises the third number, Success.\n\nYou have capital: five coins to start. Every action costs some, from nothing up to four or five later in the season. After each week your five players react. A plus gives you a coin back. An equals gives you half a coin. A minus gives you nothing.\n\nFrom week 3 on you can do more than one thing in a week, as many as you can pay for, and there are standing purchases, each once a season. From week 4 on, prices go up by one. You can hold eight coins at most, so spend them.\n\nSuccess follows culture and skills, halfway each week, and moves with every result: a win adds, a loss takes a little.",
   howGo: "Start the season",
   capital: "Capital",
   culture: "Culture",
@@ -681,6 +718,8 @@ export const DEFAULT_COPY = {
   multiTitle: "New this week",
   multi: "Now you can make more than one choice. Choose as many as you want. Each one costs its coins.",
   doIt: "Do it",
+  also: "Also this week, once a season",
+  wrap: "Final whistle",
   total: "Total",
   chooseNote: "Costs are in coins. A plus from a player gives one back, an equals gives half, a minus gives nothing.",
   cannot: "Not enough capital.",
@@ -699,9 +738,9 @@ export const DEFAULT_COPY = {
   next: "Next week",
   finals: "The final week.",
   seasonOver: "Season over.",
-  "final.a": "You spent six weeks of capital. What did you spend most of it on, and what would you spend differently in a second season?",
-  "final.b": "Pick one thing a player said in the chat this season. Were they right?",
-  "final.c": "What did this season show you about taking over a team that the reading did not?",
+  "final.a": "Which week did you spend the most capital, and what did it buy you?",
+  "final.b": "Which player was hardest to coach, and what would you do differently with them?",
+  "final.c": "Lisa Davis asks you for a season-ending quote. What do you tell her?",
   submit: "Hand in the season",
   submitted: "Handed in",
   recall: "Take it back",

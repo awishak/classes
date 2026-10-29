@@ -37,15 +37,16 @@ export function simulate({ name, concepts, topicsAnswers, choices, cast, sport, 
   for (let i = 0; i < E.WEEKS; i++) {
     const week = plan[i];
     const sit = E.situationOf(week.situation);
-    const can = sit.options.filter(o => o.cost <= state.capital);
+    const can = sit.options.filter(o => E.costOf(o, week.week) <= state.capital);
     const askedRaw = [].concat((choices || [])[i] || []).filter(Boolean);
-    const asked = askedRaw[0] === "all" && week.multi ? sit.options.map(o => o.id) : askedRaw;
+    const asked = askedRaw[0] === "all" && week.multi ? [...sit.options.map(o => o.id), ...E.EXTRAS.map(o => o.id)] : askedRaw;
     const wanted = asked.length ? asked : [can[0].id];
     // What was asked for, trimmed to what the coach can pay for this week.
     let left = state.capital;
-    const taken = wanted.filter(id => { const o = E.optionOf(sit, id); if (!o || o.cost > left) return false; left -= o.cost; return true; });
-    const ids = taken.length ? taken : [can[0].id];
-    const result = E.resolve({ name, week: week.week, state, situationId: sit.id, optionIds: ids });
+    const bought = E.boughtOf(weeks.map(x => x.result));
+    const taken = wanted.filter(id => { const o = E.anyOptionOf(sit, id); if (!o || E.costOf(o, week.week) > left || (E.extraOf(id) && (bought.includes(id) || !week.multi))) return false; left -= E.costOf(o, week.week); return true; });
+    const ids = taken.some(id => E.optionOf(sit, id)) ? taken : [can[0].id, ...taken.filter(id => E.extraOf(id) && E.extraOf(id).cost <= left)];
+    const result = E.resolve({ name, week: week.week, state, situationId: sit.id, optionIds: ids, bought });
     const { lines, ctx } = weekLines({ plan: week, result, cast, sport, team, name, bench });
     weeks.push({ week, sit, result, lines, ctx, could: can.map(o => o.id), wanted });
     state = E.after(result);
@@ -109,14 +110,19 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
       <h2 className="tkc-h">The three numbers and the coins</h2>
       <ul className="tkc-list">
         <li>Culture and skills start between 35 and 65, each by the hash. Success starts halfway between culture and skills.</li>
-        <li>Capital starts at {E.START_CAPITAL}. Every option costs 0 to 4 coins. After the week each of the five players reacts: up gives {E.RETURN.up} coin back, flat gives {E.RETURN.flat}, down gives {E.RETURN.down}. So a week can return up to five coins or none.</li>
+        <li>Capital starts at {E.START_CAPITAL} and never holds more than {E.CAP}. Every option costs 0 to 5 coins, and from week {E.MARKUP_FROM} on a week's own option that costs anything costs one more. After the week each of the five players reacts: up gives {E.RETURN.up} coin back, flat gives {E.RETURN.flat}, down gives {E.RETURN.down}. So a week can return up to five coins or none.</li>
         <li>A player is up when the option lists that player under Up, down when the option lists that player under Down, and flat otherwise. One week in ten a player swings a step of their own either way.</li>
         <li>Culture after = culture + the option's culture number + a swing: −2 one week in ten, −1 two in ten, 0 four in ten, +1 two in ten, +2 one in ten. Skills after = skills + the option's skills number + a nudge of −1, 0 or +1 (one in four each way). Both held to 0 to 100.</li>
-        <li>Chance of winning the match = 0.08 + 0.84 × (culture + skills) / 200 + 0.05 × the option's win number, held between 5% and 95%. At 50 and 50 that is 50%; at 65 and 65, 63%; at 35 and 35, 37%.</li>
-        <li>A win moves success +{E.WIN_SUCCESS}, a loss {E.LOSS_SUCCESS}. Grade at the end, on success: A from 80, B from 65, C from 50, D from 35, else F.</li>
+        <li>Chance of winning the match = 0.05 + 0.9 × (culture + skills) / 200 + 0.05 × the options' win numbers, held between 5% and 95%. At 50 and 50 that is 50%; at 65 and 65, 63.5%; at 35 and 35, 36.5%.</li>
+        <li>Success each week goes halfway from where it was to the average of culture and skills, then a win adds {E.WIN_SUCCESS} and a loss takes {E.LOSS_SUCCESS}. So success follows the two numbers up, and a losing week costs half what a winning week gives. Grade at the end, on success: A from 80, B from 65, C from 50, D from 35, else F.</li>
+        <li>From week {E.MULTI_FROM} on, the standing purchases below sit under the week's options, each buyable once a season. A week still needs one of its own options chosen.</li>
       </ul>
       <table className="tkc-table"><thead><tr><th>Kind of action</th><th>What it is</th></tr></thead><tbody>
         {Object.entries(E.TAGS).map(([id, t]) => <tr key={id}><td>{t.label}</td><td>{t.line}</td></tr>)}
+      </tbody></table>
+
+      <table className="tkc-table"><thead><tr><th>Standing purchase</th><th>Cost</th><th>Culture</th><th>Skills</th><th>Win</th><th>Kind</th><th>Up</th><th>Down</th><th>Why</th></tr></thead><tbody>
+        {E.EXTRAS.map(o => <tr key={o.id}><td><b>{o.label}</b><br />{o.line}</td><td className="tkc-n">{o.cost}</td><td className="tkc-n">{o.culture}</td><td className="tkc-n">{o.skills}</td><td className="tkc-n">{o.win}</td><td>{E.TAGS[o.tag].label}</td><td>{who(o.likes)}</td><td>{who(o.dislikes)}</td><td>{o.note}</td></tr>)}
       </tbody></table>
 
       <h2 className="tkc-h">The five parts</h2>
@@ -176,7 +182,7 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
                 <td>{week.n}{week.last ? " (final)" : ""}</td>
                 <td>{week.label}</td>
                 <td>{lines[0].text}</td>
-                <td>{result.options.map(id => E.tell(E.optionOf(sit, id).label, ctx)).join(" + ")}{wanted.join(",") !== result.options.join(",") && wanted[0] !== "all" ? " (asked for " + wanted.map(id => (E.optionOf(sit, id) || { label: id }).label).join(" + ") + ")" : ""}</td>
+                <td>{result.options.map(id => E.tell(E.anyOptionOf(sit, id).label, ctx)).join(" + ")}{wanted.join(",") !== result.options.join(",") && wanted[0] !== "all" ? " (asked for " + wanted.map(id => (E.anyOptionOf(sit, id) || { label: id }).label).join(" + ") + ")" : ""}</td>
                 <td>{could.map(id => E.optionOf(sit, id).label).join(", ")}</td>
                 <td className="tkc-n">{result.culture - result.dCulture} to {result.culture} (swing {result.swing})</td>
                 <td className="tkc-n">{result.skills - result.dSkills} to {result.skills} (nudge {result.nudge})</td>

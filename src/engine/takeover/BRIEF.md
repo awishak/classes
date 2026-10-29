@@ -120,8 +120,15 @@ f; `final` a to c.
    a bench player is hurt before the final road trip, and the dear option
    (4 coins) is to bring them anyway. Andrew's example.
    From week 3 on (`MULTI_FROM`), any number of options in a week, as many
-   as the coach can pay for. Every option's numbers add; the chat answers
-   the dearest one; every option's likes and dislikes add per player.
+   as the coach can pay for, plus the standing purchases (`EXTRAS`: film
+   room, open gym, strength coach, captains' council, sports psychologist,
+   new uniforms, assistant coach, team trip), each once a season. A week
+   still needs one of its own options. Every option's numbers add; the
+   chat answers the dearest one; every option's likes and dislikes add per
+   player. Andrew, on the third pass: "i have too much capital and not
+   enough to spend it on." So the purse holds eight at most (`CAP`), and
+   from week 4 (`MARKUP_FROM`) a week's own option that costs anything
+   costs one more.
 3. Every situation has one free option. Each option names who is up and who
    is down. The research the situation is built from, and whose sheet
    raised the question where the class did, is on the control page.
@@ -130,7 +137,14 @@ f; `final` a to c.
    who had a bad night (Claude's draft). The final week asks what makes for
    a good team culture (his: "give me some thoughts about what you think
    makes for a good team culture"). Polls on weeks 2, 4 and 6, from those
-   weeks' concepts.
+   weeks' concepts. The final week has no team chat ("I don't like the
+   group chat at the end"): the final whistle shows the result, the three
+   numbers with grades, and where each of the five ended up over the
+   season, in plain words. The season log on the end and done screens
+   shows each week's situation, the coach's choice, the result and the
+   answers, without the players' lines. The three ending questions are
+   about the capital, the hardest player, and a season-ending quote for
+   Lisa Davis ("the last question should be something else").
 5. The team is picked from six of thirty-six names that do not fit the
    place. Andrew: "the New York Cowboys, or the Kansas Marlins." The other
    names are the opponents, six different ones a season.
@@ -142,8 +156,12 @@ starts halfway between. Capital starts at 5. Culture after a week is
 culture plus the option's number plus a swing (−2 one week in ten, −1 two
 in ten, 0 four in ten, +1 two in ten, +2 one in ten); skills likewise with
 a nudge of −1, 0 or +1. Chance of winning = 0.08 + 0.84 × (culture +
-skills) / 200 + 0.05 × the option's win number, between 5% and 95%. A win
-moves success +8, a loss −6. Each of the five players reacts: up returns 1
+skills) / 200 + 0.05 × the options' win numbers, between 5% and 95%, with
+0.05 and 0.9 in place of the first pass's 0.08 and 0.84. Success each week
+goes halfway from where it was to the average of culture and skills, then
+a win adds 6 and a loss takes 3. Andrew: "success keeps going down. i
+think we need to mess with the formula." The first formula was a plain +8
+and −6, which went down on any losing run whatever the other numbers did. Each of the five players reacts: up returns 1
 coin, flat half, down none. A player is up or down when the option lists
 them, flat otherwise, and one week in ten swings a step of their own.
 
