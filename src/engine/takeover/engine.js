@@ -97,7 +97,9 @@ export const TEAM_NAMES = [
   "Chicago Coconuts", "Detroit Dolphins", "Albuquerque Admirals", "Oklahoma Oysters", "Pittsburgh Pelicans", "Milwaukee Mangoes",
   "Dallas Glaciers", "Atlanta Avalanche", "Portland Sahara", "Baltimore Bison", "Tucson Trawlers", "Honolulu Snowplows",
 ];
-export const teamChoicesFor = (name) => shuffled(TEAM_NAMES, name, "teams").slice(0, 6);
+// Three to choose from. Andrew, 2026-10-29: "give them like 3 team options,
+// randomize it out of like a grouping of like 30 different kinds of teams."
+export const teamChoicesFor = (name) => shuffled(TEAM_NAMES, name, "teams").slice(0, 3);
 export const teamNameFor = (name) => teamChoicesFor(name)[0];
 // Six different opponents a season, dealt once: a shuffle of the other
 // names, read by the week.
@@ -702,11 +704,16 @@ export const COPY_ROW = "worksheet-takeover-plan";
 export const DEFAULT_COPY = {
   title: TAKEOVER_TITLE,
   credit: "COMM 118 · Weekly Challenge 3 · Due Tuesday, November 3",
-  start: "You are the new head coach. The team is not yours yet.",
-  intro: "You've got seven weeks. Every week something happens and you decide what to do about it. Then the players react. And some of them are people you know.",
-  pickSport: "Pick your sport.",
-  pickTeam: "Pick your team.",
-  pickTeamLine: "None of these names make sense. Pick one anyway.",
+  // The first page, in Andrew's words, 2026-10-29: "Congratulations, you have
+  // been hired as the new head coach of the [team] ... in Aussie rules
+  // football, volleyball, or softball. You have to make some changes over the
+  // next 7 weeks. And it's important that you improve the culture as you've
+  // been hired to not only make the team better, but to also make the
+  // culture better. Ready to start?"
+  hired: "Congratulations. You have been hired as the new head coach of the",
+  hiredIn: "in",
+  hiredWhy: "You have to make some changes over the next 7 weeks. And it's important that you improve the culture, as you've been hired to not only make the team better, but to also make the culture better.",
+  ready: "Ready to start?",
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",

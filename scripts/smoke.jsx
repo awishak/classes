@@ -6146,7 +6146,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (JSON.stringify(E.deal("Ann Example", big.bench.concat(Object.values(big.cast)).sort()).cast) !== JSON.stringify(E.deal("Ann Example", Object.values(big.cast).concat(big.bench).sort()).cast)) say("the deal depends on the order the names come in");
   if (!E.parseCast(E.packCast(big.cast)) || E.parseCast(E.packCast(big.cast)).star !== big.cast.star) say("the cast does not round-trip");
   if (E.parseCast("star=x")) say("a cast missing parts reads as a cast");
-  if (E.teamChoicesFor("Ann Example").length !== 6 || new Set(E.teamChoicesFor("Ann Example")).size !== 6) say("the team choices are not six different names");
+  if (E.teamChoicesFor("Ann Example").length !== 3 || new Set(E.teamChoicesFor("Ann Example")).size !== 3) say("the team choices are not three different names");
   if (E.signFor("Ann Example", "a", "Kansas Marlins").includes("{")) say("a sign keeps its blank");
   // The season, for a few names, every option position and a mix.
   const names = ["Ann Example", "Marty McFly", "Neel Namburar", "Grayson Dangleis", "Zoë Ω"];

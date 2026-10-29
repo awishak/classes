@@ -423,6 +423,8 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const [handing, setHanding] = useState("");
   const [muted, setMuted] = useState(false);
   const [picked, setPicked] = useState([]);          // the options chosen so far this week, from MULTI_FROM on
+  const [pickSport, setPickSport] = useState("");    // the first page's choices, before the file has them
+  const [pickTeam, setPickTeam] = useState("");
   const [seenMulti, setSeenMulti] = useState(false); // the pop-up about more than one choice, shown once
   const [runThrough, setRunThrough] = useState(false); // the instructor's run-through: Next without the boxes
   const saver = useRef(null);
@@ -538,7 +540,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   };
   const resume = () => {
     sound.current.unlock(); sound.current.pick();
-    if (blank(answers[E.F.team])) { go("team"); return; }
+    if (blank(answers[E.F.team])) { go("title"); return; }
     if (!season.results.length) { go("meet"); return; }
     continueSeason();
   };
@@ -547,11 +549,15 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     saver.current.clear();
     setAnswers({}); setSubmitted(null); setCursor(0); setPhase(""); go("title");
   };
-  const begin = () => { sound.current.unlock(); sound.current.pick(); go("sport"); };
-  const chooseSport = (id) => { sound.current.pick(); set(E.F.sport, id, true); go("team"); };
-  const chooseTeam = (t) => {
-    sound.current.happy();
-    set(E.F.team, t);
+  // The first page: the team and the sport chosen in the sentence, then one
+  // press. Andrew, 2026-10-29: "they can choose the team and the sport that
+  // they want ... Ready to start?"
+  const begin = () => {
+    const pickSport2 = pickSport || (sport ? sport.id : ""), pickTeam2 = pickTeam || String(answers[E.F.team] || "");
+    if (!pickSport2 || !pickTeam2) return;
+    sound.current.unlock(); sound.current.happy();
+    set(E.F.sport, pickSport2);
+    set(E.F.team, pickTeam2);
     if (!concepts.length) set(E.F.concepts, packConcepts(E.conceptsFor(topics || {})));
     if (!E.parseCast(answers[E.F.cast])) set(E.F.cast, E.packCast(E.deal(name, classmates).cast));
     saver.current.flush();
@@ -632,51 +638,27 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
       </div>
     );
   } else if (screen === "title") {
+    const sportId = pickSport || (sport ? sport.id : "");
+    const teamPick = pickTeam || String(answers[E.F.team] || "");
     body = (
       <div className="screen center title">
         <h1 className="px"><Words k="title" copy={copy} /></h1>
-        <div className="coach"><Sprite name={name} photo={photo} scale={6} jersey={jersey} /><span className="px">Coach {name}</span></div>
-        <p className="say big"><Words k="start" copy={copy} /></p>
-        <p className="say"><Words k="intro" copy={copy} /></p>
+        <div className="coach"><Sprite name={name} photo={photo} scale={6} jersey={E.jerseyFor(teamPick || team)} /><span className="px">Coach {name}</span></div>
+        <p className="say big hire">
+          <Words k="hired" copy={copy} />{" "}
+          <span className="picks">{E.teamChoicesFor(name).map(t => <button key={t} type="button" className="btn px small" aria-pressed={teamPick === t} onClick={() => { sound.current.pick(); setPickTeam(t); }}>{t}</button>)}</span>{" "}
+          <Words k="hiredIn" copy={copy} />{" "}
+          <span className="picks">{E.SPORTS.map(sp => <button key={sp.id} type="button" className="btn px small" aria-pressed={sportId === sp.id} onClick={() => { sound.current.pick(); setPickSport(sp.id); }}>{sp.name}</button>)}</span>.
+        </p>
+        <p className="say"><Words k="hiredWhy" copy={copy} /></p>
         {topicsFailed ? <p className="say bad">Your concepts sheet could not be read. Reload the page and try again.</p>
-          : <button type="button" className="btn px primary blink" onClick={begin} disabled={!ready}>{ready ? "Press start" : "Loading"}</button>}
-      </div>
-    );
-  } else if (screen === "sport") {
-    body = (
-      <div className="screen center">
-        <Nav copy={copy} onBack={() => go("title")} />
-        <h2 className="px"><Words k="pickSport" copy={copy} /></h2>
-        <div className="sports">
-          {E.SPORTS.map(s => (
-            <button key={s.id} type="button" className="sport" onClick={() => chooseSport(s.id)} onMouseEnter={() => sound.current.blip()}>
-              <Field sport={s.id} />
-              <span className="px">{s.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  } else if (screen === "team") {
-    body = (
-      <div className="screen center">
-        <Nav copy={copy} onBack={() => go("sport")} />
-        <h2 className="px"><Words k="pickTeam" copy={copy} /></h2>
-        <p className="say"><Words k="pickTeamLine" copy={copy} /></p>
-        <div className="teams">
-          {E.teamChoicesFor(name).map(t => (
-            <button key={t} type="button" className="teambtn" onClick={() => chooseTeam(t)} onMouseEnter={() => sound.current.blip()}>
-              <Sprite name={name} photo={photo} scale={3} jersey={E.jerseyFor(t)} />
-              <span className="px">{t}</span>
-            </button>
-          ))}
-        </div>
+          : <button type="button" className="btn px primary blink" onClick={begin} disabled={!ready || !sportId || !teamPick}>{ready ? copy.say("ready") : "Loading"}</button>}
       </div>
     );
   } else if (screen === "meet" && sport) {
     body = (
       <div className="screen center">
-        <Nav copy={copy} onBack={() => go("team")} />
+        <Nav copy={copy} onBack={() => go("title")} />
         <h2 className="px">{team}</h2>
         <p className="say"><Words k="meet" copy={copy} /> <Words k="meetLine" copy={copy} /></p>
         <Field sport={sport.id} sign={E.signFor(name, "meet", team)} />
@@ -901,6 +883,8 @@ export const CSS = `
 .tk .dim{color:var(--dim)}
 .tk .say{margin:0;max-width:62ch}
 .tk .say.big{font-size:19px;font-weight:600}
+.tk .say.hire{line-height:2.1;max-width:70ch}
+.tk .picks{display:inline-flex;flex-wrap:wrap;gap:6px;vertical-align:middle;margin:0 2px}
 .tk .say.pre{white-space:pre-line;max-width:none}
 .tk .say.bad,.tk .status.bad{color:#fbbf24}
 .tk .how{background:var(--deep);border:3px solid var(--gold);padding:16px 18px;font-size:16px}
