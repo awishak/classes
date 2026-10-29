@@ -150,25 +150,36 @@ export function classFlowOf(config, data, now = Date.now()) {
 }
 const CLASS_FLOW_FILTERS = [["all", "All"], ["work", "Work"], ["messages", "Messages"], ["notes", "Notes"]];
 
+// What a student wrote, and that a piece came in late, is theirs and his,
+// not the room's. Andrew, 2026-10-29: "stop putting students' messages text
+// on the class flow page, or saying someone turned in work late. that is
+// private stuff." So the flow opens with those hidden, every time, and a
+// button shows them for as long as the page is open. His own notes to the
+// class and the release rows are not private.
+const isPrivate = (e) => !!e.who || e.tags.includes("messages");
 export function ClassFlow({ config, data, go }) {
   const [filter, setFilter] = useState("all");
   const [more, setMore] = useState(false);
+  const [shown, setShown] = useState(false);
   const all = classFlowOf(config, data).filter(e => filter === "all" || e.tags.includes(filter));
   const rows = more ? all : all.slice(0, 60);
   const sideOf = (e) => e.btn === "grade" ? <Io kind="go" href={config.path + "/grade?a=" + encodeURIComponent(e.aid)}>Grade</Io>
     : e.btn === "reply" && (e.to || e.who) ? <Io onClick={() => go("messages/" + encodeURIComponent(e.to || e.who))}>Reply</Io> : null;
+  const hidden = (e) => !shown && isPrivate(e);
+  const sayOf = (e) => hidden(e) && e.say[2] === " late" ? [e.say[0], e.say[1], ""] : e.say;
   return (
     <div className="pt-body" style={{ gap: 16 }}>
       <div className="pt-chips">
         {CLASS_FLOW_FILTERS.map(([id, say]) => <Chip key={id} on={filter === id} onClick={() => { setFilter(id); setMore(false); }}>{say}</Chip>)}
+        <Chip on={shown} onClick={() => setShown(v => !v)}>{shown ? "Hide private words" : "Show private words"}</Chip>
       </div>
       {rows.length ? (
         <Days rows={rows} render={e => (
           <div key={e.id} className={"pt-row " + e.tint}>
             <div className="pt-dcol">{e.who ? <Face config={config} data={data} name={e.who} /> : <DrFace config={config} />}</div>
             <div className="pt-main">
-              <p className="pt-title say">{e.say[0]}{e.say[1] ? <b>{e.say[1]}</b> : null}{e.say[2] || null}</p>
-              {e.text ? <p className="pt-text" style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{e.text}</p> : null}
+              <p className="pt-title say">{sayOf(e)[0]}{sayOf(e)[1] ? <b>{sayOf(e)[1]}</b> : null}{sayOf(e)[2] || null}</p>
+              {e.text && !hidden(e) ? <p className="pt-text" style={{ display: "-webkit-box", WebkitLineClamp: 4, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{e.text}</p> : null}
               <p className="pt-meta"><span>{whenWords(e.at)}</span></p>
             </div>
             {sideOf(e) ? <div className="pt-side">{sideOf(e)}</div> : null}
