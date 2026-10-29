@@ -7,8 +7,10 @@
 // on the assignment that links to it (worksheetSubmits.js reads by key, so
 // nothing there needs to know which repo a sheet came from).
 //
-// A local worksheet is { key, title, mount, open, classes?, review?, read? }.
-// review is the instructor's page for the whole class at ?review, and read,
+// A local worksheet is { key, title, mount, open, classes?, review?, read?,
+// board?, control? }. review is the instructor's page for the whole class at
+// ?review, board the room's screen at ?board (same gate), control the
+// instructor's how-it-works page at ?control, and read,
 // when a sheet has one, draws one student's file at ?s=<id> in place of the
 // read-only mount. mount(root, {
 // store, viewer, photo, classmates, readOnly, theme }) draws it and returns
@@ -35,6 +37,13 @@ import { VISUAL_STORY_KEY, VISUAL_STORY_TITLE, mountVisualStory } from "./visual
 import StoryReview from "./visualstory/storyreview.jsx";
 import { TEAM_TOPICS_KEY, TEAM_TOPICS_TITLE, mountTeamTopics } from "./teamtopics/sheet.jsx";
 import TopicsReview from "./teamtopics/review.jsx";
+import { TAKEOVER_KEY, TAKEOVER_TITLE, mountTakeover } from "./takeover/game.jsx";
+import TakeoverReview from "./takeover/review.jsx";
+import TakeoverControl from "./takeover/control.jsx";
+import { AUDIO_IDEAS_KEY, AUDIO_IDEAS_TITLE, mountAudioIdeas } from "./audiostory/ideas.jsx";
+import IdeasReview, { IdeasBoard } from "./audiostory/board.jsx";
+import { AUDIO_RESEARCH_KEY, AUDIO_RESEARCH_TITLE, mountAudioResearch } from "./audiostory/research.jsx";
+import AudioControl, { ResearchReview } from "./audiostory/control.jsx";
 
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
@@ -55,6 +64,17 @@ export const LOCAL_WORKSHEETS = [
   // 2026-10-22: "come to class ready to dicuss five of them with: a finding
   // they thought was interesting, an opnion they have, and a wondrer."
   { key: TEAM_TOPICS_KEY, title: TEAM_TOPICS_TITLE, mount: mountTeamTopics, review: TopicsReview, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
+  // Weekly Challenge 3, the culture game, built 2026-10-29. COMM 999 first;
+  // COMM 118 opens from the Worksheets page switch once Andrew has played a
+  // season. control is the instructor's page at ?control: how every roll
+  // works and what each student gets.
+  { key: TAKEOVER_KEY, title: TAKEOVER_TITLE, mount: mountTakeover, review: TakeoverReview, control: TakeoverControl, open: ["comm999"], classes: ["comm118", "comm999"] },
+  // COMM 3's audio story, 2026-10-29. Ideas on Friday, October 30, in class,
+  // marked from the review page and shown on the board (?board, no names)
+  // for the projector. Research on the okayed idea, due Tuesday, November 3.
+  // control is the instructor's page at ?control, how each sheet works.
+  { key: AUDIO_IDEAS_KEY, title: AUDIO_IDEAS_TITLE, mount: mountAudioIdeas, review: IdeasReview, board: IdeasBoard, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  { key: AUDIO_RESEARCH_KEY, title: AUDIO_RESEARCH_TITLE, mount: mountAudioResearch, review: ResearchReview, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
   { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },
 ];

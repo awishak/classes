@@ -39,6 +39,9 @@ import * as vsr from "../src/engine/visualstory/storyreview.jsx";
 import { PreSheet, missingOf, standing, FIELDS } from "../src/engine/visualstory/pre.jsx";
 import { TopicsSheet, missingOf as topicsMissing, FIELDS as TOPIC_FIELDS, SLOTS as TOPIC_SLOTS } from "../src/engine/teamtopics/sheet.jsx";
 import { topicsOf, byTopic } from "../src/engine/teamtopics/review.jsx";
+import { IdeasSheet, FIELDS as IDEA_FIELDS, REQUIRED as IDEA_REQUIRED, missingOf as ideasMissing, marksOf, statusFor, MARKS as IDEA_MARKS } from "../src/engine/audiostory/ideas.jsx";
+import { ideasOf } from "../src/engine/audiostory/board.jsx";
+import { ResearchSheet, FIELDS as RESEARCH_FIELDS, missingOf as researchMissing } from "../src/engine/audiostory/research.jsx";
 import VisualStoryPortal, { PortalBar, partOf, PARTS as PORTAL_PARTS } from "../src/engine/visualstory/portal.jsx";
 import { tally as reviewTally } from "../src/engine/visualstory/reviews.jsx";
 import { stageAt as storyStageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
@@ -6031,7 +6034,145 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
   if (tt && (!listedFor(tt, "comm118") || listedFor(tt, "comm3"))) say("team-topics is not COMM 118's, or is COMM 3's");
   if (tt && !openTo(tt, "comm118", {})) say("team-topics is not open to COMM 118");
 }
+// The audio story sheets, 2026-10-29: the field rule, what submit needs, the
+// marks in and out of a review row, and the registry.
+{
+  const say = (m) => { console.error("  FAIL  audio story: " + m); failedEarly++; };
+  if ([...IDEA_FIELDS, ...RESEARCH_FIELDS].some(f => !/^[a-z]+(:[a-z])?$/.test(f))) say("a field name breaks the table's rule");
+  if (IDEA_REQUIRED.includes("other")) say("the Other strength is required");
+  const full = Object.fromEntries(IDEA_FIELDS.map(f => [f, "x"]));
+  if (ideasMissing(full).length) say("a full ideas sheet reads as missing something");
+  if (ideasMissing({ ...full, "why:b": " " }).length !== 1) say("a blank why is not missing");
+  if (researchMissing(Object.fromEntries(RESEARCH_FIELDS.map(f => [f, "x"]))).length) say("a full research sheet reads as missing something");
+  if (IDEA_MARKS.map(m => m.id).join(",") !== "top,ok,close,no,ohno") say("the marks are not his five in his order");
+  const marks = marksOf({ status: "approved", note: JSON.stringify({ a: "top", c: "ohno", d: "ok", b: "bogus" }) });
+  if (marks.a !== "top" || marks.c !== "ohno" || marks.b || marks.d) say("marks do not read off the note, or a bad one got through");
+  if (marksOf({ note: "not json" }).a || Object.keys(marksOf(null)).length) say("a bad note is not no marks");
+  if (statusFor({}) !== "clear" || statusFor({ a: "ohno" }) !== "needs_work" || statusFor({ a: "ohno", b: "ok" }) !== "approved" || statusFor({ c: "top" }) !== "approved") say("a set of marks does not land on its status");
+  const ideas = ideasOf({ "idea:a": "Buses", "why:a": "one\ntwo", "idea:c": "Rain" });
+  if (ideas.length !== 3 || ideas[0].why.length !== 2 || ideas[1].idea !== "" || ideas[2].idea !== "Rain") say("a student's ideas do not read off the answers");
+  const { localWorksheet, listedFor, openTo } = await import("../src/engine/localWorksheets.js");
+  const ai = localWorksheet("audio-ideas"), ar = localWorksheet("audio-research");
+  if (!ai || !ai.review || !ai.board || !ai.control) say("audio-ideas is not a local worksheet with a review, a board and a control page");
+  if (!ar || !ar.review || !ar.control) say("audio-research is not a local worksheet with a review and a control page");
+  if (ai && (!listedFor(ai, "comm3") || listedFor(ai, "comm118"))) say("audio-ideas is not COMM 3's, or is COMM 118's");
+  if (ai && !openTo(ai, "comm3", {})) say("audio-ideas is not open to COMM 3");
+  if (ar && !openTo(ar, "comm3", {})) say("audio-research is not open to COMM 3");
+}
+cases.push(["Audio ideas, loading", <IdeasSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
+cases.push(["Audio research, loading", <ResearchSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
 cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" />, "Loading"]);
+
+// Takeover, 2026-10-29: the culture game. The engine is pure, so the whole
+// season runs here: every bank is complete, every concept a student can
+// type lands, every roll is the same twice, no week can leave the coach
+// without a spend, and a file round-trips through its packed rows.
+{
+  const say = (m) => { console.error("  FAIL  takeover: " + m); failedEarly++; };
+  const E = await import("../src/engine/takeover/engine.js");
+  const G = await import("../src/engine/takeover/game.jsx");
+  const { simulate } = await import("../src/engine/takeover/control.jsx");
+  const { tally } = await import("../src/engine/takeover/review.jsx");
+  const P = await import("../src/engine/takeover/pixel.js");
+  const FIELD = /^[a-z]+(:[a-z])?$/;
+  E.FIELDS.forEach(f => { if (!FIELD.test(f)) say("the field " + f + " would be refused by the database"); });
+  if (new Set(E.FIELDS).size !== E.FIELDS.length) say("two answers share a field name");
+  // The banks.
+  E.CONCEPTS.forEach(c => {
+    if (E.EVENTS.filter(e => e.concept === c.id).length < 2) say(c.id + " has fewer than two events");
+    if (!E.POLLS[c.id] || E.POLLS[c.id].length !== 2) say(c.id + " has no poll");
+    if (!E.CLASS_WONDERS[c.id]) say(c.id + " has no class wonder");
+    if (E.matchConcept(c.name) !== c.id) say("the chapter title " + JSON.stringify(c.name) + " does not land on " + c.id);
+  });
+  E.EVENTS.forEach(e => {
+    if (!E.conceptOf(e.concept)) say(e.id + " names no concept");
+    if (!E.characterOf(e.who)) say(e.id + " lands on nobody");
+    E.SPENDS.forEach(s => { if (typeof e.fit[s.id] !== "number") say(e.id + " has no fit for " + s.id); });
+    if (!/\{name\}/.test(e.text)) say(e.id + " never names its player");
+  });
+  if (new Set(E.EVENTS.map(e => e.id)).size !== E.EVENTS.length) say("an event id repeats");
+  E.CHARACTERS.forEach(c => E.SPENDS.forEach(s => ["up", "flat", "down"].forEach(m => { if (!E.LINES[c.id]?.[s.id]?.[m]) say(c.id + " has no " + m + " line for " + s.id); })));
+  // What students actually typed on the topics sheet.
+  const typed = { "Motivation": "motivation", "Goal Setting": "goals", "Team Chemistry": "cohesion", "Team Coordination": "coordination", "Teamwork and coaching: positive feedback ": "teamwork", "Coaching and complexity": "complexity", "Social Support": "support", "Clarity of Roles": "roles", "Time and time-outs": "time", "Lessons from sports teams for other teams": "lessons", "": null, "Something else entirely": null };
+  Object.entries(typed).forEach(([t, id]) => { if (E.matchConcept(t) !== id) say(JSON.stringify(t) + " landed on " + E.matchConcept(t) + ", not " + id); });
+  const five = E.conceptsFor({ "topic:a": "Power", "topic:b": "Power", "topic:c": "Nope" });
+  if (five.length !== 5 || five[0].id !== "power" || five[0].slot !== "a" || new Set(five.map(c => c.id)).size !== 5 || five[1].slot !== "") say("a short sheet does not fill to five different concepts: " + JSON.stringify(five));
+  if (E.conceptsFor({}).map(c => c.id).join() !== E.CLASS_TOP.slice(0, 5).join()) say("no sheet does not give the class's five");
+  // The deal.
+  const small = E.deal("Marty McFly", ["Jan Itor", "Pepe LeFritz"]);
+  if (new Set(Object.values(small.cast)).size !== 5 || small.bench.length) say("a squad of two does not fill to five different players");
+  const big = E.deal("Ann Example", Array.from({ length: 22 }, (_, i) => "Player " + i));
+  if (new Set(Object.values(big.cast)).size !== 5 || big.bench.length !== 17) say("a squad of 22 does not deal five and bench 17");
+  if (JSON.stringify(E.deal("Ann Example", big.bench.concat(Object.values(big.cast)).sort()).cast) !== JSON.stringify(E.deal("Ann Example", Object.values(big.cast).concat(big.bench).sort()).cast)) say("the deal depends on the order the names come in");
+  if (!E.parseCast(E.packCast(big.cast)) || E.parseCast(E.packCast(big.cast)).star !== big.cast.star) say("the cast does not round-trip");
+  if (E.parseCast("star=x")) say("a cast missing parts reads as a cast");
+  if (E.teamChoicesFor("Ann Example").length !== 6 || new Set(E.teamChoicesFor("Ann Example")).size !== 6) say("the team choices are not six different names");
+  if (E.opponentFor("Ann Example", "a", "Kansas Marlins") === "Kansas Marlins") say("a team can play itself");
+  if (E.signFor("Ann Example", "a", "Kansas Marlins").includes("{")) say("a sign keeps its blank");
+  // The season, for a few names, every spend and a greedy mix.
+  const names = ["Ann Example", "Marty McFly", "Neel Namburar", "Grayson Dangleis", "Zoë Ω"];
+  const topicsA = { "topic:a": "Goal setting", "wonder:a": "I wonder A", "opinion:a": "I think A", "topic:b": "Failure", "wonder:b": "I wonder B", "topic:c": "Cohesion", "topic:d": "Culture", "topic:e": "Power", "opinion:e": "I think E" };
+  for (const name of names) {
+    const concepts = E.conceptsFor(topicsA);
+    const plan = E.planSeason({ name, concepts, topicsAnswers: topicsA });
+    if (plan.length !== 6 || plan[0].concept !== "goals" || plan[0].prompt.text !== "I wonder A" || plan[2].prompt.text !== E.CLASS_WONDERS.cohesion) say(name + ": the plan does not follow the sheet");
+    if (!plan[5].last || !concepts.some(c => c.id === plan[5].concept)) say(name + ": the final is not one of the five");
+    const twin = plan.findIndex((w, i) => i < 5 && w.concept === plan[5].concept);
+    if (twin >= 0 && plan[twin].event === plan[5].event) say(name + ": the final repeats week " + (twin + 1) + "'s event");
+    if (JSON.stringify(E.planSeason({ name, concepts, topicsAnswers: topicsA })) !== JSON.stringify(plan)) say(name + ": two plans differ");
+    const cast = E.deal(name, big.bench).cast;
+    for (const sport of E.SPORTS) {
+      for (const fixed of E.SPENDS.map(s => s.id).concat(["mix"])) {
+        const spends = E.LETTERS.map((w, i) => fixed === "mix" ? E.SPENDS[(E.hash(name + w) + i) % E.SPENDS.length].id : fixed);
+        const sim = simulate({ name, concepts, topicsAnswers: topicsA, spends, cast, sport, team: "Kansas Marlins" });
+        let state = E.start();
+        const answers = { [E.F.sport]: sport.id, [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(concepts), [E.F.cast]: E.packCast(cast) };
+        sim.weeks.forEach(({ week, result, lines }, i) => {
+          if (!E.affordable(state.capital, state.culture).length) say(name + " week " + (i + 1) + ": nothing affordable");
+          if (result.capital < 0 || result.culture < 0 || result.culture > 100 || Number.isNaN(result.delta)) say(name + " week " + (i + 1) + ": " + JSON.stringify(result));
+          if (lines.length !== 2 + E.CHARACTERS.length + 2 || lines.some(l => !l.text || /\{/.test(l.text))) say(name + " week " + (i + 1) + ": the chat is short or has a blank");
+          const packed = E.packResult(result);
+          if (packed.length > 500) say("a packed result is " + packed.length + " characters");
+          const back = E.unpackResult(packed);
+          if (JSON.stringify(back) !== JSON.stringify(result)) say("a result does not round-trip: " + packed);
+          const again = E.resolve({ name, week: week.week, state, spendId: result.spend, eventId: week.event });
+          if (JSON.stringify(again) !== JSON.stringify(result)) say(name + " week " + (i + 1) + ": the same week resolved twice differently");
+          answers[E.F.result(week.week)] = packed;
+          answers[E.F.reflect(week.week)] = "Because."; answers[E.F.prompt(week.week)] = "wonder|" + week.prompt.text;
+          if (week.poll) answers[E.F.poll(week.week)] = week.poll[0];
+          state = E.after(result);
+        });
+        const replayed = E.replay(answers);
+        if (replayed.results.length !== 6 || JSON.stringify(replayed.state) !== JSON.stringify(sim.state) || replayed.week !== null) say(name + ": the replay from the file does not land where the season did");
+        [0, 1, 2].forEach(i => { answers[E.F.final(i)] = "x"; });
+        if (G.missingOf(answers).length) say(name + ": a full file still misses " + G.missingOf(answers).join(", "));
+        const t = tally([{ answers }]);
+        if (t.seasons !== 1 || Object.values(t.spends).reduce((a, b) => a + b, 0) !== 6) say("the tally does not count six spends");
+      }
+    }
+  }
+  if (E.unpackResult("not json") || E.unpackResult('{"w":"a"}')) say("a bad result row reads as a result");
+  if (E.replay({ "result:a": "junk" }).results.length) say("a junk week replays");
+  if (!G.missingOf({}).includes("a sport") || !G.missingOf({}).includes("week 1")) say("an empty file is not missing a sport and week 1");
+  if (E.costOf(E.spendOf("dominate"), 40) !== 3 || E.costOf(E.spendOf("dominate"), 55) !== 2) say("dominance does not cost 3 then 2");
+  if (E.gradeOf(80) !== "A" || E.gradeOf(34) !== "F") say("the grades are off");
+  // Pixels, without a window.
+  const g = P.spriteFromName("Ann Example");
+  if (g.length !== 16 || g.some(r => r.length !== 16) || g.flat().some(v => v < 0 || v >= P.PALETTE.length)) say("a drawn player is not a 16 by 16 of palette indexes");
+  const u = P.uniform(g, 3, 8);
+  if (u[10][7] !== P.C.white || u === g) say("the uniform does not mark a number on a copy");
+  // The pages.
+  const { localWorksheet, listedFor, openTo } = await import("../src/engine/localWorksheets.js");
+  const tk = localWorksheet("takeover");
+  if (!tk || !tk.review || !tk.control) say("takeover is not a local worksheet with a review and a control page");
+  if (tk && (!listedFor(tk, "comm118") || listedFor(tk, "comm3"))) say("takeover is not COMM 118's, or is COMM 3's");
+  if (tk && (!openTo(tk, "comm999", {}) || openTo(tk, "comm118", {}))) say("takeover is not COMM 999's to try, or is already open to COMM 118");
+  cases.push(["Takeover, loading", <G.TakeoverGame store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" topicsStore={{ load: async () => ({ answers: {} }) }} />, "Loading"]);
+  const full = { [E.F.sport]: "volleyball", [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(E.conceptsFor(topicsA)), [E.F.cast]: E.packCast(big.cast) };
+  const one = E.resolve({ name: "Ann Example", week: "a", state: E.start(), spendId: "teach", eventId: E.planSeason({ name: "Ann Example", concepts: E.conceptsFor(topicsA), topicsAnswers: topicsA })[0].event });
+  full[E.F.result("a")] = E.packResult(one); full[E.F.reflect("a")] = "Because."; full[E.F.prompt("a")] = "wonder|I wonder A";
+  cases.push(["Takeover, a season read back", <div className="tk"><G.SeasonLog answers={full} name="Ann Example" classmates={big.bench} copy={{ say: (k) => E.DEFAULT_COPY[k] }} /></div>, "Week 1"]);
+}
 
 // The visual story portal, 2026-10-23: three parts, today's from the stage;
 // the comments come out on their own on Tuesday; four topics are required

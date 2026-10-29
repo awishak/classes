@@ -36,7 +36,7 @@ const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "nig
 // One student's sheet, read only, for the instructor: /<class>/worksheets/<key>?s=<roster id>.
 // The grade view links here. It reads through /api/worksheet-submits, which
 // takes the PIN or an instructor's session, so it opens however he signed in.
-function TheirSheet({ config, worksheetKey, student, theme, photo }) {
+function TheirSheet({ config, worksheetKey, student, theme, photo, photos = {}, classmates = [] }) {
   const ref = useRef(null);
   const [state, setState] = useState("loading");   // loading | none | denied | failed | shown
   const [submitted, setSubmitted] = useState(null);
@@ -59,7 +59,7 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
         if (local) {
           // The same week 1 read the terminal showed them (onfile.js).
           const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: student.email });
-          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, readOnly: true, onFile, theme });
+          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, photos, classmates, readOnly: true, onFile, theme, classId: config.id });
           return;
         }
         const own = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
@@ -71,6 +71,9 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
       } catch { if (alive) setState("failed"); }
     })();
     return () => { alive = false; if (sheet) sheet.destroy(); };
+  // photos and classmates are the roster's, which the page passes whole; a
+  // sheet that saves its cast (takeover) reads it off the file anyway.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config, worksheetKey, student.email, theme, photo]);
   const say = { loading: "Loading " + student.name + "'s sheet.", none: student.name + " has not opened this worksheet.",
     denied: "Only the instructor can open a student's sheet. Sign in as the instructor and open this address again.",
@@ -91,16 +94,22 @@ function TheirSheet({ config, worksheetKey, student, theme, photo }) {
 // as them, the way the package's sheet does. The photograph on their card
 // becomes their picture on the terminal, and the roster, less themselves, is
 // who they can name as a co-worker.
-function LocalSheet({ local, config, viewer, photo, classmates, theme, editor }) {
+function LocalSheet({ local, config, viewer, photo, photos, classmates, theme, editor }) {
   const ref = useRef(null);
   const names = classmates.join("\n");
+  // The pictures, as one string, so a photograph arriving late redraws the
+  // sheet once rather than on every render of the page.
+  const pics = classmates.map(n => (photos || {})[n] || "").join("\n");
   useEffect(() => {
     const store = supabaseStore({ supabase: gameClient, worksheetKey: local.key, groupKey: config.id, viewerId: viewer.id });
     // What week 1 says about them (onfile.js).
     const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: viewer.id });
-    const sheet = local.mount(ref.current, { store, viewer, photo, classmates: names ? names.split("\n") : [], onFile, theme, classId: config.id, editor });
+    const list = names ? names.split("\n") : [];
+    const urls = pics.split("\n");
+    const photoOf = Object.fromEntries(list.map((n, i) => [n, urls[i] || ""]));
+    const sheet = local.mount(ref.current, { store, viewer, photo, photos: photoOf, classmates: list, onFile, theme, classId: config.id, editor });
     return () => sheet.destroy();
-  }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names, theme, editor]);
+  }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names, pics, theme, editor]);
   return <div ref={ref} />;
 }
 
@@ -163,13 +172,21 @@ export default function WorksheetPage({ config, worksheetKey }) {
   const wantIndex = local && search.has("index");
   // A sheet's own page for the instructor, like pre-production's topic review.
   const wantReview = local && local.review && search.has("review");
+  // And the control page: how the sheet works, and what each student gets.
+  // Andrew, 2026-10-29: "a control page, an instructor page that tells me
+  // exactly why everything's happening and exactly how everything is happening."
+  const wantControl = local && local.control && search.has("control");
+  // And the board: the room's screen for a sheet that has one, behind the
+  // same gate, since the projector is the instructor's laptop.
+  const wantBoard = local && local.board && search.has("board");
 
   let body;
-  if (wantReview) {
+  if (wantReview || wantControl || wantBoard) {
+    const which = wantReview ? "review" : wantControl ? "control" : "board";
     body = !(session && instructor) && !savedPin()
-      ? <p style={{ fontSize: 17, margin: 0 }}>Only the instructor can open the review. <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next + "?review")} style={{ color: config.accent, fontWeight: 600 }}>Sign in</a></p>
+      ? <p style={{ fontSize: 17, margin: 0 }}>Only the instructor can open {which === "review" ? "the review" : which === "board" ? "the board" : "the control page"}. <a className="ca-focus" href={"/login?next=" + encodeURIComponent(next + "?" + which)} style={{ color: config.accent, fontWeight: 600 }}>Sign in</a></p>
       : data === null ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
-      : "review";
+      : which;
   } else if (wantIndex) {
     body = "index";
   } else if (sheet && want) {
@@ -209,16 +226,20 @@ export default function WorksheetPage({ config, worksheetKey }) {
       </div>
       {body === "review"
         ? <local.review config={config} worksheetKey={worksheetKey} roster={roster} />
+        : body === "control"
+        ? <local.control config={config} worksheetKey={worksheetKey} roster={roster} />
+        : body === "board"
+        ? <local.board config={config} worksheetKey={worksheetKey} roster={roster} />
         : body === "index"
         ? <JobIndex />
         : body === "theirs" && local && local.read
         ? <local.read config={config} worksheetKey={worksheetKey} roster={roster} student={them} />
         : body === "theirs"
-        ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} photo={photos[them.name] || ""} />
+        ? <TheirSheet config={config} worksheetKey={worksheetKey} student={them} theme={sheetThemeOf(theme, mode)} photo={photos[them.name] || ""} photos={photos} classmates={roster.map(s => s.name).filter(n => n && n !== them.name && !isLurker(n))} />
         : body !== null
         ? <div style={{ padding: 32 }}>{body}</div>
         : local
-        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || (!me && config.instructor?.photo) || ""} classmates={classmates} theme={sheetThemeOf(theme, mode)} editor={!!instructor && !me} />
+        ? <LocalSheet key={viewer.id} local={local} config={config} viewer={viewer} photo={(me && photos[me.name]) || (!me && config.instructor?.photo) || ""} photos={photos} classmates={classmates} theme={sheetThemeOf(theme, mode)} editor={!!instructor && !me} />
         : <Worksheet key={viewer.id} supabase={gameClient} worksheetKey={worksheetKey} groupKey={config.id} viewer={viewer}
             accent={config.accent} accentLight={config.accentLight} accentDark={config.accentDark} theme={sheetThemeOf(theme, mode)} />}
     </div>
