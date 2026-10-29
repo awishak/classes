@@ -72,9 +72,9 @@ export const F = {
   reflect: (w) => "reflect:" + w,
   source: (w) => "source:" + w,
   poll: (w) => "poll:" + w,
-  final: (i) => "final:" + ["a", "b", "c"][i],
+  final: (i) => "final:" + ["a", "b", "c", "d"][i],
 };
-export const FIELDS = [F.sport, F.team, F.concepts, F.cast, ...LETTERS.flatMap(w => [F.prompt(w), F.choice(w), F.result(w), F.reflect(w), F.source(w)]), ...POLL_WEEKS.map(F.poll), F.final(0), F.final(1), F.final(2)];
+export const FIELDS = [F.sport, F.team, F.concepts, F.cast, ...LETTERS.flatMap(w => [F.prompt(w), F.choice(w), F.result(w), F.reflect(w), F.source(w)]), ...POLL_WEEKS.map(F.poll), F.final(0), F.final(1), F.final(2), F.final(3)];
 
 // ─── sports ───
 
@@ -211,7 +211,7 @@ export const TAGS = {
   culture: { label: "Culture", line: "Stuff that gets the team to actually like each other. Costs practice time." },
   skills: { label: "Skills and strategy", line: "Reps, film, plays. You get better at the game, and you see that first in the score." },
   standards: { label: "Standards", line: "Rules, and what happens when someone breaks one. Everyone knows where they stand. Costs coins." },
-  care: { label: "Care", line: "Helping one player at a time. Slow, and that player doesn't forget." },
+  care: { label: "Care", line: "Helping one player at a time. It's slower, but it builds trust." },
 };
 
 // ─── what happens each week, and what the coach can do ───
@@ -711,6 +711,7 @@ export const DEFAULT_COPY = {
   howTitle: "How this works",
   how: "You're the new coach. The team doesn't know you yet.\n\nYou have two numbers to get up. Culture is how the team treats each other. Skills and strategy is how good they actually are at the game. Both go from 0 to 100, and both start wherever the old coach left them.\n\nPut those two together and that's your chance of winning each week. Win, and your third number, Success, goes up.\n\nYou also have coins. Five to start. Everything you do costs some coins, and a few things are free. After every week your five players tell you how they feel about what you did. A plus means you get a coin back. An equals means you get half a coin back. A minus means that coin is gone.\n\nStarting in week 3 you can do more than one thing in a week, if you can pay for all of it. There are also some bigger things you can buy once a season, like a film room or a team trip. Starting in week 4 everything costs one coin more. And you can only hold eight coins, so don't sit on them.\n\nSuccess moves a little differently. Every week it drifts toward your culture and skills, so if those two go up, Success follows. A win bumps it up. A loss knocks it down a little.",
   howGo: "Start the season",
+  kindsTitle: "Here are your five types of actions you can take:",
   capital: "Capital",
   culture: "Culture",
   skills: "Skills & strategy",
@@ -743,6 +744,14 @@ export const DEFAULT_COPY = {
   "final.a": "Which week did you spend the most capital, and what did it buy you?",
   "final.b": "Which player was hardest to coach, and what would you do differently with them?",
   "final.c": "Lisa Davis asks you for a season-ending quote. What do you tell her?",
+  "final.d": "What was this game missing that you think is important to a team's culture and success?",
+  board: "Leaderboard",
+  seeBoard: "See the leaderboard",
+  boardGo: "On to the last questions",
+  boardLoading: "Loading the leaderboard",
+  boardFailed: "Could not load the leaderboard. Reload to try again.",
+  boardEmpty: "Nobody has played a week yet.",
+  overall: "Overall",
   submit: "Hand in the season",
   submitted: "Handed in",
   recall: "Take it back",

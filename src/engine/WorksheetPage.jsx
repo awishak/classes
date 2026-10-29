@@ -59,7 +59,7 @@ function TheirSheet({ config, worksheetKey, student, theme, photo, photos = {}, 
         if (local) {
           // The same week 1 read the terminal showed them (onfile.js).
           const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: student.email });
-          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, photos, classmates, readOnly: true, onFile, theme, classId: config.id });
+          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, photos, classmates, readOnly: true, onFile, theme, classId: config.id, storageKey: config.storageKey });
           return;
         }
         const own = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
@@ -107,7 +107,7 @@ function LocalSheet({ local, config, viewer, photo, photos, classmates, theme, e
     const list = names ? names.split("\n") : [];
     const urls = pics.split("\n");
     const photoOf = Object.fromEntries(list.map((n, i) => [n, urls[i] || ""]));
-    const sheet = local.mount(ref.current, { store, viewer, photo, photos: photoOf, classmates: list, onFile, theme, classId: config.id, editor });
+    const sheet = local.mount(ref.current, { store, viewer, photo, photos: photoOf, classmates: list, onFile, theme, classId: config.id, storageKey: config.storageKey, editor });
     return () => sheet.destroy();
   }, [local, config.id, config.storageKey, viewer.id, viewer.name, photo, names, pics, theme, editor]);
   return <div ref={ref} />;

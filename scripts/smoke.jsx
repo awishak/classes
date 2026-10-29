@@ -6197,7 +6197,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
         });
         const replayed = E.replay(answers, name);
         if (replayed.results.length !== 7 || JSON.stringify(replayed.state) !== JSON.stringify(sim.state) || replayed.week !== null) say(name + ": the replay from the file does not land where the season did");
-        [0, 1, 2].forEach(i => { answers[E.F.final(i)] = "x"; });
+        [0, 1, 2, 3].forEach(i => { answers[E.F.final(i)] = "x"; });
         if (G.missingOf(answers).length) say(name + ": a full file still misses " + G.missingOf(answers).join(", "));
         const t = tally([{ answers, student: { name } }]);
         if (t.seasons !== 1 || Object.values(t.kinds).reduce((a, b) => a + b, 0) < 7) say("the tally does not count every choice");
@@ -6253,6 +6253,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const full = { [E.F.sport]: "volleyball", [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(E.conceptsFor(topicsA)), [E.F.cast]: E.packCast(big.cast) };
   const one = E.resolve({ name: "Ann Example", week: "a", state: E.startState("Ann Example"), situationId: "opener", optionIds: ["dinner"] });
   full[E.F.result("a")] = E.packResult(one); full[E.F.reflect("a")] = "Because."; full[E.F.prompt("a")] = "wonder|I wonder A";
+  cases.push(["Takeover, leaderboard loading", <div className="tk"><G.Leaderboard classId="comm999" storageKey="comm999-x" me="Ann Example" copy={{ say: (k) => E.DEFAULT_COPY[k] }} fetcher={() => new Promise(() => {})} /></div>, "Loading the leaderboard"]);
   cases.push(["Takeover, a season read back", <div className="tk"><G.SeasonLog answers={full} name="Ann Example" classmates={big.bench} copy={{ say: (k) => E.DEFAULT_COPY[k] }} /></div>, "Week 1"]);
 }
 

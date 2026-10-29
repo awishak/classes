@@ -24,6 +24,8 @@ import { createSaver } from "../visualstory/saver.js";
 import { useCopy, Words } from "../visualstory/pre.jsx";
 import { supabaseStore } from "../worktopia/store.js";
 import { gameClient } from "../gameClient.js";
+import { authHeaders } from "../session.js";
+import { savedPin } from "../../InstructorGate.jsx";
 import * as E from "./engine.js";
 import { spriteFromName, renderSprite, drawField, drawMatch, uniform, journalist, MOOD_GLYPH } from "./pixel.js";
 import { createSound } from "./sound.js";
@@ -63,7 +65,7 @@ export function missingOf(answers) {
     else if (blank(a[E.F.reflect(w)])) out.push("week " + (i + 1) + "'s answer");
     if (E.POLL_WEEKS.includes(w) && !blank(a[E.F.result(w)]) && blank(a[E.F.poll(w)])) out.push("week " + (i + 1) + "'s poll");
   });
-  [0, 1, 2].forEach(i => { if (blank(a[E.F.final(i)])) out.push("final question " + (i + 1)); });
+  [0, 1, 2, 3].forEach(i => { if (blank(a[E.F.final(i)])) out.push("final question " + (i + 1)); });
   return out;
 }
 
@@ -310,9 +312,64 @@ export function SeasonLog({ answers, name, classmates, copy }) {
       {results.length === E.WEEKS ? (
         <section className="week">
           <h3 className="px"><Words k="seasonOver" copy={copy} /></h3>
-          {[0, 1, 2].map(i => <div key={i}><p className="ask">{copy.say("final." + "abc"[i])}</p><p className="answer">{answers[E.F.final(i)] || <i>No answer yet.</i>}</p></div>)}
+          {[0, 1, 2, 3].map(i => <div key={i}><p className="ask">{copy.say("final." + "abcd"[i])}</p><p className="answer">{answers[E.F.final(i)] || <i>No answer yet.</i>}</p></div>)}
         </section>
       ) : null}
+    </div>
+  );
+}
+
+// ─── the leaderboard ───
+//
+// Every season in the class, from /api/locker-room-board, sortable. Andrew,
+// 2026-10-29: "sortable by Overall (all three added together), skills,
+// culture, or success, or record."
+
+const SORTS = [
+  { id: "overall", by: (r) => r.overall },
+  { id: "culture", by: (r) => r.culture },
+  { id: "skills", by: (r) => r.skills },
+  { id: "success", by: (r) => r.success },
+  { id: "record", by: (r) => r.wins * 100 - r.losses },
+];
+export function Leaderboard({ classId, storageKey, me, copy, fetcher }) {
+  const [rows, setRows] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [sort, setSort] = useState("overall");
+  useEffect(() => {
+    let alive = true;
+    const ask = fetcher || (async () => {
+      const r = await fetch("/api/locker-room-board", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) }, body: JSON.stringify({ pin: savedPin(), groupKey: classId, storageKey, instructorName: me }) });
+      const out = await r.json().catch(() => null);
+      if (!r.ok || !out || !out.ok) throw new Error(out?.error || "no answer");
+      return out.rows;
+    });
+    ask().then(got => { if (alive) setRows(got || []); }).catch(() => { if (alive) setFailed(true); });
+    return () => { alive = false; };
+  }, [classId, storageKey, fetcher]);
+  const by = SORTS.find(s => s.id === sort).by;
+  const sorted = rows ? [...rows].sort((a, b) => by(b) - by(a) || a.name.localeCompare(b.name)) : [];
+  return (
+    <div className="board">
+      <div className="row">
+        {SORTS.map(s => <button key={s.id} type="button" className="btn px small" aria-pressed={sort === s.id} onClick={() => setSort(s.id)}>{copy.say(s.id)}</button>)}
+      </div>
+      {failed ? <p className="say bad">{copy.say("boardFailed")}</p>
+        : !rows ? <p className="say">{copy.say("boardLoading")}</p>
+        : !rows.length ? <p className="say">{copy.say("boardEmpty")}</p>
+        : (
+          <table className="lb">
+            <thead><tr><th className="px small">#</th><th className="px small">Coach</th><th className="px small">Team</th><th className="px small">{copy.say("overall")}</th><th className="px small">{copy.say("culture")}</th><th className="px small">{copy.say("skills")}</th><th className="px small">{copy.say("success")}</th><th className="px small">{copy.say("record")}</th><th className="px small">Wk</th></tr></thead>
+            <tbody>
+              {sorted.map((r, i) => (
+                <tr key={r.name + r.team + i} className={r.me ? "me" : ""}>
+                  <td className="n">{i + 1}</td><td>{r.name}</td><td className="dim">{r.team}</td>
+                  <td className="n">{r.overall}</td><td className="n">{r.culture}</td><td className="n">{r.skills}</td><td className="n">{r.success}</td><td className="n">{r.wins + "-" + r.losses}</td><td className="n dim">{r.weeks}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
     </div>
   );
 }
@@ -322,7 +379,7 @@ export function SeasonLog({ answers, name, classmates, copy }) {
 const STATUS = { loading: "Loading", saved: "Saved", saving: "Saving", retrying: "Not saved yet, trying again", "failed-load": "Could not load your season. Reload to try again." };
 const when = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
-export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [], classId, readOnly = false, storage, editor = false, topicsStore }) {
+export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [], classId, storageKey = "", readOnly = false, storage, editor = false, topicsStore, boardFetcher }) {
   const copy = useCopy(editor, E.COPY_ROW, E.DEFAULT_COPY);
   const [editing, setEditing] = useState(false);
   const [answers, setAnswers] = useState(null);
@@ -493,7 +550,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   };
   const nextWeek = () => {
     sound.current.pick();
-    if (cursor + 1 >= E.WEEKS) { go("end"); return; }
+    if (cursor + 1 >= E.WEEKS) { go("board"); return; }
     toWeek(cursor + 1);
   };
   const backWeek = () => { sound.current.blip(); if (cursor === 0) go("meet"); else toWeek(cursor - 1); };
@@ -528,6 +585,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
           <div className="row">
             <p className="say"><b>{copy.say("submitted")}</b>{submitted ? " " + when(submitted) : ""}</p>
             {submitted ? <button type="button" className="btn px" onClick={takeBack}>{copy.say("recall")}</button> : null}
+            {submitted ? <button type="button" className="btn px" onClick={() => { sound.current.pick(); go("board"); }}>{copy.say("board")}</button> : null}
           </div>
         ) : null}
         <SeasonLog answers={answers} name={name} classmates={classmates} copy={copy} />
@@ -607,6 +665,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
         <Hud copy={copy} state={season.state} />
         <h2 className="px"><Words k="howTitle" copy={copy} /></h2>
         <div className="how"><Words k="how" copy={copy} as="p" className="say pre" /></div>
+        <p className="say"><Words k="kindsTitle" copy={copy} /></p>
         <div className="legend">
           {Object.entries(E.TAGS).map(([id, t]) => <div key={id} className="card"><b className="px">{t.label}</b><span>{t.line}</span></div>)}
         </div>
@@ -707,7 +766,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
                 ) : null}
                 <div className="row end">
                   <span className="status px">{STATUS[status] || ""}</span>
-                  <button type="button" className="btn px primary" disabled={!canNext} onClick={nextWeek}>{week.last ? copy.say("seasonOver") : copy.say("next")}</button>
+                  <button type="button" className="btn px primary" disabled={!canNext} onClick={nextWeek}>{week.last ? copy.say("seeBoard") : copy.say("next")}</button>
                 </div>
               </div>
             ) : null}
@@ -715,20 +774,30 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
         )}
       </div>
     );
+  } else if (screen === "board" && sport) {
+    body = (
+      <div className="screen">
+        <Nav copy={copy} onBack={() => toWeek(E.WEEKS - 1)}><button type="button" className="btn px small" onClick={() => showHow("board")}>{copy.say("howTitle")}</button></Nav>
+        <Hud copy={copy} state={season.state} />
+        <h2 className="px"><Words k="board" copy={copy} /> <span className="dim">{team}</span></h2>
+        <Leaderboard classId={classId} storageKey={storageKey} me={name} copy={copy} fetcher={boardFetcher} />
+        <button type="button" className="btn px primary" onClick={() => { sound.current.pick(); go("end"); }}>{copy.say("boardGo")}</button>
+      </div>
+    );
   } else if (screen === "end" && sport) {
     const left = runThrough ? [] : missingOf(answers);
     const last = season.results[season.results.length - 1] || null;
     body = (
       <div className="screen">
-        <Nav copy={copy} onBack={() => toWeek(Math.max(0, season.results.length - 1))}><button type="button" className="btn px small" onClick={() => showHow("end")}>{copy.say("howTitle")}</button></Nav>
+        <Nav copy={copy} onBack={() => go("board")}><button type="button" className="btn px small" onClick={() => { sound.current.pick(); go("board"); }}>{copy.say("board")}</button><button type="button" className="btn px small" onClick={() => showHow("end")}>{copy.say("howTitle")}</button></Nav>
         <Hud copy={copy} state={season.state} />
         <h2 className="px"><Words k="seasonOver" copy={copy} /> <span className="dim">{team + " · " + season.state.wins + "-" + season.state.losses + " · " + E.gradeOf(season.state.success)}</span></h2>
         <Field sport={sport.id} sign={E.signFor(name, "end", team)} />
         <Squad cast={cast} bench={bench} photos={photos} moods={last ? last.moods : null} scale={4} jersey={jersey} cheer={season.state.success >= 65 ? "cheer" : ""} />
         <div className="reflect">
-          {[0, 1, 2].map(i => (
+          {[0, 1, 2, 3].map(i => (
             <div key={i}>
-              <p className="ask"><Words k={"final." + "abc"[i]} copy={copy} /></p>
+              <p className="ask"><Words k={"final." + "abcd"[i]} copy={copy} /></p>
               <textarea className="ta" rows={4} value={answers[E.F.final(i)] || ""} onChange={e => set(E.F.final(i), e.target.value)} aria-label={"Final question " + (i + 1)} />
             </div>
           ))}
@@ -775,9 +844,9 @@ function EditWords({ copy }) {
 }
 
 /** Mount the game. Returns { destroy }. */
-export function mountTakeover(root, { store, viewer, photo, photos, classmates, readOnly = false, classId, editor = false, topicsStore } = {}) {
+export function mountTakeover(root, { store, viewer, photo, photos, classmates, readOnly = false, classId, storageKey, editor = false, topicsStore, boardFetcher } = {}) {
   const r = createRoot(root);
-  r.render(<TakeoverGame store={store} viewer={viewer} photo={photo} photos={photos || {}} classmates={classmates || []} readOnly={readOnly} classId={classId} editor={editor && !readOnly} topicsStore={topicsStore} />);
+  r.render(<TakeoverGame store={store} viewer={viewer} photo={photo} photos={photos || {}} classmates={classmates || []} readOnly={readOnly} classId={classId} storageKey={storageKey || ""} editor={editor && !readOnly} topicsStore={topicsStore} boardFetcher={boardFetcher} />);
   return { destroy() { r.unmount(); } };
 }
 
@@ -881,6 +950,13 @@ export const CSS = `
 .tk .standings{margin:0;padding-left:18px;font-size:15px;display:grid;gap:4px}
 .tk .standings b{color:var(--gold)}
 .tk .spends.extras .spendbtn{border-style:dashed}
+.tk .board{display:grid;gap:12px}
+.tk .lb{width:100%;border-collapse:collapse;font-size:14px}
+.tk .lb th{text-align:left;padding:6px 8px;border-bottom:3px solid var(--line);color:var(--sky);font-weight:400}
+.tk .lb td{padding:6px 8px;border-bottom:2px solid #2a2a48}
+.tk .lb .n{text-align:right;font-variant-numeric:tabular-nums}
+.tk .lb th.px{text-align:left}
+.tk .lb tr.me td{background:#2a2a10;color:var(--gold)}
 .tk .chead{color:var(--green)}
 .tk .msg{display:flex;gap:10px;align-items:baseline;font-size:15px}
 .tk .msg b{color:var(--gold);white-space:nowrap}
