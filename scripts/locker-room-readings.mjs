@@ -27,7 +27,11 @@ const H = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "applic
 const write = process.argv.includes("--write");
 const STORAGE_KEY = "comm118-f26-v1";
 const ID = STORAGE_KEY + "-readings";
-const EVERYONE = ["ch4", "ch3"];
+// A student with no concepts sheet gets the class's most chosen concepts in
+// the game (goal setting, failure, motivation, cohesion, emotion, culture),
+// so they get the readings for those. Andrew, on the first pass that left
+// them with the chapters alone: "what about jameson julia and mailin?"
+const EVERYONE = ["ch4", "ch3", "great", "fans", "pickup1", "knicks", "kerr", "gladwell"];
 
 const TITLES = {
   ch4: {"title":"Chapter 4: Small Group and Team Interactions","source":"Communication and Sport, our book"},
