@@ -181,6 +181,10 @@ export default function AudioControl({ config, worksheetKey, roster }) {
       {ideas ? (<>
         <h2 className="aic-h2">Marks</h2>
         <p className="aic-p">Five marks, pressed on the review page, one per idea: {I.MARKS.map(m => m.say + " (" + m.id + ")").join(", ")}. Pressing the mark already on takes the mark off. A sheet's marks are one row in worksheet_reviews: note holds JSON by slot, like {"{"}"a":"top","c":"ohno"{"}"}; status is approved when any mark is Top idea or Okay, needs_work when only the other three are on, and the row is deleted when no mark is on. The write goes through /api/worksheet-submits with the service key, so no browser writes a mark. A student reads their own row under the rules (worksheet_owns) every {I.POLL / 1000} seconds while their tab is showing, which is how the mark appears on their sheet.</p>
+        <h2 className="aic-h2">Everyone's ideas, and asking for an idea</h2>
+        <p className="aic-p">?all is a page any signed-in student on the roster can open: every submitted idea in their section with the name and the mark, Top ideas first, read through /api/audio-ideas, which checks the caller's session email against the roster and returns ideas, marks and asks only (never strengths, work preference or the general answers). Under another student's idea, Ask to work on this writes the student's own field <code>want</code>, one owner|slot a line; under their own idea, who asked. The page asks again every ten seconds. The sheet links to the page once submitted.</p>
+        <h2 className="aic-h2">Pairs</h2>
+        <p className="aic-p">The Pairs view on the review (per section) lists everyone who submitted. Suggest pairs scores every two people who said In a pair or Either one: 3 when one asked for the other's idea, 2 when their Top or Okay ideas share a word, 1 when one is technical and the other tells stories or researches, 1 when both said In a pair outright; highest first, then anyone left who said In a pair is paired with the next such person, and everyone else is on their own. The story is the idea asked for, else a Top idea, else an Okay. Tap a person then another to pair them, Split to part a pair, pick the story from either member's ideas or type one. Every change writes the row <code>{"audio-pairs-plan"}</code> (instructor-only), which the student's everyone's-ideas page and audio exercise read to say who they work with and on what.</p>
         <h2 className="aic-h2">The board and the review</h2>
         <p className="aic-p">Both ask /api/worksheet-submits for every sheet on this key every {I.POLL / 1000} seconds while the tab is showing, and stop asking while the tab is hidden. The board shows no names and no strengths, only ideas and marks, newest sheet first. The review shows names, strengths, work preference, and the two general answers under a fold. Sections: the 8:00 and the 10:30 are tabs, off the student's section on the roster.</p>
       </>) : (<>
@@ -211,7 +215,7 @@ export default function AudioControl({ config, worksheetKey, roster }) {
 }
 
 const ideaFieldSay = (f) => {
-  const say = { any: " any audio story, lines", tools: " the tools, lines", strength: " strengths chosen, lines", other: " the Other strength, a line", work: " work preference chosen, lines" };
+  const say = { any: " any audio story, lines", tools: " the tools, lines", strength: " strengths chosen, lines", other: " the Other strength, a line", work: " work preference chosen, lines", want: " ideas asked for, owner|slot a line, written from ?all" };
   if (say[f]) return say[f];
   const [part, slot] = f.split(":");
   return " idea " + (I.SLOTS.indexOf(slot) + 1) + ", " + ({ idea: "the idea, a line", why: "why someone would want to hear the story, lines", plan: "what this story takes, lines" })[part];

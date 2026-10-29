@@ -19,8 +19,9 @@ import { useEffect, useRef, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { SLOTS, MARKS, marksOf, statusFor, Mark, POLL, DEFAULT_COPY } from "./ideas.jsx";
+import { SLOTS, MARKS, marksOf, markOf, statusFor, Mark, POLL, DEFAULT_COPY } from "./ideas.jsx";
 import { linesOf as linesOfIdea, loadFont } from "./bits.jsx";
+import { PAIRS_ROW, parseWant, suggest, join, split, pairOf } from "./pairs.js";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -89,6 +90,7 @@ function rowsOf(roster, sheets, section) {
 export default function IdeasReview({ config, worksheetKey, roster }) {
   const [sheets, setSheets, error] = useSheets(config, worksheetKey);
   const [section, tabs] = useSectionTabs(config);
+  const [view, setView] = useState("sheets");
   const [busy, setBusy] = useState("");
   const [failed, setFailed] = useState("");
   useEffect(() => { loadFont(); }, []);
@@ -97,6 +99,19 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
   if (!sheets) return <Shell><p className="aib-p">Loading the sheets.</p></Shell>;
 
   const rows = rowsOf(roster, sheets, section);
+  const views = (
+    <div className="aib-tabs" role="tablist" aria-label="View">
+      {[["sheets", "Sheets"], ["pairs", "Pairs"]].map(([id, say]) => <button key={id} type="button" role="tab" aria-selected={view === id} className={"aib-tab" + (view === id ? " aib-on" : "")} onClick={() => setView(id)}>{say}</button>)}
+    </div>
+  );
+  if (view === "pairs") return (
+    <Shell>
+      <h1 className="aib-title">{DEFAULT_COPY.title}, pairs</h1>
+      {tabs}
+      {views}
+      <PairsView config={config} section={section} rows={rows} />
+    </Shell>
+  );
   const submitted = rows.filter(r => r.sheet?.submitted_at).sort((a, b) => Date.parse(b.sheet.submitted_at) - Date.parse(a.sheet.submitted_at));
   const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).map(r => r.student.name);
   const notOpened = rows.filter(r => !r.sheet).map(r => r.student.name);
@@ -119,6 +134,7 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
     <Shell>
       <h1 className="aib-title">{DEFAULT_COPY.title}, every sheet</h1>
       {tabs}
+      {views}
       <p className="aib-p">{submitted.length + " submitted, " + started.length + " started, " + notOpened.length + " not opened. This page asks again every four seconds."}</p>
       <p className="aib-p"><a className="aib-a" href={"/" + config.id + "/worksheets/" + worksheetKey + "?board"} target="_blank" rel="noreferrer">The board for the projector, no names ↗</a> · <a className="aib-a" href={"/" + config.id + "/worksheets/" + worksheetKey + "?control"}>Control page</a></p>
       {failed ? <p className="aib-bad">The mark did not save: {failed}</p> : null}
@@ -161,6 +177,103 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
       {started.length ? <p className="aib-muted">Started, not submitted: {started.join(", ")}.</p> : null}
       {notOpened.length ? <p className="aib-muted">Not opened: {notOpened.join(", ")}.</p> : null}
     </Shell>
+  );
+}
+
+// ─── pairs ───
+//
+// Andrew, 2026-10-29: "a way for me to assign them to stories based on their
+// interests and the interests in working individually or in pairs." The
+// submitted people of a section as pairs.js sees them; Suggest lays them
+// out, tapping two cards joins them, Split parts a pair, the story is picked
+// from either member's ideas or typed, and Save writes the lot to the
+// instructor-only row the students' pages read (all.jsx, research.jsx).
+// A person who submits after the suggestion shows up as a solo on their own.
+const personOf = (row) => {
+  const a = row.sheet.answers || {};
+  return {
+    email: lower(row.student.email), name: row.student.name, section: row.student.section || "",
+    work: linesOfIdea(a.work), strengths: [...linesOfIdea(a.strength).filter(x => x !== "Other"), String(a.other || "").trim()].filter(Boolean),
+    ideas: SLOTS.map(slot => ({ slot, idea: String(a["idea:" + slot] || "").trim(), mark: marksOf(row.sheet.review)[slot] || "" })),
+    wants: linesOfIdea(a.want).map(parseWant).filter(Boolean),
+  };
+};
+
+async function readPairs() {
+  try { const got = await window.storage.get(PAIRS_ROW); return got ? JSON.parse(got.value) || {} : {}; } catch { return {}; }
+}
+
+function PairsView({ config, section, rows }) {
+  const people = rows.filter(r => r.sheet?.submitted_at).map(personOf);
+  const byEmail = new Map(people.map(p => [p.email, p]));
+  const [all, setAll] = useState(null);     // the row, every class
+  const [picking, setPicking] = useState("");
+  const [status, setStatus] = useState("");
+  useEffect(() => { let alive = true; readPairs().then(r => { if (alive) setAll(r); }); return () => { alive = false; }; }, [config.id]);
+  if (!all) return <p className="aib-p">Loading the pairs.</p>;
+
+  const saved = (all[config.id] && all[config.id].pairs) || [];
+  const inSection = new Set(people.map(p => p.email));
+  // This section's pairs: the saved ones whose members are here, plus a solo for anyone here and unplaced.
+  const here = saved.filter(p => p.members.some(m => inSection.has(m)));
+  const placed = new Set(here.flatMap(p => p.members));
+  const pairs = [...here, ...people.filter(p => !placed.has(p.email)).map(p => ({ id: p.email, members: [p.email], story: "", from: null }))];
+  const elsewhere = saved.filter(p => !p.members.some(m => inSection.has(m)));
+
+  const write = async (next) => {
+    const withNames = next.map(p => ({ ...p, names: p.members.map(m => byEmail.get(m)?.name || m) }));
+    const row = { ...all, [config.id]: { pairs: [...elsewhere, ...withNames], at: Date.now() } };
+    setAll(row);
+    setStatus("Saving");
+    const res = await window.storage.set(PAIRS_ROW, JSON.stringify(row));
+    setStatus(res === false ? "Not saved. Sign in as the instructor." : !res ? "Not saved. Try again." : "Saved");
+  };
+  const nameOf = (m) => byEmail.get(m)?.name || m;
+  const storyOptions = (p) => p.members.flatMap(m => (byEmail.get(m)?.ideas || []).filter(i => i.idea).map(i => ({ ...i, owner: m })));
+  const tap = (p) => {
+    if (!picking) { if (p.members.length === 1) setPicking(p.id); return; }
+    if (picking === p.id) { setPicking(""); return; }
+    const next = join(pairs, picking, p.id);
+    setPicking("");
+    if (next) write(next);
+  };
+  const sorted = [...pairs].sort((x, y) => y.members.length - x.members.length || nameOf(x.members[0]).localeCompare(nameOf(y.members[0])));
+
+  return (
+    <>
+      <div className="aib-head">
+        <button type="button" className="aib-tab" onClick={() => write(suggest(people))}>Suggest pairs</button>
+        <span className="aib-small">{pairs.filter(p => p.members.length === 2).length} pairs, {pairs.filter(p => p.members.length === 1).length} on their own. {picking ? "Tap another person to pair with " + nameOf(picking) + "." : "Tap a person, then another, to pair the two."}</span>
+        <span className="aib-small">{status}</span>
+      </div>
+      <div className="aib-pairs">
+        {sorted.map(p => (
+          <div key={p.id} className={"aib-pair" + (picking === p.id ? " aib-picking" : "")}>
+            <div className="aib-ihead">
+              <b className="aib-name">{p.members.map(nameOf).join(" + ")}</b>
+              {p.members.length === 2
+                ? <button type="button" className="aib-mark aib-m-ohno" onClick={() => write(split(pairs, p.id))}>Split</button>
+                : <button type="button" className={"aib-mark aib-m-ok" + (picking === p.id ? " aib-set" : "")} aria-pressed={picking === p.id} onClick={() => tap(p)}>{picking && picking !== p.id ? "Pair with " + nameOf(picking).split(" ")[0] : picking === p.id ? "Picking" : "Pair"}</button>}
+            </div>
+            {p.members.map(m => { const q = byEmail.get(m); return q ? (
+              <p key={m} className="aib-small">{q.name}: {q.work.join(", ") || "no preference"}{q.strengths.length ? " · " + q.strengths.join(", ") : ""}{q.wants.length ? " · asked for " + q.wants.map(w => nameOf(w.owner) + "'s idea " + (SLOTS.indexOf(w.slot) + 1)).join(", ") : ""}</p>
+            ) : null; })}
+            <label className="aib-small">Story
+              <select className="aib-select" value={p.from ? p.from.owner + "|" + p.from.slot : ""} onChange={e => {
+                const [owner, slot] = e.target.value.split("|");
+                const idea = storyOptions(p).find(i => i.owner === owner && i.slot === slot);
+                write(pairs.map(x => x.id === p.id ? { ...x, story: idea ? idea.idea : x.story, from: idea ? { owner, slot } : null } : x));
+              }}>
+                <option value="">Typed below</option>
+                {storyOptions(p).map(i => <option key={i.owner + i.slot} value={i.owner + "|" + i.slot}>{(i.mark ? markOf(i.mark).say + ": " : "") + i.idea + " (" + nameOf(i.owner).split(" ")[0] + ")"}</option>)}
+              </select>
+            </label>
+            <input className="aib-input" value={p.story} aria-label="Story" onChange={e => write(pairs.map(x => x.id === p.id ? { ...x, story: e.target.value, from: null } : x))} />
+          </div>
+        ))}
+      </div>
+      {!people.length ? <p className="aib-muted">Nobody in this section has submitted yet.</p> : null}
+    </>
   );
 }
 
@@ -237,6 +350,11 @@ const CSS = `
 .aib-more summary{cursor:pointer}
 .aib-more .aib-line{margin-top:8px}
 .aib-muted{margin:0;font-size:14.5px;color:${T.muted}}
+.aib-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.aib-pairs{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.aib-pair{display:flex;flex-direction:column;gap:6px;padding:12px 14px;border-radius:12px;background:${S.sunk};border:2px solid transparent}
+.aib-picking{border-color:${T.primary}}
+.aib-select,.aib-input{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};width:100%;margin-top:4px}
 .aib .mark{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;border-radius:999px;padding:4px 12px;color:var(--m-ink);background:var(--m-c)}
 .aib .mark.top{--m-c:var(--m-top)} .aib .mark.ok{--m-c:var(--m-ok)} .aib .mark.close{--m-c:var(--m-close)} .aib .mark.no{--m-c:var(--m-no);color:#1c1917} .aib .mark.ohno{--m-c:var(--m-ohno)}
 .aib-board{padding:24px 28px 80px;min-height:100vh}

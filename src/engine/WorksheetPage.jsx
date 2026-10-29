@@ -179,6 +179,8 @@ export default function WorksheetPage({ config, worksheetKey }) {
   // And the board: the room's screen for a sheet that has one, behind the
   // same gate, since the projector is the instructor's laptop.
   const wantBoard = local && local.board && search.has("board");
+  // And a page every student can open, like everyone's audio story ideas.
+  const wantAll = local && local.all && search.has("all");
 
   let body;
   if (wantReview || wantControl || wantBoard) {
@@ -208,6 +210,8 @@ export default function WorksheetPage({ config, worksheetKey }) {
     body = data === null
       ? <p style={{ fontSize: 17, margin: 0 }}>Loading the roster.</p>
       : <p style={{ fontSize: 17, margin: 0 }}>{email} is not on the roster for {config.code} yet.</p>;
+  } else if (wantAll) {
+    body = "all";
   } else if (local && !instructor && !openTo(local, config.id, data)) {
     // Built, not sent: the instructor tries it under their own email first.
     const at = opensAt(local, data);
@@ -230,6 +234,8 @@ export default function WorksheetPage({ config, worksheetKey }) {
         ? <local.control config={config} worksheetKey={worksheetKey} roster={roster} />
         : body === "board"
         ? <local.board config={config} worksheetKey={worksheetKey} roster={roster} />
+        : body === "all"
+        ? <local.all config={config} worksheetKey={worksheetKey} roster={roster} viewer={viewer} />
         : body === "index"
         ? <JobIndex />
         : body === "theirs" && local && local.read

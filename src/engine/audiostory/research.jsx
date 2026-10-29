@@ -28,6 +28,8 @@ import { supabaseStore } from "../worktopia/store.js";
 import { CSS, STATUS, when, blank, useSheet, handIn, handSay, Lines, Line, Para } from "./bits.jsx";
 import { AUDIO_IDEAS_KEY, SLOTS, marksOf, markOf, reviewFor, Mark } from "./ideas.jsx";
 import { audioOf, sendAudio, linkFor, FORMAT_SAY, MAX_SECONDS } from "./audio.js";
+import { pairsFor } from "./all.jsx";
+import { pairOf } from "./pairs.js";
 
 export const AUDIO_RESEARCH_KEY = "audio-research";
 export const AUDIO_RESEARCH_TITLE = "Audio exercise";
@@ -80,6 +82,7 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
   const [editing, setEditing] = useState(false);
   const [handing, setHanding] = useState("");
   const [okayed, setOkayed] = useState([]);
+  const [pair, setPair] = useState(null);
   const draftKey = AUDIO_RESEARCH_KEY + ":" + (classId || "") + ":" + (viewer?.id || "");
   const { answers, set, submitted, setSubmitted, status, saver } = useSheet({ store, draftKey, readOnly, storage });
 
@@ -87,6 +90,7 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
     if (readOnly || !classId || !viewer?.id) return undefined;
     let alive = true;
     okayedIdeas({ classId, viewerId: viewer.id }).then(list => { if (alive) setOkayed(list); }).catch(() => {});
+    pairsFor(classId).then(list => { if (alive) setPair(pairOf(list)[String(viewer.id).trim().toLowerCase()] || null); });
     return () => { alive = false; };
   }, [readOnly, classId, viewer?.id]);
 
@@ -115,6 +119,10 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
         </div>
 
         <section className="part" aria-label="Your story">
+          {pair && !readOnly ? (
+            <p className="pair">{(() => { const me = String(viewer?.id || "").trim().toLowerCase(); const others = (pair.names || []).filter((n, i) => pair.members[i] !== me); return others.length ? <>You are working with <b>{others.join(" and ")}</b></> : <>You are working on your own</>; })()}{pair.story ? <> on <b>{pair.story}</b></> : null}.</p>
+          ) : null}
+          {pair?.story && !readOnly && blank(answers, "story") ? <div className="chips"><button type="button" className="chip focusable" onClick={() => set("story", pair.story)}>{pair.story}</button></div> : null}
           {okayed.length && !readOnly ? (
             <div className="chips" aria-label="Your okayed ideas">
               {okayed.map(x => <button key={x.slot} type="button" className="chip focusable" onClick={() => set("story", x.idea)}><Mark id={x.mark} />&nbsp;{x.idea}</button>)}

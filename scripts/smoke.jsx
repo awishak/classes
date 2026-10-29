@@ -43,6 +43,7 @@ import { IdeasSheet, FIELDS as IDEA_FIELDS, REQUIRED as IDEA_REQUIRED, missingOf
 import { ideasOf } from "../src/engine/audiostory/board.jsx";
 import { ResearchSheet, FIELDS as RESEARCH_FIELDS, missingOf as researchMissing } from "../src/engine/audiostory/research.jsx";
 import { audioOf, refuse as refuseAudio, formatOf as audioFormat } from "../src/engine/audiostory/audio.js";
+import { suggest as suggestPairs, join as joinPairs, split as splitPairs, storyFor, parseWant, wantKey } from "../src/engine/audiostory/pairs.js";
 import VisualStoryPortal, { PortalBar, partOf, PARTS as PORTAL_PARTS } from "../src/engine/visualstory/portal.jsx";
 import { tally as reviewTally } from "../src/engine/visualstory/reviews.jsx";
 import { stageAt as storyStageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
@@ -6054,6 +6055,25 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
   if (!refuseAudio(memo, 62)) say("a 62-second memo is not refused");
   if (!refuseAudio({ name: "x.mov", type: "video/quicktime", size: 1 }, 10)) say("a video is not refused");
   if (!refuseAudio({ ...memo, size: 40 * 1024 * 1024 }, 10)) say("a 40 MB file is not refused");
+  // Pairs: who asked for whom pairs first, shared words next, a loner stays alone.
+  const P = (email, name, work, strengths, ideas, wants = []) => ({ email, name, section: "8:00", work, strengths, ideas, wants });
+  const ann = P("ann@x", "Ann A", ["In a pair"], ["Technical strength"], [{ slot: "a", idea: "The bakery at dawn", mark: "top" }]);
+  const ben = P("ben@x", "Ben B", ["Either one"], ["Storytelling"], [{ slot: "a", idea: "Night bakery sounds", mark: "ok" }]);
+  const cy = P("cy@x", "Cy C", ["Individually"], ["Research"], [{ slot: "a", idea: "The last payphone", mark: "ok" }]);
+  const di = P("di@x", "Di D", ["In a pair"], ["Research"], [{ slot: "b", idea: "Bus drivers", mark: "" }], [{ owner: "cy@x", slot: "a" }]);
+  const got = suggestPairs([ann, ben, cy, di]);
+  const of = (email) => got.find(p => p.members.includes(email));
+  if (!of("ann@x") || !of("ann@x").members.includes("ben@x")) say("the two bakery ideas were not paired");
+  if (of("ann@x").story !== "The bakery at dawn") say("the pair's story is not the Top idea");
+  if (of("cy@x").members.length !== 1) say("someone who said Individually was paired");
+  if (of("di@x").members.length !== 1) say("Di was paired with someone who did not want a pair");
+  if (storyFor([di, cy]).story !== "The last payphone") say("the asked-for idea is not the story");
+  const joined = joinPairs(got, of("di@x").id, of("cy@x").id);
+  if (!joined || !joined.find(p => p.members.length === 2 && p.members.includes("di@x") && p.members.includes("cy@x"))) say("two solos did not join");
+  if (joinPairs(joined, joined.find(p => p.members.includes("ann@x")).id, joined.find(p => p.members.includes("di@x")).id)) say("two pairs joined into four");
+  const parted = splitPairs(joined, joined.find(p => p.members.includes("ann@x")).id);
+  if (parted.filter(p => p.members.length === 1).length !== 2) say("a split pair is not two solos");
+  if (wantKey("Ann@X ", "b") !== "ann@x|b" || parseWant("cy@x|a").slot !== "a" || parseWant("junk")) say("a want does not read back");
   if (IDEA_MARKS.map(m => m.id).join(",") !== "top,ok,close,no,ohno") say("the marks are not his five in his order");
   const marks = marksOf({ status: "approved", note: JSON.stringify({ a: "top", c: "ohno", d: "ok", b: "bogus" }) });
   if (marks.a !== "top" || marks.c !== "ohno" || marks.b || marks.d) say("marks do not read off the note, or a bad one got through");

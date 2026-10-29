@@ -8,9 +8,10 @@
 // nothing there needs to know which repo a sheet came from).
 //
 // A local worksheet is { key, title, mount, open, classes?, review?, read?,
-// board?, control? }. review is the instructor's page for the whole class at
-// ?review, board the room's screen at ?board (same gate), control the
-// instructor's how-it-works page at ?control, and read,
+// board?, all?, control? }. review is the instructor's page for the whole
+// class at ?review, board the room's screen at ?board (same gate), all a
+// page any signed-in student can open at ?all, control the instructor's
+// how-it-works page at ?control, and read,
 // when a sheet has one, draws one student's file at ?s=<id> in place of the
 // read-only mount. mount(root, {
 // store, viewer, photo, classmates, readOnly, theme }) draws it and returns
@@ -42,6 +43,7 @@ import TakeoverReview from "./takeover/review.jsx";
 import TakeoverControl from "./takeover/control.jsx";
 import { AUDIO_IDEAS_KEY, AUDIO_IDEAS_TITLE, mountAudioIdeas } from "./audiostory/ideas.jsx";
 import IdeasReview, { IdeasBoard } from "./audiostory/board.jsx";
+import AllIdeas from "./audiostory/all.jsx";
 import { AUDIO_RESEARCH_KEY, AUDIO_RESEARCH_TITLE, mountAudioResearch } from "./audiostory/research.jsx";
 import AudioControl, { ResearchReview } from "./audiostory/control.jsx";
 
@@ -73,7 +75,7 @@ export const LOCAL_WORKSHEETS = [
   // marked from the review page and shown on the board (?board, no names)
   // for the projector. Research on the okayed idea, due Tuesday, November 3.
   // control is the instructor's page at ?control, how each sheet works.
-  { key: AUDIO_IDEAS_KEY, title: AUDIO_IDEAS_TITLE, mount: mountAudioIdeas, review: IdeasReview, board: IdeasBoard, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  { key: AUDIO_IDEAS_KEY, title: AUDIO_IDEAS_TITLE, mount: mountAudioIdeas, review: IdeasReview, board: IdeasBoard, all: AllIdeas, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   { key: AUDIO_RESEARCH_KEY, title: AUDIO_RESEARCH_TITLE, mount: mountAudioResearch, review: ResearchReview, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
   { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },

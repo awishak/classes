@@ -130,7 +130,7 @@ export function IdeasSheet({ store, viewer, classId, readOnly = false, storage, 
   const root = { className: "as" + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
   if (!answers) return <div {...root}><style>{CSS}</style><div className="sheet"><div className="foot"><span className="status">{STATUS[status] || "Loading…"}</span></div></div></div>;
   const left = missingOf(answers);
-  const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>.</> : <><b>{REQUIRED.length - left.length} of {REQUIRED.length}</b> answered</>);
+  const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>. {classId ? <a className="go focusable" href={ideasHref(classId) + "?all"}>Everyone's ideas</a> : null}</> : <><b>{REQUIRED.length - left.length} of {REQUIRED.length}</b> answered</>);
 
   return (
     <div {...root}>

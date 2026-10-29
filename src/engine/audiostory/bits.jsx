@@ -226,9 +226,11 @@ export const CSS = `
 .as .pick input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 .as .audio .bar{height:8px;width:min(100%,480px);border-radius:999px;background:var(--line-soft);overflow:hidden}
 .as .audio .bar i{display:block;height:100%;background:var(--accent);transition:width .2s ease}
+.as .pair{margin:0;font-size:19px}
 .as .foot{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:8px 28px 24px;flex-wrap:wrap;min-height:76px;border-top:1px solid var(--line-soft)}
 .as .foot .say{font-size:17px;color:var(--secondary);flex:1;min-width:200px}
 .as .foot .say b{color:var(--ink);font-weight:600}
+.as .foot .go{color:var(--accent);font-weight:600}
 .as .bad{color:var(--bad)}
 .as .status{font-size:14px;color:var(--secondary);min-height:1.4em}
 .as .status.bad{color:var(--bad)}
