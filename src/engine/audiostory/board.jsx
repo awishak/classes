@@ -75,11 +75,15 @@ function useSectionTabs(config) {
   return [section, tabs];
 }
 
-/** The roster's people in a section, each with their sheet if one exists. */
+/** The roster's people in a section, each with their sheet if one exists,
+ * then any sheet from off the roster (the instructor's own, for a dry run),
+ * named by its email and shown in every section. */
 function rowsOf(roster, sheets, section) {
   const byEmail = new Map(sheets.map(s => [s.viewer_id, s]));
   const people = roster.filter(s => s.email && !isLurker(s.name) && (!section || sectionOf(s) === section));
-  return people.map(p => ({ student: p, sheet: byEmail.get(lower(p.email)) || null }));
+  const onRoster = new Set(roster.filter(s => s.email).map(s => lower(s.email)));
+  const others = sheets.filter(s => !onRoster.has(s.viewer_id)).map(s => ({ student: { name: s.viewer_id, email: s.viewer_id }, sheet: s }));
+  return [...people.map(p => ({ student: p, sheet: byEmail.get(lower(p.email)) || null })), ...others];
 }
 
 export default function IdeasReview({ config, worksheetKey, roster }) {
