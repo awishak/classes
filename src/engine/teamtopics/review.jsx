@@ -58,7 +58,7 @@ export function byTopic(sheets) {
 export default function TopicsReview({ config, worksheetKey, roster }) {
   const [sheets, setSheets] = useState(null);
   const [error, setError] = useState("");
-  const [view, setView] = useState("topic");
+  const [view, setView] = useState(() => { try { const v = new URLSearchParams(window.location.search).get("v"); return v === "summary" || v === "student" ? v : "topic"; } catch { return "topic"; } });
   const sections = sectionsOf(config);
   const [section, setSection] = useState(sections[0] || "");
 
@@ -100,8 +100,10 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
       <div className="ttr-tabs" role="tablist" aria-label="View">
         <button type="button" role="tab" aria-selected={view === "topic"} className={"ttr-tab" + (view === "topic" ? " ttr-on" : "")} onClick={() => setView("topic")}>By concept</button>
         <button type="button" role="tab" aria-selected={view === "student"} className={"ttr-tab" + (view === "student" ? " ttr-on" : "")} onClick={() => setView("student")}>By student</button>
+        <button type="button" role="tab" aria-selected={view === "summary"} className={"ttr-tab" + (view === "summary" ? " ttr-on" : "")} onClick={() => setView("summary")}>Summary</button>
       </div>
-      {view === "topic" ? (
+      {view === "summary" ? <Summary topics={topics} students={withSheets.length} accent={config.accent} /> : null}
+      {view === "summary" ? null : view === "topic" ? (
         <>
           <ol className="ttr-index">
             {topics.map(t => <li key={t.topic}><a href={"#" + slug(t.topic)}>{t.topic}</a><span className="ttr-count">{t.entries.length}</span></li>)}
@@ -141,6 +143,38 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
   );
 }
 
+// The room screen. Andrew, 2026-10-29: "a summary of their concepts stuff.
+// make the summary really pretty for me." The concepts the class picked, as
+// bars, then the questions under the top ones. No names on the screen.
+function Summary({ topics, students, accent }) {
+  const max = Math.max(1, ...topics.map(t => t.entries.length));
+  const top = topics.slice(0, 6);
+  return (
+    <div className="ttr-sum">
+      <p className="ttr-sum-lede">{students + " students, five concepts each"}</p>
+      <ol className="ttr-bars">
+        {topics.map(t => (
+          <li key={t.topic}>
+            <span className="ttr-bar-label">{t.topic}</span>
+            <span className="ttr-bar" style={{ background: accent + "22" }}><i style={{ width: Math.round(100 * t.entries.length / max) + "%", background: accent }} /></span>
+            <span className="ttr-bar-n">{t.entries.length}</span>
+          </li>
+        ))}
+      </ol>
+      {top.map(t => {
+        const wonders = t.entries.map(e => String(e.wonder || "").trim()).filter(Boolean).slice(0, 4);
+        if (!wonders.length) return null;
+        return (
+          <section key={t.topic} className="ttr-sum-sec">
+            <h2 className="ttr-sum-h">{t.topic}</h2>
+            <ul className="ttr-sum-q">{wonders.map((w, i) => <li key={i}>{w}</li>)}</ul>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 function Shell({ children }) {
   return <div className="ttr"><style>{CSS}</style><div className="ttr-in">{children}</div></div>;
 }
@@ -166,4 +200,16 @@ const CSS = `
 .ttr-entry{margin:0;font-size:16.5px;line-height:1.55;max-width:70ch}
 .ttr-entry b{font-weight:600}
 .ttr-muted{margin:0;font-size:14.5px;color:${T.muted}}
+.ttr-sum{display:flex;flex-direction:column;gap:28px;padding-top:8px}
+.ttr-sum-lede{margin:0;font-size:20px;color:${T.secondary}}
+.ttr-bars{margin:0;padding:0;list-style:none;display:grid;gap:10px}
+.ttr-bars li{display:grid;grid-template-columns:minmax(180px,2fr) 5fr 2.5ch;align-items:center;gap:14px;font-size:19px}
+.ttr-bar-label{overflow-wrap:anywhere}
+.ttr-bar{display:block;height:18px;border-radius:4px;overflow:hidden}
+.ttr-bar i{display:block;height:100%;border-radius:4px}
+.ttr-bar-n{text-align:right;font-variant-numeric:tabular-nums;color:${T.secondary}}
+.ttr-sum-sec{border-top:2px solid ${T.primary};padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.ttr-sum-h{margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em}
+.ttr-sum-q{margin:0;padding-left:26px;display:grid;gap:10px;font-size:22px;line-height:1.4}
+@media (max-width:640px){.ttr-bars li{grid-template-columns:1fr 3fr 2.5ch;font-size:16px}.ttr-sum-h{font-size:24px}.ttr-sum-q{font-size:18px}}
 `;
