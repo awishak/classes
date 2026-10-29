@@ -64,7 +64,19 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
   const [error, setError] = useState("");
   const [sportId, setSportId] = useState(E.SPORTS[0].id);
   const [choices, setChoices] = useState(E.LETTERS.map(() => ""));
+  const [readings, setReadings] = useState(null);  // the class's readings row, null until read, {} when there is none
   const student = people.find(p => p.email === whoEmail) || null;
+
+  // The readings row, once. Written by scripts/locker-room-readings.mjs.
+  useEffect(() => {
+    const row = E.readingsRow(config.storageKey);
+    const S = typeof window !== "undefined" ? window.storage : null;
+    if (!row || !S) { setReadings({}); return undefined; }
+    let alive = true;
+    S.get(row).then(got => { if (!alive) return; let data = {}; try { data = got ? JSON.parse(got.value) || {} : {}; } catch { data = {}; } setReadings(data); })
+      .catch(() => { if (alive) setReadings({}); });
+    return () => { alive = false; };
+  }, [config.storageKey]);
 
   useEffect(() => {
     if (!student) return undefined;
@@ -106,6 +118,15 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
         <li>The prompt after a week is Andrew's line with the student's own wonder on that concept in the blank. The press week asks what a coach should say in public about a player who had a bad night. The final week asks what makes for a good team culture. A student with no wonder on file gets the class's, unattributed.</li>
         <li>The concepts and the cast are saved when the team is picked. Each week's result is saved packed in its own row the moment the choice is made, so later changes to these words never change a week already played.</li>
       </ol>
+
+      <h2 className="tkc-h">Before the season</h2>
+      <ul className="tkc-list">
+        <li>The readings page comes first, every time a student opens the game, when the class's readings row ({E.readingsRow(config.storageKey) || "none for this class"}) has a list under their email. Chapters as lines, articles as links. The same list is behind the Readings button on the sticky bar through the season. The row is written by scripts/locker-room-readings.mjs; the table of who gets what is at the bottom of this page.</li>
+        <li>On the How this works card, before the explainer, the student picks the definition of culture from four, dealt in an order their name sets. One is Andrew's and right; the other three are what culture gets confused with. The pick is saved as the file's `define` row, the student is told whether they got it, and the definition is printed either way. The Start button waits for a pick.</li>
+      </ul>
+      <table className="tkc-table"><thead><tr><th>Option</th><th></th></tr></thead><tbody>
+        {E.CULTURE_DEFS.map(d => <tr key={d.id}><td>{d.text}</td><td>{d.right ? "Right" : "Wrong"}</td></tr>)}
+      </tbody></table>
 
       <h2 className="tkc-h">The three numbers and the coins</h2>
       <ul className="tkc-list">
@@ -197,6 +218,18 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
           <p className="tkc-p">End of that season: {sim.state.wins}-{sim.state.losses}, culture {sim.state.culture}, skills {sim.state.skills}, success {sim.state.success}, grade {E.gradeOf(sim.state.success)}.</p>
         </>
       ) : student ? <p className="tkc-p">Loading the student's sheets.</p> : <p className="tkc-p">Nobody on the roster yet.</p>}
+
+      <h2 className="tkc-h">The readings, by student</h2>
+      {readings === null ? <p className="tkc-p">Reading the readings row.</p>
+        : !Object.keys(readings.students || {}).length ? <p className="tkc-p">No readings row for this class yet.</p>
+        : (
+          <table className="tkc-table"><thead><tr><th>Student</th><th>Readings</th></tr></thead><tbody>
+            {people.map(p => {
+              const list = E.readingsFor(readings, p.email);
+              return <tr key={p.email}><td>{p.name}</td><td>{list.length ? list.map((r, i) => <span key={r.id}>{i ? "; " : ""}{r.url ? <a href={r.url} target="_blank" rel="noopener">{r.title}</a> : r.title}</span>) : "none"}</td></tr>;
+            })}
+          </tbody></table>
+        )}
     </div></div>
   );
 }

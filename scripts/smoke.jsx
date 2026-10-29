@@ -6208,6 +6208,20 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (E.unpackResult("not json") || E.unpackResult('{"w":"a"}')) say("a bad result row reads as a result");
   if (E.replay({ "result:a": "junk" }, "Ann").results.length) say("a junk week replays");
   if (!G.missingOf({}).includes("a sport") || !G.missingOf({}).includes("week 1")) say("an empty file is not missing a sport and week 1");
+  // The definition of culture: four, one right, dealt in an order the name sets. Andrew, 2026-10-29.
+  if (E.CULTURE_DEFS.length !== 4 || E.CULTURE_DEFS.filter(d => d.right).length !== 1) say("the definitions of culture are not four with one right");
+  if (!E.CULTURE_DEFS.find(d => d.right).text.includes(E.CULTURE_DEF)) say("the right definition is not Andrew's");
+  const dealt = E.defineChoicesFor("Ann Example");
+  if (dealt.length !== 4 || new Set(dealt.map(d => d.id)).size !== 4 || JSON.stringify(dealt) !== JSON.stringify(E.defineChoicesFor("Ann Example"))) say("the definitions are not dealt whole, or not the same twice");
+  if (!E.defineOf("right")?.right || E.defineOf("mood")?.right || E.defineOf("nope")) say("defineOf is off");
+  if (!G.missingOf({}).includes("the definition of culture") || G.missingOf({ define: "mood" }).includes("the definition of culture")) say("the definition is not required, or a wrong pick does not count as a pick");
+  // The readings before the season: one list a student, from the class's row.
+  const readRow = { titles: { ch4: { title: "Chapter 4" }, kerr: { title: "Kerr", url: "https://x" } }, students: { "ann@x": ["ch4", "kerr", "gone"] } };
+  if (E.readingsRow("comm118-f26-v1") !== "comm118-f26-v1-readings" || E.readingsRow("") !== "") say("the readings row is misnamed");
+  const reads = E.readingsFor(readRow, " Ann@X ");
+  if (reads.length !== 2 || reads[0].title !== "Chapter 4" || reads[1].url !== "https://x") say("readingsFor does not read a student's list: " + JSON.stringify(reads));
+  if (E.readingsFor(readRow, "ben@x").length || E.readingsFor(null, "ann@x").length || E.readingsFor("junk", "ann@x").length) say("readingsFor invents a list");
+  cases.push(["Takeover, the readings", <div className="tk"><G.ReadingList readings={reads} /></div>, "Chapter 4"]);
   if (Math.abs(E.winChance(50, 50) - 0.5) > 0.001 || Math.abs(E.winChance(0, 0) - 0.05) > 0.001 || Math.abs(E.winChance(100, 100) - 0.95) > 0.001) say("the win chance is off: " + E.winChance(50, 50) + ", " + E.winChance(100, 100));
   if (E.gradeOf(80) !== "A" || E.gradeOf(34) !== "F") say("the grades are off");
   if (E.coins(3.5) !== "●●●◐" || E.coins(0) !== "") say("coins draw wrong: " + E.coins(3.5));

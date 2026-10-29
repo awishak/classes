@@ -34,8 +34,10 @@ export function tally(sheets) {
   const kinds = Object.fromEntries(Object.keys(E.TAGS).map(t => [t, 0]));
   const polls = {};
   const cultures = [], skills = [], successes = [];
-  let wins = 0, losses = 0;
+  let wins = 0, losses = 0, defined = 0, definedRight = 0;
   sheets.forEach(sh => {
+    const def = E.defineOf(sh.answers[E.F.define]);
+    if (def) { defined += 1; if (def.right) definedRight += 1; }
     const { results, state } = E.replay(sh.answers, sh.student?.name || "");
     results.forEach(r => { const o = E.optionOf(E.situationOf(r.situation), r.option); if (o) kinds[o.tag] = (kinds[o.tag] || 0) + 1; });
     if (results.length) { cultures.push(state.culture); skills.push(state.skills); successes.push(state.success); wins += state.wins; losses += state.losses; }
@@ -49,7 +51,7 @@ export function tally(sheets) {
     });
   });
   const avg = (xs) => xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
-  return { kinds, polls, culture: avg(cultures), skills: avg(skills), success: avg(successes), wins, losses, seasons: cultures.length };
+  return { kinds, polls, culture: avg(cultures), skills: avg(skills), success: avg(successes), wins, losses, seasons: cultures.length, defined, definedRight };
 }
 
 export default function TakeoverReview({ config, worksheetKey, roster }) {
@@ -87,7 +89,7 @@ export default function TakeoverReview({ config, worksheetKey, roster }) {
       <p className="tkr-muted"><a href={config.path + "/worksheets/" + worksheetKey + "?control"}>How the game works, and what each student gets</a></p>
       {t.seasons ? (
         <section className="tkr-row">
-          <div className="tkr-head"><b className="tkr-name">What the class did</b><span className="tkr-chip">{t.seasons + (t.seasons === 1 ? " season" : " seasons") + ", " + t.wins + "-" + t.losses + ", culture " + t.culture + ", skills " + t.skills + ", success " + t.success + " on average"}</span></div>
+          <div className="tkr-head"><b className="tkr-name">What the class did</b><span className="tkr-chip">{t.seasons + (t.seasons === 1 ? " season" : " seasons") + ", " + t.wins + "-" + t.losses + ", culture " + t.culture + ", skills " + t.skills + ", success " + t.success + " on average"}</span>{t.defined ? <span className="tkr-chip">{t.definedRight + " of " + t.defined + " picked the right definition of culture"}</span> : null}</div>
           <table className="tkr-table"><tbody>
             {Object.keys(E.TAGS).map(k => <tr key={k}><td>{E.TAGS[k].label}</td><td className="tkr-n">{t.kinds[k]}</td></tr>)}
           </tbody></table>

@@ -60,6 +60,37 @@ export const costOf = (option, weekLetter) => option.cost + (option.cost > 0 && 
 // What a player's reaction gives back, in coins. Andrew's rule.
 export const RETURN = { up: 1, flat: 0.5, down: 0 };
 
+// ─── the definition of culture ───
+// Andrew, 2026-10-29: "i want students to have to pick the right definition
+// of culture ... give them that option or 3 others that are wrong, and let
+// them know what they got." His definition is the right one; the three
+// wrong ones are Claude's, each a thing culture gets confused with: the
+// rulebook, the mood, the boss. Dealt in an order the name sets.
+export const CULTURE_DEF = "the shared beliefs, values, customs, behaviors, and artifacts that a group of people learn, share, and pass down through generations";
+export const CULTURE_DEFS = [
+  { id: "right", text: "Culture is " + CULTURE_DEF + ".", right: true },
+  { id: "rules", text: "Culture is the set of rules and policies a group writes down so that everyone knows what is expected of them.", right: false },
+  { id: "mood", text: "Culture is the mood of a group at a given moment, which rises and falls with wins and losses.", right: false },
+  { id: "leader", text: "Culture is the personality of the leader, which the rest of the group takes on while that leader is in charge.", right: false },
+];
+export const defineChoicesFor = (name) => shuffled(CULTURE_DEFS, name, "define");
+export const defineOf = (id) => CULTURE_DEFS.find(d => d.id === String(id || "").trim()) || null;
+
+// ─── the readings ───
+// Each student's readings before the season, in one instructor-written row
+// (`<storageKey>-readings`, written by scripts/locker-room-readings.mjs):
+//   { titles: { id: { title, source, url } }, students: { email: [id, ...] } }
+// Andrew, 2026-10-29: "assign chapter 4 to everyone", chapter 3 to the
+// students on motivation, youth and parents, spectators, coaching, positive
+// coaching or peers, and a few articles each from his repository and beyond.
+export const readingsRow = (storageKey) => storageKey ? storageKey + "-readings" : "";
+export function readingsFor(data, email) {
+  const d = data && typeof data === "object" ? data : null;
+  if (!d) return [];
+  const ids = (d.students || {})[String(email || "").trim().toLowerCase()] || [];
+  return ids.map(id => ({ id, ...(d.titles || {})[id] })).filter(r => r.title);
+}
+
 // Fields, as the database names them: letters, an optional ":part".
 export const F = {
   sport: "sport",
@@ -717,9 +748,20 @@ export const DEFAULT_COPY = {
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",
-  defineAsk: "Before anything else: how would you define culture? Write it in your own words.",
-  defineHint: "Culture is...",
-  how: "You're the new coach. The team doesn't know you yet.\n\nYou have two numbers to get up. Culture is how the team treats each other. Skills and strategy is how good they actually are at the game. Both go from 0 to 100, and both start wherever the old coach left them.\n\nPut those two together and that's your chance of winning each week. Win, and your third number, Success, goes up.\n\nYou also have Trust Coins. Five to start. Everything you do costs some Trust Coins, and a few things are free. After every week your five players tell you how they feel about what you did. A plus means you get a Trust Coin back. An equals means you get half a Trust Coin back. A minus means that Trust Coin is gone.\n\nStarting in week 3 you can do more than one thing in a week, if you can pay for all of it. There are also some bigger things you can buy once a season, like a film room or a team trip. Starting in week 4 everything costs one Trust Coin more. And you can only hold eight Trust Coins, so don't sit on them.\n\nSuccess moves a little differently. Every week it drifts toward your culture and skills, so if those two go up, Success follows. A win bumps it up. A loss knocks it down a little.",
+  defineAsk: "Before anything else: which one of these is the definition of culture?",
+  defineRight: "You got it.",
+  defineWrong: "Not quite.",
+  // Andrew's, 2026-10-29: "say: culture is defined as:... so how does that
+  // work for teams and organizations, and how can someone change the
+  // culture for the better (or worse)? That's up to you to figure out."
+  defineIs: "Culture is defined as: " + CULTURE_DEF + ". So how does that work for teams and organizations, and how can someone change the culture for the better (or worse)? That's up to you to figure out.",
+  // The readings before the season. Andrew's sentence, 2026-10-29.
+  readingsTitle: "Your readings",
+  readingsAsk: "You've been assigned to read these chapters and articles before you get started as the coach. Please do so before continuing.",
+  readingsGo: "Continue",
+  readingsBtn: "Readings",
+  close: "Close",
+  how: "You're the new coach. The team doesn't know you yet.\n\nYou have two numbers to get up. Culture is the team's shared beliefs, values, customs and behaviors, the definition you just picked. Skills and strategy is how good they actually are at the game. Both go from 0 to 100, and both start wherever the old coach left them.\n\nPut those two together and that's your chance of winning each week. Win, and your third number, Success, goes up.\n\nYou also have Trust Coins. Five to start. Everything you do costs some Trust Coins, and a few things are free. After every week your five players tell you how they feel about what you did. A plus means you get a Trust Coin back. An equals means you get half a Trust Coin back. A minus means that Trust Coin is gone.\n\nStarting in week 3 you can do more than one thing in a week, if you can pay for all of it. There are also some bigger things you can buy once a season, like a film room or a team trip. Starting in week 4 everything costs one Trust Coin more. And you can only hold eight Trust Coins, so don't sit on them.\n\nSuccess moves a little differently. Every week it drifts toward your culture and skills, so if those two go up, Success follows. A win bumps it up. A loss knocks it down a little.",
   howGo: "Start the season",
   kindsTitle: "Here are your five types of actions you can take:",
   capital: "Trust Coins",

@@ -20,6 +20,7 @@
 // are the ones the student saw on the profile task and the check-in, and
 // the assignments' own titles. The AI summary he mentioned is for later.
 
+import { readingsRow, readingsFor } from "./takeover/engine.js";
 import { useEffect, useMemo, useState } from "react";
 import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
@@ -98,11 +99,20 @@ export default function StudentPage({ config, id }) {
   const name = student?.name || "";
   const [feed, setFeed] = useState(null);         // the story admin feed, for classes with a story
   const [docLinks, setDocLinks] = useState({});   // a page assignment's Google Doc, from its sheet
+  const [readings, setReadings] = useState([]);   // the readings before Locker Room, from the class's readings row
   const assignments = useMemo(() => inDueOrder(assignmentsOf(config, data)).filter(a => !isProfileTask(a)), [config, data]);
   const storyAsg = assignments.find(a => isStory(a, config));
   const pageAsgs = useMemo(() => assignments.filter(a => hasPage(a, config)), [assignments, config]);
 
   useEffect(() => { document.title = config.code + " · " + (name || "Student"); }, [config, name]);
+  useEffect(() => {
+    const row = readingsRow(config.storageKey);
+    const S = typeof window !== "undefined" ? window.storage : null;
+    if (!row || !S || !student?.email) return undefined;
+    let alive = true;
+    S.get(row).then(got => { if (!alive) return; let data = null; try { data = got ? JSON.parse(got.value) : null; } catch { data = null; } setReadings(readingsFor(data, student.email)); }).catch(() => {});
+    return () => { alive = false; };
+  }, [config.storageKey, student?.email]);
 
   // The story and every comment on it.
   useEffect(() => {
@@ -186,6 +196,15 @@ export default function StudentPage({ config, id }) {
         </section>
       ))}
 
+      {readings.length ? (
+        <section className="sp-card">
+          <h2 className="sp-h2">Readings for Locker Room</h2>
+          <ul className="sp-reads">
+            {readings.map(r => <li key={r.id}>{r.url ? <a href={r.url} target="_blank" rel="noopener">{r.title}</a> : r.title}{r.source ? <span className="sp-when">{" · " + r.source}</span> : null}</li>)}
+          </ul>
+        </section>
+      ) : null}
+
       <div className="sp-grid">
         {assignments.filter(a => !isCheckin(a)).map(asg => {
           const r = recordOf(config, data, asg, name);
@@ -245,6 +264,7 @@ const CSS = `
 .sp-field{display:flex;flex-direction:column;gap:4px;min-width:0}
 .sp-field dt{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
 .sp-field dd{margin:0;font-size:16px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.sp-reads{margin:0;padding-left:22px;display:grid;gap:6px;font-size:15.5px;line-height:1.5}
 .sp-h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .sp-h2 a{color:var(--ca-accent-ink);text-decoration:none}
 .sp-h2 a:hover{text-decoration:underline}

@@ -42,6 +42,29 @@ half of it back. And if a player gives you a minus sign, you lose that
 capital ... You can't give people the same options every round ... after
 the first one, it should be in response to a thing."
 
+## Before the season, added 2026-10-29 evening
+
+Andrew: "assign chapter 4 to everyone", chapter 3 to anyone on motivation,
+youth and parents, spectators, coaching, positive coaching or peers, and a
+few articles each from his repository and a search that night. The lists
+live on the class's readings row (`comm118-f26-v1-readings`, written by
+`scripts/locker-room-readings.mjs`), one list an email. A student with a
+list sees the readings page first, every time they open the game, with his
+sentence ("You've been assigned to read these chapters and articles before
+you get started as the coach. Please do so before continuing."), and the
+Readings button on the sticky bar through the season. The control page
+tables who gets what; the student page shows the list.
+
+The definition of culture is a pick, not a box: "i want students to have
+to pick the right definition of culture ... give them that option or 3
+others that are wrong, and let them know what they got." His definition
+(`CULTURE_DEF`) and three wrong ones (the rulebook, the mood, the boss),
+dealt by the name. The pick is the file's `define` row, the student is told
+whether they got it, and his line follows either way: "Culture is defined
+as: ... So how does that work for teams and organizations, and how can
+someone change the culture for the better (or worse)? That's up to you to
+figure out."
+
 ## Where it lives
 
 - Students: `/comm118/worksheets/locker-room`, signed in with their email off

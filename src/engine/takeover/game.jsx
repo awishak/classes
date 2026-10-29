@@ -60,7 +60,7 @@ export function missingOf(answers) {
   const out = [];
   if (blank(a[E.F.sport])) out.push("a sport");
   if (blank(a[E.F.team])) out.push("a team");
-  if (blank(a[E.F.define])) out.push("your definition of culture");
+  if (blank(a[E.F.define])) out.push("the definition of culture");
   E.LETTERS.forEach((w, i) => {
     if (blank(a[E.F.result(w)])) out.push("week " + (i + 1));
     else if (blank(a[E.F.reflect(w)])) out.push("week " + (i + 1) + "'s answer");
@@ -189,15 +189,30 @@ function Meter({ label, value, delta }) {
     </span>
   );
 }
-function Hud({ copy, state, deltas }) {
+function Hud({ copy, state, deltas, onReadings }) {
   return (
     <div className="hud px">
       <span className="cap"><span className="ml"><Words k="capital" copy={copy} /></span> <b className="coins">{E.coins(state.capital)}</b> <span className="n">{state.capital}</span>{deltas && deltas.back != null ? <span className="delta up">{"+" + deltas.back + " back"}</span> : null}</span>
       <Meter label={copy.say("culture")} value={state.culture} delta={deltas ? deltas.culture : null} />
       <Meter label={copy.say("skills")} value={state.skills} delta={deltas ? deltas.skills : null} />
       <Meter label={copy.say("success")} value={state.success} delta={deltas ? deltas.success : null} />
-      <span className="rec"><span className="ml"><Words k="record" copy={copy} /></span> <span className="n">{state.wins}-{state.losses}</span></span>
+      <span className="rec"><span className="ml"><Words k="record" copy={copy} /></span> <span className="n">{state.wins}-{state.losses}</span>{onReadings ? <button type="button" className="btn px small" onClick={onReadings}>{copy.say("readingsBtn")}</button> : null}</span>
     </div>
+  );
+}
+
+// The student's readings: the chapters as lines, the articles as links that
+// open beside the game. Shown before the season and from the sticky bar.
+export function ReadingList({ readings }) {
+  return (
+    <ul className="reads">
+      {readings.map(r => (
+        <li key={r.id}>
+          {r.url ? <a href={r.url} target="_blank" rel="noopener">{r.title}</a> : <span>{r.title}</span>}
+          {r.source ? <span className="dim">{" · " + r.source}</span> : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -322,7 +337,7 @@ export function SeasonLog({ answers, name, classmates, copy }) {
   return (
     <div className="log">
       <div className="px head2">{team + " · " + sport.name + " · " + state.wins + "-" + state.losses + " · culture " + state.culture + " · skills " + state.skills + " · success " + state.success + " (" + E.gradeOf(state.success) + ")"}</div>
-      {answers[E.F.define] ? <section className="week"><p className="ask">{copy.say("defineAsk")}</p><p className="answer">{answers[E.F.define]}</p></section> : null}
+      {answers[E.F.define] ? <section className="week"><p className="ask">{copy.say("defineAsk")}</p><p className="answer">{(E.defineOf(answers[E.F.define]) || { text: answers[E.F.define] }).text}{E.defineOf(answers[E.F.define]) ? " · " + copy.say(E.defineOf(answers[E.F.define]).right ? "defineRight" : "defineWrong") : ""}</p></section> : null}
       {results.map((r, i) => {
         const week = plan[i];
         const prompt = parsePrompt(answers[E.F.prompt(week.week)]) || week.prompt;
@@ -427,6 +442,8 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const [pickTeam, setPickTeam] = useState("");
   const [seenMulti, setSeenMulti] = useState(false); // the pop-up about more than one choice, shown once
   const [runThrough, setRunThrough] = useState(false); // the instructor's run-through: Next without the boxes
+  const [readings, setReadings] = useState(null);    // this student's readings, [] when there are none, null until read
+  const [showReadings, setShowReadings] = useState(false);
   const saver = useRef(null);
   const sound = useRef(null);
   const rootRef = useRef(null);
@@ -454,6 +471,18 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const ready = topics !== null;
 
   useEffect(() => { loadFont(); }, []);
+  // The readings before the season, from the class's readings row. Andrew,
+  // 2026-10-29: a page before Locker Room, "yeah". No row, or no class, or
+  // the instructor reading a file: no page.
+  useEffect(() => {
+    const row = E.readingsRow(storageKey);
+    const S = typeof window !== "undefined" ? window.storage : null;
+    if (readOnly || !row || !S || !viewer?.id) { setReadings([]); return undefined; }
+    let alive = true;
+    S.get(row).then(got => { if (!alive) return; let data = null; try { data = got ? JSON.parse(got.value) : null; } catch { data = null; } setReadings(E.readingsFor(data, viewer.id)); })
+      .catch(() => { if (alive) setReadings([]); });
+    return () => { alive = false; };
+  }, [storageKey, readOnly, viewer?.id]);
   useEffect(() => {
     sound.current = createSound();
     return () => sound.current.destroy();
@@ -523,13 +552,15 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   };
 
   // Where to open, once the file is read.
+  const afterReadings = (a) => blank(a[E.F.sport]) ? "title" : "file";
   useEffect(() => {
     if (!answers || screen) return;
     if (readOnly) { setScreen("done"); return; }
     if (submitted) { setScreen("done"); return; }
-    if (!blank(answers[E.F.sport])) { setScreen("file"); return; }
-    setScreen("title");
-  }, [answers, submitted, readOnly, screen]);
+    if (readings === null) return;
+    if (readings.length) { setScreen("readings"); return; }
+    setScreen(afterReadings(answers));
+  }, [answers, submitted, readOnly, screen, readings]);
 
   const go = (where) => { setScreen(where); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
   const toWeek = (i) => { setCursor(i); setPhase(""); setPicked([]); go("week"); };
@@ -626,6 +657,15 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
         <SeasonLog answers={answers} name={name} classmates={classmates} copy={copy} />
       </div>
     );
+  } else if (screen === "readings") {
+    body = (
+      <div className="screen">
+        <h2 className="px"><Words k="readingsTitle" copy={copy} /></h2>
+        <p className="say big"><Words k="readingsAsk" copy={copy} /></p>
+        <ReadingList readings={readings || []} />
+        <button type="button" className="btn px primary" onClick={() => { sound.current.unlock(); sound.current.pick(); go(afterReadings(answers)); }}>{copy.say("readingsGo")}</button>
+      </div>
+    );
   } else if (screen === "file") {
     body = (
       <div className="screen center">
@@ -673,11 +713,16 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={() => { if (howFrom === "week") toWeek(cursor); else go(howFrom); }} />
-        <Hud copy={copy} state={season.state} />
+        <Hud copy={copy} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px"><Words k="howTitle" copy={copy} /></h2>
         <div className="reflect">
           <p className="ask"><Words k="defineAsk" copy={copy} /></p>
-          <textarea className="ta short" rows={3} value={answers[E.F.define] || ""} placeholder={copy.say("defineHint")} onChange={e => set(E.F.define, e.target.value)} aria-label="Your definition of culture" />
+          <div className="defs">
+            {E.defineChoicesFor(name).map(d => (
+              <button key={d.id} type="button" className="defbtn" aria-pressed={answers[E.F.define] === d.id} onClick={() => { sound.current.pick(); set(E.F.define, d.id, true); }}>{d.text}</button>
+            ))}
+          </div>
+          {E.defineOf(answers[E.F.define]) ? <p className="say"><b className={"px " + (E.defineOf(answers[E.F.define]).right ? "good" : "bad")}>{copy.say(E.defineOf(answers[E.F.define]).right ? "defineRight" : "defineWrong")}</b> <Words k="defineIs" copy={copy} /></p> : null}
         </div>
         <div className="how"><Words k="how" copy={copy} as="p" className="say pre" /></div>
         <p className="say"><Words k="kindsTitle" copy={copy} /></p>
@@ -721,7 +766,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={backWeek}><button type="button" className="btn px small" onClick={() => showHow("week")}>{copy.say("howTitle")}</button></Nav>
-        <Hud copy={copy} state={settled ? stateNow : stateBefore} deltas={deltas} />
+        <Hud copy={copy} state={settled ? stateNow : stateBefore} deltas={deltas} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px">{"Week " + week.n} <span className="dim">{"· " + week.label}</span></h2>
         {popup ? (
           <div className="popup" role="dialog" aria-label={copy.say("multiTitle")}>
@@ -793,7 +838,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={() => toWeek(E.WEEKS - 1)}><button type="button" className="btn px small" onClick={() => showHow("board")}>{copy.say("howTitle")}</button></Nav>
-        <Hud copy={copy} state={season.state} />
+        <Hud copy={copy} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px"><Words k="board" copy={copy} /> <span className="dim">{team}</span></h2>
         <Leaderboard classId={classId} storageKey={storageKey} me={name} copy={copy} fetcher={boardFetcher} />
         <button type="button" className="btn px primary" onClick={() => { sound.current.pick(); go("end"); }}>{copy.say("boardGo")}</button>
@@ -805,7 +850,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={() => go("board")}><button type="button" className="btn px small" onClick={() => { sound.current.pick(); go("board"); }}>{copy.say("board")}</button><button type="button" className="btn px small" onClick={() => showHow("end")}>{copy.say("howTitle")}</button></Nav>
-        <Hud copy={copy} state={season.state} />
+        <Hud copy={copy} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px"><Words k="seasonOver" copy={copy} /> <span className="dim">{team + " · " + season.state.wins + "-" + season.state.losses + " · " + E.gradeOf(season.state.success)}</span></h2>
         <Field sport={sport.id} sign={E.signFor(name, "end", team)} />
         <Squad cast={cast} bench={bench} photos={photos} moods={last ? last.moods : null} scale={4} jersey={jersey} cheer={season.state.success >= 65 ? "cheer" : ""} />
@@ -842,6 +887,15 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
           </span>
         </div>
         {editing ? <EditWords copy={copy} /> : body}
+        {showReadings ? (
+          <div className="popup" role="dialog" aria-label={copy.say("readingsTitle")}>
+            <div className="popin left">
+              <b className="px"><Words k="readingsTitle" copy={copy} /></b>
+              <ReadingList readings={readings || []} />
+              <button type="button" className="btn px small" onClick={() => { sound.current.blip(); setShowReadings(false); }}>{copy.say("close")}</button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -957,6 +1011,14 @@ export const CSS = `
 .tk .popup{position:fixed;inset:0;background:rgba(10,10,22,.8);display:grid;place-items:center;z-index:50;padding:16px}
 .tk .popin{display:grid;gap:14px;justify-items:center;text-align:center;background:var(--panel);border:4px solid var(--gold);box-shadow:0 0 0 4px var(--ink),0 0 0 8px var(--sky);padding:24px;max-width:520px}
 .tk .popin b{color:var(--gold);font-size:12px}
+.tk .popin.left{justify-items:start;text-align:left;max-width:640px;max-height:90vh;overflow:auto}
+.tk .defs{display:grid;gap:10px}
+.tk .defbtn{text-align:left;background:var(--deep);border:3px solid var(--line);color:var(--text);padding:12px 14px;cursor:pointer;font-family:var(--mono);font-size:15px;line-height:1.5;box-shadow:4px 4px 0 var(--ink)}
+.tk .defbtn:hover{border-color:var(--gold);background:#1c1c3a}
+.tk .defbtn[aria-pressed="true"]{border-color:var(--gold);background:#2a2a10;box-shadow:4px 4px 0 var(--gold)}
+.tk .good{color:var(--green)}
+.tk .reads{margin:0;padding:0 0 0 22px;display:grid;gap:10px;font-size:16px;line-height:1.5;max-width:70ch}
+.tk .reads a{color:var(--sky)}
 .tk .spendbtn .top{display:flex;justify-content:space-between;gap:8px;color:var(--gold);align-items:flex-start}
 .tk .spendbtn .top .coins{white-space:nowrap}
 .tk .spendbtn .line{font-size:14px;color:var(--text)}
