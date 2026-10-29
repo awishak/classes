@@ -12,8 +12,12 @@
 // ─── chance that is not chance ───
 
 export const hash = (s) => { let h = 5381; for (const ch of String(s).toLowerCase()) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return h; };
+// The hash alone is not enough: two keys that differ only in their last
+// character come out a few bits apart, so one coach drew the same opponent
+// three weeks running. A final mix (murmur3's) spreads them out.
+const mix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; return h >>> 0; };
 // A number in [0, 1) that the same key always gives.
-export const roll = (...key) => (hash(key.join("|")) % 10007) / 10007;
+export const roll = (...key) => mix(hash(key.join("|"))) / 4294967296;
 // A list in an order the key sets.
 export const shuffled = (list, ...key) => list.map((x, i) => [roll(...key, i, x), i, x]).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(x => x[2]);
 export const pick = (list, ...key) => list[Math.floor(roll(...key) * list.length) % list.length];
@@ -66,7 +70,9 @@ export const TEAM_NAMES = [
 ];
 export const teamChoicesFor = (name) => shuffled(TEAM_NAMES, name, "teams").slice(0, 6);
 export const teamNameFor = (name) => teamChoicesFor(name)[0];
-export const opponentFor = (name, week, team) => { const rest = TEAM_NAMES.filter(t => t !== team); return pick(rest, name, "opp", week); };
+// Six different opponents a season, dealt once: a shuffle of the other
+// names, read by the week.
+export const opponentFor = (name, week, team) => { const rest = TEAM_NAMES.filter(t => t !== team); const i = Math.max(0, LETTERS.indexOf(week)); return shuffled(rest, name, "opps")[i % rest.length]; };
 // A jersey for a team, from the palette's team colours (pixel.js JERSEYS).
 export const jerseyFor = (team) => hash(team || "") % 7;
 
@@ -367,6 +373,14 @@ export function planSeason({ name, concepts, topicsAnswers }) {
       : { kind: "wonder", text: wonder || CLASS_WONDERS[concept.id] };
     return { week: w, n: i + 1, last, concept: concept.id, event: event.id, who: event.who, prompt, poll: POLL_WEEKS.includes(w) ? POLLS[concept.id] : null };
   });
+  // The final repeats a concept, so its poll could repeat week 2's or 4's.
+  // Then it asks about another of the five instead, the first not yet polled.
+  const asked = weeks.slice(0, 5).filter(x => x.poll).map(x => x.concept);
+  const last = weeks[5];
+  if (last.poll && asked.includes(last.concept)) {
+    const other = five.map(c => c && c.id).find(id => id && !asked.includes(id));
+    if (other) last.poll = POLLS[other];
+  }
   return weeks;
 }
 

@@ -6171,6 +6171,19 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const full = { [E.F.sport]: "volleyball", [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(E.conceptsFor(topicsA)), [E.F.cast]: E.packCast(big.cast) };
   const one = E.resolve({ name: "Ann Example", week: "a", state: E.start(), spendId: "teach", eventId: E.planSeason({ name: "Ann Example", concepts: E.conceptsFor(topicsA), topicsAnswers: topicsA })[0].event });
   full[E.F.result("a")] = E.packResult(one); full[E.F.reflect("a")] = "Because."; full[E.F.prompt("a")] = "wonder|I wonder A";
+  const { default: TakeoverReview } = await import("../src/engine/takeover/review.jsx");
+  const { default: TakeoverControl } = await import("../src/engine/takeover/control.jsx");
+  const rosterTk = [{ name: "Ann Example", email: "ann@x" }, { name: "Ben Example", email: "ben@x" }];
+  cases.push(["Takeover, review loading", <TakeoverReview config={{ id: "comm999", path: "/comm999" }} worksheetKey="takeover" roster={rosterTk} />, "Loading the sheets"]);
+  cases.push(["Takeover, control page", <TakeoverControl config={{ id: "comm999", path: "/comm999" }} worksheetKey="takeover" roster={rosterTk} />, "Establish dominance"]);
+  // Six different opponents, and a final poll that is not week 2's or 4's.
+  for (const name of names) {
+    const opps = E.LETTERS.map(w => E.opponentFor(name, w, "Kansas Marlins"));
+    if (new Set(opps).size !== 6 || opps.includes("Kansas Marlins")) say(name + " does not get six different opponents: " + opps.join(", "));
+    const plan = E.planSeason({ name, concepts: E.conceptsFor(topicsA), topicsAnswers: topicsA });
+    const polls = plan.filter(w => w.poll).map(w => w.poll.join("/"));
+    if (new Set(polls).size !== polls.length) say(name + " is asked the same poll twice");
+  }
   cases.push(["Takeover, a season read back", <div className="tk"><G.SeasonLog answers={full} name="Ann Example" classmates={big.bench} copy={{ say: (k) => E.DEFAULT_COPY[k] }} /></div>, "Week 1"]);
 }
 
