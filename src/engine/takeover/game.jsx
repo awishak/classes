@@ -25,7 +25,7 @@ import { useCopy, Words } from "../visualstory/pre.jsx";
 import { supabaseStore } from "../worktopia/store.js";
 import { gameClient } from "../gameClient.js";
 import * as E from "./engine.js";
-import { spriteFromName, spriteFromPhoto, renderSprite, drawField, drawMatch, uniform, journalist, MOOD_GLYPH } from "./pixel.js";
+import { spriteFromName, renderSprite, drawField, drawMatch, uniform, journalist, MOOD_GLYPH } from "./pixel.js";
 import { createSound } from "./sound.js";
 
 export { TAKEOVER_KEY, TAKEOVER_TITLE } from "./engine.js";
@@ -76,25 +76,16 @@ export const benchNameOf = (cast, classmates, name) => { const b = benchOf(cast,
 
 // ─── pixels ───
 
-const grids = new Map();
-const gridFor = (name, photo, jersey) => {
-  const fromPhoto = photo ? grids.get(photo) : null;
-  return fromPhoto ? uniform(fromPhoto, jersey, 12) : uniform(spriteFromName(name), jersey, 8);
-};
-const fetchGrid = (photo) => {
-  if (!photo || grids.has(photo)) return Promise.resolve(grids.get(photo) || null);
-  return spriteFromPhoto(photo).then(g => { if (g) grids.set(photo, g); return g; });
-};
+// Every player is drawn from their name: hair, jersey, number. The card
+// photographs are not used. Andrew, 2026-10-29: "the avatars need to be
+// people not picture squares."
+const gridFor = (name, photo, jersey) => uniform(spriteFromName(name), jersey, 8);
 
 function Sprite({ name, photo, scale = 4, jersey = 0 }) {
   const ref = useRef(null);
   useEffect(() => {
-    let alive = true;
     const el = ref.current;
-    if (!el) return undefined;
-    renderSprite(el, gridFor(name, photo, jersey), scale);
-    if (photo && !grids.has(photo)) fetchGrid(photo).then(g => { if (alive && g) renderSprite(el, gridFor(name, photo, jersey), scale); });
-    return () => { alive = false; };
+    if (el) renderSprite(el, gridFor(name, photo, jersey), scale);
   }, [name, photo, scale, jersey]);
   return <canvas ref={ref} width={16 * scale} height={16 * scale} aria-hidden="true" />;
 }
