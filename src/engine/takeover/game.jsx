@@ -635,7 +635,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
       <div className="screen">
         <Nav copy={copy} onBack={backWeek}><button type="button" className="btn px small" onClick={() => showHow("week")}>{copy.say("howTitle")}</button></Nav>
         <Hud copy={copy} state={settled ? stateNow : stateBefore} deltas={deltas} />
-        <h2 className="px">{(week.last ? copy.say("finals") + " " : "") + "Week " + week.n} <span className="dim">{"· " + week.label}</span></h2>
+        <h2 className="px">{"Week " + week.n} <span className="dim">{"· " + week.label}</span></h2>
         {popup ? (
           <div className="popup" role="dialog" aria-label={copy.say("multiTitle")}>
             <div className="popin">
