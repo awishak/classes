@@ -28,15 +28,16 @@ const call = async (body) => {
 const lower = (s) => String(s || "").trim().toLowerCase();
 const when = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
-/** The class's spends and polls, counted across every sheet. */
+/** The class's choices and polls, counted across every sheet. */
 export function tally(sheets) {
-  const spends = Object.fromEntries(E.SPENDS.map(s => [s.id, 0]));
+  const kinds = Object.fromEntries(Object.keys(E.TAGS).map(t => [t, 0]));
   const polls = {};
-  let cultures = [], wins = 0, losses = 0;
+  const cultures = [], skills = [], successes = [];
+  let wins = 0, losses = 0;
   sheets.forEach(sh => {
-    const { results, state } = E.replay(sh.answers);
-    results.forEach(r => { spends[r.spend] = (spends[r.spend] || 0) + 1; });
-    if (results.length) { cultures.push(state.culture); wins += state.wins; losses += state.losses; }
+    const { results, state } = E.replay(sh.answers, sh.student?.name || "");
+    results.forEach(r => { const o = E.optionOf(E.situationOf(r.situation), r.option); if (o) kinds[o.tag] = (kinds[o.tag] || 0) + 1; });
+    if (results.length) { cultures.push(state.culture); skills.push(state.skills); successes.push(state.success); wins += state.wins; losses += state.losses; }
     E.POLL_WEEKS.forEach(w => {
       const a = String(sh.answers[E.F.poll(w)] || "").trim();
       if (!a) return;
@@ -46,8 +47,8 @@ export function tally(sheets) {
       p[a] += 1;
     });
   });
-  const avg = cultures.length ? Math.round(cultures.reduce((a, b) => a + b, 0) / cultures.length) : null;
-  return { spends, polls, avg, wins, losses, seasons: cultures.length };
+  const avg = (xs) => xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null;
+  return { kinds, polls, culture: avg(cultures), skills: avg(skills), success: avg(successes), wins, losses, seasons: cultures.length };
 }
 
 export default function TakeoverReview({ config, worksheetKey, roster }) {
@@ -71,7 +72,7 @@ export default function TakeoverReview({ config, worksheetKey, roster }) {
   const byEmail = new Map(sheets.map(s => [lower(s.viewer_id), s]));
   const people = roster.filter(s => s.email && !isLurker(s.name));
   const rows = people.map(p => ({ student: p, sheet: byEmail.get(lower(p.email)) || null }));
-  const withSheets = rows.filter(r => r.sheet).map(r => r.sheet);
+  const withSheets = rows.filter(r => r.sheet).map(r => ({ ...r.sheet, student: r.student }));
   const submitted = withSheets.filter(s => s.submitted_at).length;
   const t = tally(withSheets);
   const notIn = rows.filter(r => !r.sheet?.submitted_at).map(r => r.student.name);
@@ -85,9 +86,9 @@ export default function TakeoverReview({ config, worksheetKey, roster }) {
       <p className="tkr-muted"><a href={config.path + "/worksheets/" + worksheetKey + "?control"}>How the game works, and what each student gets</a></p>
       {t.seasons ? (
         <section className="tkr-row">
-          <div className="tkr-head"><b className="tkr-name">What the class spent</b><span className="tkr-chip">{t.seasons + (t.seasons === 1 ? " season" : " seasons") + ", " + t.wins + "-" + t.losses + ", culture " + t.avg + " on average"}</span></div>
+          <div className="tkr-head"><b className="tkr-name">What the class did</b><span className="tkr-chip">{t.seasons + (t.seasons === 1 ? " season" : " seasons") + ", " + t.wins + "-" + t.losses + ", culture " + t.culture + ", skills " + t.skills + ", success " + t.success + " on average"}</span></div>
           <table className="tkr-table"><tbody>
-            {E.SPENDS.map(s => <tr key={s.id}><td>{s.label}</td><td className="tkr-n">{t.spends[s.id]}</td></tr>)}
+            {Object.keys(E.TAGS).map(k => <tr key={k}><td>{E.TAGS[k].label}</td><td className="tkr-n">{t.kinds[k]}</td></tr>)}
           </tbody></table>
           {Object.keys(t.polls).length ? (
             <table className="tkr-table"><tbody>
@@ -105,7 +106,7 @@ export default function TakeoverReview({ config, worksheetKey, roster }) {
           </div>
           {sheet ? (
             <details className="tkr-details">
-              <summary>{summaryOf(sheet.answers)}</summary>
+              <summary>{summaryOf(sheet.answers, student.name)}</summary>
               <div className="tk tkr-game"><style>{GAME_CSS}</style><SeasonLog answers={sheet.answers} name={student.name} classmates={classmatesOf(student)} copy={copy} /></div>
             </details>
           ) : null}
@@ -115,12 +116,12 @@ export default function TakeoverReview({ config, worksheetKey, roster }) {
   );
 }
 
-const summaryOf = (answers) => {
+const summaryOf = (answers, name) => {
   const sport = E.sportOf(answers[E.F.sport]);
-  const { results, state } = E.replay(answers);
+  const { results, state } = E.replay(answers, name);
   if (!sport) return "Opened, no sport picked yet.";
   const team = String(answers[E.F.team] || "").trim() || "no team yet";
-  return team + " · " + sport.name + " · " + results.length + " of " + E.WEEKS + " weeks · " + state.wins + "-" + state.losses + " · culture " + state.culture;
+  return team + " · " + sport.name + " · " + results.length + " of " + E.WEEKS + " weeks · " + state.wins + "-" + state.losses + " · culture " + state.culture + " · skills " + state.skills + " · success " + state.success;
 };
 
 function Shell({ children }) {

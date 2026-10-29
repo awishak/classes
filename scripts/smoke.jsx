@@ -6076,7 +6076,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
 // Takeover, 2026-10-29: the culture game. The engine is pure, so the whole
 // season runs here: every bank is complete, every concept a student can
 // type lands, every roll is the same twice, no week can leave the coach
-// without a spend, and a file round-trips through its packed rows.
+// without a choice, and a file round-trips through its packed rows.
 {
   const say = (m) => { console.error("  FAIL  takeover: " + m); failedEarly++; };
   const E = await import("../src/engine/takeover/engine.js");
@@ -6088,20 +6088,30 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   E.FIELDS.forEach(f => { if (!FIELD.test(f)) say("the field " + f + " would be refused by the database"); });
   if (new Set(E.FIELDS).size !== E.FIELDS.length) say("two answers share a field name");
   // The banks.
+  const chars = E.CHARACTERS.map(c => c.id);
   E.CONCEPTS.forEach(c => {
-    if (E.EVENTS.filter(e => e.concept === c.id).length < 2) say(c.id + " has fewer than two events");
+    if (!E.situationFor(c.id)) say(c.id + " has no situation");
     if (!E.POLLS[c.id] || E.POLLS[c.id].length !== 2) say(c.id + " has no poll");
     if (!E.CLASS_WONDERS[c.id]) say(c.id + " has no class wonder");
     if (E.matchConcept(c.name) !== c.id) say("the chapter title " + JSON.stringify(c.name) + " does not land on " + c.id);
   });
-  E.EVENTS.forEach(e => {
-    if (!E.conceptOf(e.concept)) say(e.id + " names no concept");
-    if (!E.characterOf(e.who)) say(e.id + " lands on nobody");
-    E.SPENDS.forEach(s => { if (typeof e.fit[s.id] !== "number") say(e.id + " has no fit for " + s.id); });
-    if (!/\{name\}/.test(e.text)) say(e.id + " never names its player");
+  if (!E.situationOf("opener") || !E.situationOf("finale")) say("no opener or no finale");
+  if (new Set(E.SITUATIONS.map(s => s.id)).size !== E.SITUATIONS.length) say("a situation id repeats");
+  E.SITUATIONS.forEach(s => {
+    if (s.who && !E.characterOf(s.who)) say(s.id + " lands on nobody");
+    if (s.options.length < 3 || s.options.length > 4) say(s.id + " has " + s.options.length + " options");
+    if (!s.options.some(o => o.cost === 0)) say(s.id + " has no free option");
+    if (new Set(s.options.map(o => o.id)).size !== s.options.length) say(s.id + " has two options with one id");
+    if (!s.research) say(s.id + " has no research note");
+    s.options.forEach(o => {
+      if (!E.TAGS[o.tag]) say(s.id + "." + o.id + " has no kind");
+      if (o.cost < 0 || o.cost > 5 || !Number.isInteger(o.cost)) say(s.id + "." + o.id + " costs " + o.cost);
+      [...o.likes, ...o.dislikes].forEach(id => { if (!chars.includes(id)) say(s.id + "." + o.id + " names " + id); });
+      if (o.likes.some(id => o.dislikes.includes(id))) say(s.id + "." + o.id + " is liked and disliked by one player");
+      if (!o.note) say(s.id + "." + o.id + " has no note");
+    });
   });
-  if (new Set(E.EVENTS.map(e => e.id)).size !== E.EVENTS.length) say("an event id repeats");
-  E.CHARACTERS.forEach(c => E.SPENDS.forEach(s => ["up", "flat", "down"].forEach(m => { if (!E.LINES[c.id]?.[s.id]?.[m]) say(c.id + " has no " + m + " line for " + s.id); })));
+  E.CHARACTERS.forEach(c => Object.keys(E.TAGS).forEach(t => ["up", "flat", "down"].forEach(m => { if (!E.LINES[c.id]?.[t]?.[m]) say(c.id + " has no " + m + " line for " + t); })));
   // What students actually typed on the topics sheet.
   const typed = { "Motivation": "motivation", "Goal Setting": "goals", "Team Chemistry": "cohesion", "Team Coordination": "coordination", "Teamwork and coaching: positive feedback ": "teamwork", "Coaching and complexity": "complexity", "Social Support": "support", "Clarity of Roles": "roles", "Time and time-outs": "time", "Lessons from sports teams for other teams": "lessons", "": null, "Something else entirely": null };
   Object.entries(typed).forEach(([t, id]) => { if (E.matchConcept(t) !== id) say(JSON.stringify(t) + " landed on " + E.matchConcept(t) + ", not " + id); });
@@ -6117,55 +6127,67 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (!E.parseCast(E.packCast(big.cast)) || E.parseCast(E.packCast(big.cast)).star !== big.cast.star) say("the cast does not round-trip");
   if (E.parseCast("star=x")) say("a cast missing parts reads as a cast");
   if (E.teamChoicesFor("Ann Example").length !== 6 || new Set(E.teamChoicesFor("Ann Example")).size !== 6) say("the team choices are not six different names");
-  if (E.opponentFor("Ann Example", "a", "Kansas Marlins") === "Kansas Marlins") say("a team can play itself");
   if (E.signFor("Ann Example", "a", "Kansas Marlins").includes("{")) say("a sign keeps its blank");
-  // The season, for a few names, every spend and a greedy mix.
+  // The season, for a few names, every option position and a mix.
   const names = ["Ann Example", "Marty McFly", "Neel Namburar", "Grayson Dangleis", "Zoë Ω"];
   const topicsA = { "topic:a": "Goal setting", "wonder:a": "I wonder A", "opinion:a": "I think A", "topic:b": "Failure", "wonder:b": "I wonder B", "topic:c": "Cohesion", "topic:d": "Culture", "topic:e": "Power", "opinion:e": "I think E" };
+  const allIds = Array.from(new Set(E.SITUATIONS.flatMap(s => s.options.map(o => o.id))));
   for (const name of names) {
+    const s0 = E.startState(name);
+    if (s0.culture < 35 || s0.culture > 65 || s0.skills < 35 || s0.skills > 65 || s0.capital !== 5) say(name + " does not start where the rule says: " + JSON.stringify(s0));
     const concepts = E.conceptsFor(topicsA);
     const plan = E.planSeason({ name, concepts, topicsAnswers: topicsA });
-    if (plan.length !== 6 || plan[0].concept !== "goals" || plan[0].prompt.text !== "I wonder A" || plan[2].prompt.text !== E.CLASS_WONDERS.cohesion) say(name + ": the plan does not follow the sheet");
-    if (!plan[5].last || !concepts.some(c => c.id === plan[5].concept)) say(name + ": the final is not one of the five");
-    const twin = plan.findIndex((w, i) => i < 5 && w.concept === plan[5].concept);
-    if (twin >= 0 && plan[twin].event === plan[5].event) say(name + ": the final repeats week " + (twin + 1) + "'s event");
+    if (plan.length !== 6 || plan[0].situation !== "opener" || plan[0].concept !== "goals" || plan[0].prompt.text !== "I wonder A" || plan[1].situation !== "failure" || plan[2].prompt.text !== E.CLASS_WONDERS.cohesion) say(name + ": the plan does not follow the sheet");
+    if (!plan[5].last || plan[5].situation !== "finale" || !concepts.some(c => c.id === plan[5].concept)) say(name + ": the final is not the finale on one of the five");
     if (JSON.stringify(E.planSeason({ name, concepts, topicsAnswers: topicsA })) !== JSON.stringify(plan)) say(name + ": two plans differ");
+    const opps = E.LETTERS.map(w => E.opponentFor(name, w, "Kansas Marlins"));
+    if (new Set(opps).size !== 6 || opps.includes("Kansas Marlins")) say(name + " does not get six different opponents: " + opps.join(", "));
+    const polls = plan.filter(w => w.poll).map(w => w.poll.join("/"));
+    if (new Set(polls).size !== polls.length) say(name + " is asked the same poll twice");
     const cast = E.deal(name, big.bench).cast;
     for (const sport of E.SPORTS) {
-      for (const fixed of E.SPENDS.map(s => s.id).concat(["mix"])) {
-        const spends = E.LETTERS.map((w, i) => fixed === "mix" ? E.SPENDS[(E.hash(name + w) + i) % E.SPENDS.length].id : fixed);
-        const sim = simulate({ name, concepts, topicsAnswers: topicsA, spends, cast, sport, team: "Kansas Marlins" });
-        let state = E.start();
+      for (const pattern of [0, 1, 2, 3, "mix", "dear"]) {
+        const choices = E.LETTERS.map((w, i) => {
+          const sit = E.situationOf(plan[i].situation);
+          if (pattern === "dear") return [...sit.options].sort((a, b) => b.cost - a.cost)[0].id;
+          if (pattern === "mix") return sit.options[(E.hash(name + w) + i) % sit.options.length].id;
+          return (sit.options[pattern] || sit.options[0]).id;
+        });
+        const sim = simulate({ name, concepts, topicsAnswers: topicsA, choices, cast, sport, team: "Kansas Marlins", bench: "Player 9" });
+        let state = E.startState(name);
         const answers = { [E.F.sport]: sport.id, [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(concepts), [E.F.cast]: E.packCast(cast) };
-        sim.weeks.forEach(({ week, result, lines }, i) => {
-          if (!E.affordable(state.capital, state.culture).length) say(name + " week " + (i + 1) + ": nothing affordable");
-          if (result.capital < 0 || result.culture < 0 || result.culture > 100 || Number.isNaN(result.delta)) say(name + " week " + (i + 1) + ": " + JSON.stringify(result));
-          if (lines.length !== 2 + E.CHARACTERS.length + 2 || lines.some(l => !l.text || /\{/.test(l.text))) say(name + " week " + (i + 1) + ": the chat is short or has a blank");
+        sim.weeks.forEach(({ week, sit, result, lines }, i) => {
+          if (!sit.options.some(o => o.cost <= state.capital)) say(name + " week " + (i + 1) + ": nothing affordable at " + state.capital);
+          if (result.capital < 0 || result.culture < 0 || result.culture > 100 || result.skills < 0 || result.skills > 100 || result.success < 0 || result.success > 100 || [result.dCulture, result.dSkills, result.back].some(Number.isNaN)) say(name + " week " + (i + 1) + ": " + JSON.stringify(result));
+          if (result.back < 0 || result.back > 5 || (result.back * 2) % 1) say(name + " week " + (i + 1) + ": " + result.back + " coins back");
+          if (lines.length !== 2 + E.CHARACTERS.length + 2 || lines.some(l => !l.text || /\{/.test(l.text))) say(name + " week " + (i + 1) + ": the chat is short or has a blank: " + lines.map(l => l.text).join(" | "));
           const packed = E.packResult(result);
           if (packed.length > 500) say("a packed result is " + packed.length + " characters");
           const back = E.unpackResult(packed);
           if (JSON.stringify(back) !== JSON.stringify(result)) say("a result does not round-trip: " + packed);
-          const again = E.resolve({ name, week: week.week, state, spendId: result.spend, eventId: week.event });
+          const again = E.resolve({ name, week: week.week, state, situationId: sit.id, optionId: result.option });
           if (JSON.stringify(again) !== JSON.stringify(result)) say(name + " week " + (i + 1) + ": the same week resolved twice differently");
           answers[E.F.result(week.week)] = packed;
           answers[E.F.reflect(week.week)] = "Because."; answers[E.F.prompt(week.week)] = "wonder|" + week.prompt.text;
           if (week.poll) answers[E.F.poll(week.week)] = week.poll[0];
           state = E.after(result);
         });
-        const replayed = E.replay(answers);
+        const replayed = E.replay(answers, name);
         if (replayed.results.length !== 6 || JSON.stringify(replayed.state) !== JSON.stringify(sim.state) || replayed.week !== null) say(name + ": the replay from the file does not land where the season did");
         [0, 1, 2].forEach(i => { answers[E.F.final(i)] = "x"; });
         if (G.missingOf(answers).length) say(name + ": a full file still misses " + G.missingOf(answers).join(", "));
-        const t = tally([{ answers }]);
-        if (t.seasons !== 1 || Object.values(t.spends).reduce((a, b) => a + b, 0) !== 6) say("the tally does not count six spends");
+        const t = tally([{ answers, student: { name } }]);
+        if (t.seasons !== 1 || Object.values(t.kinds).reduce((a, b) => a + b, 0) !== 6) say("the tally does not count six choices");
       }
     }
   }
+  if (allIds.length < 10) say("too few option ids: " + allIds.length);
   if (E.unpackResult("not json") || E.unpackResult('{"w":"a"}')) say("a bad result row reads as a result");
-  if (E.replay({ "result:a": "junk" }).results.length) say("a junk week replays");
+  if (E.replay({ "result:a": "junk" }, "Ann").results.length) say("a junk week replays");
   if (!G.missingOf({}).includes("a sport") || !G.missingOf({}).includes("week 1")) say("an empty file is not missing a sport and week 1");
-  if (E.costOf(E.spendOf("dominate"), 40) !== 3 || E.costOf(E.spendOf("dominate"), 55) !== 2) say("dominance does not cost 3 then 2");
+  if (Math.abs(E.winChance(50, 50) - 0.5) > 0.001 || Math.abs(E.winChance(0, 0) - 0.08) > 0.001 || Math.abs(E.winChance(100, 100) - 0.92) > 0.001) say("the win chance is off: " + E.winChance(50, 50) + ", " + E.winChance(100, 100));
   if (E.gradeOf(80) !== "A" || E.gradeOf(34) !== "F") say("the grades are off");
+  if (E.coins(3.5) !== "●●●◐" || E.coins(0) !== "") say("coins draw wrong: " + E.coins(3.5));
   // Pixels, without a window.
   const g = P.spriteFromName("Ann Example");
   if (g.length !== 16 || g.some(r => r.length !== 16) || g.flat().some(v => v < 0 || v >= P.PALETTE.length)) say("a drawn player is not a 16 by 16 of palette indexes");
@@ -6178,22 +6200,14 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (tk && (!listedFor(tk, "comm118") || listedFor(tk, "comm3"))) say("takeover is not COMM 118's, or is COMM 3's");
   if (tk && (!openTo(tk, "comm999", {}) || openTo(tk, "comm118", {}))) say("takeover is not COMM 999's to try, or is already open to COMM 118");
   cases.push(["Takeover, loading", <G.TakeoverGame store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" topicsStore={{ load: async () => ({ answers: {} }) }} />, "Loading"]);
-  const full = { [E.F.sport]: "volleyball", [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(E.conceptsFor(topicsA)), [E.F.cast]: E.packCast(big.cast) };
-  const one = E.resolve({ name: "Ann Example", week: "a", state: E.start(), spendId: "teach", eventId: E.planSeason({ name: "Ann Example", concepts: E.conceptsFor(topicsA), topicsAnswers: topicsA })[0].event });
-  full[E.F.result("a")] = E.packResult(one); full[E.F.reflect("a")] = "Because."; full[E.F.prompt("a")] = "wonder|I wonder A";
   const { default: TakeoverReview } = await import("../src/engine/takeover/review.jsx");
   const { default: TakeoverControl } = await import("../src/engine/takeover/control.jsx");
   const rosterTk = [{ name: "Ann Example", email: "ann@x" }, { name: "Ben Example", email: "ben@x" }];
   cases.push(["Takeover, review loading", <TakeoverReview config={{ id: "comm999", path: "/comm999" }} worksheetKey="takeover" roster={rosterTk} />, "Loading the sheets"]);
-  cases.push(["Takeover, control page", <TakeoverControl config={{ id: "comm999", path: "/comm999" }} worksheetKey="takeover" roster={rosterTk} />, "Establish dominance"]);
-  // Six different opponents, and a final poll that is not week 2's or 4's.
-  for (const name of names) {
-    const opps = E.LETTERS.map(w => E.opponentFor(name, w, "Kansas Marlins"));
-    if (new Set(opps).size !== 6 || opps.includes("Kansas Marlins")) say(name + " does not get six different opponents: " + opps.join(", "));
-    const plan = E.planSeason({ name, concepts: E.conceptsFor(topicsA), topicsAnswers: topicsA });
-    const polls = plan.filter(w => w.poll).map(w => w.poll.join("/"));
-    if (new Set(polls).size !== polls.length) say(name + " is asked the same poll twice");
-  }
+  cases.push(["Takeover, control page", <TakeoverControl config={{ id: "comm999", path: "/comm999" }} worksheetKey="takeover" roster={rosterTk} />, "Bring {bench} on the trip"]);
+  const full = { [E.F.sport]: "volleyball", [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(E.conceptsFor(topicsA)), [E.F.cast]: E.packCast(big.cast) };
+  const one = E.resolve({ name: "Ann Example", week: "a", state: E.startState("Ann Example"), situationId: "opener", optionId: "dinner" });
+  full[E.F.result("a")] = E.packResult(one); full[E.F.reflect("a")] = "Because."; full[E.F.prompt("a")] = "wonder|I wonder A";
   cases.push(["Takeover, a season read back", <div className="tk"><G.SeasonLog answers={full} name="Ann Example" classmates={big.bench} copy={{ say: (k) => E.DEFAULT_COPY[k] }} /></div>, "Week 1"]);
 }
 

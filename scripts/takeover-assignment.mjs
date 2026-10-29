@@ -46,7 +46,7 @@ const title = flag("title") || "Weekly Challenge 3: Takeover";
 const DETAILS = "https://classes.andrewishak.com/" + classId + "/worksheets/takeover";
 
 const CHANGES = {
-  wc3: { title, due: "Nov 3", dueTime: "11:59 PM", instructionsUrl: DETAILS, description: "Take over a team. Six weeks, five things to spend on, your classmates as the players." },
+  wc3: { title, due: "Nov 3", dueTime: "11:59 PM", instructionsUrl: DETAILS, description: "Take over a team. Six weeks, a different situation every week, your classmates as the players." },
 };
 
 const planKey = classKey + "-plan";

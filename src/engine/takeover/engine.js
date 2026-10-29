@@ -1,20 +1,33 @@
 // Takeover: the season, as pure functions. No DOM, no React, nothing random.
 //
-// A student takes over a team and spends six weeks on its culture. Everything
-// that looks like chance is a hash of the student's name and where they are
-// in the season, so a reload shows the same season, a resumed file replays
-// exactly, and the instructor's read of a file is what the student saw.
-// game.jsx draws what this file decides. See BRIEF.md.
+// A student takes over a team and spends six weeks on it. Three numbers run
+// 0 to 100: culture, skills and strategy, and success. The first two start
+// wherever the last coach left them and set the chance of winning each
+// week; winning moves the third. Capital is five coins. Every action costs
+// some, and the five players give coins back by how they took the week.
 //
-// Every bank of words below is Claude's draft, 2026-10-29, for Andrew to
-// edit. His own words are marked where they are his.
+// Everything that looks like chance is a hash of the student's name and
+// where they are in the season, so a reload shows the same season, a
+// resumed file replays exactly, and the instructor's read is what the
+// student saw. game.jsx draws what this file decides. See BRIEF.md.
+//
+// Andrew, 2026-10-29, on the second pass: "Culture. Skills and strategy,
+// and then success ... those numbers are from 0 to 100. They should start
+// in different places, anywhere between 35 and 65 ... the higher those
+// numbers are, the more likely you are to win games ... you should start
+// with five things of capital ... If a player gives you a plus after the
+// game, you get one of the pieces of capital back. If a player gives you an
+// equal sign, you get half of it back. And if a player gives you a minus
+// sign, you lose that capital ... You can't give people the same options
+// every round ... after the first one, it should be in response to a thing."
+// Every bank of words below is Claude's draft for him to edit, except where
+// marked as his.
 
 // ─── chance that is not chance ───
 
 export const hash = (s) => { let h = 5381; for (const ch of String(s).toLowerCase()) h = ((h * 33) ^ ch.charCodeAt(0)) >>> 0; return h; };
 // The hash alone is not enough: two keys that differ only in their last
-// character come out a few bits apart, so one coach drew the same opponent
-// three weeks running. A final mix (murmur3's) spreads them out.
+// character come out a few bits apart. A final mix (murmur3's) spreads them.
 const mix = (h) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b) >>> 0; h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35) >>> 0; h ^= h >>> 16; return h >>> 0; };
 // A number in [0, 1) that the same key always gives.
 export const roll = (...key) => mix(hash(key.join("|"))) / 4294967296;
@@ -30,25 +43,26 @@ export const TAKEOVER_KEY = "takeover";
 export const TAKEOVER_TITLE = "Takeover";
 export const LETTERS = ["a", "b", "c", "d", "e", "f"];
 export const WEEKS = LETTERS.length;
-export const START_CAPITAL = 2;
-export const START_CULTURE = 40;
+export const START_CAPITAL = 5;
 export const POLL_WEEKS = ["b", "d", "f"];
+// What a player's reaction gives back, in coins. Andrew's rule.
+export const RETURN = { up: 1, flat: 0.5, down: 0 };
 
 // Fields, as the database names them: letters, an optional ":part".
 export const F = {
   sport: "sport",
+  team: "team",
   concepts: "concepts",
   cast: "cast",
-  team: "team",
   prompt: (w) => "prompt:" + w,
-  spend: (w) => "spend:" + w,
+  choice: (w) => "choice:" + w,
   result: (w) => "result:" + w,
   reflect: (w) => "reflect:" + w,
   source: (w) => "source:" + w,
   poll: (w) => "poll:" + w,
   final: (i) => "final:" + ["a", "b", "c"][i],
 };
-export const FIELDS = [F.sport, F.team, F.concepts, F.cast, ...LETTERS.flatMap(w => [F.prompt(w), F.spend(w), F.result(w), F.reflect(w), F.source(w)]), ...POLL_WEEKS.map(F.poll), F.final(0), F.final(1), F.final(2)];
+export const FIELDS = [F.sport, F.team, F.concepts, F.cast, ...LETTERS.flatMap(w => [F.prompt(w), F.choice(w), F.result(w), F.reflect(w), F.source(w)]), ...POLL_WEEKS.map(F.poll), F.final(0), F.final(1), F.final(2)];
 
 // ─── sports ───
 
@@ -67,6 +81,8 @@ export const TEAM_NAMES = [
   "Las Vegas Puritans", "Seattle Sunshine", "Denver Sea Lions", "Utah Jazz Hands", "Boston Cacti", "Houston Glaciers",
   "Minneapolis Flamingos", "Death Valley Penguins", "Sacramento Sharks", "Omaha Pirates", "Vermont Volcanoes", "Idaho Tide",
   "Cleveland Coral", "Buffalo Palm Trees", "Fresno Fjords", "Reno Rainforest", "Tulsa Tsunami", "Wichita Whales",
+  "Chicago Coconuts", "Detroit Dolphins", "Albuquerque Admirals", "Oklahoma Oysters", "Pittsburgh Pelicans", "Milwaukee Mangoes",
+  "Dallas Glaciers", "Atlanta Avalanche", "Portland Sahara", "Baltimore Bison", "Tucson Trawlers", "Honolulu Snowplows",
 ];
 export const teamChoicesFor = (name) => shuffled(TEAM_NAMES, name, "teams").slice(0, 6);
 export const teamNameFor = (name) => teamChoicesFor(name)[0];
@@ -83,50 +99,21 @@ export const SIGNS = [
 ];
 export const signFor = (name, week, team) => pick(SIGNS, name, "sign", week).replace("{TEAM}", String(team || "").toUpperCase());
 
-/** The cast as the file keeps it, one part a line, and back. */
-export const packCast = (cast) => CHARACTERS.map(c => c.id + "=" + (cast[c.id] || "")).join("\n");
-export const parseCast = (s) => {
-  if (!s) return null;
-  const cast = {};
-  String(s).split("\n").forEach(l => { const i = l.indexOf("="); if (i > 0) cast[l.slice(0, i)] = l.slice(i + 1).trim(); });
-  return CHARACTERS.every(c => cast[c.id]) ? cast : null;
-};
-
-// ─── the five spends ───
-//
-// Andrew, 2026-10-29: "spending capital is like, you have a difficult person.
-// When you first come in, you don't have a lot of capital, so you gotta
-// focus ... motivating players to learn? Or getting wins quickly? Or
-// establishing dominance?" The names and lines are Claude's draft.
-
-export const SPENDS = [
-  { id: "teach", label: "Teach", line: "Run practice like a classroom. Motivate players to learn.", cost: 1, culture: 4, win: -1 },
-  { id: "goals", label: "Set goals", line: "Sit the team down and write the season's goals together.", cost: 1, culture: 3, win: 0 },
-  { id: "cohesion", label: "Build cohesion", line: "Team dinner, no phones. Spend the week on each other.", cost: 2, culture: 6, win: -1 },
-  { id: "win", label: "Win now", line: "Best lineup, tight game plan, chase the result.", cost: 2, culture: -2, win: 3 },
-  { id: "dominate", label: "Establish dominance", line: "New rules, your rules. Late to practice costs a start.", cost: 3, culture: -5, win: 2 },
-];
-export const spendOf = (id) => SPENDS.find(s => s.id === id) || null;
-// The room has to be ready for dominance: above this culture the team reads
-// rules as standards, below as a threat.
-export const READY = 55;
-export const costOf = (spend, culture) => spend.id === "dominate" && culture >= READY ? 2 : spend.cost;
-export const affordable = (capital, culture) => SPENDS.filter(s => costOf(s, culture) <= capital);
-
 // ─── the five players who matter ───
 //
-// Five of the student's classmates are dealt these parts. The affinity is
-// how each feels about each spend: +2 loves, -2 hates. Dominance turns for
-// the star and the veteran once the room is ready (READY).
+// Five of the student's classmates are dealt these parts. Andrew: "You have
+// 5 players who are playing, no matter what the game is." Each option below
+// names who likes and who dislikes it; everyone else is flat.
 
 export const CHARACTERS = [
-  { id: "star", label: "The star", blurb: "Best player on the team. Has goals of their own.", affinity: { teach: -1, win: 2, dominate: -1, cohesion: 0, goals: 1 }, readyDominate: 1 },
-  { id: "veteran", label: "The veteran", blurb: "Runs the group chat. Has outlasted three coaches.", affinity: { teach: -1, win: 0, dominate: -2, cohesion: 1, goals: 1 }, readyDominate: 1 },
-  { id: "rookie", label: "The rookie", blurb: "First year. Wants to know exactly what to do.", affinity: { teach: 2, win: -1, dominate: -1, cohesion: 1, goals: 2 }, readyDominate: 0 },
-  { id: "transfer", label: "The transfer", blurb: "Came in this season. Not in the group chat yet.", affinity: { teach: 1, win: 0, dominate: -1, cohesion: 2, goals: 0 }, readyDominate: 0 },
-  { id: "quiet", label: "The quiet one", blurb: "Plays hard, says little. Something is going on.", affinity: { teach: 1, win: -2, dominate: -2, cohesion: 2, goals: 0 }, readyDominate: 0 },
+  { id: "star", label: "The star", blurb: "Best player on the team. Has goals of their own." },
+  { id: "veteran", label: "The veteran", blurb: "Runs the group chat. Has outlasted three coaches." },
+  { id: "rookie", label: "The rookie", blurb: "First year. Wants to know exactly what to do." },
+  { id: "transfer", label: "The transfer", blurb: "Came in this season. Not in the group chat yet." },
+  { id: "quiet", label: "The quiet one", blurb: "Plays hard, says little. Something is going on." },
 ];
 export const characterOf = (id) => CHARACTERS.find(c => c.id === id) || null;
+const ALL = CHARACTERS.map(c => c.id);
 
 // Names for a squad too small to fill the parts: COMM 999's rig has three.
 export const FILL = ["Dot Ramirez", "Bo Nakamura", "Frankie Oduya", "Sam Petrov", "Jules Okafor", "Tess Lindqvist", "Ravi Banerjee", "Mo Haddad"];
@@ -142,11 +129,16 @@ export function deal(name, classmates) {
   return { cast, bench: order.slice(CHARACTERS.length) };
 }
 
+/** The cast as the file keeps it, one part a line, and back. */
+export const packCast = (cast) => CHARACTERS.map(c => c.id + "=" + (cast[c.id] || "")).join("\n");
+export const parseCast = (s) => {
+  if (!s) return null;
+  const cast = {};
+  String(s).split("\n").forEach(l => { const i = l.indexOf("="); if (i > 0) cast[l.slice(0, i)] = l.slice(i + 1).trim(); });
+  return CHARACTERS.every(c => cast[c.id]) ? cast : null;
+};
+
 // ─── the concepts, from the chapters ───
-//
-// The twenty section titles the team topics sheet offers, with the ways
-// students actually typed them (Motivation, Team Chemistry, Team
-// Coordination, "Teamwork and coaching: positive feedback").
 
 export const CONCEPTS = [
   { id: "teamwork", name: "Teamwork and coaching", alts: ["teamwork"] },
@@ -181,8 +173,6 @@ export function matchConcept(text) {
   if (!t) return null;
   const exact = CONCEPTS.find(c => plain(c.name) === t);
   if (exact) return exact.id;
-  // "Coaching and complexity" before "Teamwork and coaching": the longer,
-  // rarer word wins, so the alts are tried most specific first.
   const order = [...CONCEPTS].sort((a, b) => Math.max(...b.alts.map(x => x.length)) - Math.max(...a.alts.map(x => x.length)));
   for (const c of order) if (c.alts.some(a => t.includes(a))) return c.id;
   return null;
@@ -200,97 +190,258 @@ export function conceptsFor(topicsAnswers) {
   return own.slice(0, 5);
 }
 
-// ─── what happens each week ───
-//
-// Two events a concept, forty in all. who is the part the event lands on.
-// fit is how each spend answers the event: +2 the right call, -2 the wrong
-// one. {name} is the player, {team} the team, {opp} this week's opponent,
-// {match} the sport's word for a game, {where} the court, oval or field.
+// ─── what an action is for ───
 
-export const EVENTS = [
-  { id: "teamwork-1", concept: "teamwork", who: "veteran", text: "{name} runs the warm-up without asking you. The team follows {name}, not you.", fit: { teach: 1, goals: 1, cohesion: 1, win: 0, dominate: -2 } },
-  { id: "teamwork-2", concept: "teamwork", who: "rookie", text: "{name} asks you after practice what the drills are for. Nobody has ever explained.", fit: { teach: 2, goals: 1, cohesion: 0, win: -1, dominate: -1 } },
-  { id: "coordination-1", concept: "coordination", who: "star", text: "Two players go for the same {ball} and collide. {name} yells at the one who got there second.", fit: { teach: 2, goals: 0, cohesion: 1, win: -1, dominate: 0 } },
-  { id: "coordination-2", concept: "coordination", who: "transfer", text: "{name} is a step late on every play. The old system is not the one {name} learned.", fit: { teach: 2, goals: 0, cohesion: 1, win: -1, dominate: -1 } },
-  { id: "knowledge-1", concept: "knowledge", who: "veteran", text: "{name} knows the {opp} scouting report by heart and has not shared a word of it.", fit: { teach: 1, goals: 0, cohesion: 2, win: 0, dominate: -1 } },
-  { id: "knowledge-2", concept: "knowledge", who: "rookie", text: "{name} learned a new serve on YouTube and is scared to show anyone.", fit: { teach: 2, goals: 0, cohesion: 1, win: -1, dominate: -1 } },
-  { id: "roles-1", concept: "roles", who: "star", text: "{name} wants to play every position. The rest of the lineup has stopped arguing.", fit: { teach: 0, goals: 2, cohesion: 0, win: 0, dominate: 1 } },
-  { id: "roles-2", concept: "roles", who: "transfer", text: "{name} does not know who to pass to, so {name} passes to nobody.", fit: { teach: 1, goals: 2, cohesion: 1, win: -1, dominate: -1 } },
-  { id: "goals-1", concept: "goals", who: "star", text: "{name} tells a reporter the goal is a scholarship. The team's goal was not mentioned.", fit: { teach: 0, goals: 2, cohesion: 1, win: 0, dominate: -1 } },
-  { id: "goals-2", concept: "goals", who: "veteran", text: "{name} says last year's goal was a winning record and the team missed by one {match}. Nobody wants to set another.", fit: { teach: 0, goals: 2, cohesion: 1, win: 1, dominate: -1 } },
-  { id: "motivation-1", concept: "motivation", who: "quiet", text: "{name} stops going hard in drills. Ask around and the answer is a shrug.", fit: { teach: 1, goals: 0, cohesion: 2, win: -2, dominate: -2 } },
-  { id: "motivation-2", concept: "motivation", who: "rookie", text: "{name} made one mistake in the {opp} {match} and has replayed it all week.", fit: { teach: 2, goals: 1, cohesion: 1, win: -1, dominate: -1 } },
-  { id: "support-1", concept: "support", who: "transfer", text: "{name} ate alone after the {match} again. The team's table had an empty seat.", fit: { teach: 0, goals: 0, cohesion: 2, win: -1, dominate: -1 } },
-  { id: "support-2", concept: "support", who: "quiet", text: "{name}'s parent emails you. Things at home are hard, and {name} asked that nobody be told.", fit: { teach: 0, goals: -1, cohesion: 2, win: -2, dominate: -2 } },
-  { id: "negative-1", concept: "negative", who: "star", text: "{name} tells the rookie, in front of everyone, that the pass was garbage.", fit: { teach: 1, goals: 0, cohesion: 1, win: -1, dominate: 1 } },
-  { id: "negative-2", concept: "negative", who: "veteran", text: "A screenshot of {name} calling the game plan a joke makes the rounds.", fit: { teach: 0, goals: 1, cohesion: 1, win: -1, dominate: 1 } },
-  { id: "decisions-1", concept: "decisions", who: "star", text: "Down late against {opp}, {name} waves off your play and runs a different one.", fit: { teach: 0, goals: 1, cohesion: 0, win: 0, dominate: 1 } },
-  { id: "decisions-2", concept: "decisions", who: "veteran", text: "{name} wants a team vote on the travel playlist. Then on the lineup.", fit: { teach: 0, goals: 2, cohesion: 1, win: 0, dominate: 0 } },
-  { id: "complexity-1", concept: "complexity", who: "rookie", text: "You call a time-out and give four instructions. {name} remembers one.", fit: { teach: 2, goals: 0, cohesion: 0, win: 0, dominate: -1 } },
-  { id: "complexity-2", concept: "complexity", who: "star", text: "{name} says the new system is too slow and the old one worked fine.", fit: { teach: 2, goals: 1, cohesion: 0, win: 0, dominate: 0 } },
-  { id: "cohesion-1", concept: "cohesion", who: "veteran", text: "There is a group chat with the whole team and a second one without the new players. {name} started both.", fit: { teach: 0, goals: 0, cohesion: 2, win: -1, dominate: 0 } },
-  { id: "cohesion-2", concept: "cohesion", who: "transfer", text: "The team has a handshake. {name} has not been taught the handshake.", fit: { teach: 0, goals: 0, cohesion: 2, win: -1, dominate: -1 } },
-  { id: "culture-1", concept: "culture", who: "veteran", text: "The seniors keep a tradition where first-years carry every bag. {name} says a coach tried to end that once.", fit: { teach: 0, goals: 1, cohesion: 1, win: -1, dominate: 1 } },
-  { id: "culture-2", concept: "culture", who: "star", text: "{name} is late to practice for the third time. The last coach let {name} be late.", fit: { teach: 0, goals: 1, cohesion: 0, win: -1, dominate: 2 } },
-  { id: "power-1", concept: "power", who: "star", text: "{name}'s parent calls the athletic director about playing time. The AD calls you.", fit: { teach: 0, goals: 1, cohesion: 0, win: 0, dominate: 2 } },
-  { id: "power-2", concept: "power", who: "veteran", text: "{name} tells the freshmen which coaches to listen to. You are not on the list.", fit: { teach: 0, goals: 1, cohesion: 1, win: 0, dominate: 1 } },
-  { id: "conflict-1", concept: "conflict", who: "star", text: "{name} and the veteran stop speaking. Practice gets very quiet.", fit: { teach: 0, goals: 0, cohesion: 2, win: -1, dominate: 0 } },
-  { id: "conflict-2", concept: "conflict", who: "rookie", text: "{name} pushes back on a drill in front of the team. {name} is not wrong.", fit: { teach: 2, goals: 1, cohesion: 0, win: -1, dominate: -2 } },
-  { id: "emotion-1", concept: "emotion", who: "quiet", text: "{name} cries in the hallway after the {opp} {match}. Then walks back in like nothing happened.", fit: { teach: 0, goals: 0, cohesion: 2, win: -2, dominate: -2 } },
-  { id: "emotion-2", concept: "emotion", who: "star", text: "{name} gets a yellow card for mouthing off and plays worse angry.", fit: { teach: 1, goals: 0, cohesion: 1, win: 0, dominate: 1 } },
-  { id: "failure-1", concept: "failure", who: "veteran", text: "You lose to {opp} by a lot. {name} says the team has been here before and nothing changed then either.", fit: { teach: 1, goals: 2, cohesion: 1, win: 0, dominate: -1 } },
-  { id: "failure-2", concept: "failure", who: "rookie", text: "{name} misses the last play of a close {match} and offers to quit the team.", fit: { teach: 1, goals: 0, cohesion: 2, win: -2, dominate: -2 } },
-  { id: "nonverbal-1", concept: "nonverbal", who: "transfer", text: "The team has hand signals. {name} keeps reading them wrong and nobody says so.", fit: { teach: 2, goals: 0, cohesion: 1, win: -1, dominate: -1 } },
-  { id: "nonverbal-2", concept: "nonverbal", who: "star", text: "{name} rolls their eyes at every one of your time-outs. The whole bench sees.", fit: { teach: 0, goals: 0, cohesion: 1, win: 0, dominate: 2 } },
-  { id: "time-1", concept: "time", who: "star", text: "You call time-out with the {match} on the line. {name} talks over your whole huddle.", fit: { teach: 0, goals: 0, cohesion: 0, win: 1, dominate: 2 } },
-  { id: "time-2", concept: "time", who: "rookie", text: "Practice runs long three days in a row. {name} has a lab at six and says nothing.", fit: { teach: 1, goals: 1, cohesion: 1, win: -1, dominate: -2 } },
-  { id: "gender-1", concept: "gender", who: "veteran", text: "A visiting coach jokes that your team talks too much. {name} heard every word.", fit: { teach: 0, goals: 0, cohesion: 2, win: 0, dominate: 1 } },
-  { id: "gender-2", concept: "gender", who: "quiet", text: "{name} asks why the men's team got the good {where} time again.", fit: { teach: 0, goals: 1, cohesion: 1, win: 0, dominate: 1 } },
-  { id: "lessons-1", concept: "lessons", who: "transfer", text: "{name} played for a program that did everything differently and keeps saying so.", fit: { teach: 1, goals: 1, cohesion: 1, win: 0, dominate: -1 } },
-  { id: "lessons-2", concept: "lessons", who: "veteran", text: "{name} got a job offer from a company that runs on the team's rules. {name} wants to know which rules are the team's.", fit: { teach: 1, goals: 2, cohesion: 0, win: 0, dominate: 0 } },
+export const TAGS = {
+  same: { label: "Keep things the same", line: "Costs nothing. Skills creep up from reps. Culture does not move on its own." },
+  culture: { label: "Culture", line: "The team on each other. Costs practice time." },
+  skills: { label: "Skills and strategy", line: "Reps, film, systems. The scoreboard notices first." },
+  standards: { label: "Standards", line: "Rules and consequences. Clear, and not free." },
+  care: { label: "Care", line: "One player at a time. Slow and remembered." },
+};
+
+// ─── what happens each week, and what the coach can do ───
+//
+// Week 1 is the opener. Weeks 2 to 5 answer the student's own concepts.
+// Week 6 is the finale. Every situation has one option that costs nothing.
+// {name} is the player the week lands on; {star}, {veteran}, {rookie},
+// {transfer}, {quiet} and {bench} are the cast; {opp}, {match}, {period},
+// {ball} and {where} are the sport's. `research` is for the control page:
+// the finding, and whose sheet raised the question, where the class did.
+
+const opt = (id, label, line, cost, culture, skills, tag, likes = [], dislikes = [], note = "", win = 0) => ({ id, label, line, cost, culture, skills, win, tag, likes, dislikes, note });
+
+export const SITUATIONS = [
+  { id: "opener", concept: null, who: null, text: "Your first week. The last coach left in June. Practice is Monday.",
+    research: "The first week sets the climate. Mastery versus performance climates (Ames, 1992) start with what the coach rewards on day one.",
+    options: [
+      opt("same", "Keep things the same", "Run the practices the last coach ran.", 0, 0, 2, "same", ["veteran"], [], "Nothing is risked. Reps alone raise skills a little."),
+      opt("dinner", "Team dinner", "Dinner instead of Thursday practice. No phones.", 1, 6, -1, "culture", ["transfer", "quiet", "rookie"], ["star"], "Social cohesion, Carron et al. (2002): time together off the court predicts closeness on it."),
+      opt("practice", "Practice more", "Add a morning session. Film, then reps.", 1, -1, 5, "skills", ["star"], ["quiet"], "Skills come from practice volume. The cost is time and energy, which the quiet one has least of.", 1),
+      opt("standards", "Set standards", "Late to practice runs. Starting with you.", 2, 1, 3, "standards", ["veteran", "rookie"], ["star"], "Clarity of expectations. The rookie wants to know exactly what is expected (several sheets wondered how a new player learns the rules)."),
+    ] },
+  { id: "motivation", concept: "motivation", who: "veteran", text: "The team needs a hard defensive drill. {name} is the worst at it and everyone can see.",
+    research: "Mastery climate: judged against your own last week, effort and learning get rewarded (Ames, 1992; Duda & Nicholls, 1992). Process goals raised enjoyment and adherence in an exercise study (Jacqueline's finding). Verbal aggression makes coaches read as less credible (Kassing & Infante, 1999; Jacqueline's sheet). Neel, Will and Lucy Kate asked strict versus open.",
+    options: [
+      opt("skip", "Skip the drill", "Leave it. Play to the strengths you have.", 0, 0, 1, "same", ["veteran"], ["rookie"], "Protects the veteran's ego and leaves the hole."),
+      opt("mastery", "Everyone runs it", "Everyone runs the drill, judged against their own last week, {name} included.", 2, 4, 5, "skills", ["rookie", "transfer"], [], "A mastery climate. Nobody is compared to anyone else."),
+      opt("callout", "Call {name} out", "Run the drill and say in front of everyone who is dragging it.", 1, -5, 4, "standards", ["star"], ["veteran", "quiet", "transfer"], "Performance climate, public comparison. Short gain, lost credibility.", 1),
+      opt("optout", "Let players opt out", "Anyone can sit the drill if they want.", 1, 1, -2, "care", ["veteran"], ["rookie", "star"], "Protects egos at the cost of the skill. The rookie and the star want the work."),
+    ] },
+  { id: "goals", concept: "goals", who: "star", text: "{name} told a reporter the goal this year is a scholarship. The team read the article.",
+    research: "Outcome goals give direction and process goals give something to do when the game gets close (Williams, 2013; Sophia A's opinion, on the rugby coaches). Athletes prioritize performance over outcome (Lucy Kate's reading). Neel, Jacqueline and Chloe asked whether one player's goal interferes with the team's.",
+    options: [
+      opt("same", "Say nothing", "Let the article be the article.", 0, -2, 0, "same", [], ["veteran"], "The team reads silence as agreement."),
+      opt("outcome", "One team goal", "One outcome goal for the season, a winning record, on the wall.", 1, 3, 1, "standards", ["veteran", "rookie"], [], "An outcome goal gives direction. On its own it is fragile when the team is losing."),
+      opt("process", "Process goals for everyone", "Sit with each player and write a goal they control, {name} included.", 3, 5, 3, "culture", ["rookie", "quiet", "star"], [], "Process goals: higher enjoyment, lower tension, better adherence. Costs the most time."),
+      opt("allow", "Let {name} chase it", "Tell the team a scholarship for {name} is good for everyone.", 1, -3, 2, "skills", ["star"], ["veteran", "transfer"], "The star plays harder. The team hears whose goal counts.", 1),
+    ] },
+  { id: "cohesion", concept: "cohesion", who: "veteran", text: "There are two group chats. One has the whole team. One leaves out the new players. {name} started both.",
+    research: "Task cohesion and social cohesion are different things (Carron, Bray & Eys, 2002), and the best teams have both (Ruby's opinion). Gianna asked whether a team can win without friendships. Emme asked what two closer teammates do to the whole. Chloe asked whether traditions and inside jokes build cohesion. Will and Chloe raised group chats.",
+    options: [
+      opt("same", "Stay out of it", "Players have always had their own chats.", 0, -2, 1, "same", ["veteran"], ["transfer"], "The split stays. The transfer stays out."),
+      opt("dinner", "Team dinner", "Dinner instead of Thursday practice. New players choose the seats.", 1, 5, -1, "culture", ["transfer", "quiet", "rookie"], [], "Social cohesion, built on purpose."),
+      opt("mix", "Mixed practice groups", "Every drill pairs a new player with an old one for two weeks.", 2, 4, 3, "skills", ["transfer", "rookie"], ["veteran"], "Task cohesion: working together toward the same goal, which is what predicts winning."),
+      opt("merge", "One chat", "Tell {name} the second chat ends tonight.", 1, 2, 0, "standards", ["transfer"], ["veteran", "star"], "A rule the veteran did not choose. The chat goes somewhere else."),
+    ] },
+  { id: "support", concept: "support", who: "quiet", text: "{name}'s parent emails you. Things at home are hard. {name} asked that nobody be told.",
+    research: "Social support from coaches and teammates (Rees & Hardy, 2000) is what lets an athlete ask for help (Gianna's wonder). Catherine and Sophia A asked whether support from teammates matters as much as from the coach. Lila asked how to tell when someone needs encouragement or space. Four sheets asked for mental health as a topic.",
+    options: [
+      opt("same", "Say nothing, watch", "Keep the email to yourself and keep an eye on {name}.", 0, 0, 1, "same", [], [], "The confidence is kept. Nothing else happens."),
+      opt("word", "A quiet word", "Ten minutes after practice, just you and {name}. Nothing to the team.", 1, 4, 0, "care", ["quiet", "transfer"], [], "Support that respects the ask. Trust goes up where nobody sees."),
+      opt("week", "A week off", "Give {name} the week, no questions, spot held.", 2, 5, -3, "care", ["quiet", "rookie"], ["star"], "Space, which Lila wondered about. The lineup is thinner for a week.", -1),
+      opt("tell", "Tell the captains", "Ask the captains to check in on {name}.", 1, -3, 0, "culture", ["veteran"], ["quiet"], "Teammate support, but the ask was privacy. The quiet one finds out who knows."),
+    ] },
+  { id: "failure", concept: "failure", who: "rookie", text: "{name} missed the last play of a close {match} and has offered to quit the team.",
+    research: "Failing to reach a goal threatens the athlete's ego, so how the coach talks about a loss matters (Sophia A's wonder). Drew asked the best way to talk to a team after a devastating loss. Sophia T asked whether reviewing mistakes right away helps, or whether the positives should come first. Chase and Catherine asked how much pressure is trainable.",
+    options: [
+      opt("same", "Move on", "Next practice is next practice.", 0, -2, 0, "same", [], ["rookie"], "The rookie's offer goes unanswered."),
+      opt("now", "Film tonight", "Watch every mistake tonight while it is fresh.", 1, -3, 5, "skills", ["star"], ["rookie", "quiet"], "Immediate review. The skill lesson lands; the ego threat lands harder."),
+      opt("tomorrow", "Film tomorrow, best plays first", "Sleep on it. Tomorrow, start with what worked, then the misses.", 1, 4, 3, "care", ["rookie", "quiet", "transfer"], [], "Positives first, then the mistakes, after a night. Sophia T's hunch."),
+      opt("run", "Run them", "Punishment conditioning Monday.", 2, -6, 2, "standards", [], ["rookie", "quiet", "transfer"], "Punishment after failure. Anxiety up, learning down."),
+    ] },
+  { id: "emotion", concept: "emotion", who: "star", text: "{name} got a card for mouthing off and played worse angry for the rest of the {match}.",
+    research: "Anger is associated with worse performance (Jones, 2003; Catherine's finding). Emotion regulation can be taught like any other skill (Sophia A's opinion). Paul and Catherine asked where good nerves end and anxiety starts. Ruby asked how a coach tells when a player is struggling mid-game.",
+    options: [
+      opt("same", "Let it go", "Everyone has a night.", 0, -1, 0, "same", [], [], "Nothing is learned, nothing is lost."),
+      opt("bench", "Bench {name} a {period}", "Next card, {name} sits a {period}.", 1, 2, -2, "standards", ["veteran", "rookie"], ["star"], "A consequence. The star hears a rule, the team hears fairness.", -1),
+      opt("reset", "Teach a reset", "A breathing routine the whole team runs after every bad call.", 2, 3, 4, "skills", ["quiet", "rookie", "star"], [], "Emotion regulation as a skill, for everyone, so nobody is singled out."),
+      opt("fire", "Use the fire", "Tell {name} to stay angry and point it at the other team.", 1, -2, 1, "skills", ["star"], ["quiet"], "The common move. The research says angry play is worse play.", 1),
+    ] },
+  { id: "nonverbal", concept: "nonverbal", who: "transfer", text: "The team has hand signals. {name} keeps reading them wrong and nobody says so.",
+    research: "Early-season touch, high fives and fist bumps, predicted later NBA performance (Kraus, Huang & Keltner, 2010; Will's finding). Female athletes rated visual signals the fastest channel (Emme and Vianna's finding). Addison asked whether signal-heavy teams win from understanding or from time together. Alexa asked whether long-time teams build a secret language.",
+    options: [
+      opt("same", "Leave it", "{name} will pick it up.", 0, -2, -1, "same", [], ["transfer"], "The misreads keep costing points."),
+      opt("session", "Signals session", "One practice on the signals, {name} and the rookies at the front.", 1, 3, 4, "skills", ["transfer", "rookie"], [], "Teach the language instead of waiting for it."),
+      opt("touch", "High-five rule", "Every point, every player touches every player.", 1, 4, 1, "culture", ["transfer", "rookie", "quiet"], ["star"], "The touch study, run on purpose."),
+      opt("vet", "Ask {veteran} to teach {name}", "The veteran and the transfer, twenty minutes before practice all week.", 1, 2, 2, "care", ["veteran", "transfer"], [], "Knowledge moves from the player who has it. Two people get closer."),
+    ] },
+  { id: "time", concept: "time", who: "rookie", text: "Practice ran thirty minutes over three days running. {name} has a lab at six and said nothing.",
+    research: "Time is a resource the coach controls and the players pay for. Lila and Chloe asked how teams keep going when progress is slow. Students (Will, Luke, Catherine, Alexa) chose time and time-outs as a concept; the open question is whose time the practice is.",
+    options: [
+      opt("same", "Keep going", "The work is the work.", 0, -3, 2, "same", [], ["rookie", "quiet"], "The rookie misses the lab and says nothing again."),
+      opt("stop", "Hard stop", "Practice ends on the clock from now on. Plan tighter.", 1, 4, 0, "standards", ["rookie", "quiet", "transfer"], [], "A promise kept every day."),
+      opt("saturday", "Make it up Saturday", "Add Saturday mornings.", 2, -1, 4, "skills", ["star"], ["veteran", "rookie"], "More reps, less life."),
+      opt("ask", "Ask the team", "Ask who has what at six, and build the week around it.", 1, 3, 1, "care", ["rookie", "quiet"], [], "Autonomy support: the team has a say in its own time."),
+    ] },
+  { id: "gender", concept: "gender", who: "veteran", text: "A visiting coach jokes that your team talks too much. {name} heard every word.",
+    research: "Female athletes reported talk and visual signals as their fastest channels (Emme and Vianna's finding). Jacqueline asked why female athletes set performance goals and male athletes outcome goals. Addison asked for gender as a topic; Ruby and Haixing chose it.",
+    options: [
+      opt("same", "Let it go", "Other coaches say things.", 0, -2, 0, "same", [], ["veteran"], "The team heard it too."),
+      opt("speak", "Say something to that coach", "Before you leave the gym.", 1, 4, 0, "standards", ["veteran", "star", "quiet"], [], "The team sees who the coach stands with."),
+      opt("team", "Talk to the team", "Tell the team talk is how this team plays, and keep it.", 1, 3, 2, "culture", ["veteran", "transfer"], [], "Talk is coordination. Name it as a strength."),
+      opt("less", "Ask for less talk", "Quieter huddles from now on.", 1, -4, 1, "skills", [], ["veteran", "star", "quiet"], "The visiting coach's rule, adopted."),
+    ] },
+  { id: "culture", concept: "culture", who: "veteran", text: "The seniors keep a tradition where first-years carry every bag. {name} says a coach tried to end that once.",
+    research: "Culture change takes an evaluating and planning phase and then sticking with it (Luke's reading, on his own team). Gianna and Sophia T asked how a team changes its culture when the leaders are part of the problem. Audrey asked how much coaches shape culture at all. Emme asked when culture is the players' to change.",
+    options: [
+      opt("same", "Keep it", "Every program has one.", 0, -1, 0, "same", ["veteran"], ["rookie", "transfer"], "The first-years carry the bags."),
+      opt("end", "End it", "Everyone carries their own from today.", 2, 2, 0, "standards", ["rookie", "transfer"], ["veteran", "star"], "Change by decree. The seniors remember the last coach who tried."),
+      opt("flip", "Flip it for a week", "Seniors carry the bags this week. Then everyone carries their own.", 1, 5, 0, "culture", ["rookie", "transfer", "quiet"], ["veteran"], "The tradition, turned into a joke the team tells together."),
+      opt("captains", "Ask the captains", "Tell the captains the tradition is theirs to keep or end, and you will back either.", 1, 3, 1, "care", ["veteran", "star"], [], "Change planned with the leaders, the way the reading says it sticks."),
+    ] },
+  { id: "power", concept: "power", who: "star", text: "{name}'s parent calls the athletic director about playing time. The AD calls you.",
+    research: "Power on a team sits with more than the coach (Lila's wonder on favoritism; Emme's on when players hold it). Haixing suggested showing the logic behind decisions to the players. Will asked how a low-control coach looks intentional rather than lazy.",
+    options: [
+      opt("same", "Nothing changes", "The minutes are the minutes.", 0, 1, 0, "same", ["veteran"], ["star"], "The line holds, unexplained."),
+      opt("meet", "Meet them both", "Sit with {name} and the parent. Show the minutes and the why.", 1, 3, 1, "care", ["star", "rookie"], [], "The logic behind the decision, shown. Haixing's idea."),
+      opt("minutes", "Give the minutes", "{name} starts. The AD stops calling.", 1, -5, 2, "skills", ["star"], ["veteran", "rookie", "transfer"], "The team learns who to call.", 1),
+      opt("policy", "Hold the line, in writing", "A playing-time policy for everyone, on the wall, to the AD too.", 2, 4, 1, "standards", ["veteran", "rookie", "transfer"], ["star"], "Power made visible and the same for everyone."),
+    ] },
+  { id: "conflict", concept: "conflict", who: "star", text: "{name} and {veteran} stopped speaking. Practice got very quiet.",
+    research: "Conflict and dissent (Gianna, Lucy Kate, Drew chose it). Lucy Kate drew the line between a harsh coach and a motivating one. Catherine asked whether a team that never argues is healthy. Sarcasm and teasing can build cohesion when the team reads it right (Jacqueline's finding).",
+    options: [
+      opt("same", "Wait it out", "They will sort it.", 0, -3, 0, "same", [], ["rookie"], "The quiet spreads."),
+      opt("room", "Clear the air in the room", "Whole team, one meeting, everyone says one thing.", 2, 3, 0, "culture", ["rookie", "transfer"], ["quiet"], "Dissent in the open. Costs the quiet one most."),
+      opt("each", "One on one, twice", "Talk to each of them alone first.", 2, 5, 1, "care", ["star", "veteran", "quiet"], [], "The slow way. Both feel heard before they meet."),
+      opt("partners", "Make them partners", "Every drill, those two together, for a week.", 1, 1, 3, "skills", [], ["star", "veteran"], "Forced task cohesion. Works on the court, not off it."),
+    ] },
+  { id: "roles", concept: "roles", who: "star", text: "{name} wants to play every position. The lineup stopped arguing.",
+    research: "Clarity of roles (Beauchamp et al., 2002): players who know their job and everyone else's coordinate faster. Will, Jacqueline, Alexa and Neel chose it. Alexa asked what happens when an unofficial leader's instructions conflict with the coach's.",
+    options: [
+      opt("same", "Let it ride", "{name} is the best player.", 0, -2, 1, "same", ["star"], ["rookie", "transfer"], "Everyone else plays around the star."),
+      opt("cards", "Role cards", "Every player gets a card: your job, your backup, who you talk to.", 1, 4, 4, "skills", ["rookie", "transfer", "veteran"], ["star"], "Role clarity, written down."),
+      opt("rotate", "Rotate everyone", "Everyone plays everywhere for two weeks.", 1, 2, -2, "culture", ["rookie"], ["star", "veteran"], "Fair, and slower."),
+      opt("captain", "Make {name} captain of one thing", "{name} runs one phase of the game and nothing else.", 2, 3, 2, "care", ["star", "veteran"], [], "A real role for the star, with an edge."),
+    ] },
+  { id: "knowledge", concept: "knowledge", who: "veteran", text: "{name} knows the {opp} scouting report by heart and has not shared a word of it.",
+    research: "Knowledge sharing (Chloe and Jacqueline chose it). Catherine asked what makes a player share an edge. Chloe asked how knowing teammates' strengths helps a coach build the team.",
+    options: [
+      opt("same", "Do the scouting yourself", "Your report, Tuesday.", 0, 0, 2, "same", [], [], "The knowledge stays in two heads."),
+      opt("present", "{name} presents it", "Tuesday, {name} teaches the room what {name} knows.", 1, 4, 4, "skills", ["veteran", "rookie", "transfer"], [], "The veteran as teacher. Everyone learns, the veteran most."),
+      opt("pair", "Pair {name} with {rookie}", "The veteran and the rookie scout together all week.", 1, 3, 2, "care", ["veteran", "rookie"], [], "Knowledge moves one person at a time."),
+      opt("demand", "Demand it", "Scouting notes are team property. Hand them over.", 1, -4, 2, "standards", [], ["veteran", "star"], "The notes arrive. The veteran stops writing new ones."),
+    ] },
+  { id: "teamwork", concept: "teamwork", who: "veteran", text: "{name} runs the warm-up without asking. The team follows {name}, not you.",
+    research: "Teamwork and coaching (Addison, Ruby, Catherine chose it). Alexa noticed that players listen differently to a teammate who is in the action with them, and asked whether unofficial leaders confuse the room when they conflict with the coach.",
+    options: [
+      opt("same", "Let {name} run it", "Warm-up was never yours.", 0, 1, 0, "same", ["veteran"], ["rookie"], "The team has a leader. The rookie is not sure which."),
+      opt("take", "Take it back", "Warm-up is yours from Monday.", 1, -3, 1, "standards", [], ["veteran", "star"], "Authority asserted, a leader demoted."),
+      opt("official", "Make it official", "{name} runs warm-up as a captain. You run everything after.", 1, 4, 2, "care", ["veteran", "star", "transfer"], [], "The unofficial leader made official, with a boundary."),
+      opt("teach", "Teach the warm-up", "You explain what every part is for, then {name} runs it.", 2, 3, 4, "skills", ["rookie", "veteran"], [], "The why behind the routine. Haixing's idea again."),
+    ] },
+  { id: "coordination", concept: "coordination", who: "star", text: "Two players go for the same {ball} and collide. {name} yelled at the one who got there second.",
+    research: "Physical and mental coordination (Lila and Addison chose it). Alexa noticed quiet cues work under pressure because they cannot be faked. Addison asked whether teams that read each other got there by talent or by time.",
+    options: [
+      opt("same", "Shake it off", "Collisions happen.", 0, -2, 0, "same", [], [], "The next one happens too."),
+      opt("call", "Calling drill", "A week of drills where nobody moves without saying a name.", 1, 2, 5, "skills", ["rookie", "transfer"], [], "Coordination as a communication skill, practiced."),
+      opt("zones", "Assign zones", "Every player owns a zone. The chart goes on the wall.", 1, 1, 3, "standards", ["veteran", "rookie"], [], "Clarity instead of talk."),
+      opt("word", "A word with {name}", "Yelling at a teammate costs a start.", 1, 3, 0, "standards", ["transfer", "quiet", "rookie"], ["star"], "The consequence lands on the loudest player."),
+    ] },
+  { id: "decisions", concept: "decisions", who: "veteran", text: "{name} wants a team vote on the travel playlist. Then on the lineup.",
+    research: "Decision making (Lila chose it). Giving athletes a say in their training helps skill development and decision making (Sophia A's opinion). Chloe said ownership of their own development makes motivation more meaningful.",
+    options: [
+      opt("same", "No votes", "Coaches decide.", 0, -2, 1, "same", [], ["veteran"], "Clear, and nobody asked."),
+      opt("playlist", "Vote on the playlist", "The playlist is theirs. The lineup is yours.", 1, 3, 1, "care", ["veteran", "rookie"], [], "A real say on a real thing, and a clear line."),
+      opt("both", "Vote on both", "The team picks the lineup too.", 2, 2, -4, "culture", ["veteran", "star"], ["rookie"], "Autonomy without the expertise. Friends start.", -1),
+      opt("input", "Ask, then decide", "Every player tells you their lineup. You post yours with reasons.", 2, 4, 3, "skills", ["veteran", "rookie", "transfer"], [], "Autonomy support: heard, then told why."),
+    ] },
+  { id: "complexity", concept: "complexity", who: "rookie", text: "You called a time-out and gave four instructions. {name} remembered one.",
+    research: "Coaching and complexity (Lucy Kate, Sophia T, Drew, Audrey, Catherine chose it). Alexa asked how a sudden change in plan mid-match affects trust when decisions are split-second. Lucy Kate drew the line between a controlling coach and a motivating one.",
+    options: [
+      opt("same", "Say it louder next time", "Four things is four things.", 0, -2, 0, "same", [], ["rookie"], "The rookie remembers one again."),
+      opt("one", "One thing per time-out", "One instruction. The rest waits.", 1, 2, 4, "skills", ["rookie", "transfer", "quiet"], [], "Less, remembered."),
+      opt("book", "Write the playbook", "Every set play on one page, in the locker.", 2, 1, 5, "skills", ["rookie", "veteran"], [], "Complexity moved onto paper."),
+      opt("repeat", "{veteran} repeats it", "The captain says the one thing again in the huddle.", 1, 3, 2, "care", ["veteran", "rookie"], [], "The message through a teammate, which Alexa noticed lands differently."),
+    ] },
+  { id: "negative", concept: "negative", who: "star", text: "{name} told {rookie}, in front of everyone, that the pass was garbage.",
+    research: "Negative messaging (Vianna, Emme, Lucy Kate, Sophia A, Paul chose it). Paul asked what split of positive and negative talk works. Jacqueline noted coaches who use verbal aggression read as less credible and less competent. Sarcasm can build cohesion only when everyone reads it as play.",
+    options: [
+      opt("same", "Let them sort it", "Teammates talk.", 0, -4, 0, "same", [], ["rookie", "quiet"], "The rookie stops passing to the star."),
+      opt("private", "A private word with {name}", "After practice, alone.", 1, 3, 1, "care", ["rookie", "quiet", "star"], [], "Hard words in private, which is the rule you are about to need."),
+      opt("rule", "A feedback rule", "Hard words in private, praise in public. For you too.", 2, 5, 2, "standards", ["rookie", "transfer", "quiet"], ["star"], "The split, made a standard for everyone, coach included."),
+      opt("public", "Call {name} out", "Say it in front of everyone, the way {name} did.", 1, -3, 1, "standards", [], ["star", "quiet"], "Verbal aggression from the coach. Credibility down."),
+    ] },
+  { id: "lessons", concept: "lessons", who: "transfer", text: "{name} played for a program that did everything differently and keeps saying so.",
+    research: "Lessons from sports teams for other teams (Will and Luke chose it). Chloe and Lila raised transfer players as a topic. Will asked how a low-control approach reads as intentional. Luke asked which team-building exercises actually work.",
+    options: [
+      opt("same", "Ignore it", "Every transfer says that.", 0, -2, 0, "same", [], ["transfer"], "The transfer keeps saying it, to fewer people."),
+      opt("present", "{name} presents one thing", "Ten minutes Tuesday: the one thing the old program did best.", 1, 4, 3, "skills", ["transfer", "rookie"], ["veteran"], "The outsider's knowledge, used."),
+      opt("stop", "Ask {name} to stop", "This program is this program.", 1, -3, 1, "standards", ["veteran"], ["transfer"], "The transfer learns to be quiet."),
+      opt("adopt", "Adopt one thing", "Pick one habit from the old program and make it this team's.", 2, 3, 4, "culture", ["transfer", "star"], [], "A lesson from another team, taken."),
+    ] },
+  { id: "finale", concept: null, who: null, text: "The last week. {bench} got hurt in practice and cannot play. The final {match} is a road trip against the {opp}.",
+    research: "Andrew's example, 2026-10-29: \"a player who's not very good got injured. Do you bring them on a road trip with you? ... it costs more capital ... but it increases the culture of the team quite a bit because everybody says, wow, they treat the players really well.\"",
+    options: [
+      opt("same", "Business as usual", "Same week as every week.", 0, 0, 2, "same", [], [], "The season ends the way it ran."),
+      opt("film", "Extra film", "Two film sessions on the {opp}.", 1, 0, 5, "skills", ["star", "veteran"], [], "Preparation. The scoreboard notices."),
+      opt("dinner", "Season dinner", "The whole team, the night before the trip.", 2, 5, -1, "culture", ["transfer", "quiet", "rookie"], [], "The season, marked together."),
+      opt("trip", "Bring {bench} on the trip", "Pay the travel. {bench} rides with the team and sits on the bench in uniform.", 4, 10, 0, "care", ALL, [], "The most expensive thing on the list, and the one the team remembers."),
+    ] },
 ];
-export const eventOf = (id) => EVENTS.find(e => e.id === id) || null;
+export const situationOf = (id) => SITUATIONS.find(s => s.id === id) || null;
+export const situationFor = (conceptId) => SITUATIONS.find(s => s.concept === conceptId) || null;
+export const optionOf = (situation, id) => (situation ? situation.options.find(o => o.id === id) : null) || null;
+
+/** The words of a situation or an option, with the names in. */
+export function tell(text, { cast, sport, team, opp, bench, who }) {
+  const name = (who && cast[who]) || "a player";
+  return String(text || "")
+    .replace(/\{name\}/g, name).replace(/\{team\}/g, team).replace(/\{opp\}/g, opp).replace(/\{bench\}/g, bench || FILL[0])
+    .replace(/\{star\}/g, cast.star).replace(/\{veteran\}/g, cast.veteran).replace(/\{rookie\}/g, cast.rookie).replace(/\{transfer\}/g, cast.transfer).replace(/\{quiet\}/g, cast.quiet)
+    .replace(/\{match\}/g, sport.match).replace(/\{period\}/g, sport.period).replace(/\{where\}/g, sport.where).replace(/\{ball\}/g, sport.ball);
+}
 
 // ─── what the players say ───
 //
-// One line per part, per spend, per mood, as a text to the team's chat.
-// Claude's draft, 2026-10-29.
+// One line per part, per kind of action, per mood, as a text to the team's
+// chat. Claude's draft, 2026-10-29.
 
 export const LINES = {
   star: {
-    teach: { up: "ok the film session actually helped. don't tell anyone", flat: "fine. but i already know this stuff", down: "we're doing homework now? i came here to play" },
-    goals: { up: "finally someone wrote it down. i'm in", flat: "sure. as long as my goal is on the list", down: "goals are great. wins are better" },
-    cohesion: { up: "dinner was good. still want to win though", flat: "dinner was fine. still want to win though", down: "i don't need friends. i need a ring" },
-    win: { up: "THIS is what i've been saying. let's go", flat: "about time", down: "we won and you still want more? ok" },
-    dominate: { up: "respect. first coach who meant it", flat: "rules are fine if everyone follows them", down: "you're new here. don't forget that" },
+    same: { up: "good. no changes. i know this system", flat: "same as last year then", down: "so we're just running it back? we lost" },
+    culture: { up: "ok that was actually good", flat: "fine. still want to win though", down: "i don't need a dinner. i need a ring" },
+    skills: { up: "THIS. more of this", flat: "about time", down: "more reps isn't the problem. the lineup is" },
+    standards: { up: "respect. first coach who meant it", flat: "rules are fine if everyone follows them", down: "you're new here. don't forget that" },
+    care: { up: "didn't expect that. thanks", flat: "sure", down: "we're spending the week on that?" },
   },
   veteran: {
-    teach: { up: "ok coach knows the game. noted", flat: "i've seen this drill before. it works", down: "three coaches. same drills. cool" },
-    goals: { up: "first time anyone asked us. i'll hold us to it", flat: "writing it down doesn't make it true", down: "we set goals last year. you know how that went" },
-    cohesion: { up: "yeah. that's the team i remember", flat: "nice dinner. doesn't fix the lineup", down: "forced fun. the group chat has thoughts" },
-    win: { up: "we needed one. good call", flat: "a win's a win", down: "you're playing the same six and the bench knows" },
-    dominate: { up: "took you long enough. the standard is the standard", flat: "fine. i'll follow rules i helped write", down: "everyone, new coach wants to be tough. give it two weeks" },
+    same: { up: "finally a coach who leaves it alone", flat: "seen it before. it works", down: "three coaches. same practice. cool" },
+    culture: { up: "yeah. that's the team i remember", flat: "nice. doesn't fix the lineup", down: "forced fun. the chat has thoughts" },
+    skills: { up: "ok coach knows the game. noted", flat: "i've run this drill before", down: "we did this under the last coach too" },
+    standards: { up: "took you long enough. the standard is the standard", flat: "fine. i'll follow rules i helped write", down: "everyone, new coach wants to be tough. give it two weeks" },
+    care: { up: "first time anyone asked us", flat: "ok", down: "that's not how we do things here" },
   },
   rookie: {
-    teach: { up: "i finally get what we're doing!! thank you", flat: "ok i think i get the drill now", down: "wait which drill" },
-    goals: { up: "i wrote mine on my mirror. is that weird", flat: "mine's on the list. i think", down: "the goal says playoffs. i don't know what i'm supposed to do" },
-    cohesion: { up: "i sat with the seniors!! they're actually nice", flat: "dinner was fun. i still don't know the plays", down: "i didn't know where to sit" },
-    win: { up: "we won and i played!!", flat: "we won. i watched", down: "i'm scared to mess up so i'm not doing anything" },
-    dominate: { up: "ok i like knowing the rules", flat: "the rules are clear at least", down: "i got yelled at and i don't know what i did" },
+    same: { up: "ok i can do the same thing again", flat: "same drills. ok", down: "i still don't know what i'm supposed to do" },
+    culture: { up: "i sat with the seniors!! they're actually nice", flat: "dinner was fun. i still don't know the plays", down: "i didn't know where to sit" },
+    skills: { up: "i finally get what we're doing!! thank you", flat: "ok i think i get the drill now", down: "wait which drill" },
+    standards: { up: "ok i like knowing the rules", flat: "the rules are clear at least", down: "i got yelled at and i don't know what i did" },
+    care: { up: "coach noticed. nobody noticed before", flat: "ok that was nice i guess", down: "is this about me" },
   },
   transfer: {
-    teach: { up: "same system as my old team. finally i can help", flat: "different from my old team but ok", down: "i already learned this a different way" },
-    goals: { up: "i'm on the list. feels like i'm on the team", flat: "the goal is fine. nobody asked me though", down: "goals for a team i'm not really on yet" },
-    cohesion: { up: "they taught me the handshake!!!", flat: "dinner was nice. still the new kid", down: "i sat at the end again" },
-    win: { up: "we won and i started. okay then", flat: "we won. i don't know anyone's name yet", down: "i'm here to win too. i'm just also alone" },
-    dominate: { up: "rules i can follow. better than guessing", flat: "fine. same rules for everyone at least", down: "i just got here and i'm already in trouble" },
+    same: { up: "same as my old team. i can do this", flat: "different from my old team but ok", down: "nobody's going to tell me how this works, are they" },
+    culture: { up: "they taught me the handshake!!!", flat: "dinner was nice. still the new kid", down: "i sat at the end again" },
+    skills: { up: "finally a system i can learn", flat: "ok. i'll figure it out", down: "i already learned this a different way" },
+    standards: { up: "rules i can follow. better than guessing", flat: "fine. same rules for everyone at least", down: "i just got here and i'm already in trouble" },
+    care: { up: "feels like i'm on the team now", flat: "nobody asked me though", down: "still waiting to be on the team" },
   },
   quiet: {
-    teach: { up: "practice felt like practice again. good", flat: "ok", down: "ok" },
-    goals: { up: "a goal i can actually reach. thanks", flat: "sure", down: "another thing to miss" },
-    cohesion: { up: "i talked to someone. it helped", flat: "dinner was fine", down: "didn't go. sorry" },
-    win: { up: "we won. i'm tired", flat: "we won", down: "i can't keep this up" },
-    dominate: { up: "at least it's clear", flat: "fine", down: "i'm late because i can't get out of bed. you don't know that" },
+    same: { up: "ok", flat: "ok", down: "ok" },
+    culture: { up: "i talked to someone. it helped", flat: "dinner was fine", down: "didn't go. sorry" },
+    skills: { up: "practice felt like practice again. good", flat: "ok", down: "i can't keep this up" },
+    standards: { up: "at least it's clear", flat: "fine", down: "i'm late because i can't get out of bed. you don't know that" },
+    care: { up: "thank you. don't tell anyone", flat: "ok", down: "who told you" },
   },
 };
 
@@ -307,7 +458,7 @@ export const POLLS = {
   goals: ["A season goal", "A goal for every week"],
   motivation: ["A strict coach", "An open coach"],
   support: ["Support from the coach", "Support from teammates"],
-  negative: ["Tell them hard in private", "Tell them soft in front of everyone"],
+  negative: ["Hard words in private", "Hard words in front of everyone"],
   decisions: ["Coach decides", "Team votes"],
   complexity: ["One instruction, done well", "Four instructions, done fast"],
   cohesion: ["Friends who win", "Winners who respect each other"],
@@ -349,112 +500,112 @@ export const CLASS_WONDERS = {
 
 // ─── the season, planned ───
 
-/** The six weeks a student gets: their five concepts in order, then a final from among them. */
+/**
+ * The six weeks a student gets. Week 1 is the opener with the first
+ * concept's question. Weeks 2 to 5 are the next four concepts' situations.
+ * Week 6 is the finale, asking about what they thought on one of the five.
+ */
 export function planSeason({ name, concepts, topicsAnswers }) {
   const five = (concepts || []).slice(0, 5);
+  while (five.length < 5) five.push({ id: CLASS_TOP[five.length % CLASS_TOP.length], slot: "" });
   const weeks = LETTERS.map((w, i) => {
     const last = i === 5;
-    const pickFrom = last ? five : [five[i]];
-    const c = last ? pick(pickFrom, name, "final") : pickFrom[0];
-    const concept = c || { id: CLASS_TOP[i % CLASS_TOP.length], slot: "" };
-    const bank = EVENTS.filter(e => e.concept === concept.id);
-    // The final repeats a concept: take the event that week did not get.
-    const earlier = five.findIndex(x => x && x.id === concept.id);
-    const used = last && earlier >= 0 ? pick(bank, name, "event", LETTERS[earlier]).id : null;
-    const choices = bank.filter(e => e.id !== used);
-    const event = pick(choices.length ? choices : bank, name, "event", w);
+    const concept = last ? pick(five, name, "final") : five[i];
+    const situation = i === 0 ? situationOf("opener") : last ? situationOf("finale") : (situationFor(concept.id) || situationOf("opener"));
     const wonder = concept.slot ? String((topicsAnswers || {})["wonder:" + concept.slot] || "").trim() : "";
     const opinion = concept.slot ? String((topicsAnswers || {})["opinion:" + concept.slot] || "").trim() : "";
-    // The final asks about what they thought, not what they wondered, so the
-    // same question is never asked twice. Claude's variation on Andrew's
+    // The final asks about what they thought, not what they wondered, so
+    // the same question is never asked twice. Claude's variation on Andrew's
     // prompt, 2026-10-29, for him to edit.
     const prompt = last
       ? (opinion ? { kind: "thought", text: opinion } : { kind: "wonder", text: CLASS_WONDERS[concept.id] })
       : { kind: "wonder", text: wonder || CLASS_WONDERS[concept.id] };
-    return { week: w, n: i + 1, last, concept: concept.id, event: event.id, who: event.who, prompt, poll: POLL_WEEKS.includes(w) ? POLLS[concept.id] : null };
+    return { week: w, n: i + 1, last, concept: concept.id, situation: situation.id, who: situation.who, prompt, poll: POLL_WEEKS.includes(w) ? POLLS[concept.id] : null };
   });
   // The final repeats a concept, so its poll could repeat week 2's or 4's.
   // Then it asks about another of the five instead, the first not yet polled.
   const asked = weeks.slice(0, 5).filter(x => x.poll).map(x => x.concept);
   const last = weeks[5];
   if (last.poll && asked.includes(last.concept)) {
-    const other = five.map(c => c && c.id).find(id => id && !asked.includes(id));
+    const other = five.map(c => c.id).find(id => !asked.includes(id));
     if (other) last.poll = POLLS[other];
   }
   return weeks;
 }
 
-/** The words of an event, with the names in. */
-export function tellEvent(event, { cast, sport, team, opp }) {
-  const name = cast[event.who] || "a player";
-  return event.text.replace(/\{name\}/g, name).replace(/\{team\}/g, team).replace(/\{opp\}/g, opp)
-    .replace(/\{match\}/g, sport.match).replace(/\{where\}/g, sport.where).replace(/\{ball\}/g, sport.ball);
-}
-
 // ─── one week, resolved ───
 
-export const start = () => ({ capital: START_CAPITAL, culture: START_CULTURE, wins: 0, losses: 0 });
+const clamp = (n) => Math.max(0, Math.min(100, Math.round(n)));
+/** Where the last coach left the team: culture and skills from 35 to 65, success between them. */
+export function startState(name) {
+  const culture = 35 + Math.floor(roll(name, "culture0") * 31);
+  const skills = 35 + Math.floor(roll(name, "skills0") * 31);
+  return { capital: START_CAPITAL, culture, skills, success: Math.round((culture + skills) / 2), wins: 0, losses: 0 };
+}
+export const start = startState;
 
-// A swing of -2 to +2, most weeks near zero. Andrew, 2026-10-29: "there is
-// some randomness in what the NPCs do and how they react."
+/** The chance of winning, from the two numbers and the action, as a fraction. */
+export const winChance = (culture, skills, win = 0) => Math.max(0.05, Math.min(0.95, 0.08 + 0.84 * ((culture + skills) / 200) + 0.05 * win));
+// What a win and a loss do to success.
+export const WIN_SUCCESS = 8, LOSS_SUCCESS = -6;
+
+// A swing of -2 to +2 on culture, most weeks near zero: a week of real
+// life. Skills swing one either way one week in two.
 const swingOf = (r) => r < 0.1 ? -2 : r < 0.3 ? -1 : r < 0.7 ? 0 : r < 0.9 ? 1 : 2;
+const nudgeOf = (r) => r < 0.25 ? -1 : r > 0.75 ? 1 : 0;
 
 /**
- * What a spend does in a week. state is before; the answer carries the state
- * after and everything the screen shows. Pure: the same inputs always give
- * the same week.
+ * What an action does in a week. state is before; the answer carries the
+ * state after and everything the screen shows. Pure.
  */
-export function resolve({ name, week, state, spendId, eventId }) {
-  const spend = spendOf(spendId), event = eventOf(eventId);
-  if (!spend || !event) throw new Error("Takeover: no such spend or event: " + spendId + ", " + eventId);
-  const cost = costOf(spend, state.culture);
-  if (cost > state.capital) throw new Error("Takeover: " + spend.id + " costs " + cost + " and the coach has " + state.capital);
-  const ready = state.culture >= READY;
+export function resolve({ name, week, state, situationId, optionId }) {
+  const situation = situationOf(situationId), option = optionOf(situation, optionId);
+  if (!situation || !option) throw new Error("Takeover: no such situation or option: " + situationId + ", " + optionId);
+  if (option.cost > state.capital) throw new Error("Takeover: " + option.id + " costs " + option.cost + " and the coach has " + state.capital);
   const moods = {};
-  let crowd = 0;
+  let back = 0;
   for (const c of CHARACTERS) {
-    let m = c.affinity[spend.id];
-    if (spend.id === "dominate" && ready) m += c.readyDominate * 2;
-    if (event.who === c.id) m += event.fit[spend.id] >= 1 ? 1 : event.fit[spend.id] <= -1 ? -1 : 0;
-    // Each player has a week of their own: one in five swings a step.
-    const r = roll(name, "mood", week, spend.id, c.id);
+    let m = option.likes.includes(c.id) ? 1 : option.dislikes.includes(c.id) ? -1 : 0;
+    // Each player has a week of their own: one in ten swings a step.
+    const r = roll(name, "mood", week, option.id, c.id);
     if (r < 0.1) m -= 1; else if (r > 0.9) m += 1;
     moods[c.id] = m >= 1 ? "up" : m <= -1 ? "down" : "flat";
-    crowd += moods[c.id] === "up" ? 1 : moods[c.id] === "down" ? -1 : 0;
+    back += RETURN[moods[c.id]];
   }
-  let base = spend.culture;
-  if (spend.id === "dominate" && ready) base = 2;
-  const swing = swingOf(roll(name, "swing", week, spend.id));
-  const delta = base + event.fit[spend.id] * 2 + crowd + swing;
-  const culture = Math.max(0, Math.min(100, state.culture + delta));
-  // The match: culture carries most of the chance, the spend the rest.
-  const p = Math.max(0.1, Math.min(0.9, 0.3 + (culture - START_CULTURE) / 150 + spend.win * 0.08 + event.fit[spend.id] * 0.03));
-  const won = roll(name, "match", week, spend.id) < p;
-  const capital = state.capital - cost + 1 + (won ? 1 : 0);
+  const swing = swingOf(roll(name, "swing", week, option.id));
+  const nudge = nudgeOf(roll(name, "nudge", week, option.id));
+  const culture = clamp(state.culture + option.culture + swing);
+  const skills = clamp(state.skills + option.skills + nudge);
+  const p = winChance(culture, skills, option.win);
+  const won = roll(name, "match", week, option.id) < p;
+  const success = clamp(state.success + (won ? WIN_SUCCESS : LOSS_SUCCESS));
+  const capital = Math.round((state.capital - option.cost + back) * 2) / 2;
   return {
-    week, spend: spend.id, event: event.id, cost, swing, delta, culture, won, p: Math.round(p * 100),
-    moods, capital, wins: state.wins + (won ? 1 : 0), losses: state.losses + (won ? 0 : 1),
+    week, situation: situation.id, option: option.id, cost: option.cost, swing, nudge,
+    culture, skills, success, dCulture: culture - state.culture, dSkills: skills - state.skills, dSuccess: success - state.success,
+    won, p: Math.round(p * 100), moods, back, capital, wins: state.wins + (won ? 1 : 0), losses: state.losses + (won ? 0 : 1),
   };
 }
 
 /** The state after a result. */
-export const after = (result) => ({ capital: result.capital, culture: result.culture, wins: result.wins, losses: result.losses });
+export const after = (r) => ({ capital: r.capital, culture: r.culture, skills: r.skills, success: r.success, wins: r.wins, losses: r.losses });
 
 // A result as the file keeps it: short keys, under one row.
-export const packResult = (r) => JSON.stringify({ w: r.week, s: r.spend, e: r.event, c: r.cost, g: r.swing, d: r.delta, u: r.culture, v: r.won ? 1 : 0, p: r.p, m: CHARACTERS.map(c => r.moods[c.id][0]).join(""), k: r.capital, x: r.wins, l: r.losses });
+export const packResult = (r) => JSON.stringify({ w: r.week, i: r.situation, o: r.option, c: r.cost, g: r.swing, n: r.nudge, u: r.culture, s: r.skills, e: r.success, du: r.dCulture, ds: r.dSkills, de: r.dSuccess, v: r.won ? 1 : 0, p: r.p, m: CHARACTERS.map(c => r.moods[c.id][0]).join(""), b: r.back, k: r.capital, x: r.wins, l: r.losses });
 export const unpackResult = (s) => {
   let o;
   try { o = JSON.parse(s); } catch { return null; }
-  if (!o || typeof o !== "object" || !o.w || !o.s || !o.e) return null;
+  if (!o || typeof o !== "object" || !o.w || !o.i || !o.o) return null;
   const moodOf = { u: "up", f: "flat", d: "down" };
   const moods = {};
   CHARACTERS.forEach((c, i) => { moods[c.id] = moodOf[String(o.m || "")[i]] || "flat"; });
-  return { week: o.w, spend: o.s, event: o.e, cost: +o.c || 0, swing: +o.g || 0, delta: +o.d || 0, culture: +o.u || 0, won: !!o.v, p: +o.p || 0, moods, capital: +o.k || 0, wins: +o.x || 0, losses: +o.l || 0 };
+  const n = (v) => (Number.isFinite(+v) ? +v : 0);
+  return { week: o.w, situation: o.i, option: o.o, cost: n(o.c), swing: n(o.g), nudge: n(o.n), culture: n(o.u), skills: n(o.s), success: n(o.e), dCulture: n(o.du), dSkills: n(o.ds), dSuccess: n(o.de), won: !!o.v, p: n(o.p), moods, back: n(o.b), capital: n(o.k), wins: n(o.x), losses: n(o.l) };
 };
 
 /** The season so far, from the file: every saved week applied in order, stopping at the first week without a result. */
-export function replay(answers) {
-  let state = start();
+export function replay(answers, name) {
+  let state = startState(name);
   const results = [];
   for (const w of LETTERS) {
     const r = unpackResult((answers || {})[F.result(w)]);
@@ -474,39 +625,54 @@ export function scoreOf(sport, won, name, week) {
   return won ? a + "-" + b : b + "-" + a;
 }
 
-/** A culture number as the end screen grades it. */
-export const gradeOf = (culture) => culture >= 80 ? "A" : culture >= 65 ? "B" : culture >= 50 ? "C" : culture >= 35 ? "D" : "F";
+/** A number as the end screen grades it. */
+export const gradeOf = (n) => n >= 80 ? "A" : n >= 65 ? "B" : n >= 50 ? "C" : n >= 35 ? "D" : "F";
+
+// How a week felt, for the cue after the chat: a cheer, a groan, or nothing.
+export const feelOf = (r) => !r ? "" : r.dCulture >= 6 || (r.won && r.dCulture >= 3) ? "cheer" : r.dCulture <= -4 ? "groan" : "";
+
+// Coins, with halves: 3.5 is three and a half.
+export const coins = (n) => "●".repeat(Math.max(0, Math.floor(n))) + (n % 1 ? "◐" : "");
 
 // ─── the words the student reads ───
 //
-// Andrew's prompt, 2026-10-29, word for word, is `reflect`. The rest is
-// Claude's draft for him to edit in place (useCopy, row COPY_ROW).
+// Andrew's, word for word, 2026-10-29: `reflect` ("You wrote: ... Based on
+// your experiences and what you know, how would you answer that question?
+// Please write 2-4 sentences, and include at least one source, which can be
+// from our book, our readings, or somewhere else."). The rest is Claude's
+// draft for him to edit in place (useCopy, row COPY_ROW).
 
 export const COPY_ROW = "worksheet-takeover-plan";
 export const DEFAULT_COPY = {
   title: TAKEOVER_TITLE,
   credit: "COMM 118 · Weekly Challenge 3 · Due Tuesday, November 3",
   start: "You are the new head coach. The team is not yours yet.",
-  intro: "You have six weeks. Each week something happens, and you decide what to spend your capital on. The players react. Some of them are people you know.",
+  intro: "You have six weeks. Each week something happens, and you decide what to do about it. The players react. Some of them are people you know.",
   pickSport: "Pick your sport.",
   pickTeam: "Pick your team.",
   pickTeamLine: "None of these names make sense. Pick one anyway.",
-  matchDay: "VS",
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
+  howTitle: "How this works",
+  how: "You are taking over this team.\n\nTwo numbers are yours to raise. Culture is how the team treats each other. Skills and strategy is how well they play. Both run from 0 to 100, and both start wherever the last coach left them.\n\nThose two numbers together set your chance of winning each week. Winning raises the third number, Success.\n\nYou have capital: five coins to start. Every action costs some, from nothing up to four or five later in the season. After each week your five players react. A plus gives you a coin back. An equals gives you half a coin. A minus gives you nothing.",
+  howGo: "Start the season",
   capital: "Capital",
   culture: "Culture",
+  skills: "Skills & strategy",
+  success: "Success",
   record: "Record",
-  spendAsk: "What do you spend this week on?",
-  spendNote: "You earn one capital a week, and one more for a win.",
+  chooseAsk: "What do you do?",
+  chooseNote: "Costs are in coins. A plus from a player gives one back, an equals gives half, a minus gives nothing.",
   cannot: "Not enough capital.",
+  matchDay: "VS",
   chat: "Team chat",
-  reflect: "You wondered: {wonder}. Based on what you just saw and what you know, what do you think now? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
-  reflectThought: "You thought: {wonder}. After a season of this, do you still think so? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
+  reflect: "You wrote: {wonder}. Based on your experiences and what you know, how would you answer that question? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
+  reflectThought: "You wrote: {wonder}. Based on your experiences this season and what you know, do you still think so? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
   reflectHint: "2-4 sentences",
   sourceAsk: "Your source",
-  sourceHint: "A link, or the book and a page",
+  sourceHint: "A link, or the book, or wherever it came from.",
   pollAsk: "Which matters more?",
+  back: "Back",
   next: "Next week",
   finals: "The final week.",
   seasonOver: "Season over.",

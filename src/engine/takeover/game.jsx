@@ -1,23 +1,22 @@
 // Takeover, on the screen: /comm118/worksheets/takeover.
 //
 // A student takes over a team of their classmates and spends six weeks on
-// its culture. engine.js decides everything; this file draws it and saves
-// it. Every answer is a worksheet row (worktopia/store.js) through saver.js,
-// so nothing typed is lost. A week's result is saved packed in its own row
-// the moment the spend is chosen, so a reload replays the week the student
-// saw even if the engine's words change later. The cast is saved too, so a
+// it. engine.js decides everything; this file draws it and saves it. Every
+// answer is a worksheet row (worktopia/store.js) through saver.js, so
+// nothing typed is lost. A week's result is saved packed in its own row the
+// moment the choice is made, so a reload replays the week the student saw
+// even if the engine's words change later. The cast is saved too, so a
 // roster change later never reshuffles a season already on file.
 //
-// Fields: sport, team, concepts, cast, then per week a to f: prompt, spend,
+// Fields: sport, team, concepts, cast, then per week a to f: prompt, choice,
 // result, reflect, source; poll on b, d and f; final a to c. engine.js F.
 //
 // Andrew, 2026-10-29: "eight bit graphics, almost like Zelda ... kind of
 // fun noises ... when somebody's upset, they should have little lines coming
-// out of their head ... when somebody's happy, they should cheer ... music
-// cues that are happy, and when something difficult is happening, little
-// difficult music cues ... little uniforms." Pixel font for the chrome, a
-// mono for anything longer than a line. One look, dark, whatever the page's
-// theme.
+// out of their head ... when somebody's happy, they should cheer ... little
+// uniforms." And on the second pass: "we need a back button on each page
+// so people can at least go back ... a card that explains what's happening
+// here ... show the numbers getting bigger, like show the bars moving."
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -70,11 +69,13 @@ export function missingOf(answers) {
 /** Who plays which part on a file, or a fresh deal when the file has none. */
 export const castOf = (answers, name, classmates) => E.parseCast((answers || {})[E.F.cast]) || E.deal(name, classmates).cast;
 export const teamOf = (answers, name) => String((answers || {})[E.F.team] || "").trim() || E.teamNameFor(name);
+/** The rest of the squad, and the one the finale is about. */
+export const benchOf = (cast, classmates) => { const in5 = new Set(Object.values(cast)); return (classmates || []).filter(n => !in5.has(n)); };
+export const benchNameOf = (cast, classmates, name) => { const b = benchOf(cast, classmates); return b.length ? E.pick(b, name, "hurt") : E.FILL.find(f => !Object.values(cast).includes(f)); };
 
 // ─── pixels ───
 
 const grids = new Map();
-/** A sprite's grid: the photograph when it can be read, else the name, in the team's jersey. */
 const gridFor = (name, photo, jersey) => {
   const fromPhoto = photo ? grids.get(photo) : null;
   return fromPhoto ? uniform(fromPhoto, jersey, 12) : uniform(spriteFromName(name), jersey, 8);
@@ -115,20 +116,20 @@ function MatchScene({ sport, left, right, jersey, sound, onDone, label }) {
     const el = ref.current;
     if (!el) return undefined;
     let alive = true, lastCrossing = -1;
-    const grids2 = [gridFor(left.name, left.photo, jersey), gridFor(right.name, right.photo, (jersey + 3) % 7)];
+    const two = [gridFor(left.name, left.photo, jersey), gridFor(right.name, right.photo, (jersey + 3) % 7)];
     const ms = reduced() ? 300 : 2800;
     const t0 = performance.now();
     sound.whistle();
     const frame = (now) => {
       if (!alive) return;
       const t = Math.min(1, (now - t0) / ms);
-      const crossing = drawMatch(el, { sport, left: grids2[0], right: grids2[1], t });
+      const crossing = drawMatch(el, { sport, left: two[0], right: two[1], t });
       if (crossing !== lastCrossing) { lastCrossing = crossing; if (t > 0) sound.bounce(); }
       if (t < 1) requestAnimationFrame(frame); else onDone();
     };
     requestAnimationFrame(frame);
     return () => { alive = false; };
-  // One scene a week; the names of the two players never change mid-scene.
+  // One scene a week; the two players never change mid-scene.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
@@ -159,33 +160,57 @@ function Squad({ cast, bench, photos, moods, lit, scale, jersey, cheer }) {
   );
 }
 
-function Hud({ copy, state }) {
+// The three numbers and the coins. deltas, when given, show beside each bar
+// and the bars slide to the new numbers. Andrew: "show the bars moving."
+const signed = (n) => (n > 0 ? "+" : "") + n;
+function Meter({ label, value, delta }) {
+  return (
+    <span className="meter">
+      <span className="ml">{label}</span>
+      <span className="bar"><i style={{ width: value + "%" }} /></span>
+      <span className="n">{value}</span>
+      {delta != null && delta !== 0 ? <span className={"delta " + (delta > 0 ? "up" : "down")}>{signed(delta)}</span> : null}
+    </span>
+  );
+}
+function Hud({ copy, state, deltas }) {
   return (
     <div className="hud px">
-      <span><Words k="capital" copy={copy} /> <b className="coins">{"●".repeat(Math.max(0, Math.min(12, state.capital)))}</b> <span className="n">{state.capital}</span></span>
-      <span className="cul"><Words k="culture" copy={copy} /> <span className="bar"><i style={{ width: state.culture + "%" }} /></span> <span className="n">{state.culture}</span></span>
-      <span><Words k="record" copy={copy} /> <span className="n">{state.wins}-{state.losses}</span></span>
+      <span className="cap"><span className="ml"><Words k="capital" copy={copy} /></span> <b className="coins">{E.coins(state.capital)}</b> <span className="n">{state.capital}</span>{deltas && deltas.back != null ? <span className="delta up">{"+" + deltas.back + " back"}</span> : null}</span>
+      <Meter label={copy.say("culture")} value={state.culture} delta={deltas ? deltas.culture : null} />
+      <Meter label={copy.say("skills")} value={state.skills} delta={deltas ? deltas.skills : null} />
+      <Meter label={copy.say("success")} value={state.success} delta={deltas ? deltas.success : null} />
+      <span className="rec"><span className="ml"><Words k="record" copy={copy} /></span> <span className="n">{state.wins}-{state.losses}</span></span>
+    </div>
+  );
+}
+
+// The back button every page has. Andrew: "they have to be able to go back
+// and look at stuff."
+function Nav({ copy, onBack, children }) {
+  return (
+    <div className="nav">
+      {onBack ? <button type="button" className="btn px small" onClick={onBack}>{"< " + copy.say("back")}</button> : <span />}
+      <span className="row">{children}</span>
     </div>
   );
 }
 
 // ─── the chat, one week ───
 
-export function weekLines({ plan, result, cast, sport, team, name }) {
-  const event = E.eventOf(result ? result.event : plan.event);
+export function weekLines({ plan, result, cast, sport, team, name, bench }) {
+  const sit = E.situationOf(plan.situation);
   const opp = E.opponentFor(name, plan.week, team);
-  const lines = [{ who: "", text: E.tellEvent(event, { cast, sport, team, opp }) }];
-  if (!result) return { lines, opp };
-  const spend = E.spendOf(result.spend);
-  lines.push({ who: "coach", text: spend.label + ". " + spend.line });
-  E.CHARACTERS.forEach(c => lines.push({ who: cast[c.id], text: E.LINES[c.id][result.spend][result.moods[c.id]], mood: result.moods[c.id] }));
+  const ctx = { cast, sport, team, opp, bench, who: sit.who };
+  const lines = [{ who: "", text: E.tell(sit.text, ctx) }];
+  if (!result) return { lines, opp, ctx };
+  const option = E.optionOf(sit, result.option);
+  lines.push({ who: "coach", text: E.tell(option.label, ctx) + ". " + E.tell(option.line, ctx) });
+  E.CHARACTERS.forEach(c => lines.push({ who: cast[c.id], text: E.LINES[c.id][option.tag][result.moods[c.id]], mood: result.moods[c.id] }));
   lines.push({ who: "", text: (result.won ? "Won " : "Lost ") + E.scoreOf(sport, result.won, name, plan.week) + " to the " + opp + ".", match: result.won ? "won" : "lost" });
-  lines.push({ who: "", text: "Culture " + (result.culture - result.delta) + " to " + result.culture + ". Capital " + result.capital + ".", meter: true });
-  return { lines, opp };
+  lines.push({ who: "", text: "Culture " + (result.culture - result.dCulture) + " to " + result.culture + ". Skills " + (result.skills - result.dSkills) + " to " + result.skills + ". Success " + (result.success - result.dSuccess) + " to " + result.success + ". " + result.back + " capital back, " + result.capital + " now.", meter: true });
+  return { lines, opp, ctx };
 }
-
-// How a week felt, for the cue after the chat: a cheer, a groan, or nothing.
-export const feelOf = (result) => !result ? "" : result.delta >= 8 ? "cheer" : result.delta <= -6 ? "groan" : "";
 
 function Chat({ lines, animate, sound, onDone, copy }) {
   const [shown, setShown] = useState(animate ? 1 : lines.length);
@@ -227,14 +252,15 @@ export function SeasonLog({ answers, name, classmates, copy }) {
   const plan = E.planSeason({ name, concepts, topicsAnswers: {} });
   const cast = castOf(answers, name, classmates);
   const team = teamOf(answers, name);
-  const { results, state } = E.replay(answers);
+  const bench = benchNameOf(cast, classmates, name);
+  const { results, state } = E.replay(answers, name);
   return (
     <div className="log">
-      <div className="px head2">{team} · {sport.name} · {state.wins}-{state.losses} · culture {state.culture} ({E.gradeOf(state.culture)})</div>
+      <div className="px head2">{team + " · " + sport.name + " · " + state.wins + "-" + state.losses + " · culture " + state.culture + " · skills " + state.skills + " · success " + state.success + " (" + E.gradeOf(state.success) + ")"}</div>
       {results.map((r, i) => {
         const week = plan[i];
         const prompt = parsePrompt(answers[E.F.prompt(week.week)]) || week.prompt;
-        const { lines } = weekLines({ plan: week, result: r, cast, sport, team, name });
+        const { lines } = weekLines({ plan: week, result: r, cast, sport, team, name, bench });
         return (
           <section key={week.week} className="week">
             <h3 className="px">{"Week " + week.n + " · " + E.conceptOf(week.concept).name}</h3>
@@ -269,7 +295,8 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const [status, setStatus] = useState("loading");
   const [topics, setTopics] = useState(null);        // the student's team topics answers, {} when none
   const [topicsFailed, setTopicsFailed] = useState(false);
-  const [screen, setScreen] = useState("");          // "" until loaded, then file | title | sport | team | meet | week | end | done
+  const [screen, setScreen] = useState("");          // "" until loaded, then file | title | sport | team | meet | how | week | end | done
+  const [howFrom, setHowFrom] = useState("meet");     // where Back on the how card goes
   const [cursor, setCursor] = useState(0);           // the week on screen, 0 to 5
   const [phase, setPhase] = useState("");            // in a week with a result just made: match, chat, then ""
   const [handing, setHanding] = useState("");
@@ -332,10 +359,11 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const concepts = useMemo(() => parseConcepts(answers ? answers[E.F.concepts] : ""), [answers]);
   const plan = useMemo(() => sport && concepts.length ? E.planSeason({ name, concepts, topicsAnswers: topics || {} }) : null, [sport, concepts, name, topics]);
   const cast = useMemo(() => castOf(answers, name, classmates), [answers, name, classmates]);
-  const bench = useMemo(() => { const in5 = new Set(Object.values(cast)); return classmates.filter(n => !in5.has(n)); }, [cast, classmates]);
+  const bench = useMemo(() => benchOf(cast, classmates), [cast, classmates]);
+  const benchName = useMemo(() => benchNameOf(cast, classmates, name), [cast, classmates, name]);
   const team = teamOf(answers, name);
   const jersey = E.jerseyFor(team);
-  const season = useMemo(() => E.replay(answers || {}), [answers]);
+  const season = useMemo(() => E.replay(answers || {}, name), [answers, name]);
 
   // The first week that is not finished: no result, or no answer, or no poll.
   const firstOpen = (a) => {
@@ -356,12 +384,17 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   }, [answers, submitted, readOnly, screen]);
 
   const go = (where) => { setScreen(where); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const toWeek = (i) => { setCursor(i); setPhase(""); go("week"); };
+  const continueSeason = () => {
+    const open = firstOpen(answers);
+    if (open >= E.WEEKS) { go("end"); return; }
+    toWeek(open);
+  };
   const resume = () => {
     sound.current.unlock(); sound.current.pick();
     if (blank(answers[E.F.team])) { go("team"); return; }
-    const open = firstOpen(answers);
-    if (open >= E.WEEKS) { go("end"); return; }
-    setCursor(open); setPhase(""); go("week");
+    if (!season.results.length) { go("meet"); return; }
+    continueSeason();
   };
   const restart = async () => {
     try { await store.reset(); } catch { setStatus("retrying"); return; }
@@ -369,11 +402,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     setAnswers({}); setSubmitted(null); setCursor(0); setPhase(""); go("title");
   };
   const begin = () => { sound.current.unlock(); sound.current.pick(); go("sport"); };
-  const chooseSport = (id) => {
-    sound.current.pick();
-    set(E.F.sport, id, true);
-    go("team");
-  };
+  const chooseSport = (id) => { sound.current.pick(); set(E.F.sport, id, true); go("team"); };
   const chooseTeam = (t) => {
     sound.current.happy();
     set(E.F.team, t);
@@ -382,13 +411,13 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     saver.current.flush();
     go("meet");
   };
-  const startSeason = () => { sound.current.pick(); setCursor(0); setPhase(""); go("week"); };
+  const showHow = (from) => { sound.current.pick(); setHowFrom(from); go("how"); };
 
-  const spend = (spendId) => {
+  const choose = (optionId) => {
     const week = plan[cursor];
-    const result = E.resolve({ name, week: week.week, state: season.state, spendId, eventId: week.event });
+    const result = E.resolve({ name, week: week.week, state: season.state, situationId: week.situation, optionId });
     sound.current.coin();
-    set(E.F.spend(week.week), spendId);
+    set(E.F.choice(week.week), optionId);
     set(E.F.result(week.week), E.packResult(result));
     if (blank(answers[E.F.prompt(week.week)])) set(E.F.prompt(week.week), packPrompt(week.prompt));
     saver.current.flush();
@@ -396,15 +425,16 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   };
   const matchDone = () => setPhase(reduced() ? "" : "chat");
   const chatDone = (result) => {
-    const feel = feelOf(result);
+    const feel = E.feelOf(result);
     if (feel === "cheer") sound.current.cheer(); else if (feel === "groan") sound.current.sad();
     setPhase("");
   };
   const nextWeek = () => {
     sound.current.pick();
     if (cursor + 1 >= E.WEEKS) { go("end"); return; }
-    setCursor(cursor + 1); setPhase(""); go("week");
+    toWeek(cursor + 1);
   };
+  const backWeek = () => { sound.current.blip(); if (cursor === 0) go("meet"); else toWeek(cursor - 1); };
   const handIn = async () => {
     const left = missingOf(answers);
     if (left.length) { setHanding("missing"); return; }
@@ -466,6 +496,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   } else if (screen === "sport") {
     body = (
       <div className="screen center">
+        <Nav copy={copy} onBack={() => go("title")} />
         <h2 className="px"><Words k="pickSport" copy={copy} /></h2>
         <div className="sports">
           {E.SPORTS.map(s => (
@@ -480,6 +511,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   } else if (screen === "team") {
     body = (
       <div className="screen center">
+        <Nav copy={copy} onBack={() => go("sport")} />
         <h2 className="px"><Words k="pickTeam" copy={copy} /></h2>
         <p className="say"><Words k="pickTeamLine" copy={copy} /></p>
         <div className="teams">
@@ -495,6 +527,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   } else if (screen === "meet" && sport) {
     body = (
       <div className="screen center">
+        <Nav copy={copy} onBack={() => go("team")} />
         <h2 className="px">{team}</h2>
         <p className="say"><Words k="meet" copy={copy} /> <Words k="meetLine" copy={copy} /></p>
         <Field sport={sport.id} sign={E.signFor(name, "meet", team)} />
@@ -502,46 +535,61 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
         <div className="cards">
           {E.CHARACTERS.map(c => <div key={c.id} className="card"><b className="px">{c.label}</b><span>{cast[c.id]}. {c.blurb}</span></div>)}
         </div>
-        <button type="button" className="btn px primary" onClick={startSeason}>Start the season</button>
+        <button type="button" className="btn px primary" onClick={() => showHow("meet")}>{copy.say("howTitle")}</button>
+      </div>
+    );
+  } else if (screen === "how" && sport) {
+    body = (
+      <div className="screen">
+        <Nav copy={copy} onBack={() => { if (howFrom === "week") toWeek(cursor); else go(howFrom); }} />
+        <Hud copy={copy} state={season.state} />
+        <h2 className="px"><Words k="howTitle" copy={copy} /></h2>
+        <div className="how"><Words k="how" copy={copy} as="p" className="say pre" /></div>
+        <div className="legend">
+          {Object.entries(E.TAGS).map(([id, t]) => <div key={id} className="card"><b className="px">{t.label}</b><span>{t.line}</span></div>)}
+        </div>
+        {howFrom !== "week" ? <button type="button" className="btn px primary" onClick={() => { sound.current.pick(); continueSeason(); }}>{copy.say("howGo")}</button> : null}
       </div>
     );
   } else if (screen === "week" && plan && sport) {
     const week = plan[cursor];
     const result = season.results[cursor] || null;
-    const stateBefore = cursor === 0 ? E.start() : E.after(season.results[cursor - 1]);
+    const stateBefore = cursor === 0 ? E.startState(name) : E.after(season.results[cursor - 1]);
     const stateNow = result ? E.after(result) : stateBefore;
-    const { lines, opp } = weekLines({ plan: week, result, cast, sport, team, name });
+    const { lines, opp, ctx } = weekLines({ plan: week, result, cast, sport, team, name, bench: benchName });
+    const sit = E.situationOf(week.situation);
     const prompt = parsePrompt(answers[E.F.prompt(week.week)]) || week.prompt;
-    const ask = askOf(copy, prompt);
     const canNext = !blank(answers[E.F.reflect(week.week)]) && (!week.poll || !blank(answers[E.F.poll(week.week)]));
     const settled = result && phase === "";
-    const feel = settled ? feelOf(result) : "";
+    const feel = settled ? E.feelOf(result) : "";
+    const deltas = settled ? { culture: result.dCulture, skills: result.dSkills, success: result.dSuccess, back: result.back } : null;
     body = (
       <div className="screen">
-        <Hud copy={copy} state={phase === "match" ? stateBefore : stateNow} />
+        <Nav copy={copy} onBack={backWeek}><button type="button" className="btn px small" onClick={() => showHow("week")}>{copy.say("howTitle")}</button></Nav>
+        <Hud copy={copy} state={settled ? stateNow : stateBefore} deltas={deltas} />
         <h2 className="px">{(week.last ? copy.say("finals") + " " : "") + "Week " + week.n} <span className="dim">{"· " + E.conceptOf(week.concept).name}</span></h2>
         {phase === "match"
-          ? <MatchScene key={week.week} sport={sport.id} left={{ name: cast[week.who], photo: photos[cast[week.who]] }} right={{ name: opp, photo: "" }} jersey={jersey} sound={sound.current} onDone={matchDone} label={copy.say("matchDay") + " " + opp.toUpperCase()} />
+          ? <MatchScene key={week.week} sport={sport.id} left={{ name: cast[week.who || "star"], photo: photos[cast[week.who || "star"]] }} right={{ name: opp, photo: "" }} jersey={jersey} sound={sound.current} onDone={matchDone} label={copy.say("matchDay") + " " + opp.toUpperCase()} />
           : <Field sport={sport.id} sign={E.signFor(name, week.week, team)} />}
         <Squad cast={cast} bench={[]} photos={photos} moods={settled ? result.moods : null} lit={week.who} scale={4} jersey={jersey} cheer={feel} />
         {!result ? (
           <>
             <p className="event">{lines[0].text}</p>
-            <h3 className="px"><Words k="spendAsk" copy={copy} /></h3>
+            <h3 className="px"><Words k="chooseAsk" copy={copy} /></h3>
             <div className="spends">
-              {E.SPENDS.map(s => {
-                const cost = E.costOf(s, stateBefore.culture);
-                const can = cost <= stateBefore.capital;
+              {sit.options.map(o => {
+                const can = o.cost <= stateBefore.capital;
                 return (
-                  <button key={s.id} type="button" className="spendbtn" disabled={!can || !ready} onClick={() => spend(s.id)} onMouseEnter={() => sound.current.blip()}>
-                    <span className="px top"><span>{s.label}</span><span className="coins">{"●".repeat(cost)}</span></span>
-                    <span className="line">{s.line}</span>
+                  <button key={o.id} type="button" className="spendbtn" disabled={!can || !ready} onClick={() => choose(o.id)} onMouseEnter={() => sound.current.blip()}>
+                    <span className="px top"><span>{E.tell(o.label, ctx)}</span><span className="coins">{o.cost ? E.coins(o.cost) : "free"}</span></span>
+                    <span className="line">{E.tell(o.line, ctx)}</span>
+                    <span className="px tag">{E.TAGS[o.tag].label}</span>
                     {!can ? <span className="px no">{copy.say("cannot")}</span> : null}
                   </button>
                 );
               })}
             </div>
-            <p className="say dim"><Words k="spendNote" copy={copy} /></p>
+            <p className="say dim"><Words k="chooseNote" copy={copy} /></p>
           </>
         ) : phase === "match" ? (
           <p className="event">{lines[0].text}</p>
@@ -550,10 +598,10 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
             <Chat key={week.week} lines={lines} animate={phase === "chat"} sound={sound.current} onDone={() => chatDone(result)} copy={copy} />
             {settled ? (
               <div className="reflect">
-                <p className="ask">{ask}</p>
+                <p className="ask">{askOf(copy, prompt)}</p>
                 <textarea className="ta" rows={5} value={answers[E.F.reflect(week.week)] || ""} placeholder={copy.say("reflectHint")} onChange={e => set(E.F.reflect(week.week), e.target.value)} aria-label={"Week " + week.n + " answer"} />
                 <label className="src"><span className="px small"><Words k="sourceAsk" copy={copy} /></span>
-                  <input className="in" value={answers[E.F.source(week.week)] || ""} placeholder={copy.say("sourceHint")} onChange={e => set(E.F.source(week.week), e.target.value)} />
+                  <textarea className="ta short" rows={2} value={answers[E.F.source(week.week)] || ""} placeholder={copy.say("sourceHint")} onChange={e => set(E.F.source(week.week), e.target.value)} />
                 </label>
                 {week.poll ? (
                   <div className="poll">
@@ -578,10 +626,11 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     const last = season.results[season.results.length - 1] || null;
     body = (
       <div className="screen">
+        <Nav copy={copy} onBack={() => toWeek(Math.max(0, season.results.length - 1))}><button type="button" className="btn px small" onClick={() => showHow("end")}>{copy.say("howTitle")}</button></Nav>
         <Hud copy={copy} state={season.state} />
-        <h2 className="px"><Words k="seasonOver" copy={copy} /> <span className="dim">{team} · {season.state.wins}-{season.state.losses} · {E.gradeOf(season.state.culture)}</span></h2>
+        <h2 className="px"><Words k="seasonOver" copy={copy} /> <span className="dim">{team + " · " + season.state.wins + "-" + season.state.losses + " · " + E.gradeOf(season.state.success)}</span></h2>
         <Field sport={sport.id} sign={E.signFor(name, "end", team)} />
-        <Squad cast={cast} bench={bench} photos={photos} moods={last ? last.moods : null} scale={4} jersey={jersey} cheer={season.state.culture >= 65 ? "cheer" : ""} />
+        <Squad cast={cast} bench={bench} photos={photos} moods={last ? last.moods : null} scale={4} jersey={jersey} cheer={season.state.success >= 65 ? "cheer" : ""} />
         <div className="reflect">
           {[0, 1, 2].map(i => (
             <div key={i}>
@@ -648,13 +697,17 @@ export const CSS = `
 .tk .credit{color:var(--dim)}
 .tk .screen{display:grid;gap:18px}
 .tk .screen.center{justify-items:center;text-align:center}
+.tk .nav{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%}
 .tk h1.px{font-size:26px;margin:12px 0 0;color:var(--gold);text-shadow:4px 4px 0 var(--blue)}
 .tk h2.px{font-size:14px;margin:0;color:var(--gold)}
 .tk h3.px{font-size:11px;margin:0;color:var(--sky)}
 .tk .dim{color:var(--dim)}
 .tk .say{margin:0;max-width:62ch}
 .tk .say.big{font-size:19px;font-weight:600}
+.tk .say.pre{white-space:pre-line;max-width:none}
 .tk .say.bad,.tk .status.bad{color:#fbbf24}
+.tk .how{background:var(--deep);border:3px solid var(--gold);padding:16px 18px;font-size:16px}
+.tk .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
 .tk .coach{display:grid;justify-items:center;gap:8px}
 .tk canvas{image-rendering:pixelated;image-rendering:crisp-edges}
 .tk .ground{position:relative;width:100%;max-width:640px;margin:0 auto}
@@ -673,6 +726,7 @@ export const CSS = `
 @keyframes tk-blink{to{visibility:hidden}}
 @keyframes tk-bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes tk-shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+@keyframes tk-pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.2);opacity:1}100%{transform:scale(1)}}
 .tk .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .tk .row.end{justify-content:space-between}
 .tk .sports{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:100%}
@@ -702,19 +756,25 @@ export const CSS = `
 .tk .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;width:100%;text-align:left}
 .tk .card{display:grid;gap:6px;background:var(--deep);border:3px solid #2a2a48;padding:10px 12px;font-size:14px}
 .tk .card b{color:var(--sky);font-size:9px}
-.tk .hud{display:flex;gap:20px;flex-wrap:wrap;align-items:center;background:var(--deep);border:3px solid var(--line);padding:10px 14px;color:var(--dim)}
+.tk .hud{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;align-items:center;background:var(--deep);border:3px solid var(--line);padding:10px 14px;color:var(--dim)}
+.tk .hud .cap,.tk .hud .rec{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tk .hud .n{color:var(--text)}
-.tk .hud .cul{display:inline-flex;align-items:center;gap:8px;flex:1;min-width:180px}
+.tk .hud .ml{white-space:nowrap}
+.tk .meter{display:flex;align-items:center;gap:8px;min-width:0}
 .tk .coins{color:var(--gold);letter-spacing:2px}
-.tk .bar{display:inline-block;flex:1;height:12px;border:2px solid var(--line);background:var(--ink);min-width:80px}
-.tk .bar i{display:block;height:100%;background:var(--green);transition:width .5s steps(8)}
+.tk .bar{display:inline-block;flex:1;height:12px;border:2px solid var(--line);background:var(--ink);min-width:60px}
+.tk .bar i{display:block;height:100%;background:var(--green);transition:width .9s steps(12)}
+.tk .delta{font-size:9px;padding:2px 5px;border:2px solid currentColor;animation:tk-pop .5s steps(3) 1}
+.tk .delta.up{color:var(--green)}.tk .delta.down{color:#ff6a6a}
 .tk .event{margin:0;font-size:17px;background:var(--deep);border-left:6px solid var(--gold);padding:12px 14px}
 .tk .spends{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
-.tk .spendbtn{display:grid;gap:8px;text-align:left;background:var(--deep);border:3px solid var(--line);color:var(--text);padding:12px;cursor:pointer;font-family:var(--mono);box-shadow:4px 4px 0 var(--ink)}
+.tk .spendbtn{display:grid;gap:8px;text-align:left;background:var(--deep);border:3px solid var(--line);color:var(--text);padding:12px;cursor:pointer;font-family:var(--mono);box-shadow:4px 4px 0 var(--ink);align-content:start}
 .tk .spendbtn:hover{border-color:var(--gold);background:#1c1c3a}
 .tk .spendbtn[disabled]{opacity:.45;cursor:default}
-.tk .spendbtn .top{display:flex;justify-content:space-between;gap:8px;color:var(--gold)}
-.tk .spendbtn .line{font-size:14px;color:var(--dim)}
+.tk .spendbtn .top{display:flex;justify-content:space-between;gap:8px;color:var(--gold);align-items:flex-start}
+.tk .spendbtn .top .coins{white-space:nowrap}
+.tk .spendbtn .line{font-size:14px;color:var(--text)}
+.tk .spendbtn .tag{font-size:8px;color:var(--sky)}
 .tk .spendbtn .no{color:var(--red);font-size:8px}
 .tk .chat{display:grid;gap:8px;background:var(--deep);border:3px solid var(--green);padding:12px 14px;min-height:120px}
 .tk .chead{color:var(--green)}
@@ -726,9 +786,9 @@ export const CSS = `
 .tk .msg.meter{color:var(--sky);font-style:normal}
 .tk .reflect{display:grid;gap:12px;background:var(--deep);border:3px solid var(--sky);padding:14px}
 .tk .ask{margin:0;font-size:16px;line-height:1.5}
-.tk .ta,.tk .in{width:100%;font-family:var(--mono);font-size:16px;color:var(--text);background:var(--ink);border:3px solid var(--line);padding:10px 12px;outline:none}
-.tk .ta:focus,.tk .in:focus{border-color:var(--gold)}
-.tk .ta{resize:vertical;min-height:120px}
+.tk .ta{width:100%;font-family:var(--mono);font-size:16px;color:var(--text);background:var(--ink);border:3px solid var(--line);padding:10px 12px;outline:none;resize:vertical;min-height:120px}
+.tk .ta.short{min-height:64px}
+.tk .ta:focus{border-color:var(--gold)}
 .tk .src{display:grid;gap:6px}
 .tk .poll{display:grid;gap:8px}
 .tk .status{color:var(--dim);font-size:9px}
@@ -741,12 +801,12 @@ export const CSS = `
 .tk .line b{color:var(--gold)}
 .tk .week .ask{color:var(--sky);font-size:14px;padding-top:6px}
 .tk .answer{margin:0;white-space:pre-wrap;font-size:15px}
-.tk .source{margin:0;font-size:13px;color:var(--dim)}
+.tk .source{margin:0;font-size:13px;color:var(--dim);white-space:pre-wrap}
 .tk .log-wrap summary{cursor:pointer;color:var(--sky)}
 .tk .words{gap:10px}
 .tk .word{display:grid;gap:4px}
 .tk .vsp-edit{display:block;width:100%;font:inherit;color:var(--text);background:var(--ink);border:2px dashed var(--line);padding:6px 8px;resize:none;overflow:hidden;line-height:1.45}
 .tk.ro .top .btn{display:none}
-@media (max-width:640px){.tk{padding:12px 8px 48px}.tk .cab{padding:12px}.tk .sports{grid-template-columns:1fr}.tk h1.px{font-size:18px}.tk .player{width:84px}}
+@media (max-width:640px){.tk{padding:12px 8px 48px}.tk .cab{padding:12px}.tk .sports{grid-template-columns:1fr}.tk h1.px{font-size:18px}.tk .player{width:84px}.tk .hud{grid-template-columns:1fr}}
 @media (prefers-reduced-motion: reduce){.tk *{transition:none!important;animation:none!important}}
 `;
