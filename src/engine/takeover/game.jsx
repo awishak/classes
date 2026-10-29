@@ -340,7 +340,28 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const [runThrough, setRunThrough] = useState(false); // the instructor's run-through: Next without the boxes
   const saver = useRef(null);
   const sound = useRef(null);
+  const rootRef = useRef(null);
   const name = viewer?.name || "Coach";
+
+  // The numbers stay on screen while the page scrolls. Andrew, 2026-10-29:
+  // "a sticky bar at the top with the stats and stuff." The class page has
+  // its own sticky bar above the sheet, so the HUD sits just under whatever
+  // sticky thing comes before it.
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof getComputedStyle === "undefined") return undefined;
+    const measure = () => {
+      let top = 0;
+      for (let node = el; node && node !== document.body; node = node.parentElement) {
+        let sib = node.previousElementSibling;
+        while (sib) { if (getComputedStyle(sib).position === "sticky") top = Math.max(top, sib.getBoundingClientRect().height); sib = sib.previousElementSibling; }
+      }
+      el.style.setProperty("--tk-top", Math.round(top) + "px");
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
   const ready = topics !== null;
 
   useEffect(() => { loadFont(); }, []);
@@ -723,7 +744,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   }
 
   return (
-    <div className={"tk" + (readOnly ? " ro" : "")}>
+    <div ref={rootRef} className={"tk" + (readOnly ? " ro" : "")}>
       <style>{CSS}</style>
       <div className="cab">
         <div className="top">
@@ -829,7 +850,7 @@ export const CSS = `
 .tk .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;width:100%;text-align:left}
 .tk .card{display:grid;gap:6px;background:var(--deep);border:3px solid #2a2a48;padding:10px 12px;font-size:14px}
 .tk .card b{color:var(--sky);font-size:9px}
-.tk .hud{display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;align-items:center;background:var(--deep);border:3px solid var(--line);padding:10px 14px;color:var(--dim)}
+.tk .hud{position:sticky;top:var(--tk-top,0px);z-index:20;display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;align-items:center;background:var(--deep);border:3px solid var(--line);padding:8px 14px;color:var(--dim);box-shadow:0 6px 0 var(--ink)}
 .tk .hud .cap,.tk .hud .rec{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tk .hud .n{color:var(--text)}
 .tk .hud .ml{white-space:nowrap}
