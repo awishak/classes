@@ -40,7 +40,7 @@ function Season({ name, onNew }) {
     const store = publicStore({ visitorId: visitorId(), endpoint: ENDPOINT });
     // The name on the file, for the board. A failed write is retried by the next save.
     store.save("name", name).catch(() => {});
-    const game = mountTakeover(ref.current, { store, viewer: { id: "visitor-" + visitorId(), name }, photo: "", photos: {}, classmates: PUBLIC_SQUAD, classId: "", storageKey: "", editor: false, topicsStore, boardFetcher });
+    const game = mountTakeover(ref.current, { store, viewer: { id: "visitor-" + visitorId(), name }, photo: "", photos: {}, classmates: PUBLIC_SQUAD, classId: "", storageKey: "", editor: false, topicsStore, boardFetcher, credit: "Locker Room · the practice version" });
     return () => game.destroy();
   }, [name]);
   return (

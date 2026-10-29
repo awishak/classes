@@ -408,7 +408,7 @@ export function Leaderboard({ classId, storageKey, me, copy, fetcher }) {
 const STATUS = { loading: "Loading", saved: "Saved", saving: "Saving", retrying: "Not saved yet, trying again", "failed-load": "Could not load your season. Reload to try again." };
 const when = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
-export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [], classId, storageKey = "", readOnly = false, storage, editor = false, topicsStore, boardFetcher }) {
+export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [], classId, storageKey = "", readOnly = false, storage, editor = false, topicsStore, boardFetcher, credit }) {
   const copy = useCopy(editor, E.COPY_ROW, E.DEFAULT_COPY);
   const [editing, setEditing] = useState(false);
   const [answers, setAnswers] = useState(null);
@@ -851,7 +851,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
       <style>{CSS}</style>
       <div className="cab">
         <div className="top">
-          <span className="px credit"><Words k="credit" copy={copy} /></span>
+          <span className="px credit">{credit || <Words k="credit" copy={copy} />}</span>
           <span className="row">
             {editor ? <button type="button" className="btn px small" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing" : "Edit the words"}</button> : null}
             {editor ? <button type="button" className="btn px small" aria-pressed={runThrough} onClick={() => setRunThrough(r => !r)}>{copy.say("runThrough")}</button> : null}
@@ -877,9 +877,9 @@ function EditWords({ copy }) {
 }
 
 /** Mount the game. Returns { destroy }. */
-export function mountTakeover(root, { store, viewer, photo, photos, classmates, readOnly = false, classId, storageKey, editor = false, topicsStore, boardFetcher } = {}) {
+export function mountTakeover(root, { store, viewer, photo, photos, classmates, readOnly = false, classId, storageKey, editor = false, topicsStore, boardFetcher, credit } = {}) {
   const r = createRoot(root);
-  r.render(<TakeoverGame store={store} viewer={viewer} photo={photo} photos={photos || {}} classmates={classmates || []} readOnly={readOnly} classId={classId} storageKey={storageKey || ""} editor={editor && !readOnly} topicsStore={topicsStore} boardFetcher={boardFetcher} />);
+  r.render(<TakeoverGame store={store} viewer={viewer} photo={photo} photos={photos || {}} classmates={classmates || []} readOnly={readOnly} classId={classId} storageKey={storageKey || ""} editor={editor && !readOnly} topicsStore={topicsStore} boardFetcher={boardFetcher} credit={credit} />);
   return { destroy() { r.unmount(); } };
 }
 
