@@ -25,7 +25,7 @@ import { useCopy, Words } from "../visualstory/pre.jsx";
 import { supabaseStore } from "../worktopia/store.js";
 import { gameClient } from "../gameClient.js";
 import * as E from "./engine.js";
-import { spriteFromName, spriteFromPhoto, renderSprite, drawField, drawMatch, uniform, MOOD_GLYPH } from "./pixel.js";
+import { spriteFromName, spriteFromPhoto, renderSprite, drawField, drawMatch, uniform, journalist, MOOD_GLYPH } from "./pixel.js";
 import { createSound } from "./sound.js";
 
 export { TAKEOVER_KEY, TAKEOVER_TITLE } from "./engine.js";
@@ -49,7 +49,8 @@ const packPrompt = (p) => p.kind + "|" + p.text;
 const blank = (v) => !String(v || "").trim();
 // Andrew's prompt with the student's own words in the blank. Their sentence
 // loses its final period, since the prompt supplies one.
-const askOf = (copy, prompt) => (prompt.kind === "thought" ? copy.say("reflectThought") : copy.say("reflect")).replace("{wonder}", String(prompt.text || "").trim().replace(/[.!?]+$/, ""));
+const askOf = (copy, prompt) => prompt.kind === "press" ? copy.say("reflectPress") : prompt.kind === "final" ? copy.say("reflectFinal")
+  : copy.say("reflect").replace("{wonder}", String(prompt.text || "").trim().replace(/[.!?]+$/, ""));
 
 /** What the file still needs before the season can be handed in. */
 export function missingOf(answers) {
@@ -97,6 +98,14 @@ function Sprite({ name, photo, scale = 4, jersey = 0 }) {
   }, [name, photo, scale, jersey]);
   return <canvas ref={ref} width={16 * scale} height={16 * scale} aria-hidden="true" />;
 }
+
+// A sprite that is not a player: the reporter.
+function Fixed({ grid: g, scale = 4 }) {
+  const ref = useRef(null);
+  useEffect(() => { if (ref.current) renderSprite(ref.current, g, scale); }, [g, scale]);
+  return <canvas ref={ref} width={16 * scale} height={16 * scale} aria-hidden="true" />;
+}
+const REPORTER = journalist();
 
 function Field({ sport, sign }) {
   const ref = useRef(null);
@@ -204,9 +213,10 @@ export function weekLines({ plan, result, cast, sport, team, name, bench }) {
   const ctx = { cast, sport, team, opp, bench, who: sit.who };
   const lines = [{ who: "", text: E.tell(sit.text, ctx) }];
   if (!result) return { lines, opp, ctx };
-  const option = E.optionOf(sit, result.option);
-  lines.push({ who: "coach", text: E.tell(option.label, ctx) + ". " + E.tell(option.line, ctx) });
-  E.CHARACTERS.forEach(c => lines.push({ who: cast[c.id], text: E.LINES[c.id][option.tag][result.moods[c.id]], mood: result.moods[c.id] }));
+  const options = (result.options || [result.option]).map(id => E.optionOf(sit, id)).filter(Boolean);
+  lines.push({ who: "coach", text: options.map(o => E.tell(o.label, ctx) + ". " + E.tell(o.line, ctx)).join(" ") });
+  const tag = E.TAGS[result.tag] ? result.tag : (options[0] || {}).tag || "same";
+  E.CHARACTERS.forEach(c => lines.push({ who: cast[c.id], text: E.LINES[c.id][tag][result.moods[c.id]], mood: result.moods[c.id] }));
   lines.push({ who: "", text: (result.won ? "Won " : "Lost ") + E.scoreOf(sport, result.won, name, plan.week) + " to the " + opp + ".", match: result.won ? "won" : "lost" });
   lines.push({ who: "", text: "Culture " + (result.culture - result.dCulture) + " to " + result.culture + ". Skills " + (result.skills - result.dSkills) + " to " + result.skills + ". Success " + (result.success - result.dSuccess) + " to " + result.success + ". " + result.back + " capital back, " + result.capital + " now.", meter: true });
   return { lines, opp, ctx };
@@ -263,7 +273,7 @@ export function SeasonLog({ answers, name, classmates, copy }) {
         const { lines } = weekLines({ plan: week, result: r, cast, sport, team, name, bench });
         return (
           <section key={week.week} className="week">
-            <h3 className="px">{"Week " + week.n + " · " + E.conceptOf(week.concept).name}</h3>
+            <h3 className="px">{"Week " + week.n + " · " + week.label}</h3>
             {lines.map((l, j) => <p key={j} className={"line" + (l.who ? "" : " sys")}>{l.who ? <b>{l.who === "coach" ? "You" : l.who}: </b> : null}{l.text}</p>)}
             <p className="ask">{askOf(copy, prompt)}</p>
             <p className="answer">{answers[E.F.reflect(week.week)] || <i>No answer yet.</i>}</p>
@@ -301,6 +311,9 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const [phase, setPhase] = useState("");            // in a week with a result just made: match, chat, then ""
   const [handing, setHanding] = useState("");
   const [muted, setMuted] = useState(false);
+  const [picked, setPicked] = useState([]);          // the options chosen so far this week, from MULTI_FROM on
+  const [seenMulti, setSeenMulti] = useState(false); // the pop-up about more than one choice, shown once
+  const [runThrough, setRunThrough] = useState(false); // the instructor's run-through: Next without the boxes
   const saver = useRef(null);
   const sound = useRef(null);
   const name = viewer?.name || "Coach";
@@ -384,7 +397,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   }, [answers, submitted, readOnly, screen]);
 
   const go = (where) => { setScreen(where); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const toWeek = (i) => { setCursor(i); setPhase(""); go("week"); };
+  const toWeek = (i) => { setCursor(i); setPhase(""); setPicked([]); go("week"); };
   const continueSeason = () => {
     const open = firstOpen(answers);
     if (open >= E.WEEKS) { go("end"); return; }
@@ -413,16 +426,18 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   };
   const showHow = (from) => { sound.current.pick(); setHowFrom(from); go("how"); };
 
-  const choose = (optionId) => {
+  const choose = (optionIds) => {
     const week = plan[cursor];
-    const result = E.resolve({ name, week: week.week, state: season.state, situationId: week.situation, optionId });
+    const result = E.resolve({ name, week: week.week, state: season.state, situationId: week.situation, optionIds });
     sound.current.coin();
-    set(E.F.choice(week.week), optionId);
+    set(E.F.choice(week.week), result.options.join(","));
     set(E.F.result(week.week), E.packResult(result));
     if (blank(answers[E.F.prompt(week.week)])) set(E.F.prompt(week.week), packPrompt(week.prompt));
     saver.current.flush();
+    setPicked([]);
     setPhase("match");
   };
+  const togglePick = (id) => { sound.current.blip(); setPicked(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]); };
   const matchDone = () => setPhase(reduced() ? "" : "chat");
   const chatDone = (result) => {
     const feel = E.feelOf(result);
@@ -436,7 +451,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   };
   const backWeek = () => { sound.current.blip(); if (cursor === 0) go("meet"); else toWeek(cursor - 1); };
   const handIn = async () => {
-    const left = missingOf(answers);
+    const left = runThrough ? [] : missingOf(answers);
     if (left.length) { setHanding("missing"); return; }
     setHanding("sending");
     try {
@@ -559,7 +574,9 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     const { lines, opp, ctx } = weekLines({ plan: week, result, cast, sport, team, name, bench: benchName });
     const sit = E.situationOf(week.situation);
     const prompt = parsePrompt(answers[E.F.prompt(week.week)]) || week.prompt;
-    const canNext = !blank(answers[E.F.reflect(week.week)]) && (!week.poll || !blank(answers[E.F.poll(week.week)]));
+    const canNext = runThrough || (!blank(answers[E.F.reflect(week.week)]) && (!week.poll || !blank(answers[E.F.poll(week.week)])));
+    const pickedCost = picked.reduce((t, id) => t + ((E.optionOf(sit, id) || {}).cost || 0), 0);
+    const popup = week.multi && week.n === E.MULTI_FROM && !result && !seenMulti;
     const settled = result && phase === "";
     const feel = settled ? E.feelOf(result) : "";
     const deltas = settled ? { culture: result.dCulture, skills: result.dSkills, success: result.dSuccess, back: result.back } : null;
@@ -567,20 +584,32 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
       <div className="screen">
         <Nav copy={copy} onBack={backWeek}><button type="button" className="btn px small" onClick={() => showHow("week")}>{copy.say("howTitle")}</button></Nav>
         <Hud copy={copy} state={settled ? stateNow : stateBefore} deltas={deltas} />
-        <h2 className="px">{(week.last ? copy.say("finals") + " " : "") + "Week " + week.n} <span className="dim">{"· " + E.conceptOf(week.concept).name}</span></h2>
+        <h2 className="px">{(week.last ? copy.say("finals") + " " : "") + "Week " + week.n} <span className="dim">{"· " + week.label}</span></h2>
+        {popup ? (
+          <div className="popup" role="dialog" aria-label={copy.say("multiTitle")}>
+            <div className="popin">
+              <b className="px"><Words k="multiTitle" copy={copy} /></b>
+              <p className="say"><Words k="multi" copy={copy} /></p>
+              <button type="button" className="btn px primary" onClick={() => { sound.current.pick(); setSeenMulti(true); }}>OK</button>
+            </div>
+          </div>
+        ) : null}
         {phase === "match"
           ? <MatchScene key={week.week} sport={sport.id} left={{ name: cast[week.who || "star"], photo: photos[cast[week.who || "star"]] }} right={{ name: opp, photo: "" }} jersey={jersey} sound={sound.current} onDone={matchDone} label={copy.say("matchDay") + " " + opp.toUpperCase()} />
           : <Field sport={sport.id} sign={E.signFor(name, week.week, team)} />}
         <Squad cast={cast} bench={[]} photos={photos} moods={settled ? result.moods : null} lit={week.who} scale={4} jersey={jersey} cheer={feel} />
+        {sit.id === "press" ? <div className="reporter"><Fixed grid={REPORTER} scale={4} /><span className="px small"><Words k="pressName" copy={copy} /></span></div> : null}
         {!result ? (
           <>
             <p className="event">{lines[0].text}</p>
             <h3 className="px"><Words k="chooseAsk" copy={copy} /></h3>
+            {week.multi ? <p className="say dim"><Words k="multi" copy={copy} /></p> : null}
             <div className="spends">
               {sit.options.map(o => {
-                const can = o.cost <= stateBefore.capital;
+                const on = picked.includes(o.id);
+                const can = week.multi ? (on || o.cost + pickedCost <= stateBefore.capital) : o.cost <= stateBefore.capital;
                 return (
-                  <button key={o.id} type="button" className="spendbtn" disabled={!can || !ready} onClick={() => choose(o.id)} onMouseEnter={() => sound.current.blip()}>
+                  <button key={o.id} type="button" className="spendbtn" aria-pressed={week.multi ? on : undefined} disabled={!can || !ready} onClick={() => week.multi ? togglePick(o.id) : choose([o.id])} onMouseEnter={() => sound.current.blip()}>
                     <span className="px top"><span>{E.tell(o.label, ctx)}</span><span className="coins">{o.cost ? E.coins(o.cost) : "free"}</span></span>
                     <span className="line">{E.tell(o.line, ctx)}</span>
                     <span className="px tag">{E.TAGS[o.tag].label}</span>
@@ -589,6 +618,12 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
                 );
               })}
             </div>
+            {week.multi ? (
+              <div className="row end">
+                <span className="px"><Words k="total" copy={copy} /> <span className="coins">{E.coins(pickedCost)}</span> {pickedCost} / {stateBefore.capital}</span>
+                <button type="button" className="btn px primary" disabled={!picked.length || !ready} onClick={() => choose(picked)}>{copy.say("doIt")}</button>
+              </div>
+            ) : null}
             <p className="say dim"><Words k="chooseNote" copy={copy} /></p>
           </>
         ) : phase === "match" ? (
@@ -622,7 +657,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
       </div>
     );
   } else if (screen === "end" && sport) {
-    const left = missingOf(answers);
+    const left = runThrough ? [] : missingOf(answers);
     const last = season.results[season.results.length - 1] || null;
     body = (
       <div className="screen">
@@ -658,6 +693,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
           <span className="px credit"><Words k="credit" copy={copy} /></span>
           <span className="row">
             {editor ? <button type="button" className="btn px small" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing" : "Edit the words"}</button> : null}
+            {editor ? <button type="button" className="btn px small" aria-pressed={runThrough} onClick={() => setRunThrough(r => !r)}>{copy.say("runThrough")}</button> : null}
             {editor && copy.status ? <span className="status px">{copy.status}</span> : null}
             {!readOnly ? <button type="button" className="btn px small" aria-pressed={muted} onClick={toggleMute}>{muted ? "Sound off" : "Sound on"}</button> : null}
           </span>
@@ -771,6 +807,11 @@ export const CSS = `
 .tk .spendbtn{display:grid;gap:8px;text-align:left;background:var(--deep);border:3px solid var(--line);color:var(--text);padding:12px;cursor:pointer;font-family:var(--mono);box-shadow:4px 4px 0 var(--ink);align-content:start}
 .tk .spendbtn:hover{border-color:var(--gold);background:#1c1c3a}
 .tk .spendbtn[disabled]{opacity:.45;cursor:default}
+.tk .spendbtn[aria-pressed="true"]{border-color:var(--gold);background:#2a2a10;box-shadow:4px 4px 0 var(--gold)}
+.tk .reporter{display:flex;align-items:center;gap:12px;justify-content:center;color:var(--sky)}
+.tk .popup{position:fixed;inset:0;background:rgba(10,10,22,.8);display:grid;place-items:center;z-index:50;padding:16px}
+.tk .popin{display:grid;gap:14px;justify-items:center;text-align:center;background:var(--panel);border:4px solid var(--gold);box-shadow:0 0 0 4px var(--ink),0 0 0 8px var(--sky);padding:24px;max-width:520px}
+.tk .popin b{color:var(--gold);font-size:12px}
 .tk .spendbtn .top{display:flex;justify-content:space-between;gap:8px;color:var(--gold);align-items:flex-start}
 .tk .spendbtn .top .coins{white-space:nowrap}
 .tk .spendbtn .line{font-size:14px;color:var(--text)}

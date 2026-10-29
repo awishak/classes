@@ -1,4 +1,4 @@
-// Weekly Challenge 3 becomes Takeover: a new title, the Details link, and
+// Weekly Challenge 3 becomes Locker Room: a new title, the Details link, and
 // Tuesday, November 3. Andrew, 2026-10-29: "let's change the coach interview
 // to something fun and interactive like a worksheet or game ... the due
 // date's going to be November 3rd, Tuesday ... we'll keep it as the weekly
@@ -42,8 +42,8 @@ const flag = (name) => { const i = args.indexOf("--" + name); return i >= 0 ? ar
 const write = args.includes("--write");
 const classKey = flag("class") || "comm118-f26-v1";
 const classId = classKey.split("-")[0];
-const title = flag("title") || "Weekly Challenge 3: Takeover";
-const DETAILS = "https://classes.andrewishak.com/" + classId + "/worksheets/takeover";
+const title = flag("title") || "Weekly Challenge 3: Locker Room";
+const DETAILS = "https://classes.andrewishak.com/" + classId + "/worksheets/locker-room";
 
 const CHANGES = {
   wc3: { title, due: "Nov 3", dueTime: "11:59 PM", instructionsUrl: DETAILS, description: "Take over a team. Six weeks, a different situation every week, your classmates as the players." },

@@ -37,14 +37,18 @@ export const pick = (list, ...key) => list[Math.floor(roll(...key) * list.length
 
 // ─── the shape of a season ───
 
-export const TAKEOVER_KEY = "takeover";
-// The working name. Andrew, 2026-10-29: "what is a team called? I don't know
-// yet." The title is his to rename; the key stays.
-export const TAKEOVER_TITLE = "Takeover";
-export const LETTERS = ["a", "b", "c", "d", "e", "f"];
+// Andrew, 2026-10-29: "game name is Locker Room." The folder keeps its first
+// name; the key is the address.
+export const TAKEOVER_KEY = "locker-room";
+export const TAKEOVER_TITLE = "Locker Room";
+export const LETTERS = ["a", "b", "c", "d", "e", "f", "g"];
 export const WEEKS = LETTERS.length;
 export const START_CAPITAL = 5;
 export const POLL_WEEKS = ["b", "d", "f"];
+// From this week on, more than one option a week. Andrew: "Starting from
+// week 3 on, give them the instruction that they are allowed to do more
+// than one thing ... they can choose as many as they want."
+export const MULTI_FROM = 3;
 // What a player's reaction gives back, in coins. Andrew's rule.
 export const RETURN = { up: 1, flat: 0.5, down: 0 };
 
@@ -219,6 +223,14 @@ export const SITUATIONS = [
       opt("dinner", "Team dinner", "Dinner instead of Thursday practice. No phones.", 1, 6, -1, "culture", ["transfer", "quiet", "rookie"], ["star"], "Social cohesion, Carron et al. (2002): time together off the court predicts closeness on it."),
       opt("practice", "Practice more", "Add a morning session. Film, then reps.", 1, -1, 5, "skills", ["star"], ["quiet"], "Skills come from practice volume. The cost is time and energy, which the quiet one has least of.", 1),
       opt("standards", "Set standards", "Late to practice runs. Starting with you.", 2, 1, 3, "standards", ["veteran", "rookie"], ["star"], "Clarity of expectations. The rookie wants to know exactly what is expected (several sheets wondered how a new player learns the rules)."),
+    ] },
+  { id: "press", concept: null, who: "star", text: "After the {match}, Lisa Davis of the Pacifica Times asks you on the record: {name} disappeared in the second half. What happened?",
+    research: "Andrew's situation, 2026-10-29: \"journalist Lisa Davis with a newspaper called the Pacifica Times asks you a question in which she criticizes your star player. And you have to decide if you want to be honest, or if you want to take responsibility for it.\" What a coach says in public is read in the locker room first; public blame is negative messaging in print (Paul's and Jacqueline's sheets), and a coach who takes the hit is read as credible (Kassing & Infante, 1999).",
+    options: [
+      opt("nocomment", "No comment", "Next question.", 0, -1, 0, "same", [], ["veteran"], "The team reads silence as having nothing to say for them."),
+      opt("honest", "Be honest", "{name} did disappear. We have talked about it.", 1, -4, 2, "standards", ["rookie"], ["star", "veteran"], "True, and in print. The star reads it at breakfast."),
+      opt("own", "Take responsibility", "That is on me. The plan put {name} in a bad spot.", 2, 5, 0, "care", ["star", "veteran", "transfer"], [], "The coach takes the hit in public. Hard words, if any, stay in the room."),
+      opt("spread", "Spread it around", "The whole team was flat, not one player.", 1, -2, 0, "culture", ["star"], ["rookie", "quiet"], "Nobody is blamed and nobody is told the truth."),
     ] },
   { id: "motivation", concept: "motivation", who: "veteran", text: "The team needs a hard defensive drill. {name} is the worst at it and everyone can see.",
     research: "Mastery climate: judged against your own last week, effort and learning get rewarded (Ames, 1992; Duda & Nicholls, 1992). Process goals raised enjoyment and adherence in an exercise study (Jacqueline's finding). Verbal aggression makes coaches read as less credible (Kassing & Infante, 1999; Jacqueline's sheet). Neel, Will and Lucy Kate asked strict versus open.",
@@ -501,36 +513,29 @@ export const CLASS_WONDERS = {
 // ─── the season, planned ───
 
 /**
- * The six weeks a student gets. Week 1 is the opener with the first
- * concept's question. Weeks 2 to 5 are the next four concepts' situations.
- * Week 6 is the finale, asking about what they thought on one of the five.
+ * The seven weeks a student gets. Week 1 is the opener with the first
+ * concept's question. Week 2 is the second concept's situation. Week 3 is
+ * the press. Weeks 4 to 6 are the last three concepts. Week 7 is the finale,
+ * which asks what makes a good team culture.
  */
 export function planSeason({ name, concepts, topicsAnswers }) {
   const five = (concepts || []).slice(0, 5);
   while (five.length < 5) five.push({ id: CLASS_TOP[five.length % CLASS_TOP.length], slot: "" });
-  const weeks = LETTERS.map((w, i) => {
-    const last = i === 5;
-    const concept = last ? pick(five, name, "final") : five[i];
-    const situation = i === 0 ? situationOf("opener") : last ? situationOf("finale") : (situationFor(concept.id) || situationOf("opener"));
-    const wonder = concept.slot ? String((topicsAnswers || {})["wonder:" + concept.slot] || "").trim() : "";
-    const opinion = concept.slot ? String((topicsAnswers || {})["opinion:" + concept.slot] || "").trim() : "";
-    // The final asks about what they thought, not what they wondered, so
-    // the same question is never asked twice. Claude's variation on Andrew's
-    // prompt, 2026-10-29, for him to edit.
-    const prompt = last
-      ? (opinion ? { kind: "thought", text: opinion } : { kind: "wonder", text: CLASS_WONDERS[concept.id] })
-      : { kind: "wonder", text: wonder || CLASS_WONDERS[concept.id] };
-    return { week: w, n: i + 1, last, concept: concept.id, situation: situation.id, who: situation.who, prompt, poll: POLL_WEEKS.includes(w) ? POLLS[concept.id] : null };
+  const order = [
+    { situation: "opener", concept: five[0] }, { situation: null, concept: five[1] }, { situation: "press", concept: null },
+    { situation: null, concept: five[2] }, { situation: null, concept: five[3] }, { situation: null, concept: five[4] }, { situation: "finale", concept: null },
+  ];
+  return LETTERS.map((w, i) => {
+    const { concept } = order[i];
+    const sitId = order[i].situation || (situationFor(concept.id) || situationOf("opener")).id;
+    const situation = situationOf(sitId);
+    const last = i === LETTERS.length - 1;
+    const wonder = concept && concept.slot ? String((topicsAnswers || {})["wonder:" + concept.slot] || "").trim() : "";
+    const prompt = sitId === "press" ? { kind: "press", text: "" } : last ? { kind: "final", text: "" } : { kind: "wonder", text: wonder || CLASS_WONDERS[concept.id] };
+    const label = sitId === "press" ? "The press" : last ? "The final week" : conceptOf(concept.id).name;
+    const poll = POLL_WEEKS.includes(w) && concept ? POLLS[concept.id] : null;
+    return { week: w, n: i + 1, last, multi: i + 1 >= MULTI_FROM, concept: concept ? concept.id : null, label, situation: sitId, who: situation.who, prompt, poll };
   });
-  // The final repeats a concept, so its poll could repeat week 2's or 4's.
-  // Then it asks about another of the five instead, the first not yet polled.
-  const asked = weeks.slice(0, 5).filter(x => x.poll).map(x => x.concept);
-  const last = weeks[5];
-  if (last.poll && asked.includes(last.concept)) {
-    const other = five.map(c => c.id).find(id => !asked.includes(id));
-    if (other) last.poll = POLLS[other];
-  }
-  return weeks;
 }
 
 // ─── one week, resolved ───
@@ -555,33 +560,43 @@ const swingOf = (r) => r < 0.1 ? -2 : r < 0.3 ? -1 : r < 0.7 ? 0 : r < 0.9 ? 1 :
 const nudgeOf = (r) => r < 0.25 ? -1 : r > 0.75 ? 1 : 0;
 
 /**
- * What an action does in a week. state is before; the answer carries the
- * state after and everything the screen shows. Pure.
+ * What a week's actions do. optionIds is one id, or from MULTI_FROM on any
+ * number of them. state is before; the answer carries the state after and
+ * everything the screen shows. Pure.
  */
-export function resolve({ name, week, state, situationId, optionId }) {
-  const situation = situationOf(situationId), option = optionOf(situation, optionId);
-  if (!situation || !option) throw new Error("Takeover: no such situation or option: " + situationId + ", " + optionId);
-  if (option.cost > state.capital) throw new Error("Takeover: " + option.id + " costs " + option.cost + " and the coach has " + state.capital);
+export function resolve({ name, week, state, situationId, optionIds }) {
+  const situation = situationOf(situationId);
+  const ids = Array.from(new Set((Array.isArray(optionIds) ? optionIds : [optionIds]).filter(Boolean)));
+  const options = ids.map(id => optionOf(situation, id));
+  if (!situation || !ids.length || options.some(o => !o)) throw new Error("Takeover: no such situation or option: " + situationId + ", " + ids.join(","));
+  const n = LETTERS.indexOf(week) + 1;
+  if (options.length > 1 && n < MULTI_FROM) throw new Error("Takeover: week " + n + " takes one choice");
+  const cost = options.reduce((t, o) => t + o.cost, 0);
+  if (cost > state.capital) throw new Error("Takeover: " + ids.join("+") + " costs " + cost + " and the coach has " + state.capital);
+  // The chat answers the dearest thing done this week.
+  const tag = [...options].sort((x, y) => y.cost - x.cost)[0].tag;
+  const key = ids.join("+");
   const moods = {};
   let back = 0;
   for (const c of CHARACTERS) {
-    let m = option.likes.includes(c.id) ? 1 : option.dislikes.includes(c.id) ? -1 : 0;
+    let m = options.reduce((t, o) => t + (o.likes.includes(c.id) ? 1 : o.dislikes.includes(c.id) ? -1 : 0), 0);
     // Each player has a week of their own: one in ten swings a step.
-    const r = roll(name, "mood", week, option.id, c.id);
+    const r = roll(name, "mood", week, key, c.id);
     if (r < 0.1) m -= 1; else if (r > 0.9) m += 1;
     moods[c.id] = m >= 1 ? "up" : m <= -1 ? "down" : "flat";
     back += RETURN[moods[c.id]];
   }
-  const swing = swingOf(roll(name, "swing", week, option.id));
-  const nudge = nudgeOf(roll(name, "nudge", week, option.id));
-  const culture = clamp(state.culture + option.culture + swing);
-  const skills = clamp(state.skills + option.skills + nudge);
-  const p = winChance(culture, skills, option.win);
-  const won = roll(name, "match", week, option.id) < p;
+  const swing = swingOf(roll(name, "swing", week, key));
+  const nudge = nudgeOf(roll(name, "nudge", week, key));
+  const culture = clamp(state.culture + options.reduce((t, o) => t + o.culture, 0) + swing);
+  const skills = clamp(state.skills + options.reduce((t, o) => t + o.skills, 0) + nudge);
+  const win = Math.max(-2, Math.min(2, options.reduce((t, o) => t + o.win, 0)));
+  const p = winChance(culture, skills, win);
+  const won = roll(name, "match", week, key) < p;
   const success = clamp(state.success + (won ? WIN_SUCCESS : LOSS_SUCCESS));
-  const capital = Math.round((state.capital - option.cost + back) * 2) / 2;
+  const capital = Math.round((state.capital - cost + back) * 2) / 2;
   return {
-    week, situation: situation.id, option: option.id, cost: option.cost, swing, nudge,
+    week, situation: situation.id, options: ids, option: ids[0], tag, cost, swing, nudge,
     culture, skills, success, dCulture: culture - state.culture, dSkills: skills - state.skills, dSuccess: success - state.success,
     won, p: Math.round(p * 100), moods, back, capital, wins: state.wins + (won ? 1 : 0), losses: state.losses + (won ? 0 : 1),
   };
@@ -591,7 +606,7 @@ export function resolve({ name, week, state, situationId, optionId }) {
 export const after = (r) => ({ capital: r.capital, culture: r.culture, skills: r.skills, success: r.success, wins: r.wins, losses: r.losses });
 
 // A result as the file keeps it: short keys, under one row.
-export const packResult = (r) => JSON.stringify({ w: r.week, i: r.situation, o: r.option, c: r.cost, g: r.swing, n: r.nudge, u: r.culture, s: r.skills, e: r.success, du: r.dCulture, ds: r.dSkills, de: r.dSuccess, v: r.won ? 1 : 0, p: r.p, m: CHARACTERS.map(c => r.moods[c.id][0]).join(""), b: r.back, k: r.capital, x: r.wins, l: r.losses });
+export const packResult = (r) => JSON.stringify({ w: r.week, i: r.situation, o: r.options.join(","), t: r.tag, c: r.cost, g: r.swing, n: r.nudge, u: r.culture, s: r.skills, e: r.success, du: r.dCulture, ds: r.dSkills, de: r.dSuccess, v: r.won ? 1 : 0, p: r.p, m: CHARACTERS.map(c => r.moods[c.id][0]).join(""), b: r.back, k: r.capital, x: r.wins, l: r.losses });
 export const unpackResult = (s) => {
   let o;
   try { o = JSON.parse(s); } catch { return null; }
@@ -600,7 +615,8 @@ export const unpackResult = (s) => {
   const moods = {};
   CHARACTERS.forEach((c, i) => { moods[c.id] = moodOf[String(o.m || "")[i]] || "flat"; });
   const n = (v) => (Number.isFinite(+v) ? +v : 0);
-  return { week: o.w, situation: o.i, option: o.o, cost: n(o.c), swing: n(o.g), nudge: n(o.n), culture: n(o.u), skills: n(o.s), success: n(o.e), dCulture: n(o.du), dSkills: n(o.ds), dSuccess: n(o.de), won: !!o.v, p: n(o.p), moods, back: n(o.b), capital: n(o.k), wins: n(o.x), losses: n(o.l) };
+  const options = String(o.o).split(",").filter(Boolean);
+  return { week: o.w, situation: o.i, options, option: options[0], tag: TAGS[o.t] ? o.t : "same", cost: n(o.c), swing: n(o.g), nudge: n(o.n), culture: n(o.u), skills: n(o.s), success: n(o.e), dCulture: n(o.du), dSkills: n(o.ds), dSuccess: n(o.de), won: !!o.v, p: n(o.p), moods, back: n(o.b), capital: n(o.k), wins: n(o.x), losses: n(o.l) };
 };
 
 /** The season so far, from the file: every saved week applied in order, stopping at the first week without a result. */
@@ -647,14 +663,14 @@ export const DEFAULT_COPY = {
   title: TAKEOVER_TITLE,
   credit: "COMM 118 · Weekly Challenge 3 · Due Tuesday, November 3",
   start: "You are the new head coach. The team is not yours yet.",
-  intro: "You have six weeks. Each week something happens, and you decide what to do about it. The players react. Some of them are people you know.",
+  intro: "You have seven weeks. Each week something happens, and you decide what to do about it. The players react. Some of them are people you know.",
   pickSport: "Pick your sport.",
   pickTeam: "Pick your team.",
   pickTeamLine: "None of these names make sense. Pick one anyway.",
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",
-  how: "You are taking over this team.\n\nTwo numbers are yours to raise. Culture is how the team treats each other. Skills and strategy is how well they play. Both run from 0 to 100, and both start wherever the last coach left them.\n\nThose two numbers together set your chance of winning each week. Winning raises the third number, Success.\n\nYou have capital: five coins to start. Every action costs some, from nothing up to four or five later in the season. After each week your five players react. A plus gives you a coin back. An equals gives you half a coin. A minus gives you nothing.",
+  how: "You are taking over this team.\n\nTwo numbers are yours to raise. Culture is how the team treats each other. Skills and strategy is how well they play. Both run from 0 to 100, and both start wherever the last coach left them.\n\nThose two numbers together set your chance of winning each week. Winning raises the third number, Success.\n\nYou have capital: five coins to start. Every action costs some, from nothing up to four or five later in the season. After each week your five players react. A plus gives you a coin back. An equals gives you half a coin. A minus gives you nothing.\n\nFrom week 3 on you can do more than one thing in a week, as many as you can pay for.",
   howGo: "Start the season",
   capital: "Capital",
   culture: "Culture",
@@ -662,17 +678,24 @@ export const DEFAULT_COPY = {
   success: "Success",
   record: "Record",
   chooseAsk: "What do you do?",
+  multiTitle: "New this week",
+  multi: "Now you can make more than one choice. Choose as many as you want. Each one costs its coins.",
+  doIt: "Do it",
+  total: "Total",
   chooseNote: "Costs are in coins. A plus from a player gives one back, an equals gives half, a minus gives nothing.",
   cannot: "Not enough capital.",
   matchDay: "VS",
   chat: "Team chat",
   reflect: "You wrote: {wonder}. Based on your experiences and what you know, how would you answer that question? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
-  reflectThought: "You wrote: {wonder}. Based on your experiences this season and what you know, do you still think so? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
+  reflectPress: "Lisa Davis printed what you said. Based on your experiences and what you know, what should a coach say in public about a player who had a bad night? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
+  reflectFinal: "After this season, what do you think makes for a good team culture? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
+  pressName: "Lisa Davis, Pacifica Times",
   reflectHint: "2-4 sentences",
   sourceAsk: "Your source",
   sourceHint: "A link, or the book, or wherever it came from.",
   pollAsk: "Which matters more?",
   back: "Back",
+  runThrough: "Run-through",
   next: "Next week",
   finals: "The final week.",
   seasonOver: "Season over.",

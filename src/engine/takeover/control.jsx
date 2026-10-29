@@ -29,7 +29,7 @@ const call = async (body) => {
 };
 const TOPICS_KEY = "team-topics";
 
-/** A whole season for a name and six choices, from the engine alone. choices are option ids, one a week, or blank for the cheapest. */
+/** A whole season for a name and its choices, from the engine alone. choices are option ids, one a week (or a list from MULTI_FROM on), or blank for the cheapest. */
 export function simulate({ name, concepts, topicsAnswers, choices, cast, sport, team, bench }) {
   const plan = E.planSeason({ name, concepts, topicsAnswers });
   let state = E.startState(name);
@@ -38,11 +38,16 @@ export function simulate({ name, concepts, topicsAnswers, choices, cast, sport, 
     const week = plan[i];
     const sit = E.situationOf(week.situation);
     const can = sit.options.filter(o => o.cost <= state.capital);
-    const wanted = E.optionOf(sit, (choices || [])[i]) || can[0];
-    const option = can.find(o => o.id === wanted.id) || can[0];
-    const result = E.resolve({ name, week: week.week, state, situationId: sit.id, optionId: option.id });
+    const askedRaw = [].concat((choices || [])[i] || []).filter(Boolean);
+    const asked = askedRaw[0] === "all" && week.multi ? sit.options.map(o => o.id) : askedRaw;
+    const wanted = asked.length ? asked : [can[0].id];
+    // What was asked for, trimmed to what the coach can pay for this week.
+    let left = state.capital;
+    const taken = wanted.filter(id => { const o = E.optionOf(sit, id); if (!o || o.cost > left) return false; left -= o.cost; return true; });
+    const ids = taken.length ? taken : [can[0].id];
+    const result = E.resolve({ name, week: week.week, state, situationId: sit.id, optionIds: ids });
     const { lines, ctx } = weekLines({ plan: week, result, cast, sport, team, name, bench });
-    weeks.push({ week, sit, result, lines, ctx, could: can.map(o => o.id), wanted: wanted.id });
+    weeks.push({ week, sit, result, lines, ctx, could: can.map(o => o.id), wanted });
     state = E.after(result);
   }
   return { plan, weeks, state };
@@ -95,8 +100,9 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
         <li>The student picks a sport (volleyball, Aussie rules football, softball) and a team from six names the hash deals them out of {E.TEAM_NAMES.length} that do not fit the place. Opponents are six other names, a different one each week.</li>
         <li>Five classmates are dealt the five parts below, in an order the name sets, from the roster less the student and the house accounts. The cast is saved on the file, so a roster change later never reshuffles a season.</li>
         <li>The student's five concepts come from their Concepts in Team Communication sheet, slots a to e, matched to the chapter's twenty titles. A short or missing sheet is filled from the class's most chosen: {E.CLASS_TOP.map(c => E.conceptOf(c).name).join(", ")}.</li>
-        <li>Week 1 is the opener, with the first concept's question. Weeks 2 to 5 are the next four concepts' situations, below. Week 6 is the finale, with one of the five concepts' questions, by the hash.</li>
-        <li>The prompt after a week is Andrew's line with the student's own wonder on that concept in the blank. Week 6 shows the student's own opinion instead and asks whether they still think so. A student with no wonder on file gets the class's, unattributed.</li>
+        <li>Week 1 is the opener, with the first concept's question. Week 2 is the second concept's situation. Week 3 is the press: Lisa Davis of the Pacifica Times. Weeks 4 to 6 are the last three concepts' situations. Week 7 is the finale.</li>
+        <li>From week {E.MULTI_FROM} on, a student may choose more than one option in a week, as many as they can pay for. A pop-up says so the first time. The chat answers the dearest option chosen; every option's culture, skills and win numbers add, and every option's likes and dislikes add per player.</li>
+        <li>The prompt after a week is Andrew's line with the student's own wonder on that concept in the blank. The press week asks what a coach should say in public about a player who had a bad night. The final week asks what makes for a good team culture. A student with no wonder on file gets the class's, unattributed.</li>
         <li>The concepts and the cast are saved when the team is picked. Each week's result is saved packed in its own row the moment the choice is made, so later changes to these words never change a week already played.</li>
       </ol>
 
@@ -122,7 +128,7 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
       <p className="tkc-p">Culture and skills are what the option adds before the swing. Win is the bonus to the chance of winning. Who is up and who is down is the option's own list; everyone else is flat. Under each situation is the research it is built from, and whose sheet raised the question where the class did.</p>
       {E.SITUATIONS.map(s => (
         <section key={s.id} className="tkc-sit">
-          <h3 className="tkc-h3">{s.concept ? E.conceptOf(s.concept).name : s.id === "opener" ? "Week 1, the opener" : "Week 6, the finale"}{s.who ? " · lands on " + E.characterOf(s.who).label.toLowerCase() : ""}</h3>
+          <h3 className="tkc-h3">{s.concept ? E.conceptOf(s.concept).name : s.id === "opener" ? "Week 1, the opener" : s.id === "press" ? "Week 3, the press" : "Week 7, the finale"}{s.who ? " · lands on " + E.characterOf(s.who).label.toLowerCase() : ""}</h3>
           <p className="tkc-p"><b>{s.text}</b></p>
           <p className="tkc-p">{s.research}</p>
           <table className="tkc-table"><thead><tr><th>Option</th><th>Cost</th><th>Culture</th><th>Skills</th><th>Win</th><th>Kind</th><th>Up</th><th>Down</th><th>Why</th></tr></thead><tbody>
@@ -161,16 +167,16 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
           <p className="tkc-p">Concepts: {concepts.map(c => E.conceptOf(c.id).name + (c.slot ? " (slot " + c.slot + ")" : " (class)")).join(", ")}.</p>
           <div className="tkc-row">
             {sim.weeks.map(({ week, sit }, i) => (
-              <label key={week.week} className="tkc-label">Week {i + 1} <select className="tkc-select" value={choices[i]} onChange={e => setChoices(s => s.map((x, j) => j === i ? e.target.value : x))}><option value="">(cheapest)</option>{sit.options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
+              <label key={week.week} className="tkc-label">Week {i + 1} <select className="tkc-select" value={choices[i]} onChange={e => setChoices(s => s.map((x, j) => j === i ? e.target.value : x))}><option value="">(cheapest)</option>{sit.options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}{week.multi ? <option value="all">(everything affordable)</option> : null}</select></label>
             ))}
           </div>
           <table className="tkc-table"><thead><tr><th>Week</th><th>Concept</th><th>What happens</th><th>Choice</th><th>Could afford</th><th>Culture</th><th>Skills</th><th>Match</th><th>Success</th><th>Coins</th><th>Moods</th><th>The prompt</th></tr></thead><tbody>
             {sim.weeks.map(({ week, sit, result, lines, ctx, could, wanted }) => (
               <tr key={week.week}>
                 <td>{week.n}{week.last ? " (final)" : ""}</td>
-                <td>{E.conceptOf(week.concept).name}</td>
+                <td>{week.label}</td>
                 <td>{lines[0].text}</td>
-                <td>{E.tell(E.optionOf(sit, result.option).label, ctx)}{result.option !== wanted ? " (could not afford " + E.optionOf(sit, wanted).label + ")" : ""}</td>
+                <td>{result.options.map(id => E.tell(E.optionOf(sit, id).label, ctx)).join(" + ")}{wanted.join(",") !== result.options.join(",") && wanted[0] !== "all" ? " (asked for " + wanted.map(id => (E.optionOf(sit, id) || { label: id }).label).join(" + ") + ")" : ""}</td>
                 <td>{could.map(id => E.optionOf(sit, id).label).join(", ")}</td>
                 <td className="tkc-n">{result.culture - result.dCulture} to {result.culture} (swing {result.swing})</td>
                 <td className="tkc-n">{result.skills - result.dSkills} to {result.skills} (nudge {result.nudge})</td>
@@ -178,7 +184,7 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
                 <td className="tkc-n">{result.success}</td>
                 <td className="tkc-n">−{result.cost} +{result.back} = {result.capital}</td>
                 <td>{E.CHARACTERS.map(c => c.label.replace("The ", "") + " " + result.moods[c.id]).join(", ")}</td>
-                <td>{week.prompt.kind === "thought" ? "You wrote (opinion): " : "You wrote (wonder): "}{week.prompt.text}</td>
+                <td>{week.prompt.kind === "press" ? "The press question" : week.prompt.kind === "final" ? "What makes a good team culture" : "You wrote: " + week.prompt.text}</td>
               </tr>
             ))}
           </tbody></table>

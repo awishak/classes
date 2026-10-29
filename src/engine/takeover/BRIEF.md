@@ -1,10 +1,12 @@
-# Takeover
+# Locker Room
 
 **A worksheet that is an 8-bit game. COMM 118, Communication and Sport,
 Fall 2026, Weekly Challenge 3, due Tuesday, November 3.**
 
 Built 2026-10-29 in a Claude Code session, rebuilt the same afternoon on
-Andrew's second pass. This brief is the handoff: what was decided, in his
+Andrew's second pass, and again on his third ("game name is Locker Room").
+The folder is still `takeover`, its first name; the key and the address
+are `locker-room`. This brief is the handoff: what was decided, in his
 words where they are his, what is built, and what is still open. The
 control page at `/comm118/worksheets/takeover?control` states the mechanism
 from the engine itself; this file is the reasoning.
@@ -15,10 +17,13 @@ A student is the new head coach. They pick a sport, pick a team name that
 does not fit the place, and meet the team: their classmates as pixel
 sprites in the team's jersey, five of them dealt the parts that decide the
 season (the star, the veteran, the rookie, the transfer, the quiet one). A
-card says how it works. Six weeks. Each week something happens, drawn from
-the concepts the student chose on the Concepts in Team Communication
-sheet, and they choose one of three or four things to do about it, each
-priced in coins. The ball goes back and forth, the team chat fills in, the
+card says how it works. Seven weeks. Each week something happens, drawn
+from the concepts the student chose on the Concepts in Team Communication
+sheet, and they choose from three or four things to do about it, each
+priced in coins. From week 3 on they may do more than one thing in a week,
+and a pop-up says so the first time. Week 3 is the press: Lisa Davis of
+the Pacifica Times, a woman with brown hair and glasses, asks on the
+record what happened to the star. The ball goes back and forth, the team chat fills in, the
 match is won or lost, and the three bars move. Then Andrew's prompt, with
 the student's own wonder on that concept in the blank, two to four
 sentences and a source. Three polls along the way. At the end, three
@@ -39,12 +44,17 @@ the first one, it should be in response to a thing."
 
 ## Where it lives
 
-- Students: `/comm118/worksheets/takeover`, signed in with their email off
+- Students: `/comm118/worksheets/locker-room`, signed in with their email off
   the roster. **COMM 999 only until Andrew opens it** from the Worksheets
   page switch (`open: ["comm999"]` in `localWorksheets.js`).
 - One student's file, for the instructor: `?s=<email>`.
 - Every student, for the instructor: `?review`. Who is in, what kinds of
   action the class chose, how the polls went, and each season read back.
+- The run-through, for the instructor: the Run-through switch at the top
+  of his own sheet lets Next and Hand in go without the boxes, so he can
+  play it in front of the class. Andrew: "an instructor version where I
+  can just press next ... I have to choose something, but I don't have to
+  fill in every box."
 - How it works, for the instructor: `?control`. Every rule, every
   situation with its options and the research under each, every chat line,
   and one student's season as the engine will deal it, with a simulator for
@@ -102,18 +112,25 @@ f; `final` a to c.
    A short or missing sheet fills from the class's most chosen on
    2026-10-29: goal setting, failure, motivation, cohesion, emotion, culture.
 2. Week 1 is the opener (keep things the same, team dinner, practice more,
-   set standards) with the first concept's question. Weeks 2 to 5 are the
-   next four concepts' situations, each a thing that happened to one of the
-   five players, with three or four answers priced 0 to 3. Week 6 is the
-   finale: a bench player is hurt before the final road trip, and the dear
-   option (4 coins) is to bring them anyway. Andrew's example.
+   set standards) with the first concept's question. Week 2 is the second
+   concept's situation. Week 3 is the press: no comment, be honest, take
+   responsibility, spread it around. Weeks 4 to 6 are the last three
+   concepts' situations, each a thing that happened to one of the five
+   players, with three or four answers priced 0 to 3. Week 7 is the finale:
+   a bench player is hurt before the final road trip, and the dear option
+   (4 coins) is to bring them anyway. Andrew's example.
+   From week 3 on (`MULTI_FROM`), any number of options in a week, as many
+   as the coach can pay for. Every option's numbers add; the chat answers
+   the dearest one; every option's likes and dislikes add per player.
 3. Every situation has one free option. Each option names who is up and who
    is down. The research the situation is built from, and whose sheet
    raised the question where the class did, is on the control page.
 4. The prompt is Andrew's line with the student's own wonder in the blank.
-   Week 6 shows their opinion instead and asks whether they still think so
-   (Claude's variation, so the same question is never asked twice). Its
-   poll comes from another of the five if that concept's poll was asked.
+   The press week asks what a coach should say in public about a player
+   who had a bad night (Claude's draft). The final week asks what makes for
+   a good team culture (his: "give me some thoughts about what you think
+   makes for a good team culture"). Polls on weeks 2, 4 and 6, from those
+   weeks' concepts.
 5. The team is picked from six of thirty-six names that do not fit the
    place. Andrew: "the New York Cowboys, or the Kansas Marlins." The other
    names are the opponents, six different ones a season.
@@ -136,11 +153,12 @@ Andrew's, word for word: the reflection prompt ("You wrote: [their
 wonder]. Based on your experiences and what you know, how would you answer
 that question? Please write 2-4 sentences, and include at least one
 source, which can be from our book, our readings, or somewhere else."), the
-rule for coins, the three numbers, the finale's injured player. Everything
-else is Claude's draft of 2026-10-29 for him to edit: the explainer card,
-the five parts and their blurbs, 22 situations and their 87 options with
-the research notes, 75 chat lines, 20 polls, 20 class wonders, 12 crowd
-signs, the three final questions, and the screen copy.
+rule for coins, the three numbers, the finale's injured player, the press
+situation, the final question's subject, the name. Everything else is
+Claude's draft of 2026-10-29 for him to edit: the explainer card, the five
+parts and their blurbs, 23 situations and their 91 options with the
+research notes, 75 chat lines, 20 polls, 20 class wonders, 12 crowd signs,
+the three final questions, and the screen copy.
 
 The situations and polls are built from what the class wrote on the topics
 sheet. Where a student's wonder is quoted, it is quoted back only to that
@@ -149,8 +167,6 @@ reworded.
 
 ## Still open
 
-- The name. Andrew, 2026-10-29: "what is a team called? I don't know yet."
-  `TAKEOVER_TITLE` and the assignment title are the working name.
 - Opening it to COMM 118: the Worksheets page switch, and `opens` on the
   assignment card, both his.
 - Every bank of words, his to edit. The research notes on the control page

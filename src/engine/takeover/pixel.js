@@ -182,5 +182,31 @@ export function drawField(canvas, sportId, w = 320, h = 96) {
   }
 }
 
+/**
+ * Lisa Davis of the Pacifica Times: a woman with brown hair and glasses,
+ * in a grey blazer, a notebook in hand. Andrew, 2026-10-29: "a woman with
+ * brown hair and glasses."
+ */
+export function journalist() {
+  const g = grid();
+  const put = (x, y, c) => { if (x >= 0 && x < 16 && y >= 0 && y < 16) g[y][x] = c; };
+  const box = (x0, y0, x1, y1, c) => { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, c); };
+  box(5, 2, 10, 7, C.skin);
+  box(5, 1, 10, 1, C.brown); box(4, 2, 11, 2, C.brown);
+  box(4, 3, 4, 9, C.brown); box(11, 3, 11, 9, C.brown);
+  // Glasses: two frames and a bridge, the lenses light.
+  box(5, 5, 7, 5, C.ink); box(8, 5, 10, 5, C.ink); put(6, 5, C.light); put(9, 5, C.light);
+  put(5, 4, C.ink); put(7, 4, C.ink); put(8, 4, C.ink); put(10, 4, C.ink);
+  put(7, 7, C.red); put(8, 7, C.red);
+  box(5, 8, 10, 12, C.grey);
+  box(7, 8, 8, 12, C.white);
+  box(3, 8, 3, 11, C.skin); box(12, 8, 12, 11, C.skin);
+  // The notebook, in the right hand.
+  box(12, 11, 14, 13, C.yellow); put(13, 12, C.ink);
+  box(5, 13, 10, 13, C.dark);
+  box(5, 14, 6, 15, C.skin); box(9, 14, 10, 15, C.skin);
+  return g;
+}
+
 /** The mood of a player as three pixel glyphs: up, flat, down. */
 export const MOOD_GLYPH = { up: "+", flat: "=", down: "-" };

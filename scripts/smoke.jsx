@@ -6095,7 +6095,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
     if (!E.CLASS_WONDERS[c.id]) say(c.id + " has no class wonder");
     if (E.matchConcept(c.name) !== c.id) say("the chapter title " + JSON.stringify(c.name) + " does not land on " + c.id);
   });
-  if (!E.situationOf("opener") || !E.situationOf("finale")) say("no opener or no finale");
+  if (!E.situationOf("opener") || !E.situationOf("finale") || !E.situationOf("press")) say("no opener, press or finale");
   if (new Set(E.SITUATIONS.map(s => s.id)).size !== E.SITUATIONS.length) say("a situation id repeats");
   E.SITUATIONS.forEach(s => {
     if (s.who && !E.characterOf(s.who)) say(s.id + " lands on nobody");
@@ -6137,18 +6137,20 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
     if (s0.culture < 35 || s0.culture > 65 || s0.skills < 35 || s0.skills > 65 || s0.capital !== 5) say(name + " does not start where the rule says: " + JSON.stringify(s0));
     const concepts = E.conceptsFor(topicsA);
     const plan = E.planSeason({ name, concepts, topicsAnswers: topicsA });
-    if (plan.length !== 6 || plan[0].situation !== "opener" || plan[0].concept !== "goals" || plan[0].prompt.text !== "I wonder A" || plan[1].situation !== "failure" || plan[2].prompt.text !== E.CLASS_WONDERS.cohesion) say(name + ": the plan does not follow the sheet");
-    if (!plan[5].last || plan[5].situation !== "finale" || !concepts.some(c => c.id === plan[5].concept)) say(name + ": the final is not the finale on one of the five");
+    if (plan.length !== 7 || plan[0].situation !== "opener" || plan[0].concept !== "goals" || plan[0].prompt.text !== "I wonder A" || plan[1].situation !== "failure" || plan[2].situation !== "press" || plan[2].prompt.kind !== "press" || plan[3].prompt.text !== E.CLASS_WONDERS.cohesion || plan[5].concept !== "power") say(name + ": the plan does not follow the sheet: " + plan.map(w => w.situation).join(","));
+    if (!plan[6].last || plan[6].situation !== "finale" || plan[6].prompt.kind !== "final" || !plan[6].multi || !plan[2].multi || plan[1].multi) say(name + ": the final is not the finale, or multi starts on the wrong week");
+    if (plan.some(w => !w.label)) say(name + ": a week has no label");
     if (JSON.stringify(E.planSeason({ name, concepts, topicsAnswers: topicsA })) !== JSON.stringify(plan)) say(name + ": two plans differ");
     const opps = E.LETTERS.map(w => E.opponentFor(name, w, "Kansas Marlins"));
-    if (new Set(opps).size !== 6 || opps.includes("Kansas Marlins")) say(name + " does not get six different opponents: " + opps.join(", "));
+    if (new Set(opps).size !== 7 || opps.includes("Kansas Marlins")) say(name + " does not get seven different opponents: " + opps.join(", "));
     const polls = plan.filter(w => w.poll).map(w => w.poll.join("/"));
     if (new Set(polls).size !== polls.length) say(name + " is asked the same poll twice");
     const cast = E.deal(name, big.bench).cast;
     for (const sport of E.SPORTS) {
-      for (const pattern of [0, 1, 2, 3, "mix", "dear"]) {
+      for (const pattern of [0, 1, 2, 3, "mix", "dear", "all"]) {
         const choices = E.LETTERS.map((w, i) => {
           const sit = E.situationOf(plan[i].situation);
+          if (pattern === "all") return plan[i].multi ? "all" : sit.options[0].id;
           if (pattern === "dear") return [...sit.options].sort((a, b) => b.cost - a.cost)[0].id;
           if (pattern === "mix") return sit.options[(E.hash(name + w) + i) % sit.options.length].id;
           return (sit.options[pattern] || sit.options[0]).id;
@@ -6165,7 +6167,8 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
           if (packed.length > 500) say("a packed result is " + packed.length + " characters");
           const back = E.unpackResult(packed);
           if (JSON.stringify(back) !== JSON.stringify(result)) say("a result does not round-trip: " + packed);
-          const again = E.resolve({ name, week: week.week, state, situationId: sit.id, optionId: result.option });
+          const again = E.resolve({ name, week: week.week, state, situationId: sit.id, optionIds: result.options });
+          if (pattern === "all" && plan[i].multi && result.options.length < 2 && sit.options.filter(o => o.cost <= state.capital).length >= 2) say(name + " week " + (i + 1) + ": everything affordable came out as one option");
           if (JSON.stringify(again) !== JSON.stringify(result)) say(name + " week " + (i + 1) + ": the same week resolved twice differently");
           answers[E.F.result(week.week)] = packed;
           answers[E.F.reflect(week.week)] = "Because."; answers[E.F.prompt(week.week)] = "wonder|" + week.prompt.text;
@@ -6173,11 +6176,11 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
           state = E.after(result);
         });
         const replayed = E.replay(answers, name);
-        if (replayed.results.length !== 6 || JSON.stringify(replayed.state) !== JSON.stringify(sim.state) || replayed.week !== null) say(name + ": the replay from the file does not land where the season did");
+        if (replayed.results.length !== 7 || JSON.stringify(replayed.state) !== JSON.stringify(sim.state) || replayed.week !== null) say(name + ": the replay from the file does not land where the season did");
         [0, 1, 2].forEach(i => { answers[E.F.final(i)] = "x"; });
         if (G.missingOf(answers).length) say(name + ": a full file still misses " + G.missingOf(answers).join(", "));
         const t = tally([{ answers, student: { name } }]);
-        if (t.seasons !== 1 || Object.values(t.kinds).reduce((a, b) => a + b, 0) !== 6) say("the tally does not count six choices");
+        if (t.seasons !== 1 || Object.values(t.kinds).reduce((a, b) => a + b, 0) < 7) say("the tally does not count every choice");
       }
     }
   }
@@ -6195,18 +6198,23 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (u[10][7] !== P.C.white || u === g) say("the uniform does not mark a number on a copy");
   // The pages.
   const { localWorksheet, listedFor, openTo } = await import("../src/engine/localWorksheets.js");
-  const tk = localWorksheet("takeover");
-  if (!tk || !tk.review || !tk.control) say("takeover is not a local worksheet with a review and a control page");
+  const tk = localWorksheet(E.TAKEOVER_KEY);
+  if (!tk || !tk.review || !tk.control) say(E.TAKEOVER_KEY + " is not a local worksheet with a review and a control page");
+  let twoEarly = null;
+  try { twoEarly = E.resolve({ name: "Ann Example", week: "a", state: E.startState("Ann Example"), situationId: "opener", optionIds: ["same", "dinner"] }); } catch { twoEarly = null; }
+  if (twoEarly) say("week 1 took two choices");
+  const two = E.resolve({ name: "Ann Example", week: "c", state: E.startState("Ann Example"), situationId: "press", optionIds: ["honest", "own"] });
+  if (two.cost !== 3 || two.options.length !== 2 || two.tag !== "care" || JSON.stringify(E.unpackResult(E.packResult(two))) !== JSON.stringify(two)) say("two choices in week 3 do not add up or round-trip: " + E.packResult(two));
   if (tk && (!listedFor(tk, "comm118") || listedFor(tk, "comm3"))) say("takeover is not COMM 118's, or is COMM 3's");
   if (tk && (!openTo(tk, "comm999", {}) || openTo(tk, "comm118", {}))) say("takeover is not COMM 999's to try, or is already open to COMM 118");
   cases.push(["Takeover, loading", <G.TakeoverGame store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" topicsStore={{ load: async () => ({ answers: {} }) }} />, "Loading"]);
   const { default: TakeoverReview } = await import("../src/engine/takeover/review.jsx");
   const { default: TakeoverControl } = await import("../src/engine/takeover/control.jsx");
   const rosterTk = [{ name: "Ann Example", email: "ann@x" }, { name: "Ben Example", email: "ben@x" }];
-  cases.push(["Takeover, review loading", <TakeoverReview config={{ id: "comm999", path: "/comm999" }} worksheetKey="takeover" roster={rosterTk} />, "Loading the sheets"]);
-  cases.push(["Takeover, control page", <TakeoverControl config={{ id: "comm999", path: "/comm999" }} worksheetKey="takeover" roster={rosterTk} />, "Bring {bench} on the trip"]);
+  cases.push(["Takeover, review loading", <TakeoverReview config={{ id: "comm999", path: "/comm999" }} worksheetKey={E.TAKEOVER_KEY} roster={rosterTk} />, "Loading the sheets"]);
+  cases.push(["Takeover, control page", <TakeoverControl config={{ id: "comm999", path: "/comm999" }} worksheetKey={E.TAKEOVER_KEY} roster={rosterTk} />, "Bring {bench} on the trip"]);
   const full = { [E.F.sport]: "volleyball", [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(E.conceptsFor(topicsA)), [E.F.cast]: E.packCast(big.cast) };
-  const one = E.resolve({ name: "Ann Example", week: "a", state: E.startState("Ann Example"), situationId: "opener", optionId: "dinner" });
+  const one = E.resolve({ name: "Ann Example", week: "a", state: E.startState("Ann Example"), situationId: "opener", optionIds: ["dinner"] });
   full[E.F.result("a")] = E.packResult(one); full[E.F.reflect("a")] = "Because."; full[E.F.prompt("a")] = "wonder|I wonder A";
   cases.push(["Takeover, a season read back", <div className="tk"><G.SeasonLog answers={full} name="Ann Example" classmates={big.bench} copy={{ say: (k) => E.DEFAULT_COPY[k] }} /></div>, "Week 1"]);
 }
