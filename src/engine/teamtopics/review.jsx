@@ -18,6 +18,7 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { SLOTS, PARTS, MORE_FIELD, missingOf, DEFAULT_COPY } from "./sheet.jsx";
 import * as TOKENS from "../tokens.js";
+import { matchConcept, conceptOf } from "../takeover/engine.js";
 
 const call = async (body) => {
   const r = await fetch("/api/worksheet-submits", {
@@ -39,12 +40,15 @@ export const topicsOf = (answers) => SLOTS.map(s => ({
 })).filter(t => t.topic);
 
 // Every topic chosen in a set of sheets, most chosen first, each with who
-// chose the topic and what they wrote. Spelling and case are folded.
+// chose the topic and what they wrote. Spelling and case are folded, and a
+// topic typed as a word of a chapter title ("Motivation", "Team Chemistry")
+// is listed under that title, the way the game reads them (matchConcept).
 export function byTopic(sheets) {
   const map = new Map();
   sheets.forEach(sh => topicsOf(sh.answers).forEach(t => {
-    const k = lower(t.topic).replace(/[.!?]+$/, "");
-    if (!map.has(k)) map.set(k, { topic: t.topic, entries: [] });
+    const id = matchConcept(t.topic);
+    const k = id || lower(t.topic).replace(/[.!?]+$/, "");
+    if (!map.has(k)) map.set(k, { topic: id ? conceptOf(id).name : t.topic, entries: [] });
     map.get(k).entries.push({ student: sh.student, ...t });
   }));
   return [...map.values()].sort((a, b) => b.entries.length - a.entries.length || a.topic.localeCompare(b.topic));
@@ -78,6 +82,10 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
   const topics = byTopic(withSheets);
   const notIn = rows.filter(r => !r.sheet?.submitted_at).map(r => r.student.name);
 
+  // Andrew, 2026-10-29: "this is ugly. make it better to read." One concept
+  // at a time, its three parts stacked, each entry one line with the name
+  // run in, and a list of the concepts at the top to jump by. No boxes.
+  const slug = (t) => "c-" + lower(t).replace(/[^a-z0-9]+/g, "-");
   return (
     <Shell>
       <h1 className="ttr-title">Five concepts, every sheet</h1>
@@ -86,39 +94,47 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
           {sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"ttr-tab" + (s === section ? " ttr-on" : "")} onClick={() => setSection(s)}>{s}</button>)}
         </div>
       ) : null}
-      <p className="ttr-p">{submitted + " submitted, " + (withSheets.length - submitted) + " started, " + (rows.length - withSheets.length) + " not opened. " + topics.length + " different concepts. This page asks again every half minute."}</p>
-      {notIn.length ? <p className="ttr-muted">Not submitted yet: {notIn.join(", ")}.</p> : <p className="ttr-muted">Everyone is in.</p>}
+      <p className="ttr-p">{submitted + " submitted · " + (withSheets.length - submitted) + " started · " + (rows.length - withSheets.length) + " not opened · " + topics.length + " concepts"}</p>
+      {notIn.length ? <p className="ttr-muted">Not submitted yet: {notIn.join(", ")}.</p> : null}
       <div className="ttr-tabs" role="tablist" aria-label="View">
         <button type="button" role="tab" aria-selected={view === "topic"} className={"ttr-tab" + (view === "topic" ? " ttr-on" : "")} onClick={() => setView("topic")}>By concept</button>
         <button type="button" role="tab" aria-selected={view === "student"} className={"ttr-tab" + (view === "student" ? " ttr-on" : "")} onClick={() => setView("student")}>By student</button>
       </div>
-      {view === "topic" ? topics.map(t => (
-        <section key={t.topic} className="ttr-row">
-          <div className="ttr-head"><b className="ttr-name">{t.topic}</b><span className="ttr-chip">{t.entries.length + (t.entries.length === 1 ? " student" : " students")}</span></div>
-          {t.entries.map(e => (
-            <div key={e.student.email + e.slot} className="ttr-entry">
-              <span className="ttr-who">{e.student.name}</span>
-              {PARTS.map(p => e[p.field] ? <p key={p.field} className="ttr-line"><span className="ttr-k">{DEFAULT_COPY["box." + p.field]}</span>{e[p.field]}</p> : null)}
-            </div>
+      {view === "topic" ? (
+        <>
+          <ol className="ttr-index">
+            {topics.map(t => <li key={t.topic}><a href={"#" + slug(t.topic)}>{t.topic}</a><span className="ttr-count">{t.entries.length}</span></li>)}
+          </ol>
+          {topics.map(t => (
+            <section key={t.topic} id={slug(t.topic)} className="ttr-concept">
+              <h2 className="ttr-h2">{t.topic} <span className="ttr-count">{t.entries.length}</span></h2>
+              {PARTS.map(p => {
+                const said = t.entries.filter(e => e[p.field]);
+                if (!said.length) return null;
+                return (
+                  <div key={p.field} className="ttr-part">
+                    <h3 className="ttr-h3">{DEFAULT_COPY["box." + p.field]}</h3>
+                    {said.map(e => <p key={e.student.email + e.slot} className="ttr-entry"><b>{e.student.name}</b> {e[p.field]}</p>)}
+                  </div>
+                );
+              })}
+            </section>
           ))}
-        </section>
-      )) : rows.map(({ student, sheet }) => (
-        <article key={student.email} className="ttr-row">
-          <div className="ttr-head">
-            <b className="ttr-name">{student.name}</b>
-            <span className={"ttr-chip" + (sheet?.submitted_at ? " ttr-ok" : "")}>{sheet ? (sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started") : "Not opened"}</span>
-          </div>
+        </>
+      ) : rows.map(({ student, sheet }) => (
+        <section key={student.email} className="ttr-concept">
+          <h2 className="ttr-h2">{student.name} <span className="ttr-count">{sheet ? (sheet.submitted_at ? "submitted " + when(sheet.submitted_at) : "started") : "not opened"}</span></h2>
           {sheet ? (<>
             {topicsOf(sheet.answers).map(t => (
-              <div key={t.slot} className="ttr-entry">
-                <span className="ttr-who">{t.topic}</span>
-                {PARTS.map(p => t[p.field] ? <p key={p.field} className="ttr-line"><span className="ttr-k">{DEFAULT_COPY["box." + p.field]}</span>{t[p.field]}</p> : null)}
+              <div key={t.slot} className="ttr-part">
+                <h3 className="ttr-h3">{t.topic}</h3>
+                {PARTS.map(p => t[p.field] ? <p key={p.field} className="ttr-entry"><b>{DEFAULT_COPY["box." + p.field]}</b> {t[p.field]}</p> : null)}
               </div>
             ))}
-            {String(sheet.answers?.[MORE_FIELD] || "").trim() ? <p className="ttr-line"><span className="ttr-k">{DEFAULT_COPY.moreAsk}</span>{sheet.answers[MORE_FIELD]}</p> : null}
+            {String(sheet.answers?.[MORE_FIELD] || "").trim() ? <div className="ttr-part"><h3 className="ttr-h3">{DEFAULT_COPY.moreAsk}</h3><p className="ttr-entry">{sheet.answers[MORE_FIELD]}</p></div> : null}
             {missingOf(sheet.answers).length ? <p className="ttr-muted">{missingOf(sheet.answers).length} boxes empty.</p> : null}
           </>) : null}
-        </article>
+        </section>
       ))}
     </Shell>
   );
@@ -130,21 +146,23 @@ function Shell({ children }) {
 
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
 const CSS = `
-.ttr{padding:20px 16px 80px;color:${T.primary}}
-.ttr-in{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-.ttr-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
+.ttr{padding:24px 16px 96px;color:${T.primary}}
+.ttr-in{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.ttr-title{margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em}
 .ttr-p{margin:0;font-size:16px;color:${T.secondary}}
 .ttr-tabs{display:flex;gap:8px;flex-wrap:wrap}
 .ttr-tab{font:inherit;font-size:15px;padding:6px 16px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer;min-height:34px}
 .ttr-on{background:${T.primary};border-color:${T.primary};color:${S.page}}
-.ttr-row{border-top:1px solid ${L.soft};padding:16px 0 4px;display:flex;flex-direction:column;gap:10px}
-.ttr-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.ttr-name{font-size:18px}
-.ttr-chip{font-size:13px;font-weight:600;border-radius:999px;padding:3px 10px;border:1px solid ${L.strong};color:${T.secondary}}
-.ttr-ok{border-color:${ST.ok};color:${ST.ok}}
-.ttr-entry{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border-radius:10px;background:${S.sunk}}
-.ttr-who{font-size:15px;font-weight:600}
-.ttr-line{margin:0;font-size:15.5px;line-height:1.5;white-space:pre-wrap}
-.ttr-k{display:block;font-size:13px;font-weight:600;color:${T.muted}}
+.ttr-index{margin:6px 0 10px;padding:0;list-style:none;columns:2 220px;column-gap:28px;font-size:15.5px;line-height:1.7}
+.ttr-index li{display:flex;justify-content:space-between;gap:10px;break-inside:avoid;border-bottom:1px solid ${L.soft};padding:2px 0}
+.ttr-index a{color:inherit;text-decoration:none}
+.ttr-index a:hover{text-decoration:underline}
+.ttr-count{font-size:14px;color:${T.muted};font-weight:400;font-variant-numeric:tabular-nums}
+.ttr-concept{border-top:2px solid ${T.primary};padding:18px 0 6px;display:flex;flex-direction:column;gap:14px;scroll-margin-top:72px}
+.ttr-h2{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:baseline;gap:12px}
+.ttr-part{display:flex;flex-direction:column;gap:8px}
+.ttr-h3{margin:0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:${T.muted}}
+.ttr-entry{margin:0;font-size:16.5px;line-height:1.55;max-width:70ch}
+.ttr-entry b{font-weight:600}
 .ttr-muted{margin:0;font-size:14.5px;color:${T.muted}}
 `;
