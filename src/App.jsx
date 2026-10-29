@@ -37,6 +37,7 @@ import ProgressPage from "./ProgressPage.jsx";
 import FeaturesPage from "./FeaturesPage.jsx";
 import WorktopiaPage from "./WorktopiaPage.jsx";
 import LockerRoomPage from "./LockerRoomPage.jsx";
+import StudentPage from "./engine/StudentPage.jsx";
 import RetreatPage from "./RetreatPage.jsx";
 import { ENGINE, currentClasses, archivedClasses } from "./config/registry.js";
 import InstructorLinks from "./InstructorLinks.jsx";
@@ -379,6 +380,18 @@ export default function App() {
     return (
       <InstructorGate what={cfg.code + " grades"}>
         <InstructorBar config={cfg} always><GradesGrid key={cfg.id} config={cfg} /></InstructorBar>
+      </InstructorGate>
+    );
+  }
+
+  // One student, whole: /<class>/student/<id>. Andrew, 2026-10-29: "a
+  // beautiful profile, a page for every student." StudentPage.jsx.
+  const one = path.match(/^\/(comm\w+)\/student\/([A-Za-z0-9_.~%-]+)\/?$/);
+  if (one && ENGINE[one[1]]) {
+    const cfg = ENGINE[one[1]];
+    return (
+      <InstructorGate what={cfg.code + " student"}>
+        <InstructorBar config={cfg} always><StudentPage key={cfg.id + one[2]} config={cfg} id={one[2]} /></InstructorBar>
       </InstructorGate>
     );
   }

@@ -20,6 +20,7 @@ import { latenessOf } from "./lateness.js";
 import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
+import { studentHref } from "./StudentPage.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -194,7 +195,7 @@ export default function GradeView({ config }) {
 
   const cardOf = (s) => {
     const card = board.cards?.[s.name] || {};
-    return <Card key={s.name} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name, asg)} accent={a}
+    return <Card key={s.name} config={config} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name, asg)} accent={a}
       checkin={isCheckin(asg) ? { answers: answersOf(data, aid, s.name), href: config.path + "/checkins?w=" + asg.week + "&s=" + encodeURIComponent(s.name) } : null}
       columns={columns}
       dragging={dragging === s.name} picked={picked === s.name} editing={editing === s.name}
@@ -491,7 +492,7 @@ function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, 
   );
 }
 
-function Card({ student, profile, due, card, work, accent, checkin, columns, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
+function Card({ config, student, profile, due, card, work, accent, checkin, columns, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
   const [comment, setComment] = useState(card.comment || "");
   // The grade, chosen in the same box as the comment. Starts on the column
   // the card is in; tapping the lit one again puts the card back on the pile.
@@ -510,13 +511,16 @@ function Card({ student, profile, due, card, work, accent, checkin, columns, dra
       {/* Wraps, so a long grade like Completed with Revisions drops under the
           name rather than squeezing the name to nothing. */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <button className="gv-focus" onClick={onPick} aria-pressed={picked}
-          style={{ flex: 1, minWidth: 140, textAlign: "left", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, cursor: "pointer", minHeight: 28, display: "flex", alignItems: "center", gap: 8 }}>
+        <button className="gv-focus" onClick={onPick} aria-pressed={picked} aria-label={"Pick " + student.name}
+          style={{ flex: "none", background: "none", border: "none", padding: 0, cursor: "pointer", minHeight: 28, display: "flex", alignItems: "center" }}>
           {/* The face is the biggest thing on the card. Andrew, 2026-10-14:
-              "I need to see their pictures." */}
+              "I need to see their pictures." The face picks the card; the
+              name opens the student's page. Andrew, 2026-10-29: "when I
+              click on their name ... a page for every student." */}
           <Avatar profile={profile} name={student.name} accent={accent} size={52} />
-          <span style={{ minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{student.name}</span>
         </button>
+        <a className="gv-focus" href={studentHref(config, student)}
+          style={{ flex: 1, minWidth: 100, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{student.name}</a>
         {/* Which sitting they are in, because two rooms of COMM 3 grade
             together. Andrew, 2026-09-23: "when they are in the grade view, i
             need an 8:00 and 10:30 chip next to each students name." */}

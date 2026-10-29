@@ -14,6 +14,7 @@ import { Avatar, profileOf } from "./Face.jsx";
 import { StudentThread } from "./YouCard.jsx";
 import RosterSheet, { callLogins } from "./RosterSheet.jsx";
 import * as TOKENS from "./tokens.js";
+import { studentHref } from "./StudentPage.jsx";
 
 // The theme's face. Outfit on Clean and Business, Nunito on Snapchat,
 // Fredoka on Crashing Out. One declaration, and every use below follows.
@@ -177,7 +178,7 @@ function InstructorRoster({ config, data, update }) {
           const shown = nameShown(data, s.name);
           const where = [p.year, p.hometown || s.from].filter(Boolean).join(" · ");
           return (
-            <button key={s.name} onClick={() => setSelected(s.name)}
+            <button key={s.name} onClick={() => { window.location.assign(studentHref(config, s)); }}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 14, padding: 14, cursor: "pointer", fontFamily: F, minHeight: TAP }}>
               {/* Big enough to know somebody by across a room. Andrew,
                   2026-09-23: "i'd like to make their pictures bigger on the

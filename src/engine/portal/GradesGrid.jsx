@@ -19,6 +19,7 @@ import { computeGrade } from "../AssignmentsCard.jsx";
 import { rosterOf, nameShown } from "../roster.js";
 import { realStudents, isHouse, sectionOf, sectionsOf } from "../sections.js";
 import { boardOf, bucketOf, letterOf } from "../grades.js";
+import { studentHref } from "../StudentPage.jsx";
 import { ThemeStyle } from "../ThemeShell.jsx";
 import { PORTAL_CSS } from "./style.js";
 import { Chip, Gm } from "./bits.jsx";
@@ -85,7 +86,7 @@ export default function GradesGrid({ config }) {
                 const g = computeGrade(config, data, s.name);
                 return (
                   <tr key={s.name}>
-                    <th className="gg-name" scope="row"><span>{nameShown(data, s.name)}</span>{!section && sectionOf(s) ? <span className="gg-sec">{sectionOf(s)}</span> : null}</th>
+                    <th className="gg-name" scope="row"><a className="gg-who" href={studentHref(config, s)}>{nameShown(data, s.name)}</a>{!section && sectionOf(s) ? <span className="gg-sec">{sectionOf(s)}</span> : null}</th>
                     {assignments.map(asg => { const c = cellOf(config, data, asg, s.name); return <td key={asg.id} className={"gg-cell " + c.kind} title={c.title}>{c.say}</td>; })}
                     <td className="gg-sofar">{g.pct == null ? "" : <><b>{letterOf(g.pct)}</b> <span className="gg-pct">{g.pct}</span></>}</td>
                   </tr>
@@ -107,6 +108,8 @@ const CSS = `
 .gg-table th,.gg-table td{padding:8px 10px;border-bottom:1px solid var(--line-soft);white-space:nowrap;text-align:center;vertical-align:middle}
 .gg-table thead th{position:sticky;top:0;background:var(--surface-card);z-index:2;font-weight:600;border-bottom:1px solid var(--line-strong)}
 .gg-table .gg-name{position:sticky;left:0;background:var(--surface-card);z-index:1;text-align:left;font-weight:600;min-width:180px}
+.gg-who{color:inherit;text-decoration:none}
+.gg-who:hover{text-decoration:underline}
 .gg-table thead .gg-name{z-index:3}
 .gg-th{display:flex;flex-direction:column;gap:2px;align-items:center;color:inherit;text-decoration:none;max-width:120px}
 .gg-tt{white-space:normal;line-height:1.2;font-size:13px}
