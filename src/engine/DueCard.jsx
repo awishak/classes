@@ -13,7 +13,7 @@
 // date rather than staying silent.
 
 import { useState } from "react";
-import { assignmentsOf, isProfileTask, profileComplete } from "./profileTask.js";
+import { assignmentsOf, isProfileTask, profileComplete, isHidden } from "./profileTask.js";
 import { isCheckin } from "./checkins.js";
 import { dueText } from "./AssignmentsCard.jsx";
 import * as TOKENS from "./tokens.js";
@@ -55,6 +55,7 @@ export function dueSoon(config, data, name, now = Date.now()) {
   if (!name) return [];
   const assignments = assignmentsOf(config, data);
   return assignments.filter(asg => {
+    if (isHidden(asg, now)) return false;
     if (isProfileTask(asg) && profileComplete(data?.profiles?.[name])) return false;
     // A check-in has its own card all week. See checkins.js.
     if (isCheckin(asg)) return false;

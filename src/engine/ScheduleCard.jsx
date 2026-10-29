@@ -17,6 +17,7 @@ import { normSlot, kindOf } from "./dayplan.js";
 import { ComingBox, AwayList } from "./Attendance.jsx";
 import { isAway, idFor, awayIds } from "./attendance.js";
 import { dayTitles } from "./days.js";
+import { assignmentsOf, isHidden } from "./profileTask.js";
 import PickMark from "./Pick.jsx";
 import * as TOKENS from "./tokens.js";
 import { cardStyle } from "./ThemeChrome.jsx";
@@ -168,6 +169,14 @@ const GAME_FEATURES = new Set(["Game", "Team Trivia"]);
 const STUDENT_TYPES = new Set(["reading", "assignment"]);
 const isGameSet = (block, blockOf) => block?.type === "set" && (/\b(game|trivia)\b/i.test(block.title || "")
   || (block.children || []).some(id => (blockOf(id)?.tags || []).some(t => /game|trivia/i.test(t))));
+
+// A challenge students cannot see yet (profileTask.js isHidden) keeps its
+// due row off their schedule too. The instructor sees every row.
+export function withoutHidden(items, config, data, instructor = false) {
+  if (instructor) return items;
+  const hidden = new Set(assignmentsOf(config, data).filter(a => isHidden(a)).map(a => a.id));
+  return hidden.size ? items.filter(it => !(it.type === "assignment" && it.asgId && hidden.has(it.asgId))) : items;
+}
 
 export function studentItems(week, dayPlans, blockOf) {
   const lookup = blockOf || (() => null);
@@ -361,7 +370,7 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
       <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
         {weeks.map((w, wi) => {
           const isNow = w.id === current;
-          const { days, loose } = daysOfWeek(w, studentItems(w, data?.dayPlans, blockOf));
+          const { days, loose } = daysOfWeek(w, withoutHidden(studentItems(w, data?.dayPlans, blockOf), config, data));
           const row = (it) => {
             const block = blockOf ? blockOf(it.blockId || it.libId) : null;
             // A deadline opens the challenge itself, where the instructions

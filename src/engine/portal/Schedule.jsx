@@ -6,7 +6,7 @@
 // day the class meets. The next class wears the ring.
 
 import { useState, useEffect } from "react";
-import { daysOfWeek, studentItems, sourceOf, inWeekOrder, dayAnchor } from "../ScheduleCard.jsx";
+import { daysOfWeek, studentItems, sourceOf, inWeekOrder, dayAnchor, withoutHidden } from "../ScheduleCard.jsx";
 import { dayTitles, daySlug } from "../days.js";
 import { kindOf } from "../dayplan.js";
 import { isAway, idFor, awayIds } from "../attendance.js";
@@ -123,7 +123,7 @@ export function SchedulePage({ config, data, blockOf, focusDay, instructor, me, 
         </div>
       ) : null}
       {weeks.map((w, wi) => {
-        const { days, loose } = daysOfWeek(w, studentItems(w, data?.dayPlans, blockOf));
+        const { days, loose } = daysOfWeek(w, withoutHidden(studentItems(w, data?.dayPlans, blockOf), config, data, instructor));
         return (
           <div key={w.id || wi} id={"wk-" + (w.id || wi)} className="pt-day pt-anchor">
             <Sec name={w.topic || weekTag(w, wi)} sub={weekTag(w, wi) + (rangeOf(w) ? " · " + rangeOf(w) : "")} />

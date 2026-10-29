@@ -922,7 +922,9 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       ...(asg || {}),
       id: asg?.id || genId(), title: title.trim(), due: due.trim(), dueTime: dueTime.trim(), weight: Number(weight) || 0, scale,
       description: description.trim(), instructionsUrl: instructionsUrl.trim(), closeAt: closeAt || "",
-      visible, opens, opensAt: opens === "date" ? opensAt : "",
+      // A time set by script (profileTask.js hiddenUntil) survives a save
+      // unless the box was changed.
+      visible: visible === (asg?.visible !== false) && typeof asg?.visible === "string" ? asg.visible : visible, opens, opensAt: opens === "date" ? opensAt : "",
       ...(pageOut === undefined ? {} : { page: pageOut }),
     });
   };

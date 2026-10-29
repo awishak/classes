@@ -10,14 +10,14 @@
 //             string, or "never". A challenge not yet open is drawn faded with
 //             Opens <day> on it and takes nothing in.
 
-import { assignmentsOf } from "../profileTask.js";
+import { assignmentsOf, isHidden } from "../profileTask.js";
 import { statusOf, inDueOrder, duesOf } from "../AssignmentCards.jsx";
 import { unseenGrades, alive, htmlToText, bucketOf, letterOf } from "../grades.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { dueWords } from "./bits.jsx";
 
 export const visibleAssignments = (config, data) =>
-  inDueOrder(assignmentsOf(config, data).filter(a => a.visible !== false));
+  inDueOrder(assignmentsOf(config, data).filter(a => !isHidden(a)));
 
 // "open", "later" or "never".
 export function opensState(asg, now = Date.now()) {

@@ -15,7 +15,7 @@ import { hasSections, sectionsOf } from "../sections.js";
 import { rosterOf, nameShown } from "../roster.js";
 import { useQuestions } from "../questions.js";
 import { onThePage, isAnswered } from "../QuestionsCard.jsx";
-import { isProfileTask, PROFILE_TASK_OFF } from "../profileTask.js";
+import { isProfileTask, PROFILE_TASK_OFF, hiddenWords } from "../profileTask.js";
 import { Sec, Row, Io, Btn, Chip, Face, DrFace, Gm, dcolOf, dueWords, whenWords } from "./bits.jsx";
 import { alive, htmlToText, boardOf } from "../grades.js";
 import { Days } from "./MyWork.jsx";
@@ -53,7 +53,7 @@ export function HisWorkRow({ config, data, asg, toGrade, side, tools = [], sheet
   const rail = home ? <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}><Io kind="go" href={home.href}>{home.say}</Io>{side}</div> : side;
   return (
     <Row tint={tint} d={ongoing ? ["", ""] : dcolOf(asg.due)} side={rail}>
-      <p className="pt-title">{asg.title}{asg.visible === false ? <span className="pt-kind" style={{ color: "var(--text-muted)" }}> · Hidden</span> : null}</p>
+      <p className="pt-title">{asg.title}{hiddenWords(asg) ? <span className="pt-kind" style={{ color: "var(--text-muted)" }}> · {hiddenWords(asg)}</span> : null}</p>
       <p className={"pt-when " + tint}><span>{line}{sheetLine ? " · " + sheetLine : ""}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}{toGrade ? <span className="pt-gm" style={{ color: "var(--pt-due-ink)" }}>{toGrade} to grade</span> : null}</p>
       {ongoing || open !== "open" ? null : <InLine config={config} data={data} asg={asg} />}
       {tools.length > 1 ? <Links links={tools} /> : null}

@@ -44,6 +44,19 @@ export const profileTaskOf = (config, data) => config?.profileTask && !data?.[PR
 // config's, with the card challenge in front when the class asks for it.
 // The week 4 and week 8 check-ins come last, built from the term. See
 // checkins.js.
+// A challenge students cannot see: `visible` false, or a time students
+// cannot see the challenge before. Andrew, 2026-10-29: "don't show students
+// the audio story due card until class starts tomorrow." The instructor
+// still sees a hidden challenge, marked.
+export const hiddenUntil = (asg) => (typeof asg?.visible === "string" && !Number.isNaN(Date.parse(asg.visible)) ? Date.parse(asg.visible) : null);
+export const isHidden = (asg, now = Date.now()) => asg?.visible === false || (hiddenUntil(asg) != null && hiddenUntil(asg) > now);
+export const hiddenWords = (asg, now = Date.now()) => {
+  if (asg?.visible === false) return "Hidden";
+  const at = hiddenUntil(asg);
+  if (at == null) return "";
+  return at > now ? "Hidden until " + new Date(at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+};
+
 export const assignmentsOf = (config, data) => {
   const list = data?.assignments || config?.assignments || [];
   const task = profileTaskOf(config, data);

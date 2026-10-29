@@ -13,7 +13,7 @@ import { useState, useMemo } from "react";
 import { useClassData } from "../store.js";
 import { usePhotos, useWithPhotos } from "../photos.js";
 import { useWithWorksheetSubmits } from "../worksheetSubmits.js";
-import { assignmentsOf } from "../profileTask.js";
+import { assignmentsOf, hiddenWords } from "../profileTask.js";
 import { inDueOrder, statusOf } from "../AssignmentCards.jsx";
 import { computeGrade } from "../AssignmentsCard.jsx";
 import { rosterOf, nameShown } from "../roster.js";
@@ -73,7 +73,7 @@ export default function GradesGrid({ config }) {
                   <th key={asg.id} title={asg.title + (asg.due ? ", due " + asg.due : "")}>
                     <a className="gg-th pt-focus" href={config.path + "/grade?a=" + encodeURIComponent(asg.id)}>
                       <span className="gg-tt">{asg.title}</span>
-                      <span className="gg-td">{asg.due || ""}{asg.weight ? <Gm>{asg.weight}%</Gm> : null}{asg.visible === false ? " · hidden" : ""}</span>
+                      <span className="gg-td">{asg.due || ""}{asg.weight ? <Gm>{asg.weight}%</Gm> : null}{hiddenWords(asg) ? " · " + hiddenWords(asg).toLowerCase() : ""}</span>
                     </a>
                   </th>
                 ))}
