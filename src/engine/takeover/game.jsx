@@ -60,6 +60,7 @@ export function missingOf(answers) {
   const out = [];
   if (blank(a[E.F.sport])) out.push("a sport");
   if (blank(a[E.F.team])) out.push("a team");
+  if (blank(a[E.F.define])) out.push("your definition of culture");
   E.LETTERS.forEach((w, i) => {
     if (blank(a[E.F.result(w)])) out.push("week " + (i + 1));
     else if (blank(a[E.F.reflect(w)])) out.push("week " + (i + 1) + "'s answer");
@@ -321,6 +322,7 @@ export function SeasonLog({ answers, name, classmates, copy }) {
   return (
     <div className="log">
       <div className="px head2">{team + " · " + sport.name + " · " + state.wins + "-" + state.losses + " · culture " + state.culture + " · skills " + state.skills + " · success " + state.success + " (" + E.gradeOf(state.success) + ")"}</div>
+      {answers[E.F.define] ? <section className="week"><p className="ask">{copy.say("defineAsk")}</p><p className="answer">{answers[E.F.define]}</p></section> : null}
       {results.map((r, i) => {
         const week = plan[i];
         const prompt = parsePrompt(answers[E.F.prompt(week.week)]) || week.prompt;
@@ -691,12 +693,16 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
         <Nav copy={copy} onBack={() => { if (howFrom === "week") toWeek(cursor); else go(howFrom); }} />
         <Hud copy={copy} state={season.state} />
         <h2 className="px"><Words k="howTitle" copy={copy} /></h2>
+        <div className="reflect">
+          <p className="ask"><Words k="defineAsk" copy={copy} /></p>
+          <textarea className="ta short" rows={3} value={answers[E.F.define] || ""} placeholder={copy.say("defineHint")} onChange={e => set(E.F.define, e.target.value)} aria-label="Your definition of culture" />
+        </div>
         <div className="how"><Words k="how" copy={copy} as="p" className="say pre" /></div>
         <p className="say"><Words k="kindsTitle" copy={copy} /></p>
         <div className="legend">
           {Object.entries(E.TAGS).map(([id, t]) => <div key={id} className="card"><b className="px">{t.label}</b><span>{t.line}</span></div>)}
         </div>
-        {howFrom !== "week" ? <button type="button" className="btn px primary" onClick={() => { sound.current.pick(); continueSeason(); }}>{copy.say("howGo")}</button> : null}
+        {howFrom !== "week" ? <button type="button" className="btn px primary" disabled={!runThrough && blank(answers[E.F.define])} onClick={() => { sound.current.pick(); continueSeason(); }}>{copy.say("howGo")}</button> : null}
       </div>
     );
   } else if (screen === "week" && plan && sport) {

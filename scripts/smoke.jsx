@@ -6177,7 +6177,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
         });
         const sim = simulate({ name, concepts, topicsAnswers: topicsA, choices, cast, sport, team: "Kansas Marlins", bench: "Player 9" });
         let state = E.startState(name);
-        const answers = { [E.F.sport]: sport.id, [E.F.team]: "Kansas Marlins", [E.F.concepts]: G.packConcepts(concepts), [E.F.cast]: E.packCast(cast) };
+        const answers = { [E.F.sport]: sport.id, [E.F.team]: "Kansas Marlins", [E.F.define]: "How we treat each other.", [E.F.concepts]: G.packConcepts(concepts), [E.F.cast]: E.packCast(cast) };
         sim.weeks.forEach(({ week, sit, result, lines }, i) => {
           if (!sit.options.some(o => E.costOf(o, week.week) <= state.capital)) say(name + " week " + (i + 1) + ": nothing affordable at " + state.capital);
           if (result.capital < 0 || result.culture < 0 || result.culture > 100 || result.skills < 0 || result.skills > 100 || result.success < 0 || result.success > 100 || [result.dCulture, result.dSkills, result.back].some(Number.isNaN)) say(name + " week " + (i + 1) + ": " + JSON.stringify(result));

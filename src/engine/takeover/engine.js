@@ -66,6 +66,7 @@ export const F = {
   team: "team",
   concepts: "concepts",
   cast: "cast",
+  define: "define",
   prompt: (w) => "prompt:" + w,
   choice: (w) => "choice:" + w,
   result: (w) => "result:" + w,
@@ -74,7 +75,7 @@ export const F = {
   poll: (w) => "poll:" + w,
   final: (i) => "final:" + ["a", "b", "c", "d"][i],
 };
-export const FIELDS = [F.sport, F.team, F.concepts, F.cast, ...LETTERS.flatMap(w => [F.prompt(w), F.choice(w), F.result(w), F.reflect(w), F.source(w)]), ...POLL_WEEKS.map(F.poll), F.final(0), F.final(1), F.final(2), F.final(3)];
+export const FIELDS = [F.sport, F.team, F.concepts, F.cast, F.define, ...LETTERS.flatMap(w => [F.prompt(w), F.choice(w), F.result(w), F.reflect(w), F.source(w)]), ...POLL_WEEKS.map(F.poll), F.final(0), F.final(1), F.final(2), F.final(3)];
 
 // ─── sports ───
 
@@ -210,7 +211,7 @@ export const TAGS = {
   same: { label: "Keep things the same", line: "Free. Your skills go up a tiny bit because you still practiced. Culture doesn't move." },
   culture: { label: "Culture", line: "Stuff that gets the team to actually like each other. Costs practice time." },
   skills: { label: "Skills and strategy", line: "Reps, film, plays. You get better at the game, and you see that first in the score." },
-  standards: { label: "Standards", line: "Rules, and what happens when someone breaks one. Everyone knows where they stand. Costs coins." },
+  standards: { label: "Standards", line: "Rules, and what happens when someone breaks one. Everyone knows where they stand. Costs Trust Coins." },
   care: { label: "Care", line: "Helping one player at a time. It's slower, but it builds trust." },
 };
 
@@ -709,23 +710,25 @@ export const DEFAULT_COPY = {
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",
-  how: "You're the new coach. The team doesn't know you yet.\n\nYou have two numbers to get up. Culture is how the team treats each other. Skills and strategy is how good they actually are at the game. Both go from 0 to 100, and both start wherever the old coach left them.\n\nPut those two together and that's your chance of winning each week. Win, and your third number, Success, goes up.\n\nYou also have coins. Five to start. Everything you do costs some coins, and a few things are free. After every week your five players tell you how they feel about what you did. A plus means you get a coin back. An equals means you get half a coin back. A minus means that coin is gone.\n\nStarting in week 3 you can do more than one thing in a week, if you can pay for all of it. There are also some bigger things you can buy once a season, like a film room or a team trip. Starting in week 4 everything costs one coin more. And you can only hold eight coins, so don't sit on them.\n\nSuccess moves a little differently. Every week it drifts toward your culture and skills, so if those two go up, Success follows. A win bumps it up. A loss knocks it down a little.",
+  defineAsk: "Before anything else: how would you define culture? Write it in your own words.",
+  defineHint: "Culture is...",
+  how: "You're the new coach. The team doesn't know you yet.\n\nYou have two numbers to get up. Culture is how the team treats each other. Skills and strategy is how good they actually are at the game. Both go from 0 to 100, and both start wherever the old coach left them.\n\nPut those two together and that's your chance of winning each week. Win, and your third number, Success, goes up.\n\nYou also have Trust Coins. Five to start. Everything you do costs some Trust Coins, and a few things are free. After every week your five players tell you how they feel about what you did. A plus means you get a Trust Coin back. An equals means you get half a Trust Coin back. A minus means that Trust Coin is gone.\n\nStarting in week 3 you can do more than one thing in a week, if you can pay for all of it. There are also some bigger things you can buy once a season, like a film room or a team trip. Starting in week 4 everything costs one Trust Coin more. And you can only hold eight Trust Coins, so don't sit on them.\n\nSuccess moves a little differently. Every week it drifts toward your culture and skills, so if those two go up, Success follows. A win bumps it up. A loss knocks it down a little.",
   howGo: "Start the season",
   kindsTitle: "Here are your five types of actions you can take:",
-  capital: "Capital",
+  capital: "Trust Coins",
   culture: "Culture",
   skills: "Skills & strategy",
   success: "Success",
   record: "Record",
   chooseAsk: "What do you do?",
   multiTitle: "New this week",
-  multi: "Now you can make more than one choice. Choose as many as you want. Each one costs its coins.",
+  multi: "Now you can make more than one choice. Choose as many as you want. Each one costs its Trust Coins.",
   doIt: "Do it",
   also: "Also this week, once a season",
   wrap: "Final whistle",
   total: "Total",
-  chooseNote: "Everything's priced in coins. After the week, a plus gets you a coin back, an equals gets you half, and a minus gets you nothing.",
-  cannot: "Not enough capital.",
+  chooseNote: "Everything's priced in Trust Coins. After the week, a plus gets you a Trust Coin back, an equals gets you half, and a minus gets you nothing.",
+  cannot: "Not enough Trust Coins.",
   matchDay: "VS",
   chat: "Team chat",
   reflect: "You wrote: {wonder}. Based on your experiences and what you know, how would you answer that question? Please write 2-4 sentences, and include at least one source, which can be from our book, our readings, or somewhere else.",
@@ -741,7 +744,7 @@ export const DEFAULT_COPY = {
   next: "Next week",
   finals: "The final week.",
   seasonOver: "Season over.",
-  "final.a": "Which week did you spend the most capital, and what did it buy you?",
+  "final.a": "Which week did you spend the most Trust Coins, and what did they buy you?",
   "final.b": "Which player was hardest to coach, and what would you do differently with them?",
   "final.c": "Lisa Davis asks you for a season-ending quote. What do you tell her?",
   "final.d": "What was this game missing that you think is important to a team's culture and success?",
