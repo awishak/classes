@@ -29,6 +29,7 @@ import ClassmatesStories from "./engine/visualstory/reading.jsx";
 import SampleStory from "./engine/visualstory/sample.jsx";
 import GradeView from "./engine/GradeView.jsx";
 import GradingIdeas from "./engine/portal/GradingIdeas.jsx";
+import GradesGrid from "./engine/portal/GradesGrid.jsx";
 import CheckinAnswers from "./engine/CheckinAnswers.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
@@ -360,6 +361,18 @@ export default function App() {
   const ws = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/?$/);
   if (ws && ENGINE[ws[1]]) {
     return <WorksheetPage key={ws[1] + "/" + ws[2]} config={ENGINE[ws[1]]} worksheetKey={ws[2]} />;
+  }
+
+  // Every student's every grade, one grid. Andrew, 2026-10-29: "I need a way
+  // to look at all student grades ... a grid of all student grades."
+  const grid = path.match(/^\/(comm\w+)\/grades\/?$/);
+  if (grid && ENGINE[grid[1]]) {
+    const cfg = ENGINE[grid[1]];
+    return (
+      <InstructorGate what={cfg.code + " grades"}>
+        <InstructorBar config={cfg} always><GradesGrid key={cfg.id} config={cfg} /></InstructorBar>
+      </InstructorGate>
+    );
   }
 
   // Grade view, round two: the grading ideas drawn in the site's own rows,

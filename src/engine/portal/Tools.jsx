@@ -1,6 +1,13 @@
-// The instructor's tools, one row per thing the class is doing: each
-// worksheet (Worktopia, 3x5, the visual story and its pre-production), the
-// classmates' stories, Sit-Down 1, and the grade view.
+// The instructor's tools: the buttons for everything the class is doing.
+//
+// Since 2026-10-29 a worksheet that an assignment links to carries its
+// buttons on that assignment's own row (InstructorHome.jsx, HisWorkRow), and
+// the Tools panel keeps only what is not an assignment. Andrew: "Most of
+// these things are just assignments. So if something is an assignment ... I
+// should have all those buttons for all of those, and the home button, but
+// just, for me, put it on the assignment tile. Otherwise, just there's too
+// many things going on." The classmates' stories ride on the visual story's
+// row the same way: "That is technically the visual story."
 //
 // Andrew, 2026-10-16: "i need clear links to all the stuff we're doing in
 // comm 3 and comm 118. Think about Worktopia or 3x5 or whatever ... we just
@@ -26,6 +33,9 @@ import { INSTRUCTOR_EMAILS } from "../../instructors.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { Sec, Row, Io, Chip } from "./bits.jsx";
+import { worksheetOf } from "../worksheetSubmits.js";
+import { VISUAL_PRE_KEY, VISUAL_PRE_2_KEY } from "../visualstory/pre.jsx";
+import { assignmentsOf } from "../profileTask.js";
 
 const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
 
@@ -45,8 +55,45 @@ export function sheetLinks(config, sheet) {
   if (local && local.review) links.push({ say: "Review", href: student + "?review" });
   links.push({ say: "Student view", href: student });
   if (hasReadout(config.id, sheet.key)) links.push({ say: "Readout", href: student + "/readout" });
+  if (local && local.board) links.push({ say: "Board", href: student + "?board" });
+  if (local && local.control) links.push({ say: "Control", href: student + "?control" });
   if (sheet.key === WORKTOPIA_KEY) links.push({ say: "Answers by question", href: student + "/answers" });
   return links;
+}
+
+// The sheet an assignment is, if any: the worksheet its link names, or the
+// visual story for a link to the story builder.
+const STORY_LINK = /^(?:https?:\/\/[^/]+)?\/(comm\w+)\/(?:worksheets\/)?visual-story\/?(?:[?#].*)?$/;
+export function sheetOfAssignment(config, asg) {
+  const story = String(asg?.instructionsUrl || "").trim().match(STORY_LINK);
+  const key = story ? VISUAL_STORY_KEY : worksheetOf(asg, config)?.key;
+  if (!key) return null;
+  return sheetsFor(config).find(w => w.key === key) || null;
+}
+
+// The buttons an assignment's row carries: its sheet's, plus what belongs
+// with that sheet (the classmates' stories on the visual story, the second
+// topic on pre-production).
+export function assignmentTools(config, asg) {
+  const sheet = sheetOfAssignment(config, asg);
+  if (!sheet) return [];
+  const links = sheetLinks(config, sheet);
+  if (sheet.key === VISUAL_STORY_KEY && STORIES_CLASSES.includes(config.id)) links.push({ say: "Classmates' stories", href: storiesHref(config) });
+  if (sheet.key === VISUAL_PRE_KEY) links.push({ say: "Second topic review", href: config.path + "/worksheets/" + VISUAL_PRE_2_KEY + "?review" });
+  return links;
+}
+
+// The sheets the assignments already carry, so the Tools panel skips them.
+export function carriedKeys(config, data) {
+  const keys = new Set();
+  assignmentsOf(config, data).forEach(asg => {
+    const sheet = sheetOfAssignment(config, asg);
+    if (!sheet) return;
+    keys.add(sheet.key);
+    if (sheet.key === VISUAL_PRE_KEY) keys.add(VISUAL_PRE_2_KEY);
+    if (sheet.key === VISUAL_STORY_KEY) keys.add("stories");
+  });
+  return keys;
 }
 
 // The rest of the class's tools, beyond the worksheets.
@@ -89,7 +136,7 @@ export function useSubmitCounts(config, keys) {
   return counts;
 }
 
-const Links = ({ links }) => (
+export const Links = ({ links }) => (
   <div className="pt-chips" style={{ paddingTop: 4 }}>
     {links.filter(l => !l.main).map(l => <Chip key={l.href} href={l.href}>{l.say}</Chip>)}
   </div>
@@ -97,7 +144,8 @@ const Links = ({ links }) => (
 
 // The panel: a section of rows. counts=false draws the links only, for More.
 export function ToolsPanel({ config, data, counts: wantCounts = true, name = "Tools" }) {
-  const sheets = sheetsFor(config);
+  const carried = carriedKeys(config, data);
+  const sheets = sheetsFor(config).filter(w => !carried.has(w.key));
   const people = rosterOf(config, data).filter(s => s.email && !INSTRUCTOR_EMAILS.includes(emailOf(s)));
   const emails = new Set(people.map(emailOf));
   const counts = useSubmitCounts(config, wantCounts ? sheets.map(w => w.key) : []);
@@ -107,7 +155,8 @@ export function ToolsPanel({ config, data, counts: wantCounts = true, name = "To
     const done = counts && counts[sheet.key] ? [...counts[sheet.key]].filter(e => emails.has(e)).length : null;
     const line = !wantCounts ? "" : (open ? "Open to students" : "Closed to students") + (counts === null ? "" : " · " + (done ?? 0) + " of " + people.length + " submitted");
     return { key: sheet.key, title: sheet.title, line, tint: !wantCounts ? "" : open ? "due" : "off", links: sheetLinks(config, sheet) };
-  }).concat(otherTools(config).map(t => ({ ...t, line: wantCounts ? t.line : "", tint: "" })));
+  }).concat(otherTools(config).filter(t => !carried.has(t.key)).map(t => ({ ...t, line: wantCounts ? t.line : "", tint: "" })));
+  if (!rows.length) return null;
   return (
     <div className="pt-day">
       <Sec name={name} sub={wantCounts ? "Where everything is" : ""} />

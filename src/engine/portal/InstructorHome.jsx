@@ -24,7 +24,8 @@ import { deadlineOf } from "../DueCard.jsx";
 import { waitingOnInstructor } from "../YouCard.jsx";
 import { Hero, StoryPhaseBar, StoryDoor, TopicsDoor, DOOR_CSS } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
-import { ToolsPanel } from "./Tools.jsx";
+import { ToolsPanel, Links, assignmentTools, useSubmitCounts, sheetOfAssignment } from "./Tools.jsx";
+import { INSTRUCTOR_EMAILS } from "../../instructors.js";
 
 const secs = (config) => hasSections(config) ? sectionsOf(config) : [""];
 
@@ -39,16 +40,23 @@ const past = (asg) => { const d = asg.due ? new Date(asg.due + ", 2026") : null;
 
 // One challenge as he reads it: the state, the weight, how many are waiting
 // to be graded, and how much of each section is in.
-export function HisWorkRow({ config, data, asg, toGrade, side }) {
+//
+// An assignment that is a worksheet carries the sheet's buttons here, Home
+// first beside Edit, since 2026-10-29 (Tools.jsx). `sheetLine` is the
+// sheet's own count, submitted off its rows.
+export function HisWorkRow({ config, data, asg, toGrade, side, tools = [], sheetLine = "" }) {
   const ongoing = !asg.due || asg.due === "Ongoing";
   const open = opensState(asg);
   const tint = ongoing ? "" : open !== "open" ? "off" : past(asg) ? "done" : "due";
   const line = ongoing ? "Ongoing, all quarter" : open !== "open" ? opensWords(asg) : past(asg) ? "Closed " + dueWords(asg.due, asg.dueTime) : "Due " + dueWords(asg.due, asg.dueTime);
+  const home = tools.find(l => l.main) || null;
+  const rail = home ? <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}><Io kind="go" href={home.href}>{home.say}</Io>{side}</div> : side;
   return (
-    <Row tint={tint} d={ongoing ? ["", ""] : dcolOf(asg.due)} side={side}>
+    <Row tint={tint} d={ongoing ? ["", ""] : dcolOf(asg.due)} side={rail}>
       <p className="pt-title">{asg.title}{asg.visible === false ? <span className="pt-kind" style={{ color: "var(--text-muted)" }}> · Hidden</span> : null}</p>
-      <p className={"pt-when " + tint}><span>{line}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}{toGrade ? <span className="pt-gm" style={{ color: "var(--pt-due-ink)" }}>{toGrade} to grade</span> : null}</p>
+      <p className={"pt-when " + tint}><span>{line}{sheetLine ? " · " + sheetLine : ""}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}{toGrade ? <span className="pt-gm" style={{ color: "var(--pt-due-ink)" }}>{toGrade} to grade</span> : null}</p>
       {ongoing || open !== "open" ? null : <InLine config={config} data={data} asg={asg} />}
+      {tools.length > 1 ? <Links links={tools} /> : null}
     </Row>
   );
 }
@@ -265,23 +273,31 @@ export function InstructorWork({ config, data, update, go, editing }) {
   const months = {};
   dated.forEach(a => { const d = new Date(a.due + ", 2026"); const k = isNaN(d) ? "Later" : d.toLocaleDateString("en-US", { month: "long" }); (months[k] = months[k] || []).push(a); });
   const toGrade = waiting.reduce((n, w) => n + (w.toGrade || 0), 0);
+  // Each assignment that is a sheet: its buttons, and its own submitted count.
+  const sheetKeys = [...new Set(assignments.map(a => sheetOfAssignment(config, a)?.key).filter(Boolean))];
+  const counts = useSubmitCounts(config, sheetKeys);
+  const people = rosterOf(config, data).filter(s => s.email && !INSTRUCTOR_EMAILS.includes(String(s.email).trim().toLowerCase()));
+  const emails = new Set(people.map(s => String(s.email).trim().toLowerCase()));
+  const sheetLineOf = (asg) => {
+    const key = sheetOfAssignment(config, asg)?.key;
+    if (!key || !counts || !counts[key]) return "";
+    return [...counts[key]].filter(e => emails.has(e)).length + " of " + people.length + " submitted the sheet";
+  };
+  const row = (asg) => <HisWorkRow key={asg.id} config={config} data={data} asg={asg} toGrade={toGradeOf(asg)} tools={assignmentTools(config, asg)} sheetLine={sheetLineOf(asg)} side={<Io kind="go" onClick={() => go("assignments/" + asg.id)}>Edit</Io>} />;
   return (
     <div className="pt-body" style={{ gap: 16 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Btn onClick={() => go("assignments/new")}>New challenge</Btn>
         <Chip href={config.path + "/grade"}>Grade view</Chip>
         {toGrade ? <Chip href={config.path + "/grade"}>{toGrade} to grade</Chip> : null}
+        <Chip href={config.path + "/grades"}>All grades</Chip>
         <Chip href={config.path + "/grading"}>Grade view, round two</Chip>
       </div>
       <ToolsPanel config={config} data={data} />
       {Object.entries(months).map(([m, rows]) => (
-        <div key={m} className="pt-day"><Sec name={m} /><div className="pt-stack">
-          {rows.map(asg => <HisWorkRow key={asg.id} config={config} data={data} asg={asg} toGrade={toGradeOf(asg)} side={<Io kind="go" onClick={() => go("assignments/" + asg.id)}>Edit</Io>} />)}
-        </div></div>
+        <div key={m} className="pt-day"><Sec name={m} /><div className="pt-stack">{rows.map(row)}</div></div>
       ))}
-      {ongoing.length ? <div className="pt-day"><Sec name="All quarter" /><div className="pt-stack">
-        {ongoing.map(asg => <HisWorkRow key={asg.id} config={config} data={data} asg={asg} toGrade={toGradeOf(asg)} side={<Io kind="go" onClick={() => go("assignments/" + asg.id)}>Edit</Io>} />)}
-      </div></div> : null}
+      {ongoing.length ? <div className="pt-day"><Sec name="All quarter" /><div className="pt-stack">{ongoing.map(row)}</div></div> : null}
     </div>
   );
 }
