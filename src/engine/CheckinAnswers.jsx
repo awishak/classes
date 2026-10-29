@@ -21,6 +21,7 @@ import { ThemeStyle } from "./ThemeShell.jsx";
 import { withIds } from "./roster.js";
 import { checkinTasksOf, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { workSoFar } from "./CheckinCard.jsx";
+import { StudentLink } from "./StudentPage.jsx";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -139,7 +140,7 @@ export default function CheckinAnswers({ config }) {
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                 <Avatar profile={profileOf(data, student.name)} name={student.name} accent={a} size={56} />
                 <div>
-                  <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.15 }}>{student.name}</h1>
+                  <h1 style={{ margin: 0, fontSize: 30, lineHeight: 1.15 }}><StudentLink config={config} student={student} /></h1>
                   <div style={{ fontSize: 15, color: TEXT_SECONDARY, marginTop: 4 }}>
                     {answersOf(data, asg.id, student.name)
                       ? "Answered " + fmtDay(answersOf(data, asg.id, student.name).at) + (answersOf(data, asg.id, student.name).updatedAt > answersOf(data, asg.id, student.name).at + 60000 ? ", changed " + fmtDay(answersOf(data, asg.id, student.name).updatedAt) : "")
@@ -188,7 +189,7 @@ export default function CheckinAnswers({ config }) {
                 <button onClick={() => go({ v: "student", s: s.name })}
                   style={{ display: "flex", alignItems: "center", gap: 10, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: F, fontSize: 17, fontWeight: 700, color: TEXT_PRIMARY, minHeight: HIT }}>
                   <Avatar profile={profileOf(data, s.name)} name={s.name} accent={a} size={32} />
-                  {s.name}
+                  <StudentLink config={config} student={s} />
                 </button>
                 <p style={{ margin: "8px 0 0", fontSize: 18, lineHeight: 1.6, whiteSpace: "pre-wrap", color: answerOf(s.name, question.id) ? TEXT_PRIMARY : TEXT_MUTED }}>
                   {answerOf(s.name, question.id) || "No answer."}

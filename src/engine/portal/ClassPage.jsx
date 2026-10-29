@@ -7,6 +7,7 @@
 // ways to reach him.
 
 import { useState, useEffect } from "react";
+import { StudentLink } from "../StudentPage.jsx";
 import { classmatesOf } from "../RosterCard.jsx";
 import { profileOf } from "../Face.jsx";
 import { nameShown } from "../roster.js";
@@ -167,7 +168,7 @@ export function ClassPage({ config, data, update, setPhoto, name, go, instructor
           {people.map(s => (
             <button type="button" key={s.name} className="pt-person pt-focus" onClick={() => setOpen(s.name)}>
               <Face config={config} data={data} name={s.name} size={88} />
-              <span className="nm">{nameShown(data, s.name)}</span>
+              <span className="nm"><StudentLink config={config} student={s}>{nameShown(data, s.name)}</StudentLink></span>
               {instructor && s.section ? <span className="sm">{s.section}</span> : null}
             </button>
           ))}

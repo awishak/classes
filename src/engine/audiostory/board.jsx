@@ -22,6 +22,7 @@ import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { SLOTS, MARKS, marksOf, markOf, statusFor, Mark, POLL, DEFAULT_COPY } from "./ideas.jsx";
 import { linesOf as linesOfIdea, loadFont } from "./bits.jsx";
 import { PAIRS_ROW, parseWant, suggest, join, split, pairOf } from "./pairs.js";
+import { StudentLink } from "../StudentPage.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -144,7 +145,7 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
         return (
           <article key={row.student.email} className="aib-row">
             <div className="aib-head">
-              <b className="aib-name">{row.student.name}</b>
+              <b className="aib-name"><StudentLink config={config} student={row.student} /></b>
               <span className="aib-chip">Submitted {when(row.sheet.submitted_at)}</span>
               <span className="aib-small">{[...linesOfIdea(a.strength).filter(x => x !== "Other"), String(a.other || "").trim()].filter(Boolean).join(", ")}{a.work ? " · " + linesOfIdea(a.work).join(", ") : ""}</span>
             </div>

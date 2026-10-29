@@ -40,6 +40,7 @@ export function appsFor(config, role) {
       ...sheet,
       ...decisions,
       { id: "grade", label: "Grade view", href: p + "/grade" },
+      { id: "grades", label: "Grades", href: p + "/grades" },
       { id: "checkins", label: "Check-in answers", href: p + "/checkins" },
       { id: "horn", label: "Around the Horn", opens: "horn" },
       { id: "today", label: "Room screen", href: p + "/today" },

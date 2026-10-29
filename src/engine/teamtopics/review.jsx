@@ -18,6 +18,7 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { SLOTS, PARTS, MORE_FIELD, missingOf, DEFAULT_COPY } from "./sheet.jsx";
 import * as TOKENS from "../tokens.js";
+import { StudentLink } from "../StudentPage.jsx";
 import { matchConcept, conceptOf } from "../takeover/engine.js";
 
 const call = async (body) => {
@@ -114,7 +115,7 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
                 return (
                   <div key={p.field} className="ttr-part">
                     <h3 className="ttr-h3">{DEFAULT_COPY["box." + p.field]}</h3>
-                    {said.map(e => <p key={e.student.email + e.slot} className="ttr-entry"><b>{e.student.name}</b> {e[p.field]}</p>)}
+                    {said.map(e => <p key={e.student.email + e.slot} className="ttr-entry"><b><StudentLink config={config} student={e.student} /></b> {e[p.field]}</p>)}
                   </div>
                 );
               })}
@@ -123,7 +124,7 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
         </>
       ) : rows.map(({ student, sheet }) => (
         <section key={student.email} className="ttr-concept">
-          <h2 className="ttr-h2">{student.name} <span className="ttr-count">{sheet ? (sheet.submitted_at ? "submitted " + when(sheet.submitted_at) : "started") : "not opened"}</span></h2>
+          <h2 className="ttr-h2"><StudentLink config={config} student={student} /> <span className="ttr-count">{sheet ? (sheet.submitted_at ? "submitted " + when(sheet.submitted_at) : "started") : "not opened"}</span></h2>
           {sheet ? (<>
             {topicsOf(sheet.answers).map(t => (
               <div key={t.slot} className="ttr-part">

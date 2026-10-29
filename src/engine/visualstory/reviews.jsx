@@ -17,6 +17,7 @@ import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf } from "../sections.js";
 import * as TOKENS from "../tokens.js";
+import { StudentLink } from "../StudentPage.jsx";
 
 const NEED_TOTAL = 8;
 const ASK = { best: "The best image, and why", shone: "One way this story shone", encourage: "One thing you would encourage the author to do" };
@@ -167,7 +168,7 @@ export default function StoryReviews({ config }) {
           <tbody>
             {sorted.map(r => (
               <tr key={r.email} className={r.complete ? "vrw-ok" : r.total ? "vrw-warn" : "vrw-late"}>
-                <td>{r.name}</td>
+                <td><StudentLink config={config} student={r.name} /></td>
                 <td>{r.submitted ? "Yes" : "No"}</td>
                 <td>{r.requiredNeed ? r.requiredDone + " of " + r.requiredNeed : "no pod"}</td>
                 <td>{r.othersDone}{r.needOthers ? " of " + r.needOthers : ""}</td>

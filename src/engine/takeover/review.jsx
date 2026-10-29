@@ -15,6 +15,7 @@ import { useCopy } from "../visualstory/pre.jsx";
 import * as E from "./engine.js";
 import { SeasonLog, CSS as GAME_CSS } from "./game.jsx";
 import * as TOKENS from "../tokens.js";
+import { StudentLink } from "../StudentPage.jsx";
 
 const call = async (body) => {
   const r = await fetch("/api/worksheet-submits", {
@@ -100,7 +101,7 @@ export default function TakeoverReview({ config, worksheetKey, roster }) {
       {rows.map(({ student, sheet }) => (
         <article key={student.email} className="tkr-row">
           <div className="tkr-head">
-            <b className="tkr-name">{student.name}</b>
+            <b className="tkr-name"><StudentLink config={config} student={student} /></b>
             <span className={"tkr-chip" + (sheet?.submitted_at ? " tkr-ok" : "")}>{sheet ? (sheet.submitted_at ? "Handed in " + when(sheet.submitted_at) : "Started") : "Not opened"}</span>
             {sheet ? <a className="tkr-link" href={config.path + "/worksheets/" + worksheetKey + "?s=" + encodeURIComponent(student.email)}>Open the file</a> : null}
           </div>

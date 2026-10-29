@@ -57,6 +57,17 @@ const lower = (s) => String(s || "").trim().toLowerCase();
 /** The address of one student's page. */
 export const studentHref = (config, student) => config.path + "/student/" + encodeURIComponent(idOf(student));
 
+/**
+ * A student's name as the link to their page, wherever a name is printed
+ * for the instructor. Andrew, 2026-10-29: "be able to click on a student's
+ * name anywhere to take me to their page." student is a roster entry or a
+ * name; the words are the children, or the name.
+ */
+export function StudentLink({ config, student, children, className, style }) {
+  const who = typeof student === "string" ? student : student?.name || "";
+  return <a href={studentHref(config, student)} className={className} style={{ color: "inherit", textDecoration: "none", ...(style || {}) }} onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }} onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}>{children ?? who}</a>;
+}
+
 // The story assignment points at /<class>/visual-story, not at a worksheet.
 const isStory = (asg, config) => /\/visual-story\/?$/.test(String(asg?.instructionsUrl || "").replace(/[?#].*$/, "")) || String(asg?.id || "") === "visual-story";
 

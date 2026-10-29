@@ -22,6 +22,7 @@ import * as I from "./ideas.jsx";
 import * as R from "./research.jsx";
 import { linesOf } from "./bits.jsx";
 import { audioOf } from "./audio.js";
+import { StudentLink } from "../StudentPage.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -90,7 +91,7 @@ export function ResearchReview({ config, worksheetKey, roster }) {
       {rows.filter(r => r.sheet).map(({ student, sheet }) => (
         <article key={student.email} className="aic-row">
           <div className="aic-head">
-            <b className="aic-name">{student.name}</b>
+            <b className="aic-name"><StudentLink config={config} student={student} /></b>
             <span className={"aic-chip" + (sheet.submitted_at ? " aic-ok" : "")}>{sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started"}</span>
           </div>
           <ResearchAnswers answers={sheet.answers} urls={urls} />

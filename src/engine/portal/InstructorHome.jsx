@@ -6,6 +6,7 @@
 // built.
 
 import { useState } from "react";
+import { StudentLink } from "../StudentPage.jsx";
 import { PinnedLinks, NoteEditor, nextClassFacts } from "../HomeCards.jsx";
 import { AwayList } from "../Attendance.jsx";
 import { assignmentsOf } from "../profileTask.js";
@@ -77,7 +78,7 @@ export function Inbox({ config, data, go, limit }) {
         <button type="button" key={s.name} className="pt-row pt-focus" style={{ padding: "12px 14px", alignItems: "flex-start" }} onClick={() => go("messages/" + encodeURIComponent(s.name))}>
           <Face config={config} data={data} name={s.name} size={40} />
           <div className="pt-main">
-            <div className="pt-head"><p className="pt-title" style={{ fontWeight: waiting ? 700 : 500 }}>{nameShown(data, s.name)}</p><span className="pt-meta" style={{ flex: "none" }}>{whenWords(last.ts)}</span></div>
+            <div className="pt-head"><p className="pt-title" style={{ fontWeight: waiting ? 700 : 500 }}><StudentLink config={config} student={s}>{nameShown(data, s.name)}</StudentLink></p><span className="pt-meta" style={{ flex: "none" }}>{whenWords(last.ts)}</span></div>
             <p className="pt-text" style={{ color: "var(--text-secondary)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "normal" }}>
               {last.from === "instructor" ? <span style={{ color: "var(--text-muted)" }}>You: </span> : null}{last.text || (last.kind === "got_it" ? "Thumbs up" : last.kind === "meeting" ? "Make a meeting" : "")}
             </p>

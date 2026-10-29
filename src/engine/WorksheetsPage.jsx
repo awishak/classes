@@ -20,6 +20,7 @@ import { savedPin } from "../InstructorGate.jsx";
 import { WORKTOPIA_KEY } from "./worktopia/terminal.js";
 import { LOCAL_WORKSHEETS, listedFor, openTo } from "./localWorksheets.js";
 import { gameClient } from "./gameClient.js";
+import { StudentLink } from "./StudentPage.jsx";
 import * as TOKENS from "./tokens.js";
 import { useStudentTheme, useDayNight, ThemeStyle } from "./ThemeShell.jsx";
 import { hasNight } from "./themes.js";
@@ -94,7 +95,7 @@ function Completion({ config, sheet, people, studentUrl }) {
           <div style={{ padding: "10px 16px 6px", fontSize: 13, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: TOKENS.TEXT.secondary, borderTop: "1px solid " + TOKENS.LINE.soft }}>{say} · {list.length}</div>
           {sortRows(list).map(r => (
             <div key={r.email} style={line}>
-              <span style={{ fontWeight: 600, overflowWrap: "anywhere" }}>{r.s.name}</span>
+              <span style={{ fontWeight: 600, overflowWrap: "anywhere" }}><StudentLink config={config} student={r.s} /></span>
               {bar(r.pct, r.state === "submitted")}
               <span style={{ fontVariantNumeric: "tabular-nums", textAlign: "right", color: TOKENS.TEXT.primary }}>{r.pct}%</span>
               <span style={{ display: "flex", gap: 12, alignItems: "center", fontSize: 14, color: TOKENS.TEXT.secondary, whiteSpace: "nowrap" }}>
