@@ -106,31 +106,175 @@ export function uniform(g, jersey, fromRow = 8) {
   return out;
 }
 
+// ─── scenes ───
+//
+// Andrew, 2026-10-29: "can you make them do stuff besides hit a ball back
+// and forth? can lisa davis appear in the locker room to do interviews? can
+// you show the team dinner before showing the game if people choose that?"
+// A scene is drawn whole each frame from t in [0, 1]. The week plays the
+// scene for each thing the coach chose, then the match.
+
+/** Which scene an option plays, by its id first and its kind second. */
+export function sceneOf(option) {
+  if (!option) return null;
+  const byId = { dinner: "dinner", "x-trip": "bus", "x-film": "film", film: "film", now: "film", tomorrow: "film", "x-strength": "weights", "x-gym": "practice", "x-uniforms": "uniforms", "x-assistant": "practice", "x-council": "talk", "x-psych": "talk", run: "laps", standards: "laps", practice: "practice", mastery: "practice", call: "practice", session: "practice", book: "film", saturday: "practice" };
+  if (byId[option.id]) return byId[option.id];
+  return { culture: "dinner", skills: "practice", standards: "laps", care: "talk", same: null }[option.tag] || null;
+}
+
+const SKY = "#1c1c3a", WALL = "#2a2a48", FLOOR = "#3a2a1a", WOOD = "#8a5a2a", LOCKER = "#6a7a8a", LOCKER_DARK = "#4a5a6a";
+
+const blit = (ctx, g, x, y, s, flip = false) => {
+  for (let yy = 0; yy < 16; yy++) for (let xx = 0; xx < 16; xx++) {
+    const c = PALETTE[g[yy][xx]];
+    if (!c) continue;
+    ctx.fillStyle = c;
+    ctx.fillRect(x + (flip ? 15 - xx : xx) * s, y + yy * s, s, s);
+  }
+};
+const rect = (ctx, x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); };
+// A speech bubble with three dots, the way an 8-bit game talks.
+const bubble = (ctx, x, y, on) => {
+  rect(ctx, x, y, 26, 14, "#ffffff"); rect(ctx, x + 4, y + 14, 6, 4, "#ffffff");
+  if (on) for (let i = 0; i < 3; i++) rect(ctx, x + 5 + i * 7, y + 5, 4, 4, "#0f0f1a");
+};
+const room = (ctx, w, h) => { rect(ctx, 0, 0, w, h, WALL); rect(ctx, 0, h - 26, w, 26, FLOOR); };
+const bob = (t, i, amp = 3) => Math.round(Math.sin((t * 6 + i) * Math.PI) * amp);
+
 /**
- * A moment of practice or a match: the ground, two players, and the ball
- * going back and forth. t is 0 to 1 across the scene. Drawn whole each
- * frame, so the caller only loops.
+ * One frame of a scene. kind is one of sceneOf's answers, "press" for the
+ * locker room interview, or "match". team is the five players' grids in
+ * cast order, coach the coach's, reporter Lisa's, opp the opponent's.
  */
-export function drawMatch(canvas, { sport, left, right, t, w = 320, h = 96 }) {
-  drawField(canvas, sport, w, h);
+export function drawScene(canvas, { kind, t, sport, team = [], coach, reporter, opp, w = 320, h = 96 }) {
+  canvas.width = w; canvas.height = h;
   const ctx = canvas.getContext("2d");
-  const s = 3;
-  const draw = (g, x, y) => { for (let yy = 0; yy < 16; yy++) for (let xx = 0; xx < 16; xx++) { const c = PALETTE[g[yy][xx]]; if (c) { ctx.fillStyle = c; ctx.fillRect(x + xx * s, y + yy * s, s, s); } } };
-  const ground = h - 16 * s - 6;
-  // Three crossings: the ball goes over, back, and over.
-  const phase = (t * 3) % 1, crossing = Math.floor(t * 3);
-  const dir = crossing % 2 === 0 ? 1 : -1;
-  const x0 = 40, x1 = w - 40 - 16 * s;
-  const bx = dir === 1 ? x0 + 16 * s + phase * (x1 - x0 - 16 * s) : x1 - phase * (x1 - x0 - 16 * s);
-  const by = ground + 8 - Math.sin(phase * Math.PI) * 50;
-  // The players hop when the ball is theirs.
-  const hopL = dir === 1 && phase < 0.2 ? 6 : 0, hopR = dir === -1 && phase < 0.2 ? 6 : 0;
-  draw(left, x0, ground - hopL);
-  draw(right, x1, ground - hopR);
-  ctx.fillStyle = sport === "footy" ? "#d03030" : sport === "softball" ? "#f8e020" : "#ffffff";
-  ctx.fillRect(Math.round(bx), Math.round(by), 8, 8);
-  ctx.fillStyle = "#0f0f1a"; ctx.fillRect(Math.round(bx) + 2, Math.round(by) + 2, 2, 2);
-  return crossing;
+  const s = 3, S = 16 * s, floorY = h - S - 6;
+  const five = team.slice(0, 5);
+  if (kind === "match") return drawMatchScene(ctx, { sport, t, left: five[0] || coach, right: opp || five[1], w, h });
+  if (kind === "dinner") {
+    room(ctx, w, h);
+    rect(ctx, 30, h - 44, w - 60, 10, WOOD); rect(ctx, 34, h - 34, 6, 30, WOOD); rect(ctx, w - 40, h - 34, 6, 30, WOOD);
+    five.forEach((g, i) => { const x = 44 + i * 50; blit(ctx, g, x, floorY - 22 + bob(t, i, 2), s); rect(ctx, x + 10, h - 50, 20, 4, "#ffffff"); rect(ctx, x + 14, h - 52, 12, 2, t < 0.5 ? "#f09020" : "#2a2a48"); });
+    // The phones, in a basket by the door.
+    rect(ctx, 6, h - 40, 18, 12, WOOD); for (let i = 0; i < 4; i++) rect(ctx, 8 + i * 4, h - 46, 3, 6, "#0f0f1a");
+    return 0;
+  }
+  if (kind === "practice") {
+    drawField(canvas, sport, w, h);
+    const up = Math.floor(t * 8) % 2 === 0;
+    five.forEach((g, i) => blit(ctx, g, 40 + i * 50, floorY - (up ? 8 : 0), s));
+    if (coach) { blit(ctx, coach, w - 60, floorY, s, true); bubble(ctx, w - 70, floorY - 20, Math.floor(t * 4) % 2 === 0); }
+    return Math.floor(t * 8);
+  }
+  if (kind === "film") {
+    room(ctx, w, h);
+    rect(ctx, 60, 10, w - 120, 46, "#e0e0e0");
+    const dot = 70 + ((t * 2) % 1) * (w - 150);
+    rect(ctx, dot, 20 + Math.sin(t * 9) * 10, 8, 8, "#d03030"); rect(ctx, 70, 48, w - 140, 3, "#38b838");
+    five.forEach((g, i) => blit(ctx, g, 20 + i * 56, floorY + 2, s));
+    rect(ctx, 0, 0, w, h, "rgba(10,10,22," + (0.35 + 0.1 * Math.sin(t * 20)) + ")");
+    return 0;
+  }
+  if (kind === "laps") {
+    drawField(canvas, sport, w, h);
+    five.forEach((g, i) => { const x = ((t * 1.6 + i * 0.12) % 1) * (w + S) - S; blit(ctx, g, x, floorY - bob(t, i, 4), s); });
+    if (coach) { blit(ctx, coach, w / 2 - S / 2, 8, s); }
+    return Math.floor(t * 5);
+  }
+  if (kind === "talk") {
+    room(ctx, w, h);
+    rect(ctx, 20, h - 36, 60, 8, WOOD); rect(ctx, w - 80, h - 36, 60, 8, WOOD);
+    if (coach) blit(ctx, coach, w / 2 - S - 20, floorY, s);
+    if (five[0]) blit(ctx, five[0], w / 2 + 20, floorY, s, true);
+    const turn = Math.floor(t * 4) % 2;
+    bubble(ctx, w / 2 - S - 30, floorY - 22, turn === 0); bubble(ctx, w / 2 + 36, floorY - 22, turn === 1);
+    return turn;
+  }
+  if (kind === "press") {
+    room(ctx, w, h);
+    for (let i = 0; i < 7; i++) { const x = 8 + i * 44; rect(ctx, x, 6, 36, 50, LOCKER); rect(ctx, x + 4, 12, 28, 6, LOCKER_DARK); rect(ctx, x + 4, 22, 28, 6, LOCKER_DARK); rect(ctx, x + 28, 36, 4, 8, "#0f0f1a"); }
+    rect(ctx, 40, h - 30, w - 80, 6, WOOD);
+    if (reporter) blit(ctx, reporter, w / 2 - S - 16, floorY, s);
+    if (coach) blit(ctx, coach, w / 2 + 16, floorY, s, true);
+    // The microphone, held out.
+    rect(ctx, w / 2 - 4, floorY + 18, 10, 6, "#0f0f1a"); rect(ctx, w / 2 - 1, floorY + 24, 3, 10, "#8a8a8a");
+    const turn = Math.floor(t * 4) % 2;
+    bubble(ctx, w / 2 - S - 28, floorY - 22, turn === 0); bubble(ctx, w / 2 + 34, floorY - 22, turn === 1);
+    return turn;
+  }
+  if (kind === "bus") {
+    rect(ctx, 0, 0, w, h, "#58b8f8"); rect(ctx, 0, h - 20, w, 20, "#8a8a8a"); for (let i = 0; i < 8; i++) rect(ctx, ((i * 50 - t * 400) % (w + 50) + w + 50) % (w + 50) - 50, h - 11, 24, 3, "#f8e020");
+    const bx = 30, by = 14, bw = w - 60, bh = 54;
+    rect(ctx, bx, by, bw, bh, "#f8e020"); rect(ctx, bx, by + bh, bw, 6, "#0f0f1a");
+    const spin = Math.floor(t * 12) % 2;
+    [bx + 30, bx + bw - 40].forEach(x => { rect(ctx, x, by + bh, 16, 16, "#0f0f1a"); rect(ctx, x + 5 + (spin ? 2 : 0), by + bh + 5, 6, 6, "#8a8a8a"); });
+    five.forEach((g, i) => { const x = bx + 12 + i * 44; rect(ctx, x - 2, by + 8, 34, 26, "#ffffff"); ctx.save(); ctx.beginPath(); ctx.rect(x - 2, by + 8, 34, 26); ctx.clip(); blit(ctx, g, x - 7, by + 6 + bob(t, i, 1), s); ctx.restore(); });
+    return 0;
+  }
+  if (kind === "weights") {
+    room(ctx, w, h);
+    five.slice(0, 3).forEach((g, i) => {
+      const x = 50 + i * 90, lift = Math.floor(t * 6 + i) % 2 === 0 ? 0 : 14;
+      blit(ctx, g, x, floorY, s);
+      rect(ctx, x - 10, floorY + 2 - lift, 68, 4, "#8a8a8a"); rect(ctx, x - 14, floorY - 4 - lift, 8, 16, "#0f0f1a"); rect(ctx, x + 54, floorY - 4 - lift, 8, 16, "#0f0f1a");
+    });
+    return 0;
+  }
+  if (kind === "uniforms") {
+    room(ctx, w, h);
+    five.forEach((g, i) => { const shown = t > (i + 1) / 6; blit(ctx, shown ? g : g.map(r => r.map(c => (c === C.red || c === C.orange || c === C.blue || c === C.purple || c === C.green || c === C.sky || c === C.yellow) ? C.light : c)), 40 + i * 50, floorY - (shown ? bob(t, i, 3) : 0), s); });
+    return Math.floor(t * 6);
+  }
+  room(ctx, w, h);
+  return 0;
+}
+
+// The match, in the sport's own shape: a spike over the net, a kick through
+// the posts, a pitch and a hit. Answers the beat for the sound.
+function drawMatchScene(ctx, { sport, t, left, right, w, h }) {
+  drawField(ctx.canvas, sport, w, h);
+  const s = 3, S = 16 * s, floorY = h - S - 6;
+  const ball = (x, y, c) => { rect(ctx, x, y, 8, 8, c); rect(ctx, x + 2, y + 2, 2, 2, "#0f0f1a"); };
+  if (sport === "volleyball") {
+    // Bump, set, spike, three touches on the left, over the net, a dive on the right.
+    const phase = (t * 3) % 1, beat = Math.floor(t * 3);
+    const lx = 50, rx = w - 50 - S;
+    const jump = beat === 2 && phase > 0.3 && phase < 0.7 ? 16 : 0;
+    if (left) blit(ctx, left, lx, floorY - jump, s);
+    if (right) blit(ctx, right, rx, floorY + (beat === 2 && phase > 0.7 ? 8 : 0), s, true);
+    let bx, by;
+    if (beat < 2) { bx = lx + 20 + Math.sin(phase * Math.PI) * 10; by = floorY - 6 - Math.sin(phase * Math.PI) * 40; }
+    else { bx = lx + 24 + phase * (rx - lx - 10); by = phase < 0.4 ? floorY - 10 - phase * 70 : floorY - 38 + (phase - 0.4) * 80; }
+    ball(bx, by, "#ffffff");
+    return beat;
+  }
+  if (sport === "footy") {
+    // A run, a kick, the ball end over end through the posts on the right.
+    const phase = t, beat = Math.floor(t * 3);
+    [w - 36, w - 20].forEach(x => rect(ctx, x, 10, 4, h - 30, "#ffffff")); [w - 52, w - 4].forEach(x => rect(ctx, x, 30, 4, h - 50, "#ffffff"));
+    const lx = 20 + Math.min(phase, 0.33) * 120;
+    if (left) blit(ctx, left, lx, floorY - (phase > 0.3 && phase < 0.4 ? 6 : 0), s);
+    if (right) blit(ctx, right, w - 110, floorY, s, true);
+    let bx, by;
+    if (phase < 0.33) { bx = lx + 36; by = floorY + 20; }
+    else { const k = (phase - 0.33) / 0.67; bx = lx + 36 + k * (w - lx - 60); by = floorY + 20 - Math.sin(k * Math.PI) * 60; }
+    const spin = Math.floor(t * 16) % 2;
+    rect(ctx, bx, by, spin ? 10 : 6, spin ? 6 : 10, "#d03030");
+    return beat;
+  }
+  // Softball: the pitch from the right, the swing, the ball gone over the fence.
+  const phase = t, beat = Math.floor(t * 3);
+  const lx = 50, rx = w - 90;
+  if (right) blit(ctx, right, rx, floorY, s, true);
+  const swing = phase > 0.45 && phase < 0.6;
+  if (left) blit(ctx, left, lx, floorY, s);
+  rect(ctx, lx + S - 4 + (swing ? 14 : 0), floorY + 4 - (swing ? 10 : 0), swing ? 20 : 4, swing ? 4 : 20, "#8a5a2a");
+  let bx, by;
+  if (phase < 0.5) { bx = rx - phase * 2 * (rx - lx - 20); by = floorY + 14 + Math.sin(phase * 2 * Math.PI) * 6; }
+  else { const k = (phase - 0.5) * 2; bx = lx + 20 + k * (w - lx); by = floorY + 14 - k * 110; }
+  ball(bx, by, "#f8e020");
+  return beat;
 }
 
 /** Draw a sprite onto a canvas at a scale. The canvas is sized here. */

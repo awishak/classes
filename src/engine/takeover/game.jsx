@@ -27,7 +27,7 @@ import { gameClient } from "../gameClient.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import * as E from "./engine.js";
-import { spriteFromName, renderSprite, drawField, drawMatch, uniform, journalist, MOOD_GLYPH } from "./pixel.js";
+import { spriteFromName, renderSprite, drawField, drawScene, sceneOf, uniform, journalist, MOOD_GLYPH } from "./pixel.js";
 import { createSound } from "./sound.js";
 
 export { TAKEOVER_KEY, TAKEOVER_TITLE } from "./engine.js";
@@ -111,27 +111,40 @@ function Field({ sport, sign }) {
   );
 }
 
-// The ball goes back and forth, then the week's result comes in.
-function MatchScene({ sport, left, right, jersey, sound, onDone, label }) {
+// The week, played: a scene for each thing the coach chose, then the match
+// in the sport's own shape. Each scene is a label over the field and a few
+// seconds of pixels; the sounds follow the beats.
+const SCENE_MS = 2400, MATCH_MS = 3000;
+function ScenePlayer({ scenes, sport, team, coach, reporter, opp, sound, onDone, onScene }) {
   const ref = useRef(null);
+  const [label, setLabel] = useState(scenes[0] ? scenes[0].label : "");
   useEffect(() => {
     const el = ref.current;
-    if (!el) return undefined;
-    let alive = true, lastCrossing = -1;
-    const two = [gridFor(left.name, left.photo, jersey), gridFor(right.name, right.photo, (jersey + 3) % 7)];
-    const ms = reduced() ? 300 : 2800;
-    const t0 = performance.now();
-    sound.whistle();
+    if (!el || !scenes.length) { onDone(); return undefined; }
+    let alive = true, at = 0, lastBeat = -1;
+    const quick = reduced();
+    let t0 = performance.now();
+    const begin = (i) => {
+      const sc = scenes[i];
+      setLabel(sc.label);
+      if (onScene) onScene(sc.kind);
+      if (sc.kind === "match") sound.whistle(); else if (sc.kind === "press" || sc.kind === "talk") sound.chat(); else if (sc.kind === "dinner" || sc.kind === "bus") sound.happy(); else sound.pick();
+    };
+    begin(0);
     const frame = (now) => {
       if (!alive) return;
+      const sc = scenes[at];
+      const ms = quick ? 250 : (sc.kind === "match" ? MATCH_MS : SCENE_MS);
       const t = Math.min(1, (now - t0) / ms);
-      const crossing = drawMatch(el, { sport, left: two[0], right: two[1], t });
-      if (crossing !== lastCrossing) { lastCrossing = crossing; if (t > 0) sound.bounce(); }
-      if (t < 1) requestAnimationFrame(frame); else onDone();
+      const beat = drawScene(el, { kind: sc.kind, t, sport, team, coach, reporter, opp });
+      if (beat !== lastBeat) { lastBeat = beat; if (t > 0 && (sc.kind === "match" || sc.kind === "laps" || sc.kind === "practice")) sound.bounce(); }
+      if (t < 1) { requestAnimationFrame(frame); return; }
+      if (at + 1 < scenes.length) { at += 1; lastBeat = -1; t0 = performance.now(); begin(at); requestAnimationFrame(frame); }
+      else onDone();
     };
     requestAnimationFrame(frame);
     return () => { alive = false; };
-  // One scene a week; the two players never change mid-scene.
+  // One run a week; the scenes never change mid-run.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
@@ -214,6 +227,20 @@ export function weekLines({ plan, result, cast, sport, team, name, bench }) {
   lines.push({ who: "", text: (result.won ? "Won " + E.scoreOf(sport, true, name, plan.week) + " over the " : "Lost " + E.scoreOf(sport, false, name, plan.week) + " to the ") + opp + ".", match: result.won ? "won" : "lost" });
   lines.push({ who: "", text: "Culture " + (result.culture - result.dCulture) + " to " + result.culture + ". Skills " + (result.skills - result.dSkills) + " to " + result.skills + ". Success " + (result.success - result.dSuccess) + " to " + result.success + ". " + result.back + " capital back, " + result.capital + " now.", meter: true });
   return { lines, opp, ctx };
+}
+
+/** The scenes a week plays: the press first when it is the press, one per thing chosen that has a scene, then the match. */
+export function scenesFor(result, sit, ctx, opp, copy) {
+  const scenes = [];
+  if (sit.id === "press") scenes.push({ kind: "press", label: copy.say("pressName").toUpperCase() });
+  (result.options || []).forEach(id => {
+    const o = E.anyOptionOf(sit, id);
+    const kind = sceneOf(o);
+    // On the press week the interview is the scene; only the extras add one.
+    if (o && kind && !(sit.id === "press" && !E.extraOf(id))) scenes.push({ kind, label: E.tell(o.label, ctx).toUpperCase() });
+  });
+  scenes.push({ kind: "match", label: copy.say("matchDay") + " " + String(opp).toUpperCase() });
+  return scenes;
 }
 
 function Chat({ lines, animate, sound, onDone, copy }) {
@@ -718,7 +745,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
           </div>
         ) : null}
         {phase === "match"
-          ? <MatchScene key={week.week} sport={sport.id} left={{ name: cast[week.who || "star"], photo: photos[cast[week.who || "star"]] }} right={{ name: opp, photo: "" }} jersey={jersey} sound={sound.current} onDone={matchDone} label={copy.say("matchDay") + " " + opp.toUpperCase()} />
+          ? <ScenePlayer key={week.week} scenes={scenesFor(result, sit, ctx, opp, copy)} sport={sport.id} team={E.CHARACTERS.map(c => gridFor(cast[c.id], "", jersey))} coach={gridFor(name, "", jersey)} reporter={REPORTER} opp={gridFor(opp, "", (jersey + 3) % 7)} sound={sound.current} onDone={matchDone} />
           : <Field sport={sport.id} sign={E.signFor(name, week.week, team)} />}
         <Squad cast={cast} bench={[]} photos={photos} moods={settled ? result.moods : null} lit={week.who} scale={4} jersey={jersey} cheer={feel} />
         {sit.id === "press" ? <div className="reporter"><Fixed grid={REPORTER} scale={4} /><span className="px small"><Words k="pressName" copy={copy} /></span></div> : null}
