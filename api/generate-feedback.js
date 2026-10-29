@@ -29,11 +29,11 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing prompt" });
     }
 
-    // The three older grades files (Grades, Grades4, Comm2Grades) call this with
-    // nothing but a prompt, and their wording was tuned against the model below.
-    // So the defaults stay exactly where they were, and a caller that wants
-    // something newer asks for it. The engine asks for Opus 5.
-    const model = body.model || "claude-sonnet-4-20250514";
+    // The three older grades files (Grades, Grades4, Comm2Grades) and the
+    // engine all name their model. The default below covers a caller that
+    // sends nothing but a prompt. It was Sonnet 4 until 2026-10-29; Anthropic
+    // retired that model June 15, 2026, so every call without a model failed.
+    const model = body.model || "claude-opus-5-5";
     const maxTokens = body.max_tokens || 1000;
     const system = body.system || null;
     const effort = body.effort || null;

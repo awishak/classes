@@ -67,7 +67,7 @@ export async function draftFeedback(args) {
       body: JSON.stringify({
         prompt: buildPrompt(args),
         system: SYSTEM,
-        model: "claude-opus-5",
+        model: "claude-opus-5-5",
         // Thinking is on by default on Opus 5 and comes out of this same
         // budget, so a tight cap would truncate the comment. Low effort keeps
         // a short drafting job from thinking its way through the whole hour.
