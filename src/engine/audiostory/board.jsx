@@ -113,7 +113,14 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
       <PairsView config={config} section={section} rows={rows} />
     </Shell>
   );
-  const submitted = rows.filter(r => r.sheet?.submitted_at).sort((a, b) => Date.parse(b.sheet.submitted_at) - Date.parse(a.sheet.submitted_at));
+  // Resubmitted since the marks went on, or never marked: those first.
+  // Andrew, 2026-10-30: "if someone resubmits, can you note that on the
+  // review board so i know to re-review?" A mark writes reviewed_at, so a
+  // submit after it is a resubmit, and marking again clears the note.
+  const submitted = rows.filter(r => r.sheet?.submitted_at)
+    .map(r => ({ ...r, again: !!r.sheet.review?.reviewed_at && Date.parse(r.sheet.submitted_at) > Date.parse(r.sheet.review.reviewed_at), unmarked: !r.sheet.review }))
+    .sort((a, b) => (b.again - a.again) || (b.unmarked - a.unmarked) || Date.parse(b.sheet.submitted_at) - Date.parse(a.sheet.submitted_at));
+  const again = submitted.filter(r => r.again).length;
   const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).map(r => r.student.name);
   const notOpened = rows.filter(r => !r.sheet).map(r => r.student.name);
 
@@ -136,17 +143,19 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
       <h1 className="aib-title">{DEFAULT_COPY.title}, every sheet</h1>
       {tabs}
       {views}
-      <p className="aib-p">{submitted.length + " submitted, " + started.length + " started, " + notOpened.length + " not opened. This page asks again every four seconds."}</p>
+      <p className="aib-p">{submitted.length + " submitted, " + started.length + " started, " + notOpened.length + " not opened. This page asks again every four seconds."}{again ? <> <b className="aib-again-n">{again + " resubmitted since your marks, at the top."}</b></> : null}</p>
       <p className="aib-p"><a className="aib-a" href={"/" + config.id + "/worksheets/" + worksheetKey + "?board"} target="_blank" rel="noreferrer">The board for the projector, no names ↗</a> · <a className="aib-a" href={"/" + config.id + "/worksheets/" + worksheetKey + "?control"}>Control page</a></p>
       {failed ? <p className="aib-bad">The mark did not save: {failed}</p> : null}
       {submitted.map(row => {
         const marks = marksOf(row.sheet.review);
         const a = row.sheet.answers || {};
         return (
-          <article key={row.student.email} className="aib-row">
+          <article key={row.student.email} className={"aib-row" + (row.again ? " aib-row-again" : "")}>
             <div className="aib-head">
               <b className="aib-name"><StudentLink config={config} student={row.student} /></b>
               <span className="aib-chip">Submitted {when(row.sheet.submitted_at)}</span>
+              {row.again ? <span className="aib-chip aib-again">Resubmitted since your marks ({when(row.sheet.review.reviewed_at)})</span> : null}
+              {row.unmarked ? <span className="aib-chip">Not marked yet</span> : null}
               <span className="aib-small">{[...linesOfIdea(a.strength).filter(x => x !== "Other"), String(a.other || "").trim()].filter(Boolean).join(", ")}{a.work ? " · " + linesOfIdea(a.work).join(", ") : ""}</span>
             </div>
             <div className="aib-ideas">
@@ -289,7 +298,14 @@ export function IdeasBoard({ config, worksheetKey, roster }) {
   if (!sheets) return <Shell board><p className="aib-p">Loading.</p></Shell>;
 
   const rows = rowsOf(roster, sheets, section);
-  const submitted = rows.filter(r => r.sheet?.submitted_at).sort((a, b) => Date.parse(b.sheet.submitted_at) - Date.parse(a.sheet.submitted_at));
+  // Resubmitted since the marks went on, or never marked: those first.
+  // Andrew, 2026-10-30: "if someone resubmits, can you note that on the
+  // review board so i know to re-review?" A mark writes reviewed_at, so a
+  // submit after it is a resubmit, and marking again clears the note.
+  const submitted = rows.filter(r => r.sheet?.submitted_at)
+    .map(r => ({ ...r, again: !!r.sheet.review?.reviewed_at && Date.parse(r.sheet.submitted_at) > Date.parse(r.sheet.review.reviewed_at), unmarked: !r.sheet.review }))
+    .sort((a, b) => (b.again - a.again) || (b.unmarked - a.unmarked) || Date.parse(b.sheet.submitted_at) - Date.parse(a.sheet.submitted_at));
+  const again = submitted.filter(r => r.again).length;
 
   return (
     <Shell board>
@@ -318,7 +334,7 @@ function Shell({ children, board = false }) {
   return <div className={"aib" + (board ? " aib-board" : "")}><style>{CSS}</style><div className="aib-in">{children}</div></div>;
 }
 
-const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE;
+const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
 const CSS = `
 .aib{padding:20px 16px 80px;color:${T.primary};--m-top:#15803d;--m-ok:#16a34a;--m-close:#ea580c;--m-no:#ca8a04;--m-ohno:#dc2626;--m-ink:#ffffff}
 .aib-in{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
@@ -333,6 +349,9 @@ const CSS = `
 .aib-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .aib-name{font-size:20px}
 .aib-chip{font-size:13px;font-weight:600;border-radius:999px;padding:3px 10px;border:1px solid ${L.strong};color:${T.secondary}}
+.aib-again{border-color:${ST.warn};color:${ST.warn}}
+.aib-again-n{color:${ST.warn}}
+.aib-row-again{box-shadow:inset 4px 0 0 ${ST.warn};padding-left:12px}
 .aib-small{font-size:14px;color:${T.muted}}
 .aib-ideas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .aib-idea,.aib-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:12px;background:${S.sunk};border:2px solid transparent}
@@ -343,7 +362,7 @@ const CSS = `
 .aib-line{margin:0;font-size:15.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .aib-big{font-size:18px;font-weight:600}
 .aib-marks{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px}
-.aib-mark{font:inherit;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1.5px solid var(--m-c);background:transparent;color:var(--m-c);cursor:pointer;min-height:30px}
+.aib-mark{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1.5px solid var(--m-c);background:transparent;color:var(--m-c);cursor:pointer;min-height:30px}
 .aib-mark.aib-set{background:var(--m-c);color:var(--m-ink)}
 .aib-mark.aib-m-no.aib-set{color:#1c1917}
 .aib-mark[disabled]{opacity:.5;cursor:default}
