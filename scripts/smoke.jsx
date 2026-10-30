@@ -6315,7 +6315,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   let sd = 50; for (let i = 0; i < 7; i++) sd = E.successAfter(sd, 40, 40, false);
   if (su <= 60 || su > 80 || sd >= 40 || sd < 20) say("success does not follow the numbers: " + su + " after wins, " + sd + " after losses");
   if (tk && (!listedFor(tk, "comm118") || listedFor(tk, "comm3"))) say("takeover is not COMM 118's, or is COMM 3's");
-  if (tk && (!openTo(tk, "comm999", {}) || openTo(tk, "comm118", {}))) say("takeover is not COMM 999's to try, or is already open to COMM 118");
+  if (tk && (!openTo(tk, "comm999", {}) || !openTo(tk, "comm118", {}))) say("takeover is not open to COMM 999 and COMM 118");
   cases.push(["Takeover, loading", <G.TakeoverGame store={{ load: () => new Promise(() => {}) }} viewer={{ id: "marty@example.com", name: "Marty McFly" }} classId="comm999" topicsStore={{ load: async () => ({ answers: {} }) }} />, "Loading"]);
   const { default: TakeoverReview } = await import("../src/engine/takeover/review.jsx");
   const { default: TakeoverControl } = await import("../src/engine/takeover/control.jsx");

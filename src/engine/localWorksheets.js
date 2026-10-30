@@ -68,11 +68,11 @@ export const LOCAL_WORKSHEETS = [
   // 2026-10-22: "come to class ready to dicuss five of them with: a finding
   // they thought was interesting, an opnion they have, and a wondrer."
   { key: TEAM_TOPICS_KEY, title: TEAM_TOPICS_TITLE, mount: mountTeamTopics, review: TopicsReview, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
-  // Weekly Challenge 3, the culture game, built 2026-10-29. COMM 999 first;
-  // COMM 118 opens from the Worksheets page switch once Andrew has played a
-  // season. control is the instructor's page at ?control: how every roll
-  // works and what each student gets.
-  { key: TAKEOVER_KEY, title: TAKEOVER_TITLE, mount: mountTakeover, review: TakeoverReview, control: TakeoverControl, open: ["comm999"], classes: ["comm118", "comm999"] },
+  // Weekly Challenge 3, the culture game, built 2026-10-29. Open to COMM 118
+  // since 2026-10-30 (Andrew: "locker room is not opening for students fix
+  // that immediately"). control is the instructor's page at ?control: how
+  // every roll works and what each student gets.
+  { key: TAKEOVER_KEY, title: TAKEOVER_TITLE, mount: mountTakeover, review: TakeoverReview, control: TakeoverControl, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
   // COMM 3's audio story, 2026-10-29. Ideas on Friday, October 30, in class,
   // marked from the review page and shown on the board (?board, no names)
   // for the projector. Research on the okayed idea, due Tuesday, November 3.
