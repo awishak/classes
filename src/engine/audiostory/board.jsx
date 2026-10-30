@@ -160,7 +160,7 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
                     {MARKS.map(m => (
                       <button key={m.id} type="button" className={"aib-mark aib-m-" + m.id + (marks[it.slot] === m.id ? " aib-set" : "")} aria-pressed={marks[it.slot] === m.id}
                         disabled={busy === row.student.email + it.slot} onClick={() => mark(row, it.slot, m.id)}>
-                        {m.star ? <span aria-hidden="true">★ </span> : null}{m.say}
+                        {m.star ? <span aria-hidden="true">★ </span> : null}{m.pic ? <img className="mark-pic" src={m.pic} alt="" /> : null}{m.say}
                       </button>
                     ))}
                   </div>
@@ -367,6 +367,8 @@ const CSS = `
 .aib-card{padding:16px 18px;animation:aib-rise .5s ease}
 .aib-board .aib-ihead{min-height:34px}
 .aib-board .mark{font-size:17px;padding:6px 14px}
+.aib .mark-pic{height:26px;width:auto;display:block;margin:-4px 0;border-radius:6px}
+.aib-board .mark-pic{height:34px}
 .aib-huge{font-size:24px;font-weight:600;line-height:1.25}
 .aib-why{font-size:16px;color:${T.secondary}}
 @keyframes aib-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}

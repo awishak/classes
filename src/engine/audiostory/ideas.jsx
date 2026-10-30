@@ -46,7 +46,11 @@ export const doneOf = (answers, s) => slotFields(s).filter(f => !blank(answers, 
 // like, oh, no."
 export const MARKS = [
   { id: "top", say: "Top idea", star: true, good: true },
-  { id: "ok", say: "Okay", good: true },
+  // Andrew, 2026-10-30: "change okay to good to go! and a small picture of
+  // me giving a thumbs up which is in the repository." The picture is the
+  // repository's sticker, /chef.png, served from public/ so it can change
+  // without a deploy; a failed load leaves the words alone.
+  { id: "ok", say: "Good to go!", pic: "/chef.png", good: true },
   { id: "close", say: "Not quite there" },
   { id: "no", say: "Would not advise" },
   { id: "ohno", say: "Oh no" },
@@ -102,7 +106,7 @@ export const POLL = 4000;
 export function Mark({ id }) {
   const m = markOf(id);
   if (!m) return null;
-  return <span className={"mark " + m.id}>{m.star ? <span aria-hidden="true">★</span> : null}{m.say}</span>;
+  return <span className={"mark " + m.id}>{m.star ? <span aria-hidden="true">★</span> : null}{m.pic ? <img className="mark-pic" src={m.pic} alt="" onError={e => { e.currentTarget.style.display = "none"; }} /> : null}{m.say}</span>;
 }
 
 export function IdeasSheet({ store, viewer, classId, readOnly = false, storage, editor = false, theme, marks: givenMarks }) {

@@ -219,6 +219,7 @@ export const CSS = `
 .as .mark{display:inline-flex;align-items:center;gap:6px;font-family:var(--font);font-size:15px;font-weight:600;border-radius:999px;padding:6px 14px;color:var(--m-ink);background:var(--m-c);justify-self:start}
 .as .mark.top{--m-c:var(--m-top)} .as .mark.ok{--m-c:var(--m-ok)} .as .mark.close{--m-c:var(--m-close)} .as .mark.no{--m-c:var(--m-no)} .as .mark.ohno{--m-c:var(--m-ohno)}
 .as .mark.no{color:#1c1917}
+.as .mark-pic{height:28px;width:auto;display:block;margin:-4px 0;border-radius:6px}
 .as .audio{display:grid;gap:10px;justify-items:start}
 .as .clip{display:grid;gap:8px;justify-items:start}
 .as .clip audio{width:min(100%,480px)}
