@@ -80,9 +80,10 @@ export const LOCAL_WORKSHEETS = [
   { key: AUDIO_IDEAS_KEY, title: AUDIO_IDEAS_TITLE, mount: mountAudioIdeas, review: IdeasReview, board: IdeasBoard, all: AllIdeas, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   { key: AUDIO_RESEARCH_KEY, title: AUDIO_RESEARCH_TITLE, mount: mountAudioResearch, review: ResearchReview, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The audio story builder, built 2026-10-29 from the mockup Andrew picked:
-  // "build that and put it in now, so i can show it to students." Open to
-  // COMM 3 from the start; the Worksheets page switch closes it.
-  { key: AUDIO_STORY_KEY, title: AUDIO_STORY_TITLE, mount: mountAudioStory, review: AudioStoryReview, control: AudioStoryControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  // "build that and put it in now, so i can show it to students." COMM 999
+  // only until he opens it; Andrew, 2026-10-30: "don't give them the audio
+  // story link yet." The Worksheets page switch opens it to COMM 3.
+  { key: AUDIO_STORY_KEY, title: AUDIO_STORY_TITLE, mount: mountAudioStory, review: AudioStoryReview, control: AudioStoryControl, open: ["comm999"], classes: ["comm3", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
   { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },
 ];
