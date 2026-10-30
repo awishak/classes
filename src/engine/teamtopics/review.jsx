@@ -16,7 +16,7 @@ import { useEffect, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { SLOTS, PARTS, MORE_FIELD, missingOf, DEFAULT_COPY } from "./sheet.jsx";
+import { SLOTS, PARTS, MORE_FIELD, TOPICS, missingOf, DEFAULT_COPY } from "./sheet.jsx";
 import * as TOKENS from "../tokens.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { matchConcept, conceptOf } from "../takeover/engine.js";
@@ -102,7 +102,7 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
         <button type="button" role="tab" aria-selected={view === "student"} className={"ttr-tab" + (view === "student" ? " ttr-on" : "")} onClick={() => setView("student")}>By student</button>
         <button type="button" role="tab" aria-selected={view === "summary"} className={"ttr-tab" + (view === "summary" ? " ttr-on" : "")} onClick={() => setView("summary")}>Summary</button>
       </div>
-      {view === "summary" ? <Summary topics={topics} students={withSheets.length} accent={config.accent} /> : null}
+      {view === "summary" ? <Summary topics={topics} students={withSheets.length} accent={config.accent} section={section} sheets={withSheets} /> : null}
       {view === "summary" ? null : view === "topic" ? (
         <>
           <ol className="ttr-index">
@@ -146,12 +146,132 @@ export default function TopicsReview({ config, worksheetKey, roster }) {
 // The room screen. Andrew, 2026-10-29: "a summary of their concepts stuff.
 // make the summary really pretty for me." The concepts the class picked, as
 // bars, then the questions under the top ones. No names on the screen.
-function Summary({ topics, students, accent }) {
+// ─── the analysis ───
+//
+// Andrew, 2026-10-30: "make the comm 118 worksheets team topic review much
+// more interesting! where is the analysis!" Two kinds. The counted kind is
+// worked out here from the sheets: how the class spread across the chapter,
+// which concepts nobody touched, which get picked together, and the words the
+// questions keep coming back to. The read kind is Claude's, asked for with a
+// button, over every entry with no names attached, and kept in the tab so a
+// second look costs nothing.
+
+const STOP = new Set("the a an and or but of to in on at for with by from as is are was were be been being it its this that these those they them their there here how what when where which who why do does did done can could should would will just like than then so if not no yes more most some any all each every one two about into over very really also i you we he she my our your his her me us think thinks wonder wonders feel feels team teams player players coach coaches sport sports athlete athletes people person someone something things thing way ways lot much many get gets make makes".split(" "));
+const words = (t) => String(t || "").toLowerCase().replace(/[^a-z\s'-]/g, " ").split(/\s+/).filter(w => w.length > 3 && !STOP.has(w));
+
+/** The counted analysis for one section's sheets. */
+export function analysisOf(topics, sheets) {
+  const n = Math.max(1, sheets.length);
+  const chosen = new Set(topics.map(t => lower(t.topic)));
+  const untouched = TOPICS.filter(t => !chosen.has(lower(t)) && !topics.some(x => lower(x.topic).includes(lower(t).split(" ")[0]) && lower(t).split(" ")[0].length > 4));
+  // Concepts picked by more than half, and by one person only.
+  const majority = topics.filter(t => t.entries.length / n >= 0.5);
+  const lone = topics.filter(t => t.entries.length === 1);
+  // Pairs chosen together, from each student's own five.
+  const pairs = new Map();
+  const nameOf = (t) => { const hit = topics.find(x => x.entries.some(e => lower(e.topic) === lower(t))); return hit ? hit.topic : t; };
+  sheets.forEach(sh => {
+    const mine = [...new Set(topicsOf(sh.answers).map(t => nameOf(t.topic)))].sort();
+    for (let i = 0; i < mine.length; i++) for (let j = i + 1; j < mine.length; j++) { const k = mine[i] + " + " + mine[j]; pairs.set(k, (pairs.get(k) || 0) + 1); }
+  });
+  const together = [...pairs.entries()].filter(([, c]) => c >= 2).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  // The words the questions keep coming back to, and the words the opinions do.
+  const tally = (field) => { const m = new Map(); topics.forEach(t => t.entries.forEach(e => new Set(words(e[field])).forEach(w => m.set(w, (m.get(w) || 0) + 1)))); return [...m.entries()].filter(([, c]) => c >= 3).sort((a, b) => b[1] - a[1]).slice(0, 12); };
+  const askWords = tally("wonder"), sayWords = tally("opinion");
+  // Where the words went: how long the class wrote, by part.
+  const lengths = PARTS.map(p => { const all = topics.flatMap(t => t.entries.map(e => String(e[p.field] || "").trim().split(/\s+/).filter(Boolean).length)).filter(x => x > 0); return { part: p.box, avg: all.length ? Math.round(all.reduce((a, b) => a + b, 0) / all.length) : 0, n: all.length }; });
+  // The questions that more than one student asked, by shared words on the same concept.
+  const shared = [];
+  topics.forEach(t => {
+    const qs = t.entries.filter(e => e.wonder).map(e => ({ e, w: new Set(words(e.wonder)) }));
+    const used = new Set();
+    qs.forEach((a, i) => {
+      if (used.has(i)) return;
+      const kin = qs.filter((b, j) => j !== i && !used.has(j) && [...a.w].filter(x => b.w.has(x)).length >= 2);
+      if (kin.length) { used.add(i); kin.forEach(b => used.add(qs.indexOf(b))); shared.push({ topic: t.topic, n: kin.length + 1, wonder: a.e.wonder }); }
+    });
+  });
+  shared.sort((a, b) => b.n - a.n);
+  return { n: sheets.length, untouched, majority, lone, together, askWords, sayWords, lengths, shared: shared.slice(0, 6) };
+}
+
+function Analysis({ topics, sheets }) {
+  const a = analysisOf(topics, sheets);
+  const pct = (k) => Math.round(100 * k / Math.max(1, a.n)) + "%";
+  return (
+    <section className="ttr-an">
+      <h2 className="ttr-sum-h">The read</h2>
+      <div className="ttr-an-grid">
+        <div className="ttr-an-box">
+          <h3 className="ttr-h3">Where the class went</h3>
+          {a.majority.length ? <p className="ttr-an-p">{a.majority.map(t => <span key={t.topic}><b>{t.topic}</b> ({pct(t.entries.length)}) </span>)}{a.majority.length === 1 ? "was picked by at least half the room." : "were picked by at least half the room."}</p> : <p className="ttr-an-p">No concept was picked by half the room. The class spread out.</p>}
+          {a.lone.length ? <p className="ttr-an-p">One person alone chose {a.lone.map(t => t.topic).join(", ")}.</p> : null}
+          {a.untouched.length ? <p className="ttr-an-p">Nobody touched {a.untouched.join(", ")}.</p> : <p className="ttr-an-p">Every section title in the chapter was chosen by someone.</p>}
+        </div>
+        <div className="ttr-an-box">
+          <h3 className="ttr-h3">Picked together</h3>
+          {a.together.length ? <ul className="ttr-an-list">{a.together.map(([k, c]) => <li key={k}><b>{k}</b><span className="ttr-count"> {c} students</span></li>)}</ul> : <p className="ttr-an-p">No two concepts were picked together by more than one student.</p>}
+        </div>
+        <div className="ttr-an-box">
+          <h3 className="ttr-h3">The questions keep saying</h3>
+          <p className="ttr-an-words">{a.askWords.length ? a.askWords.map(([w, c]) => <span key={w} style={{ fontSize: 14 + Math.min(14, c * 2) }}>{w}<i>{c}</i></span>) : "Not enough questions yet."}</p>
+          <h3 className="ttr-h3">The opinions keep saying</h3>
+          <p className="ttr-an-words">{a.sayWords.length ? a.sayWords.map(([w, c]) => <span key={w} style={{ fontSize: 14 + Math.min(14, c * 2) }}>{w}<i>{c}</i></span>) : "Not enough opinions yet."}</p>
+        </div>
+        <div className="ttr-an-box">
+          <h3 className="ttr-h3">How much they wrote</h3>
+          <ul className="ttr-an-list">{a.lengths.map(l => <li key={l.part}><b>{l.part}</b><span className="ttr-count"> {l.avg} words on average, {l.n} written</span></li>)}</ul>
+        </div>
+      </div>
+      {a.shared.length ? (
+        <div className="ttr-an-box">
+          <h3 className="ttr-h3">Asked by more than one student</h3>
+          <ul className="ttr-an-list">{a.shared.map((q, i) => <li key={i}><b>{q.topic}</b><span className="ttr-count"> {q.n} asked</span><br />{q.wonder}</li>)}</ul>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+// Claude's read of every entry, no names, on a button. Through
+// /api/generate-feedback, the route the grades pages use.
+const READ_SYSTEM = "You are reading a college class's worksheet for a sports communication course (COMM 118, Communication and Sport). Each student chose five concepts from a chapter on team communication and wrote, for each, an observation, an opinion, and a question. You are writing for the instructor, who will run Wednesday's discussion from this. Write plain, specific, direct prose. No em dashes. No emojis. No headings with counts. No bullet lists. Quote students' own phrases where they are sharp. Keep it under 450 words, in five short paragraphs: what the class as a whole seems to believe about teams, where students disagree with each other (name the two sides), what they notice that the chapter would push back on, the three questions most worth opening the discussion with and why, and one minority view worth bringing to the front of the room.";
+function ClaudeRead({ topics, section }) {
+  const key = "ttr-read:" + section + ":" + topics.reduce((n, t) => n + t.entries.length, 0);
+  const [text, setText] = useState(() => { try { return sessionStorage.getItem(key) || ""; } catch { return ""; } });
+  const [busy, setBusy] = useState("");
+  const ask = async () => {
+    setBusy("asking");
+    const lines = topics.flatMap(t => t.entries.map(e => "Concept: " + t.topic + "\nObservation: " + e.finding + "\nOpinion: " + e.opinion + "\nQuestion: " + e.wonder));
+    try {
+      const r = await fetch("/api/generate-feedback", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) }, body: JSON.stringify({ model: "claude-opus-5-5", max_tokens: 1400, system: READ_SYSTEM, prompt: "Here are the entries, " + lines.length + " in all.\n\n" + lines.join("\n\n") }) });
+      const out = await r.json().catch(() => null);
+      const got = out && out.content && out.content.map(c => c.text || "").join("").trim();
+      if (!r.ok || !got) throw new Error((out && (out.error?.message || out.error)) || "no answer");
+      setText(got); try { sessionStorage.setItem(key, got); } catch { /* the words still show */ }
+      setBusy("");
+    } catch (e) { setBusy("Claude did not answer: " + String(e.message || e)); }
+  };
+  return (
+    <section className="ttr-an">
+      <div className="ttr-an-head">
+        <h2 className="ttr-sum-h">Claude's read</h2>
+        <button type="button" className="ttr-tab" disabled={busy === "asking"} onClick={ask}>{busy === "asking" ? "Reading every entry" : text ? "Read again" : "Ask Claude to read the sheets"}</button>
+      </div>
+      {busy && busy !== "asking" ? <p className="ttr-muted">{busy}</p> : null}
+      {text ? text.split(/\n{2,}/).map((p, i) => <p key={i} className="ttr-read-p">{p}</p>) : <p className="ttr-muted">What the class believes, where it splits, what the chapter would push back on, the questions to open with, and one minority view. Names are not sent.</p>}
+    </section>
+  );
+}
+
+function Summary({ topics, students, accent, section, sheets = [] }) {
   const max = Math.max(1, ...topics.map(t => t.entries.length));
   const top = topics.slice(0, 6);
   return (
     <div className="ttr-sum">
       <p className="ttr-sum-lede">{students + " students, five concepts each"}</p>
+      <Analysis topics={topics} sheets={sheets} />
+      <ClaudeRead topics={topics} section={section} />
       <ol className="ttr-bars">
         {topics.map(t => (
           <li key={t.topic}>
@@ -211,5 +331,16 @@ const CSS = `
 .ttr-sum-sec{border-top:2px solid ${T.primary};padding-top:14px;display:flex;flex-direction:column;gap:10px}
 .ttr-sum-h{margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em}
 .ttr-sum-q{margin:0;padding-left:26px;display:grid;gap:10px;font-size:22px;line-height:1.4}
+.ttr-an{display:flex;flex-direction:column;gap:14px;border-top:2px solid ${T.primary};padding-top:14px}
+.ttr-an-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.ttr-an-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.ttr-an-box{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:14px;background:${S.sunk}}
+.ttr-an-p{margin:0;font-size:16px;line-height:1.55}
+.ttr-an-list{margin:0;padding-left:18px;display:grid;gap:6px;font-size:16px;line-height:1.5}
+.ttr-an-words{margin:0;display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;line-height:1.3}
+.ttr-an-words span{font-weight:600}
+.ttr-an-words i{font-style:normal;font-weight:400;font-size:12px;color:${T.muted};margin-left:3px}
+.ttr-read-p{margin:0;font-size:17.5px;line-height:1.6;max-width:70ch}
+@media (max-width:640px){.ttr-an-grid{grid-template-columns:1fr}}
 @media (max-width:640px){.ttr-bars li{grid-template-columns:1fr 3fr 2.5ch;font-size:16px}.ttr-sum-h{font-size:24px}.ttr-sum-q{font-size:18px}}
 `;
