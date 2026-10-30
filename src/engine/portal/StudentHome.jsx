@@ -144,13 +144,21 @@ export function StoryPhaseBar({ config }) {
 // The door to the COMM 118 topics worksheet, from when the sheet opens until
 // Wednesday's class is over. Andrew, 2026-10-23: "I want you putting things
 // in a place where it's really clear."
+// The door stayed up through Wednesday, October 28, then went away for
+// everyone, so a student who had not done the sheet had no way in. Andrew,
+// 2026-10-30, on two of them: "can you make that available to them now so
+// they can do it?" So after Wednesday the door stays for anyone not yet
+// submitted, through Tuesday, November 3.
 const TOPICS_LAST = new Date(2026, 9, 28, 23, 59, 59).getTime();
+const TOPICS_LATE_LAST = new Date(2026, 10, 3, 23, 59, 59).getTime();
 export function TopicsDoor({ config, data, now = Date.now() }) {
   const sheet = localWorksheet(TEAM_TOPICS_KEY);
   const standing = usePreStanding(config, TEAM_TOPICS_KEY);
-  if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now) || now > TOPICS_LAST) return null;
+  if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
+  const late = now > TOPICS_LAST;
+  if (late && (now > TOPICS_LATE_LAST || submittedOf(standing))) return null;
   return <DueBar href={topicsHref(config.id)} name="Concepts in Team Communication"
-    say="Please complete this by end of day Wednesday."
+    say={late ? "This was due Wednesday. Please complete it as soon as you can." : "Please complete this by end of day Wednesday."}
     done={submittedOf(standing)} doneName="Concepts in Team Communication: submitted" doneSay="You can keep editing until end of day Wednesday." />;
 }
 
