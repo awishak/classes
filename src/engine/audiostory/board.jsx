@@ -94,6 +94,12 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
   const [view, setView] = useState("sheets");
   const [busy, setBusy] = useState("");
   const [failed, setFailed] = useState("");
+  // The order the sheets were last sorted into, and the submissions it was
+  // sorted from. Andrew, 2026-10-31: "when i change a rating here at the top
+  // of the page on a student idea, it moves the whole student bar somewhere
+  // else." A mark changes a sheet's group (unmarked, resubmitted) but not
+  // where it sits; the list sorts again only when a submission arrives.
+  const order = useRef({ sig: "", emails: [] });
   useEffect(() => { loadFont(); }, []);
 
   if (error) return <Shell><p className="aib-p">Could not read the sheets: {error}</p></Shell>;
@@ -116,10 +122,18 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
   // Resubmitted since the marks went on, or never marked: those first.
   // Andrew, 2026-10-30: "if someone resubmits, can you note that on the
   // review board so i know to re-review?" A mark writes reviewed_at, so a
-  // submit after it is a resubmit, and marking again clears the note.
-  const submitted = rows.filter(r => r.sheet?.submitted_at)
-    .map(r => ({ ...r, again: !!r.sheet.review?.reviewed_at && Date.parse(r.sheet.submitted_at) > Date.parse(r.sheet.review.reviewed_at), unmarked: !r.sheet.review }))
-    .sort((a, b) => (b.again - a.again) || (b.unmarked - a.unmarked) || Date.parse(b.sheet.submitted_at) - Date.parse(a.sheet.submitted_at));
+  // submit after it is a resubmit, and marking again clears the note. The
+  // sort runs only when the set of submissions changes (a new sheet, a
+  // resubmit, another section); a mark leaves every row where it was.
+  const flagged = rows.filter(r => r.sheet?.submitted_at)
+    .map(r => ({ ...r, again: !!r.sheet.review?.reviewed_at && Date.parse(r.sheet.submitted_at) > Date.parse(r.sheet.review.reviewed_at), unmarked: !r.sheet.review }));
+  const sig = section + "|" + flagged.map(r => lower(r.student.email) + "@" + r.sheet.submitted_at).sort().join(",");
+  if (sig !== order.current.sig) {
+    const sorted = [...flagged].sort((a, b) => (b.again - a.again) || (b.unmarked - a.unmarked) || Date.parse(b.sheet.submitted_at) - Date.parse(a.sheet.submitted_at));
+    order.current = { sig, emails: sorted.map(r => lower(r.student.email)) };
+  }
+  const place = new Map(order.current.emails.map((e, i) => [e, i]));
+  const submitted = [...flagged].sort((a, b) => place.get(lower(a.student.email)) - place.get(lower(b.student.email)));
   const again = submitted.filter(r => r.again).length;
   const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).map(r => r.student.name);
   const notOpened = rows.filter(r => !r.sheet).map(r => r.student.name);
