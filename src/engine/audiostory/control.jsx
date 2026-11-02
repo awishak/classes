@@ -12,7 +12,7 @@
 // addresses. Then one student, chosen from the roster, as the data holds
 // them. Nothing is written here.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
@@ -23,6 +23,8 @@ import * as R from "./research.jsx";
 import { linesOf } from "./bits.jsx";
 import { audioOf } from "./audio.js";
 import { StudentLink } from "../StudentPage.jsx";
+import { PORTAL_CSS } from "../portal/style.js";
+import { Face, Chip, Io } from "../portal/bits.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -66,60 +68,186 @@ function useAllSheets(config, worksheetKey, every = 30000) {
   return [sheets, error];
 }
 
+// The four parts of a sheet, each its own colour on the page, and what counts
+// as done in each. Andrew, 2026-11-02: "make it easier for me to go through
+// diff parts, give me a running summary." A part tab shows that part alone on
+// every card; the counts in the tabs and the bar follow the sheets as the page
+// asks again.
+const filled = (a, f) => !!String(a?.[f] || "").trim();
+export const PARTS = [
+  { id: "audio", say: "Audio", done: (a) => !!audioOf(a?.audio) },
+  { id: "story", say: "Story", done: (a) => ["story", "treatment", "includes"].every(f => filled(a, f)) },
+  { id: "research", say: "Research", done: (a) => R.RESEARCH.every(r => filled(a, r.field)) },
+  { id: "example", say: "Good audio story", done: (a) => filled(a, "example") },
+];
+
 export function ResearchReview({ config, worksheetKey, roster }) {
   const [sheets, error] = useAllSheets(config, worksheetKey);
+  const [data] = useClassState(config.storageKey);
   const urls = useClipUrls(config, worksheetKey, sheets);
   const sections = sectionsOf(config);
   const [section, setSection] = useState(sections[0] || "");
-  if (error) return <Shell><p className="aic-p">Could not read the sheets: {error}</p></Shell>;
-  if (!sheets) return <Shell><p className="aic-p">Loading the sheets.</p></Shell>;
+  const [part, setPart] = useState("all");
+  const [at, setAt] = useState(0);
+  const list = useRef(null);
+  const root = useRef(null);
+  // Which card sits under the bar, read as the page scrolls; the bar's
+  // buttons step from there. The bar sticks under the class's own nav, whose
+  // height is read off the page.
+  useEffect(() => {
+    const read = () => {
+      const nav = root.current?.previousElementSibling;
+      if (nav && root.current) root.current.style.setProperty("--aic-nav", Math.round(nav.getBoundingClientRect().height) + "px");
+      const cards = [...(list.current?.querySelectorAll(".aic-card") || [])];
+      const top = (document.querySelector(".aic-bar")?.getBoundingClientRect().bottom || 0) + 12;
+      const i = cards.findIndex(c => c.getBoundingClientRect().bottom > top);
+      setAt(i < 0 ? Math.max(0, cards.length - 1) : i);
+    };
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, [sheets, part, section]);
+  const jump = (i) => { const c = list.current?.querySelectorAll(".aic-card")[i]; if (c) { setAt(i); c.scrollIntoView({ block: "start", behavior: "smooth" }); } };
+  if (error) return <Shell config={config}><p className="pt-sub">Could not read the sheets: {error}</p></Shell>;
+  if (!sheets) return <Shell config={config}><p className="pt-sub">Loading the sheets.</p></Shell>;
   const byEmail = new Map(sheets.map(s => [s.viewer_id, s]));
   const people = roster.filter(s => s.email && !isLurker(s.name) && (!section || sectionOf(s) === section));
   const rows = people.map(p => ({ student: p, sheet: byEmail.get(lower(p.email)) || null }));
   const submitted = rows.filter(r => r.sheet?.submitted_at).length;
+  const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).length;
   const notIn = rows.filter(r => !r.sheet?.submitted_at).map(r => r.student.name);
+  const done = Object.fromEntries(PARTS.map(p => [p.id, rows.filter(r => r.sheet && p.done(r.sheet.answers)).length]));
+  // Submitted sheets first, newest hand-in first; then the started ones by name.
+  const cards = rows.filter(r => r.sheet).sort((x, y) => (y.sheet.submitted_at ? 1 : 0) - (x.sheet.submitted_at ? 1 : 0)
+    || String(y.sheet.submitted_at || "").localeCompare(String(x.sheet.submitted_at || "")) || x.student.name.localeCompare(y.student.name));
+  const here = Math.min(at, Math.max(0, cards.length - 1));
   return (
-    <Shell>
-      <h1 className="aic-title">{R.DEFAULT_COPY.title}, every sheet</h1>
-      {sections.length > 1 ? (
-        <div className="aic-tabs" role="tablist">
-          {sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"aic-tab" + (s === section ? " aic-on" : "")} onClick={() => setSection(s)}>{s}</button>)}
+    <Shell config={config} root={root}>
+      <header className="aic-top">
+        <div className="aic-titles">
+          <h1 className="pt-h1">{R.DEFAULT_COPY.title}</h1>
+          <p className="pt-sub">{R.DEFAULT_COPY.credit} This page asks again every half minute.</p>
         </div>
-      ) : null}
-      <p className="aic-p">{submitted + " submitted, " + (rows.filter(r => r.sheet).length - submitted) + " started, " + rows.filter(r => !r.sheet).length + " not opened. This page asks again every half minute."}</p>
-      {notIn.length ? <p className="aic-muted">Not submitted yet: {notIn.join(", ")}.</p> : <p className="aic-muted">Everyone is in.</p>}
-      {rows.filter(r => r.sheet).map(({ student, sheet }) => (
-        <article key={student.email} className="aic-row">
-          <div className="aic-head">
-            <b className="aic-name"><StudentLink config={config} student={student} /></b>
-            <span className={"aic-chip" + (sheet.submitted_at ? " aic-ok" : "")}>{sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started"}</span>
+        {sections.length > 1 ? (
+          <div className="pt-seg" role="tablist" aria-label="Section">
+            {sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"pt-focus" + (s === section ? " on" : "")} onClick={() => setSection(s)}>{s}</button>)}
           </div>
-          <ResearchAnswers answers={sheet.answers} urls={urls} />
-        </article>
-      ))}
+        ) : null}
+      </header>
+      <div className="pt-tiles" aria-label="Running summary">
+        <div className="pt-tile aic-t-done"><span className="pt-tileN">{submitted}</span><span className="pt-tileL">Submitted</span></div>
+        <div className="pt-tile aic-t-due"><span className="pt-tileN">{started}</span><span className="pt-tileL">Started</span></div>
+        <div className="pt-tile"><span className="pt-tileN">{rows.length - submitted - started}</span><span className="pt-tileL">Not opened</span></div>
+      </div>
+      <div className="aic-bar">
+        <div className="pt-chips aic-parts" role="tablist" aria-label="Part">
+          <Chip on={part === "all"} onClick={() => setPart("all")}>Everything</Chip>
+          {PARTS.map(p => (
+            <button key={p.id} type="button" role="tab" aria-selected={part === p.id} className={"pt-chip pt-focus aic-p-" + p.id + (part === p.id ? " on" : "")} onClick={() => setPart(part === p.id ? "all" : p.id)}>
+              {p.say} <b>{done[p.id]} of {rows.length}</b>
+            </button>
+          ))}
+        </div>
+        <div className="aic-pos">
+          <span className="aic-where">{cards.length ? <><b>{here + 1} of {cards.length}</b> {cards[here].student.name}</> : "No sheets yet"}</span>
+          <Io onClick={() => jump(here - 1)} disabled={here <= 0} label="Previous student">Previous</Io>
+          <Io kind="go" onClick={() => jump(here + 1)} disabled={here >= cards.length - 1} label="Next student">Next</Io>
+        </div>
+      </div>
+      {notIn.length ? (
+        <details className="aic-fold">
+          <summary className="pt-focus">Not submitted yet, {notIn.length}</summary>
+          <div className="aic-names">{notIn.map(n => <span key={n} className="pt-gpill off">{n}</span>)}</div>
+        </details>
+      ) : <p className="pt-quiet">Everyone is in.</p>}
+      <div className="pt-stack aic-cards" ref={list}>
+        {cards.map(({ student, sheet }) => {
+          const a = sheet.answers || {};
+          const clip = audioOf(a.audio);
+          const empty = R.missingOf(a).length;
+          const meta = [pickedSay(a.picked), empty ? empty + (empty === 1 ? " box empty" : " boxes empty") : "Every box filled"].filter(Boolean);
+          return (
+            <article key={student.email} className={"pt-row aic-card" + (sheet.submitted_at ? "" : " due")}>
+              <div className="aic-head">
+                <div className="aic-who">
+                  <Face config={config} data={data} name={student.name} size={40} />
+                  <div className="pt-main">
+                    <p className="pt-title"><StudentLink config={config} student={student} /></p>
+                    <p className={"pt-when " + (sheet.submitted_at ? "done" : "due")}><span>{sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started, not submitted"}</span></p>
+                    <p className="pt-meta">{meta.join(" · ")}</p>
+                  </div>
+                </div>
+                <Clip clip={clip} urls={urls} />
+              </div>
+              <ResearchAnswers answers={a} urls={urls} clipShown part={part} />
+            </article>
+          );
+        })}
+      </div>
     </Shell>
   );
 }
 
-function ResearchAnswers({ answers, urls = {} }) {
-  const a = answers || {};
-  const clip = audioOf(a.audio);
-  const line = (k, v) => (String(v || "").trim() ? <p key={k} className="aic-line"><span className="aic-k">{R.DEFAULT_COPY[k]}</span>{v}</p> : null);
+// Which idea the student chose: a slot off the ideas sheet, or the pair's story.
+const pickedSay = (p) => {
+  const slot = String(p || "").trim();
+  return slot === "pair" ? "Chose the pair's story" : I.SLOTS.includes(slot) ? "Chose idea " + (I.SLOTS.indexOf(slot) + 1) : "";
+};
+
+function Clip({ clip, urls }) {
+  if (!clip) return <span className="pt-gpill aic-noclip">No audio yet</span>;
   return (
-    <div className="aic-entry">
-      {clip ? (
-        <div className="aic-clip">
-          <span className="aic-k">{R.DEFAULT_COPY.audioHead}</span>
-          {urls[clip.path] ? <audio controls preload="metadata" src={urls[clip.path]} /> : <span className="aic-muted">Signing the link.</span>}
-          <span className="aic-muted">{clip.name}{clip.seconds ? " · " + Math.round(clip.seconds) + " s" : ""}</span>
-        </div>
-      ) : null}
-      {line("storyAsk", a.story)}
-      {line("treatmentAsk", a.treatment)}
-      {line("includesAsk", linesOf(a.includes).join("\n"))}
-      {R.RESEARCH.map(r => line("ask." + r.field, linesOf(a[r.field]).join("\n")))}
-      {line("exampleHead", linesOf(a.example).join("\n"))}
-      {R.missingOf(a).length ? <p className="aic-muted">{R.missingOf(a).length} boxes empty.</p> : null}
+    <div className="aic-clip aic-p-audio">
+      {urls[clip.path] ? <audio controls preload="metadata" src={urls[clip.path]} /> : <span className="aic-muted">Signing the link.</span>}
+      <span className="aic-secs">{clip.seconds ? Math.round(clip.seconds) + " s" : ""}</span>
+    </div>
+  );
+}
+
+// The answers as they read: the story down the left, the four research
+// finds and the example in a grid down the right, each part in its colour.
+// An empty box says so, rather than going missing, so a half-done sheet
+// shows its holes. With a part chosen, only that part.
+function Lines({ v }) {
+  const ls = linesOf(v);
+  if (!ls.length) return <p className="aic-empty">Empty.</p>;
+  return ls.length > 1 ? <ul className="aic-lines">{ls.map((l, i) => <li key={i}>{l}</li>)}</ul> : <p className="aic-line">{ls[0]}</p>;
+}
+function Field({ k, v, big = false }) {
+  const text = String(v || "").trim();
+  return (
+    <div className="aic-field">
+      <span className="aic-k">{R.DEFAULT_COPY[k]}</span>
+      {big ? (text ? <p className="aic-big">{text}</p> : <p className="aic-empty">Empty.</p>) : <Lines v={v} />}
+    </div>
+  );
+}
+function ResearchAnswers({ answers, urls = {}, clipShown = false, part = "all" }) {
+  const a = answers || {};
+  const show = (p) => part === "all" || part === p;
+  if (part === "audio") return <div className="aic-body aic-p-story"><Field k="storyAsk" v={a.story} big /></div>;
+  return (
+    <div className="aic-body">
+      {clipShown ? null : <Clip clip={audioOf(a.audio)} urls={urls} />}
+      <div className={"aic-cols" + (part === "all" ? "" : " aic-one")}>
+        {show("story") ? (
+          <section className="aic-story aic-p-story">
+            <Field k="storyAsk" v={a.story} big />
+            <Field k="treatmentAsk" v={a.treatment} />
+            <Field k="includesAsk" v={a.includes} />
+          </section>
+        ) : null}
+        {show("research") || show("example") ? (
+          <section className="aic-research">
+            {show("research") ? (
+              <div className="aic-grid">
+                {R.RESEARCH.map(r => <div key={r.field} className="aic-cell aic-p-research"><Field k={"ask." + r.field} v={a[r.field]} /></div>)}
+              </div>
+            ) : null}
+            {show("example") ? <div className="aic-cell aic-p-example"><Field k="exampleHead" v={a.example} /></div> : null}
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -223,34 +351,74 @@ const ideaFieldSay = (f) => {
 };
 const researchFieldSay = (f) => ({ picked: " the approved idea chosen, a slot (a, b, c) or pair", audio: " the 60-second audio story, JSON { path, seconds, name }", story: " the story, a line", treatment: " the paragraph treatment", includes: " what the story includes, lines", article: " articles, lines", media: " other media, lines", person: " people to interview, lines", place: " places to capture audio, lines", example: " a good audio story found, lines" })[f] || "";
 
-function Shell({ children }) {
-  return <div className="aic"><style>{CSS}</style><div className="aic-in">{children}</div></div>;
+function Shell({ children, config, root }) {
+  const accent = config?.accent || TOKENS.TEXT.primary;
+  return (
+    <div ref={root} className="ca-root pt-root aic" style={{ "--ca-accent": accent, "--ca-accent-ink": accent }}>
+      <style>{PORTAL_CSS + CSS}</style>
+      <div className="aic-in pt-body">{children}</div>
+    </div>
+  );
 }
 
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
 const CSS = `
-.aic{padding:20px 16px 80px;color:${T.primary}}
-.aic-in{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.aic{padding:20px 16px 80px;background:var(--surface-page)}
+.aic-in{max-width:1100px;margin:0 auto}
+.aic-top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.aic-titles{display:flex;flex-direction:column;gap:8px}
 .aic-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
 .aic-h2{margin:12px 0 0;font-size:20px;font-weight:700}
-.aic-p{margin:0;font-size:16px;line-height:1.5;color:${T.secondary}}
-.aic-p code,.aic-list code{font-size:14px;background:${S.sunk};padding:1px 6px;border-radius:6px;color:${T.primary}}
-.aic-a{color:${T.primary};font-weight:600}
-.aic-list{margin:0;padding-left:20px;font-size:15.5px;line-height:1.6;color:${T.secondary}}
+.aic-p{margin:0;font-size:16px;line-height:1.5;color:var(--text-secondary)}
+.aic-p code,.aic-list code{font-size:14px;background:var(--surface-sunk);padding:1px 6px;border-radius:6px;color:var(--text-primary)}
+.aic-a{color:var(--text-primary);font-weight:600}
+.aic-list{margin:0;padding-left:20px;font-size:15.5px;line-height:1.6;color:var(--text-secondary)}
 .aic-tabs{display:flex;gap:8px;flex-wrap:wrap}
-.aic-tab{font:inherit;font-size:15px;padding:6px 16px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer;min-height:34px}
-.aic-on{background:${T.primary};border-color:${T.primary};color:${S.page}}
-.aic-select{font:inherit;font-size:16px;padding:8px 12px;border-radius:10px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};max-width:360px}
-.aic-row{border-top:1px solid ${L.soft};padding:16px 0 4px;display:flex;flex-direction:column;gap:10px}
-.aic-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.aic-name{font-size:18px}
-.aic-chip{font-size:13px;font-weight:600;border-radius:999px;padding:3px 10px;border:1px solid ${L.strong};color:${T.secondary}}
-.aic-ok{border-color:${ST.ok};color:${ST.ok}}
-.aic-entry{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;background:${S.sunk}}
-.aic-clip{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
-.aic-clip audio{width:min(100%,480px)}
-.aic-idea{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;background:${S.card}}
-.aic-line{margin:0;font-size:15.5px;line-height:1.5;white-space:pre-wrap}
-.aic-k{display:block;font-size:13px;font-weight:600;color:${T.muted}}
-.aic-muted{margin:0;font-size:14.5px;color:${T.muted}}
+.aic-tab{font:inherit;font-size:15px;padding:6px 16px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface-card);color:var(--text-secondary);cursor:pointer;min-height:34px}
+.aic-on{background:var(--text-primary);border-color:var(--text-primary);color:var(--surface-page)}
+.aic-select{font:inherit;font-size:16px;padding:8px 12px;border-radius:10px;border:1px solid var(--line-strong);background:var(--surface-card);color:var(--text-primary);max-width:360px}
+.aic .pt-tiles{max-width:520px}
+.aic-t-done .pt-tileN{color:var(--pt-done-ink)}
+.aic-t-due .pt-tileN{color:var(--pt-due-ink)}
+.aic-bar{position:sticky;top:var(--aic-nav,56px);z-index:5;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 -16px;padding:10px 16px;background:var(--surface-page);box-shadow:0 1px 0 var(--line-soft)}
+.aic-parts{flex:1 1 auto;min-width:0}
+.aic .pt-chip b{font-weight:700;font-variant-numeric:tabular-nums}
+.aic .pt-chip.aic-p-audio,.aic .pt-chip.aic-p-story,.aic .pt-chip.aic-p-research,.aic .pt-chip.aic-p-example{color:var(--p-c);background:var(--p-bg);box-shadow:0 0 0 1px var(--p-c)}
+.aic .pt-chip.aic-p-audio.on,.aic .pt-chip.aic-p-story.on,.aic .pt-chip.aic-p-research.on,.aic .pt-chip.aic-p-example.on{background:var(--p-c);color:#ffffff;box-shadow:none}
+.aic-pos{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:15px;color:var(--text-secondary);white-space:nowrap}
+.aic-where b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:600;margin-right:4px}
+.aic-fold summary{cursor:pointer;font-size:15px;font-weight:600;color:var(--text-secondary);min-height:34px;display:flex;align-items:center;padding:0 4px}
+.aic-names{display:flex;flex-wrap:wrap;gap:6px;padding:4px 4px 8px}
+.aic .pt-row.aic-card{flex-direction:column;align-items:stretch;gap:14px;padding:16px 20px 20px;scroll-margin-top:calc(var(--aic-nav,56px) + 72px)}
+.aic-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.aic-who{display:flex;align-items:center;gap:12px;min-width:0}
+.aic-who .pt-title a{color:inherit;text-decoration:none}
+.aic-p-audio{--p-c:#5b21b6;--p-bg:#f3f0ff}
+.aic-p-story{--p-c:#1d4ed8;--p-bg:#eef2ff}
+.aic-p-research{--p-c:#9a3412;--p-bg:#fff1e6}
+.aic-p-example{--p-c:#9d174d;--p-bg:#fdf2f8}
+.aic-noclip{background:var(--pt-late);color:var(--pt-late-ink)}
+.aic-clip{display:flex;align-items:center;gap:10px;padding:4px 12px 4px 4px;border-radius:12px;background:var(--p-bg);color:var(--p-c)}
+.aic-clip audio{width:300px;max-width:100%;height:36px}
+.aic-secs{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;min-width:32px}
+.aic-body{display:flex;flex-direction:column;gap:12px}
+.aic-cols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px}
+.aic-cols.aic-one{grid-template-columns:1fr}
+.aic-story{display:flex;flex-direction:column;gap:14px;padding-left:14px;box-shadow:inset 3px 0 0 var(--p-c)}
+.aic-research{display:flex;flex-direction:column;gap:10px}
+.aic-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.aic-cell{padding:10px 12px 10px 14px;border-radius:12px;background:var(--p-bg);color:#1c1917;box-shadow:inset 3px 0 0 var(--p-c)}
+.aic-card.due .aic-cell{background:var(--surface-card)}
+.aic-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.aic-k{display:block;font-size:13px;font-weight:600;color:var(--p-c,var(--text-secondary));text-transform:uppercase;letter-spacing:.08em}
+.aic-big{margin:0;font-family:var(--pt-serif);font-size:22px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
+.aic-line{margin:0;font-size:15.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.aic-lines{margin:0;padding-left:18px;font-size:15.5px;line-height:1.5}
+.aic-lines li{overflow-wrap:anywhere}
+.aic-empty{margin:0;font-size:15px;color:var(--text-muted)}
+.aic-cell .aic-empty{color:#6b655f}
+.aic-entry{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:10px;background:var(--surface-sunk)}
+.aic-idea{display:flex;flex-direction:column;gap:4px;padding:8px 10px;border-radius:8px;background:var(--surface-card)}
+.aic-muted{margin:0;font-size:14.5px;color:var(--text-muted)}
+@media (max-width:900px){.aic-cols{grid-template-columns:1fr}.aic-grid{grid-template-columns:1fr}.aic-pos{margin-left:0}.aic .pt-tiles{max-width:none}}
 `;
