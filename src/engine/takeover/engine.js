@@ -748,6 +748,7 @@ export const DEFAULT_COPY = {
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",
+  howBtn: "How it works",
   defineAsk: "Before anything else: which one of these is the definition of culture?",
   defineRight: "You got it.",
   defineWrong: "Not quite.",

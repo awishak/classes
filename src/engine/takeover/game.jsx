@@ -189,14 +189,14 @@ function Meter({ label, value, delta }) {
     </span>
   );
 }
-function Hud({ copy, state, deltas, onReadings }) {
+function Hud({ copy, state, deltas, onReadings, onHow }) {
   return (
     <div className="hud px">
       <span className="cap"><span className="ml"><Words k="capital" copy={copy} /></span> <b className="coins">{E.coins(state.capital)}</b> <span className="n">{state.capital}</span>{deltas && deltas.back != null ? <span className="delta up">{"+" + deltas.back + " back"}</span> : null}</span>
       <Meter label={copy.say("culture")} value={state.culture} delta={deltas ? deltas.culture : null} />
       <Meter label={copy.say("skills")} value={state.skills} delta={deltas ? deltas.skills : null} />
       <Meter label={copy.say("success")} value={state.success} delta={deltas ? deltas.success : null} />
-      <span className="rec"><span className="ml"><Words k="record" copy={copy} /></span> <span className="n">{state.wins}-{state.losses}</span>{onReadings ? <button type="button" className="btn px small" onClick={onReadings}>{copy.say("readingsBtn")}</button> : null}</span>
+      <span className="rec"><span className="ml"><Words k="record" copy={copy} /></span> <span className="n">{state.wins}-{state.losses}</span>{onReadings ? <button type="button" className="btn px small" onClick={onReadings}>{copy.say("readingsBtn")}</button> : null}{onHow ? <button type="button" className="btn px small" onClick={onHow}>{copy.say("howBtn")}</button> : null}</span>
     </div>
   );
 }
@@ -444,6 +444,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const [runThrough, setRunThrough] = useState(false); // the instructor's run-through: Next without the boxes
   const [readings, setReadings] = useState(null);    // this student's readings, [] when there are none, null until read
   const [showReadings, setShowReadings] = useState(false);
+  const [howOpen, setHowOpen] = useState(false);      // the How it works popup, open from the top row or the HUD. Andrew, 2026-11-02: "a popup on the site that explains the game."
   const saver = useRef(null);
   const sound = useRef(null);
   const rootRef = useRef(null);
@@ -638,6 +639,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     try { await store.recall(); setSubmitted(null); setHanding(""); go("end"); } catch { setHanding("failed"); }
   };
   const toggleMute = () => { const m = sound.current.mute(); setMuted(m); };
+  const openHow = () => { sound.current.pick(); setHowOpen(true); };
 
   // ─── screens ───
 
@@ -713,7 +715,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={() => { if (howFrom === "week") toWeek(cursor); else go(howFrom); }} />
-        <Hud copy={copy} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
+        <Hud copy={copy} onHow={openHow} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px"><Words k="howTitle" copy={copy} /></h2>
         <div className="reflect">
           <p className="ask"><Words k="defineAsk" copy={copy} /></p>
@@ -766,7 +768,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={backWeek}><button type="button" className="btn px small" onClick={() => showHow("week")}>{copy.say("howTitle")}</button></Nav>
-        <Hud copy={copy} state={settled ? stateNow : stateBefore} deltas={deltas} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
+        <Hud copy={copy} onHow={openHow} state={settled ? stateNow : stateBefore} deltas={deltas} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px">{"Week " + week.n} <span className="dim">{"· " + week.label}</span></h2>
         {popup ? (
           <div className="popup" role="dialog" aria-label={copy.say("multiTitle")}>
@@ -838,7 +840,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={() => toWeek(E.WEEKS - 1)}><button type="button" className="btn px small" onClick={() => showHow("board")}>{copy.say("howTitle")}</button></Nav>
-        <Hud copy={copy} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
+        <Hud copy={copy} onHow={openHow} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px"><Words k="board" copy={copy} /> <span className="dim">{team}</span></h2>
         <Leaderboard classId={classId} storageKey={storageKey} me={name} copy={copy} fetcher={boardFetcher} />
         <button type="button" className="btn px primary" onClick={() => { sound.current.pick(); go("end"); }}>{copy.say("boardGo")}</button>
@@ -850,7 +852,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
     body = (
       <div className="screen">
         <Nav copy={copy} onBack={() => go("board")}><button type="button" className="btn px small" onClick={() => { sound.current.pick(); go("board"); }}>{copy.say("board")}</button><button type="button" className="btn px small" onClick={() => showHow("end")}>{copy.say("howTitle")}</button></Nav>
-        <Hud copy={copy} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
+        <Hud copy={copy} onHow={openHow} state={season.state} onReadings={readings && readings.length ? () => setShowReadings(true) : null} />
         <h2 className="px"><Words k="seasonOver" copy={copy} /> <span className="dim">{team + " · " + season.state.wins + "-" + season.state.losses + " · " + E.gradeOf(season.state.success)}</span></h2>
         <Field sport={sport.id} sign={E.signFor(name, "end", team)} />
         <Squad cast={cast} bench={bench} photos={photos} moods={last ? last.moods : null} scale={4} jersey={jersey} cheer={season.state.success >= 65 ? "cheer" : ""} />
@@ -884,9 +886,23 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
             {editor ? <button type="button" className="btn px small" aria-pressed={runThrough} onClick={() => setRunThrough(r => !r)}>{copy.say("runThrough")}</button> : null}
             {editor && copy.status ? <span className="status px">{copy.status}</span> : null}
             {!readOnly ? <button type="button" className="btn px small" aria-pressed={muted} onClick={toggleMute}>{muted ? "Sound off" : "Sound on"}</button> : null}
+            {!readOnly ? <button type="button" className="btn px small" aria-pressed={howOpen} onClick={openHow}>{copy.say("howBtn")}</button> : null}
           </span>
         </div>
         {editing ? <EditWords copy={copy} /> : body}
+        {howOpen ? (
+          <div className="popup" role="dialog" aria-label={copy.say("howTitle")}>
+            <div className="popin left howpop">
+              <b className="px"><Words k="howTitle" copy={copy} /></b>
+              <Words k="how" copy={copy} as="p" className="say pre" />
+              <p className="say"><Words k="kindsTitle" copy={copy} /></p>
+              <div className="legend">
+                {Object.entries(E.TAGS).map(([id, t]) => <div key={id} className="card"><b className="px">{t.label}</b><span>{t.line}</span></div>)}
+              </div>
+              <button type="button" className="btn px small" onClick={() => { sound.current.blip(); setHowOpen(false); }}>{copy.say("close")}</button>
+            </div>
+          </div>
+        ) : null}
         {showReadings ? (
           <div className="popup" role="dialog" aria-label={copy.say("readingsTitle")}>
             <div className="popin left">
@@ -1012,6 +1028,8 @@ export const CSS = `
 .tk .popin{display:grid;gap:14px;justify-items:center;text-align:center;background:var(--panel);border:4px solid var(--gold);box-shadow:0 0 0 4px var(--ink),0 0 0 8px var(--sky);padding:24px;max-width:520px}
 .tk .popin b{color:var(--gold);font-size:12px}
 .tk .popin.left{justify-items:start;text-align:left;max-width:640px;max-height:90vh;overflow:auto}
+.tk .popin.howpop{max-width:760px}
+.tk .popin.howpop .legend{width:100%}
 .tk .defs{display:grid;gap:10px}
 .tk .defbtn{text-align:left;background:var(--deep);border:3px solid var(--line);color:var(--text);padding:12px 14px;cursor:pointer;font-family:var(--mono);font-size:15px;line-height:1.5;box-shadow:4px 4px 0 var(--ink)}
 .tk .defbtn:hover{border-color:var(--gold);background:#1c1c3a}
