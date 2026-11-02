@@ -220,6 +220,8 @@ export const CSS = `
 .as .mark.top{--m-c:var(--m-top)} .as .mark.ok{--m-c:var(--m-ok)} .as .mark.close{--m-c:var(--m-close)} .as .mark.no{--m-c:var(--m-no)} .as .mark.ohno{--m-c:var(--m-ohno)}
 .as .mark.no{color:#1c1917}
 .as .mark-pic{height:28px;width:auto;display:block;margin:-4px 0;border-radius:6px}
+.as .reasons{margin:-4px 0 0;padding:0 0 0 12px;list-style:none;display:grid;gap:4px;border-left:3px solid var(--m-c);font-size:15px;line-height:1.4;color:var(--ink)}
+.as .reasons.top{--m-c:var(--m-top)} .as .reasons.ok{--m-c:var(--m-ok)} .as .reasons.close{--m-c:var(--m-close)} .as .reasons.no{--m-c:var(--m-no)} .as .reasons.ohno{--m-c:var(--m-ohno)}
 .as .audio{display:grid;gap:10px;justify-items:start}
 .as .clip{display:grid;gap:8px;justify-items:start}
 .as .clip audio{width:min(100%,480px)}

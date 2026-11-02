@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { SLOTS, MARKS, marksOf, markOf, statusFor, Mark, POLL, DEFAULT_COPY } from "./ideas.jsx";
+import { SLOTS, MARKS, marksOf, markOf, saysOf, noteFor, reasonsOf, statusFor, Mark, POLL, DEFAULT_COPY } from "./ideas.jsx";
 import { linesOf as linesOfIdea, loadFont } from "./bits.jsx";
 import { PAIRS_ROW, parseWant, suggest, join, split, pairOf } from "./pairs.js";
 import { StudentLink } from "../StudentPage.jsx";
@@ -138,19 +138,35 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
   const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).map(r => r.student.name);
   const notOpened = rows.filter(r => !r.sheet).map(r => r.student.name);
 
-  // Press a mark to put it on, press the same mark to take it off.
-  const mark = async (row, slot, id) => {
-    const marks = marksOf(row.sheet.review);
-    const next = { ...marks };
-    if (next[slot] === id) delete next[slot]; else next[slot] = id;
-    const key = row.student.email + slot;
-    setBusy(key); setFailed("");
+  // One write for a sheet's marks and reasons; the student reads it back on
+  // their next ask.
+  const write = async (row, slot, marks, says) => {
+    setBusy(row.student.email + slot); setFailed("");
     try {
-      const out = await call({ groupKey: config.id, key: worksheetKey, viewer: lower(row.student.email), review: { status: statusFor(next), note: JSON.stringify(next) } });
+      const out = await call({ groupKey: config.id, key: worksheetKey, viewer: lower(row.student.email), review: { status: statusFor(marks), note: noteFor(marks, says) } });
       setSheets(list => list.map(s => s.viewer_id === out.sheet.viewer_id ? { ...s, review: out.review } : s));
     } catch (e) { setFailed(e.message); }
     setBusy("");
   };
+  // Press a mark to put it on, press the same mark to take it off; the
+  // reasons go with it.
+  const mark = (row, slot, id) => {
+    const marks = { ...marksOf(row.sheet.review) };
+    if (marks[slot] === id) delete marks[slot]; else marks[slot] = id;
+    return write(row, slot, marks, saysOf(row.sheet.review));
+  };
+  // Press a reason to put it on the marked idea, press it again to take it
+  // off. Andrew, 2026-11-01: "when I put an option for one person I want
+  // that option for me to be able to tag any other student." Every reason on
+  // any sheet is a tag here, so one typed once is a press everywhere else.
+  const say = (row, slot, reason) => {
+    const says = { ...saysOf(row.sheet.review) };
+    const had = says[slot] || [];
+    const on = had.some(x => x.toLowerCase() === reason.toLowerCase());
+    says[slot] = on ? had.filter(x => x.toLowerCase() !== reason.toLowerCase()) : [...had, reason];
+    return write(row, slot, marksOf(row.sheet.review), says);
+  };
+  const reasons = reasonsOf(sheets.map(s => s.review));
 
   return (
     <Shell>
@@ -187,6 +203,7 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
                       </button>
                     ))}
                   </div>
+                  {marks[it.slot] ? <Reasons all={reasons} on={saysOf(row.sheet.review)[it.slot] || []} busy={busy === row.student.email + it.slot} label={"Reasons on idea " + (i + 1) + " for " + row.student.name} onPress={r => say(row, it.slot, r)} /> : null}
                 </div>
               ))}
             </div>
@@ -201,6 +218,31 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
       {started.length ? <p className="aib-muted">Started, not submitted: {started.join(", ")}.</p> : null}
       {notOpened.length ? <p className="aib-muted">Not opened: {notOpened.join(", ")}.</p> : null}
     </Shell>
+  );
+}
+
+// The reasons under a marked idea: every tag as a press, the ones on this
+// idea pressed in, and a line to type a new one, which goes on this idea and
+// becomes a tag on every other.
+function Reasons({ all, on, busy, label, onPress }) {
+  const [typed, setTyped] = useState("");
+  const isOn = (r) => on.some(x => x.toLowerCase() === r.toLowerCase());
+  const add = () => {
+    const r = typed.replace(/\s+/g, " ").trim();
+    if (!r) return;
+    setTyped("");
+    if (!isOn(r)) onPress(all.find(x => x.toLowerCase() === r.toLowerCase()) || r);
+  };
+  return (
+    <div className="aib-reasons" role="group" aria-label={label}>
+      {all.map(r => (
+        <button key={r} type="button" className={"aib-reason" + (isOn(r) ? " aib-set" : "")} aria-pressed={isOn(r)} disabled={busy} onClick={() => onPress(r)}>{r}</button>
+      ))}
+      <form className="aib-reason-add" onSubmit={e => { e.preventDefault(); add(); }}>
+        <input className="aib-input" type="text" value={typed} maxLength={140} placeholder="add a reason" aria-label={"Add a reason, " + label} disabled={busy} onChange={e => setTyped(e.target.value)} />
+        <button type="submit" className="aib-reason" disabled={busy || !typed.trim()}>add</button>
+      </form>
+    </div>
   );
 }
 
@@ -380,6 +422,12 @@ const CSS = `
 .aib-mark.aib-set{background:var(--m-c);color:var(--m-ink)}
 .aib-mark.aib-m-no.aib-set{color:#1c1917}
 .aib-mark[disabled]{opacity:.5;cursor:default}
+.aib-reasons{display:flex;flex-wrap:wrap;gap:6px;border-top:1px dashed ${L.strong};margin-top:2px;padding-top:8px}
+.aib-reason{font:inherit;font-size:13px;font-weight:600;padding:5px 10px;border-radius:999px;border:1.5px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer;min-height:30px;text-align:left}
+.aib-reason.aib-set{background:${T.primary};border-color:${T.primary};color:${S.page}}
+.aib-reason[disabled]{opacity:.5;cursor:default}
+.aib-reason-add{display:flex;gap:6px;flex:1 1 220px;min-width:0}
+.aib-reason-add .aib-input{margin:0;min-height:30px;padding:4px 10px;font-size:13px}
 .aib-more{font-size:15px}
 .aib-more summary{cursor:pointer}
 .aib-more .aib-line{margin-top:8px}

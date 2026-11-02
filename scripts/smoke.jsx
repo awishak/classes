@@ -6081,6 +6081,17 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
   if (marks.a !== "top" || marks.c !== "ohno" || marks.b || marks.d) say("marks do not read off the note, or a bad one got through");
   if (marksOf({ note: "not json" }).a || Object.keys(marksOf(null)).length) say("a bad note is not no marks");
   if (statusFor({}) !== "clear" || statusFor({ a: "ohno" }) !== "needs_work" || statusFor({ a: "ohno", b: "ok" }) !== "approved" || statusFor({ c: "top" }) !== "approved") say("a set of marks does not land on its status");
+  {
+    const { saysOf, noteFor, reasonsOf, REASONS } = await import("../src/engine/audiostory/ideas.jsx");
+    const note = noteFor({ a: "close", b: "bogus" }, { a: ["  Needs to be  more specific ", "needs to be  more specific", ""], b: ["dropped"], c: ["no mark here"] });
+    const back = JSON.parse(note);
+    if (back.a !== "close" || back.b || back.says?.a?.length !== 1 || back.says?.a?.[0] !== "Needs to be more specific" || back.says.b || back.says.c) say("a note does not carry reasons by marked slot only, tidied");
+    if (marksOf({ note }).a !== "close" || saysOf({ note }).a?.[0] !== "Needs to be more specific") say("marks and reasons do not read back off one note");
+    if (Object.keys(saysOf({ note: "not json" })).length || Object.keys(saysOf(null)).length) say("a bad note is not no reasons");
+    if (JSON.parse(noteFor({ a: "top" }, {})).says) say("a note with no reasons carries a says key");
+    const tags = reasonsOf([{ note }, { note: JSON.stringify({ c: "no", says: { c: ["Too long", "needs to be more specific"] } }) }, null]);
+    if (tags.length !== REASONS.length + 1 || tags[0] !== REASONS[0] || tags[tags.length - 1] !== "Too long") say("the tags are not his three then every reason once");
+  }
   const ideas = ideasOf({ "idea:a": "Buses", "why:a": "one\ntwo", "idea:c": "Rain" });
   if (ideas.length !== 3 || ideas[0].why.length !== 2 || ideas[1].idea !== "" || ideas[2].idea !== "Rain") say("a student's ideas do not read off the answers");
   const { localWorksheet, listedFor, openTo } = await import("../src/engine/localWorksheets.js");

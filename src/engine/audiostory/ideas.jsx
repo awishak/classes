@@ -14,8 +14,8 @@
 // keep saving as typed, so an edit after submitting shows on the board too.
 //
 // His marks on an idea are one row in worksheet_reviews (the pre-production
-// table), the note holding { a: "top", b: "ohno" } and the status approved
-// when any idea is okayed. Nobody writes that row from a browser: board.jsx
+// table), the note holding { a: "top", b: "ohno" }, his reasons by slot under
+// says when he gave any, and the status approved when any idea is okayed. Nobody writes that row from a browser: board.jsx
 // writes through /api/worksheet-submits, and the student reads their own row
 // under the rules every four seconds while the page is open, which is how
 // the mark shows up on their screen without a refresh.
@@ -64,6 +64,47 @@ export const marksOf = (review) => {
     SLOTS.forEach(s => { if (markOf(got?.[s])) out[s] = got[s]; });
     return out;
   } catch { return {}; }
+};
+// A mark can carry his reasons. Andrew, 2026-11-01: "when I say a student is
+// not quite there to be able to say ... make sure to follow the instructions
+// or ... this isn't fit what we're doing or needs to be more specific ...
+// when I put an option for one person I want that option for me to be able
+// to tag any other student." The note's says key holds them by slot,
+// { a: ["Needs to be more specific"] }; every reason on any sheet is a tag
+// on the review, and these three, his words, are there before any is written.
+export const REASONS = ["Make sure to follow the instructions", "This doesn't fit what we're doing", "Needs to be more specific"];
+const tidy = (s) => String(s || "").replace(/\s+/g, " ").trim().slice(0, 140);
+/** Each reason once, the first spelling kept, case aside. */
+const once = (list) => { const seen = new Map(); list.forEach(x => { if (!seen.has(x.toLowerCase())) seen.set(x.toLowerCase(), x); }); return [...seen.values()]; };
+/** The reasons on a sheet's marks, { slot: [reason] }, from its review row. */
+export const saysOf = (review) => {
+  try {
+    const got = JSON.parse(review?.note || "{}");
+    const out = {};
+    SLOTS.forEach(s => {
+      const list = Array.isArray(got?.says?.[s]) ? got.says[s].map(tidy).filter(Boolean) : [];
+      if (list.length) out[s] = once(list);
+    });
+    return out;
+  } catch { return {}; }
+};
+/** The note for a set of marks and reasons; a reason stays only on a marked idea. */
+export const noteFor = (marks, says) => {
+  const out = {};
+  SLOTS.forEach(s => { if (markOf(marks?.[s])) out[s] = marks[s]; });
+  const kept = {};
+  SLOTS.forEach(s => {
+    const list = out[s] ? (says?.[s] || []).map(tidy).filter(Boolean) : [];
+    if (list.length) kept[s] = once(list);
+  });
+  if (Object.keys(kept).length) out.says = kept;
+  return JSON.stringify(out);
+};
+/** Every reason on any sheet, after his three, each once. */
+export const reasonsOf = (reviews) => {
+  const seen = new Map(REASONS.map(r => [r.toLowerCase(), r]));
+  (reviews || []).forEach(r => Object.values(saysOf(r)).flat().forEach(x => { if (!seen.has(x.toLowerCase())) seen.set(x.toLowerCase(), x); }));
+  return [...seen.values()];
 };
 /** The review row's status for a set of marks: approved once any idea is okayed, clear when none is marked. */
 export const statusFor = (marks) => {
@@ -131,7 +172,8 @@ export function IdeasSheet({ store, viewer, classId, readOnly = false, storage, 
   }, [readOnly, classId, viewer?.id]);
 
   const marks = givenMarks || marksOf(review);
-  const root = { className: "as" + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
+  const says = givenMarks ? {} : saysOf(review);
+  const root ={ className: "as" + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
   if (!answers) return <div {...root}><style>{CSS}</style><div className="sheet"><div className="foot"><span className="status">{STATUS[status] || "Loading…"}</span></div></div></div>;
   const left = missingOf(answers);
   const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>. {classId ? <a className="go focusable" href={ideasHref(classId) + "?all"}>Everyone's ideas</a> : null}</> : <><b>{REQUIRED.length - left.length} of {REQUIRED.length}</b> answered</>);
@@ -191,6 +233,7 @@ export function IdeasSheet({ store, viewer, classId, readOnly = false, storage, 
                   <h2>Idea {i + 1}</h2>
                   {marks[s] ? <Mark id={marks[s]} /> : <span className="sub">{doneOf(answers, s) === 3 ? "✓" : ""}</span>}
                 </div>
+                {marks[s] && says[s]?.length ? <ul className={"reasons " + marks[s]} aria-label={"Reasons, idea " + (i + 1)}>{says[s].map(r => <li key={r}>{r}</li>)}</ul> : null}
                 <label className="field">
                   <Words k="ideaAsk" copy={copy} editing={editing} className="ask" />
                   <Line id={"ai-idea-" + s} label={copy.say("ideaAsk") + ", idea " + (i + 1)} value={answers["idea:" + s]} readOnly={readOnly} onChange={v => set("idea:" + s, v)} />
