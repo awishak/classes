@@ -230,6 +230,7 @@ export const CSS = `
 .as .audio .bar{height:8px;width:min(100%,480px);border-radius:999px;background:var(--line-soft);overflow:hidden}
 .as .audio .bar i{display:block;height:100%;background:var(--accent);transition:width .2s ease}
 .as .pair{margin:0;font-size:19px}
+.as .blocked{margin:0;font-size:19px;line-height:1.5;padding:16px 18px;border-radius:12px;background:var(--sunk);border-left:4px solid var(--bad)}
 .as .foot{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:8px 28px 24px;flex-wrap:wrap;min-height:76px;border-top:1px solid var(--line-soft)}
 .as .foot .say{font-size:17px;color:var(--secondary);flex:1;min-width:200px}
 .as .foot .say b{color:var(--ink);font-weight:600}

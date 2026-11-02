@@ -25,6 +25,7 @@ import { StoriesRow, useStoriesStage, storiesHref, STORIES_CLASSES } from "../vi
 import { portalHref } from "../visualstory/portal.jsx";
 import { PreRow, usePreStanding } from "../visualstory/prerow.jsx";
 import { TEAM_TOPICS_KEY, topicsHref } from "../teamtopics/sheet.jsx";
+import { TAKEOVER_KEY, TAKEOVER_TITLE } from "../takeover/engine.js";
 import { assignmentsOf } from "../profileTask.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { SITDOWN_CLASSES, SITDOWN, released, sessionOf, tableOf, sitdownAssignment, linkOf } from "../worktopia/sitdown.js";
@@ -141,25 +142,22 @@ export function StoryPhaseBar({ config }) {
   );
 }
 
-// The door to the COMM 118 topics worksheet, from when the sheet opens until
-// Wednesday's class is over. Andrew, 2026-10-23: "I want you putting things
-// in a place where it's really clear."
-// The door stayed up through Wednesday, October 28, then went away for
-// everyone, so a student who had not done the sheet had no way in. Andrew,
-// 2026-10-30, on two of them: "can you make that available to them now so
-// they can do it?" So after Wednesday the door stays for anyone not yet
-// submitted, through Tuesday, November 3.
-const TOPICS_LAST = new Date(2026, 9, 28, 23, 59, 59).getTime();
-const TOPICS_LATE_LAST = new Date(2026, 10, 3, 23, 59, 59).getTime();
-export function TopicsDoor({ config, data, now = Date.now() }) {
-  const sheet = localWorksheet(TEAM_TOPICS_KEY);
-  const standing = usePreStanding(config, TEAM_TOPICS_KEY);
+// The door to the Locker Room, COMM 118's Weekly Challenge 3, the same way
+// as the stories: bright green until the student's game is in, from when
+// the sheet is open to the class until the assignment's due date. The
+// Concepts in Team Communication door stood here from October 23; Andrew,
+// 2026-11-01: "remove concepts in team communication as a pinned thing and
+// add Locker Room, due Tuesday." The concepts sheet stays reachable from the
+// worksheet button below.
+export function LockerRoomDoor({ config, data, now = Date.now() }) {
+  const sheet = localWorksheet(TAKEOVER_KEY);
+  const standing = usePreStanding(config, TAKEOVER_KEY);
   if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
-  const late = now > TOPICS_LAST;
-  if (late && (now > TOPICS_LATE_LAST || submittedOf(standing))) return null;
-  return <DueBar href={topicsHref(config.id)} name="Concepts in Team Communication"
-    say={late ? "This was due Wednesday. Please complete it as soon as you can." : "Please complete this by end of day Wednesday."}
-    done={submittedOf(standing)} doneName="Concepts in Team Communication: submitted" doneSay="You can keep editing until end of day Wednesday." />;
+  const asg = assignmentsOf(config, data).find(a => a.id === "wc3");
+  const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
+  if (!end || now > end) return null;
+  return <DueBar href={"/" + config.id + "/worksheets/" + TAKEOVER_KEY} name={TAKEOVER_TITLE} say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
+    done={submittedOf(standing)} doneName={TAKEOVER_TITLE + ": submitted"} doneSay={"Submitted. Due " + dueWords(asg.due, asg.dueTime) + "."} />;
 }
 
 // The week the class is in: its number and its first and last class day.
@@ -308,7 +306,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
       <StoryPhaseBar config={config} />
       <StoryDoor config={config} data={data} />
       <AudioStoryDoor config={config} data={data} />
-      <TopicsDoor config={config} data={data} />
+      <LockerRoomDoor config={config} data={data} />
       <PinBar data={data} go={go} />
       <SitdownDoor config={config} data={data} name={name} />
       <Hero config={config} data={data} blockOf={blockOf} section={section} me={name} mark={mark} go={go} />

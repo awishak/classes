@@ -17,8 +17,13 @@
 //
 // The idea comes across from the ideas sheet: the student's own sheet and
 // its marks are read under the rules, and the okayed ideas sit at the top as
-// chips to tap into the story line. Answers are worksheet rows, one field
-// each, saved as typed (bits.jsx).
+// chips. Andrew, 2026-11-01: "only let them choose from the ideas that were
+// approved by me. They must choose one of the ideas to move forward. They
+// can modify, but must choose one." A tap picks the idea (the field picked,
+// a slot, or pair for the story Andrew set on the Pairs view) and fills the
+// story line, which stays theirs to change; Submit wants a pick. With no
+// approved idea the sheet is shut behind his words (blockedSay). Answers are
+// worksheet rows, one field each, saved as typed (bits.jsx).
 
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -42,9 +47,18 @@ export const RESEARCH = [
   { field: "person", ask: "One person you could interview" },
   { field: "place", ask: "Another place you could go to capture some audio" },
 ];
-export const FIELDS = ["story", "treatment", "includes", ...RESEARCH.map(r => r.field), "example", "audio"];
+export const FIELDS = ["picked", "story", "treatment", "includes", ...RESEARCH.map(r => r.field), "example", "audio"];
 export const REQUIRED = FIELDS;
 export const missingOf = (answers) => REQUIRED.filter(f => blank(answers, f));
+/** The approved ideas a student can pick from: their own okayed ones, and the story Andrew set for their pair. */
+export const approvedOf = (okayed, pair) => {
+  const list = [...(okayed || [])];
+  const story = String(pair?.story || "").trim();
+  if (story && !list.some(x => x.idea.toLowerCase() === story.toLowerCase())) list.push({ slot: "pair", idea: story, mark: null });
+  return list;
+};
+/** The approved idea the student picked, or null when none is picked or the pick is no longer approved. */
+export const chosenOf = (answers, approved) => approved.find(x => x.slot === String(answers?.picked || "").trim()) || null;
 
 export const COPY_ROW = "worksheet-audio-research-plan";
 // Andrew's words, 2026-10-29, by voice, for every line a student reads.
@@ -54,6 +68,9 @@ export const DEFAULT_COPY = {
   credit: "COMM 3. Due Tuesday, November 3, at 11:59 PM.",
   intro: "Please fill in the information below as a sort of pre-production for your audio story.",
   storyAsk: "Your story",
+  // Andrew, 2026-11-01, spelling fixed.
+  pickSay: "Choose one of the ideas approved by Dr. Ishak to move forward. You can modify the idea, but you must choose one idea.",
+  blockedSay: "This assignment cannot be started until you get an idea approved. The deadlines for me to review your audio story ideas are Friday, October 30, at 5 PM, and Monday, November 2, at 5 PM. If you don't have an idea approved, you won't be able to move forward.",
   treatmentAsk: "A paragraph treatment",
   treatmentSay: "Share a preview of this story in 2 to 4 sentences.",
   includesAsk: "What does the story actually include?",
@@ -81,7 +98,7 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
   const copy = useCopy(editor, COPY_ROW, DEFAULT_COPY);
   const [editing, setEditing] = useState(false);
   const [handing, setHanding] = useState("");
-  const [okayed, setOkayed] = useState([]);
+  const [okayed, setOkayed] = useState(null);   // null until read
   const [pair, setPair] = useState(null);
   const draftKey = AUDIO_RESEARCH_KEY + ":" + (classId || "") + ":" + (viewer?.id || "");
   const { answers, set, submitted, setSubmitted, status, saver } = useSheet({ store, draftKey, readOnly, storage });
@@ -96,36 +113,60 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
 
   const root = { className: "as" + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
   if (!answers) return <div {...root}><style>{CSS}</style><div className="sheet"><div className="foot"><span className="status">{STATUS[status] || "Loading…"}</span></div></div></div>;
-  const left = missingOf(answers);
+  const approved = approvedOf(okayed, pair);
+  const chosen = chosenOf(answers, approved);
+  // The pick counts only while it names an idea still approved.
+  const left = [...missingOf(answers), ...(!readOnly && okayed && !chosen && !blank(answers, "picked") ? ["picked"] : [])];
+  // Shut until an idea is approved; the editor sees the sheet anyway, to edit the words.
+  const blocked = !readOnly && !editor && okayed !== null && !approved.length;
   const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>.</> : <><b>{REQUIRED.length - left.length} of {REQUIRED.length}</b> answered</>);
   const tick = (f) => <span className="sub">{blank(answers, f) ? "" : "✓"}</span>;
+  const pick = (x) => { set("picked", x.slot); set("story", x.idea); };
+
+  const head = (
+    <div className="head">
+      <div className="title">
+        <Words k="title" copy={copy} editing={editing} as="h2" className="name" />
+        <Words k="credit" copy={copy} editing={editing} as="div" className="credit" />
+        {editor ? (
+          <div className="editbar">
+            <button type="button" className="btn small" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
+            <span className="status" aria-live="polite">{editing ? copy.status || "Change any line students read. Clear a line to put the original back." : copy.status}</span>
+          </div>
+        ) : null}
+        <Words k="intro" copy={copy} editing={editing} as="p" className="intro" />
+      </div>
+    </div>
+  );
+  if (blocked) return (
+    <div {...root}>
+      <style>{CSS}</style>
+      <div className="sheet">
+        {head}
+        <section className="part" aria-label="Not started">
+          <Words k="blockedSay" copy={copy} editing={editing} as="p" className="blocked" />
+        </section>
+      </div>
+    </div>
+  );
 
   return (
     <div {...root}>
       <style>{CSS}</style>
       <div className="sheet">
-        <div className="head">
-          <div className="title">
-            <Words k="title" copy={copy} editing={editing} as="h2" className="name" />
-            <Words k="credit" copy={copy} editing={editing} as="div" className="credit" />
-            {editor ? (
-              <div className="editbar">
-                <button type="button" className="btn small" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
-                <span className="status" aria-live="polite">{editing ? copy.status || "Change any line students read. Clear a line to put the original back." : copy.status}</span>
-              </div>
-            ) : null}
-            <Words k="intro" copy={copy} editing={editing} as="p" className="intro" />
-          </div>
-        </div>
+        {head}
 
         <section className="part" aria-label="Your story">
+          {editor ? <Words k="blockedSay" copy={copy} editing={editing} as="p" className="blocked" /> : null}
           {pair && !readOnly ? (
             <p className="pair">{(() => { const me = String(viewer?.id || "").trim().toLowerCase(); const others = (pair.names || []).filter((n, i) => pair.members[i] !== me); return others.length ? <>You are working with <b>{others.join(" and ")}</b></> : <>You are working on your own</>; })()}{pair.story ? <> on <b>{pair.story}</b></> : null}.</p>
           ) : null}
-          {pair?.story && !readOnly && blank(answers, "story") ? <div className="chips"><button type="button" className="chip focusable" onClick={() => set("story", pair.story)}>{pair.story}</button></div> : null}
-          {okayed.length && !readOnly ? (
-            <div className="chips" aria-label="Your okayed ideas">
-              {okayed.map(x => <button key={x.slot} type="button" className="chip focusable" onClick={() => set("story", x.idea)}><Mark id={x.mark} />&nbsp;{x.idea}</button>)}
+          {!readOnly ? (
+            <div className="field">
+              <Words k="pickSay" copy={copy} editing={editing} as="p" className="hint" />
+              <div className="chips" role="group" aria-label="Your approved ideas">
+                {approved.map(x => <button key={x.slot} type="button" className={"chip focusable" + (chosen?.slot === x.slot ? " on" : "")} aria-pressed={chosen?.slot === x.slot} onClick={() => pick(x)}>{x.mark ? <><Mark id={x.mark} />&nbsp;</> : null}{x.idea}</button>)}
+              </div>
             </div>
           ) : null}
           <label className="field">
@@ -175,7 +216,7 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
           <div className="foot">
             <div className="say" aria-live="polite">{say}</div>
             <span className={"status" + (status === "retrying" || status === "failed-load" ? " bad" : "")} aria-live="polite">{STATUS[status]}</span>
-            <button type="button" className="btn primary focusable" disabled={handing === "sending"} onClick={() => handIn({ saver, store, missing: missingOf(answers), setHanding, setSubmitted })}>
+            <button type="button" className="btn primary focusable" disabled={handing === "sending"} onClick={() => handIn({ saver, store, missing: left, setHanding, setSubmitted })}>
               {handing === "sending" ? "Submitting…" : submitted ? copy.say("again") : copy.say("submit")}
             </button>
           </div>

@@ -6048,6 +6048,16 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
   if (ideasMissing(full).length) say("a full ideas sheet reads as missing something");
   if (ideasMissing({ ...full, "why:b": " " }).length !== 1) say("a blank why is not missing");
   if (researchMissing(Object.fromEntries(RESEARCH_FIELDS.map(f => [f, "x"]))).length) say("a full research sheet reads as missing something");
+  {
+    const { approvedOf, chosenOf } = await import("../src/engine/audiostory/research.jsx");
+    if (!researchMissing(Object.fromEntries(RESEARCH_FIELDS.filter(f => f !== "picked").map(f => [f, "x"]))).includes("picked")) say("a research sheet with no idea picked does not read as missing the pick");
+    const own = [{ slot: "a", idea: "Buses", mark: "top" }];
+    const ap = approvedOf(own, { story: "Rain" });
+    if (ap.length !== 2 || ap[1].slot !== "pair" || ap[1].idea !== "Rain") say("the pair's story is not an approved idea beside the student's own");
+    if (approvedOf(own, { story: "buses" }).length !== 1) say("the pair's story doubles an idea already approved");
+    if (approvedOf(null, null).length || approvedOf([], { story: "" }).length) say("no approved idea is not an empty list");
+    if (chosenOf({ picked: "a" }, ap)?.idea !== "Buses" || chosenOf({ picked: "pair" }, ap)?.idea !== "Rain" || chosenOf({ picked: "b" }, ap) || chosenOf({}, ap)) say("the chosen idea does not read off the pick, or a pick no longer approved got through");
+  }
   if (!RESEARCH_FIELDS.includes("audio")) say("the audio story is not a field");
   if (!audioOf(JSON.stringify({ path: "comm3/a@b/audio-x.m4a", seconds: 58 })) || audioOf("not json") || audioOf("")) say("the audio field does not read as a clip, or junk does");
   const memo = { name: "New Recording 3.m4a", type: "audio/x-m4a", size: 900000 };
