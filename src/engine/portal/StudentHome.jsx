@@ -21,6 +21,8 @@ import { DrCard, DrSheet } from "./ClassPage.jsx";
 import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
 import { AUDIO_STORY_KEY } from "../audiostory/story.jsx";
+import { AUDIO_RESEARCH_KEY, AUDIO_RESEARCH_TITLE, researchHref } from "../audiostory/research.jsx";
+import { barUp } from "../visualstory/model.js";
 import { StoriesRow, useStoriesStage, storiesHref, STORIES_CLASSES } from "../visualstory/door.jsx";
 import { portalHref } from "../visualstory/portal.jsx";
 import { PreRow, usePreStanding } from "../visualstory/prerow.jsx";
@@ -90,6 +92,20 @@ export function AudioStoryDoor({ config, data, now = Date.now() }) {
     done={submittedOf(standing)} doneName="Your audio story is in" doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
 }
 
+// The audio exercise's door, the same way, until the Audio exercise
+// assignment is due. Andrew, 2026-11-02: the top of the COMM 3 home "should
+// be about the audio story exercise."
+export function AudioExerciseDoor({ config, data, now = Date.now() }) {
+  const sheet = localWorksheet(AUDIO_RESEARCH_KEY);
+  const standing = usePreStanding(config, AUDIO_RESEARCH_KEY);
+  if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
+  const asg = assignmentsOf(config, data).find(a => a.id === "ex5");
+  const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
+  if (!end || now > end) return null;
+  return <DueBar href={researchHref(config.id)} name={"Work on the " + AUDIO_RESEARCH_TITLE.toLowerCase()} say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
+    done={submittedOf(standing)} doneName={"Your " + AUDIO_RESEARCH_TITLE.toLowerCase() + " is in"} doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
+}
+
 // A sheet's standing says submitted once it has a hand-in time (waiting), or
 // a review on a hand-in (approved, needs). Nothing known yet reads as not.
 const submittedOf = (standing) => !!(standing && standing.kind !== "open");
@@ -124,8 +140,10 @@ export function DueBar({ href, name, say, done, doneName, doneSay }) {
 // we pin a link, but make it nice and bright and green in terms of, hey,
 // here's where you go." Reading opens the stories; released opens the portal,
 // where the comments on the student's own story are; closed says Tuesday.
+// The released bar steps down at the end of its week (barUp).
 export function StoryPhaseBar({ config }) {
   const stage = useStoriesStage(config);
+  if (!barUp(stage, config.id)) return null;
   const w = stage === "reading" ? { name: "Read and comment on your classmates' stories", say: "We don't have class on Monday. View and comment on at least 8 other students' stories.", href: storiesHref(config) }
     : stage === "released" ? { name: "Your classmates' comments are in", say: "See what people think of your work, by reviewer or by question.", href: portalHref(config) + "#comments" }
     : stage === "closed" ? { name: "Comments are closed", say: "The comments on your story, with names attached, come out on Tuesday.", href: portalHref(config) }
@@ -305,6 +323,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
       {/* Things to complete first, bright green; then the pin and the quieter doors. */}
       <StoryPhaseBar config={config} />
       <StoryDoor config={config} data={data} />
+      <AudioExerciseDoor config={config} data={data} />
       <AudioStoryDoor config={config} data={data} />
       <LockerRoomDoor config={config} data={data} />
       <PinBar data={data} go={go} />

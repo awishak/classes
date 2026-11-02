@@ -84,6 +84,14 @@ export const COMMENTS_UNTIL = { comm3: "2026-10-29T18:59:00.000Z" };
 export const commentsOpen = (stage, groupKey, now = Date.now()) =>
   stage === "reading" || (stage === "released" && !!COMMENTS_UNTIL[groupKey] && now < Date.parse(COMMENTS_UNTIL[groupKey]));
 
+/** When the bright bar at the top of the home steps down after the release;
+ * the row under My work keeps the way to the comments. Andrew, 2026-11-02:
+ * "why does it still say your classmates comments are in at the top? that was
+ * last week." Sunday, November 1, 11:59 PM Pacific for COMM 3. */
+export const BAR_UNTIL = { comm3: "2026-11-02T07:59:00.000Z" };
+export const barUp = (stage, groupKey, now = Date.now()) =>
+  stage !== "released" || !BAR_UNTIL[groupKey] || now < Date.parse(BAR_UNTIL[groupKey]);
+
 // A link in a caption or text block is written [words](https://...).
 // Andrew, 2026-10-15: "include links in text." Only the words count.
 export const LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
