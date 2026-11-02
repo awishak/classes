@@ -184,8 +184,15 @@ export const CSS = `
 .as .side .hint{margin:0}
 .as .side .chips{gap:8px}
 .as .side .chip{white-space:normal;text-align:left;line-height:1.3;padding:8px 12px}
-.as .side .chip.off{color:var(--muted);border-style:dashed;background:var(--card)}
-.as .side .chip.off .mark{opacity:.7}
+.as .pickpart{background:var(--accent-light);border-top:0}
+.as .pickhead{margin:0;font-size:19px;font-weight:600;line-height:1.4}
+.as .pickbox{background:var(--card);border:2px solid var(--line-strong)}
+.as .pickbox.can{border-color:var(--ok);box-shadow:0 0 0 4px color-mix(in srgb, var(--ok) 18%, transparent)}
+.as .pickbox.on{background:var(--accent-light);border-color:var(--accent)}
+.as .pickbox.off{opacity:.6}
+.as .pickidea{margin:0;font-size:19px;font-weight:500;line-height:1.35;overflow-wrap:anywhere}
+.as .pickgo{justify-self:start;margin-top:auto}
+.as .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .as .goideas{display:inline-flex;align-items:center;justify-self:start;text-decoration:none;margin-top:4px}
 .as .name{font-size:26px;font-weight:600;line-height:1.2;margin:0;letter-spacing:-.01em}
 .as .credit{font-size:17px;color:var(--secondary)}
@@ -250,7 +257,6 @@ export const CSS = `
 .as .status{font-size:14px;color:var(--secondary);min-height:1.4em}
 .as .status.bad{color:var(--bad)}
 .as .btn{font-family:var(--font);font-size:15px;font-weight:600;min-height:44px;padding:0 20px;border-radius:10px;border:1px solid var(--line-strong);background:var(--card);color:var(--ink);cursor:pointer}
-.as .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
 .as .btn.small{min-height:36px;padding:0 14px;font-size:14px}
 .as .btn[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--card)}
 .as .btn[disabled]{opacity:.4;cursor:default}

@@ -128,28 +128,40 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
   const tick = (f) => <span className="sub">{blank(answers, f) ? "" : "✓"}</span>;
   const pick = (x) => { set("picked", x.slot); set("story", x.idea); };
 
-  // Andrew, 2026-11-01: "approved ideas at the top ... like a side box on the
-  // right side." The box sits beside the title; the blocked words go in it
-  // when nothing is approved.
-  // Every idea is listed with its mark; only an approved one is a press.
+  // With nothing approved, the blocked words sit in a box beside the title.
+  // Andrew, 2026-11-01: "it's only a bar on the side if people haven't
+  // gotten any approved yet."
+  const shut = !readOnly && (blocked || (editor && !approved.length));
+  const goIdeas = classId ? <a className="btn small focusable goideas" href={ideasHref(classId)}>{copy.say("ideasGo")}</a> : null;
+  const side = shut ? (
+    <aside className="side shut" aria-label={copy.say("sideHead")}>
+      <Words k="blockedSay" copy={copy} editing={editing} as="p" className="blocked" />
+      {goIdeas}
+    </aside>
+  ) : null;
+  // The ideas the way the ideas sheet shows them, three boxes in a row with
+  // his mark on each, and a choose button on the approved ones. Andrew,
+  // 2026-11-01: "they should not be sidebars. they should appear as they did
+  // on the other doc," and "make it clear that you're supposed to choose one."
   const listed = [...(ideas || []), ...approved.filter(x => x.slot === "pair")];
-  const chipOf = (x) => {
+  const boxOf = (x, i) => {
     const can = approved.some(a => a.slot === x.slot);
     const on = can && chosen?.slot === x.slot;
-    return <button key={x.slot} type="button" className={"chip focusable" + (on ? " on" : "") + (can ? "" : " off")} aria-pressed={can ? on : undefined} disabled={!can} onClick={can ? () => pick(x) : undefined}>{x.mark ? <><Mark id={x.mark} />&nbsp;</> : null}{x.idea}</button>;
+    return (
+      <div key={x.slot} className={"box pickbox" + (can ? " can" : " off") + (on ? " on" : "")} aria-label={x.slot === "pair" ? "Your pair's story" : "Idea " + (i + 1)}>
+        <div className="bh"><h2>{x.slot === "pair" ? "Your pair's story" : "Idea " + (i + 1)}</h2>{x.mark ? <Mark id={x.mark} /> : null}</div>
+        <p className="pickidea">{x.idea}</p>
+        {can ? <button type="button" className={"btn focusable pickgo" + (on ? "" : " primary")} aria-pressed={on} onClick={() => pick(x)}>{on ? "chosen ✓" : "choose this idea"}</button> : null}
+      </div>
+    );
   };
-  const side = readOnly ? null : (
-    <aside className={"side" + (blocked || (editor && !approved.length) ? " shut" : "")} aria-label={copy.say("sideHead")}>
-      {blocked || (editor && !approved.length) ? <Words k="blockedSay" copy={copy} editing={editing} as="p" className="blocked" /> : (
-        <>
-          <Words k="sideHead" copy={copy} editing={editing} as="h3" className="sidehead" />
-          <Words k="pickSay" copy={copy} editing={editing} as="p" className="hint" />
-        </>
-      )}
-      {listed.length ? <div className="chips" role="group" aria-label={copy.say("sideHead")}>{listed.map(chipOf)}</div> : null}
-      {classId ? <a className="btn small focusable goideas" href={ideasHref(classId)}>{copy.say("ideasGo")}</a> : null}
-    </aside>
-  );
+  const pickPart = !readOnly && !shut && listed.length ? (
+    <section className="part pickpart" aria-label="Choose an idea">
+      <Words k="pickSay" copy={copy} editing={editing} as="p" className="pickhead" />
+      <div className="ideas" role="group" aria-label={copy.say("sideHead")}>{listed.map(boxOf)}</div>
+      {goIdeas}
+    </section>
+  ) : null;
   const head = (
     <div className={"head" + (side ? " withside" : "")}>
       <div className="title">
@@ -178,6 +190,7 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
       <style>{CSS}</style>
       <div className="sheet">
         {head}
+        {pickPart}
 
         <section className="part" aria-label="Your story">
           {pair && !readOnly ? (
