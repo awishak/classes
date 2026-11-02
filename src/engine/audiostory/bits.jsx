@@ -176,6 +176,17 @@ export const CSS = `
 .as .sheet{max-width:1100px;margin:0 auto;border-radius:16px;overflow:hidden;background:var(--card);border:1px solid var(--line-soft);display:grid;gap:20px;padding-bottom:4px}
 .as .head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding:24px 28px 0;flex-wrap:wrap}
 .as .title{display:grid;gap:6px;width:100%}
+.as .head.withside{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,360px);align-items:start;gap:20px 28px}
+.as .side{display:grid;gap:10px;padding:16px 18px;border-radius:14px;background:var(--sunk);border:1px solid var(--line-strong);align-content:start}
+.as .side.shut{background:var(--card);border-color:var(--bad)}
+.as .side .blocked{padding:0;border:0;background:none;font-size:17px}
+.as .sidehead{margin:0;font-size:17px;font-weight:600}
+.as .side .hint{margin:0}
+.as .side .chips{gap:8px}
+.as .side .chip{white-space:normal;text-align:left;line-height:1.3;padding:8px 12px}
+.as .side .chip.off{color:var(--muted);border-style:dashed;background:var(--card)}
+.as .side .chip.off .mark{opacity:.7}
+.as .goideas{display:inline-flex;align-items:center;justify-self:start;text-decoration:none;margin-top:4px}
 .as .name{font-size:26px;font-weight:600;line-height:1.2;margin:0;letter-spacing:-.01em}
 .as .credit{font-size:17px;color:var(--secondary)}
 .as .intro{margin:0;font-size:17px;line-height:1.5;color:var(--ink);padding-top:6px;max-width:72ch;white-space:pre-line}
@@ -248,6 +259,6 @@ export const CSS = `
 .as .vsp-edit{display:block;width:100%;box-sizing:border-box;font:inherit;color:inherit;line-height:1.45;padding:4px 8px;margin:0;border:1.5px dashed var(--line-strong);border-radius:8px;background:var(--card);resize:none;overflow:hidden}
 .as .vsp-edit.name{font-size:26px;font-weight:600}
 .as .vsp-edit.intro{font-size:17px}
-@media (max-width:860px){.as .ideas{grid-template-columns:1fr}.as .head,.as .part,.as .foot{padding-inline:18px}}
+@media (max-width:860px){.as .ideas{grid-template-columns:1fr}.as .head,.as .part,.as .foot{padding-inline:18px}.as .head.withside{grid-template-columns:1fr}}
 @media (prefers-reduced-motion: reduce){.as *{transition:none!important}}
 `;

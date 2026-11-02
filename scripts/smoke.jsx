@@ -6051,7 +6051,8 @@ cases.push(["Visual story pre-production, loading", <PreSheet store={{ load: () 
   {
     const { approvedOf, chosenOf } = await import("../src/engine/audiostory/research.jsx");
     if (!researchMissing(Object.fromEntries(RESEARCH_FIELDS.filter(f => f !== "picked").map(f => [f, "x"]))).includes("picked")) say("a research sheet with no idea picked does not read as missing the pick");
-    const own = [{ slot: "a", idea: "Buses", mark: "top" }];
+    const own = [{ slot: "a", idea: "Buses", mark: "top" }, { slot: "b", idea: "Trains", mark: "close" }, { slot: "c", idea: "Boats", mark: null }];
+    if (approvedOf(own, null).length !== 1) say("an idea marked Not quite there, or not marked, reads as approved");
     const ap = approvedOf(own, { story: "Rain" });
     if (ap.length !== 2 || ap[1].slot !== "pair" || ap[1].idea !== "Rain") say("the pair's story is not an approved idea beside the student's own");
     if (approvedOf(own, { story: "buses" }).length !== 1) say("the pair's story doubles an idea already approved");
