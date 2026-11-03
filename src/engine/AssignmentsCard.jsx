@@ -618,7 +618,7 @@ function GradeHub({ config, data, assignments, onStart }) {
         <div><span style={{ fontSize: 22, fontWeight: 700, color: a }}>{all.length}</span> <span style={{ color: TEXT_SECONDARY }}>to grade</span></div>
         {all.length > 0 && <Btn accent={a} onClick={() => onStart(all)}>Grade all</Btn>}
       </div>
-      <a href={config.path + "/grade"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", marginBottom: 12 }}>Open grade view: sort the class into columns →</a>
+      <a href={"/grades/" + config.id + "/flow"} style={{ display: "inline-flex", alignItems: "center", minHeight: TAP, fontSize: 15, fontWeight: 600, color: a, textDecoration: "none", marginBottom: 12 }}>Open grade view: sort the class into columns →</a>
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {assignments.map(asg => {
           // Out of how many, and by room where there are two of them.

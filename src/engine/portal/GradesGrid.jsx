@@ -42,7 +42,9 @@ export function cellOf(config, data, asg, name) {
   return { say: "", kind: "", title: "" };
 }
 
-export default function GradesGrid({ config }) {
+// `embedded`: inside the Grades portal (GradesPortal.jsx), which draws the
+// root, the bar and the tabs.
+export default function GradesGrid({ config, embedded = false }) {
   const [stored] = useClassData(config.storageKey);
   const [photos] = usePhotos(config.storageKey);
   const data = useWithWorksheetSubmits(useWithPhotos(stored, photos), config);
@@ -53,15 +55,15 @@ export default function GradesGrid({ config }) {
   const assignments = useMemo(() => inDueOrder(assignmentsOf(config, data)), [config, data]);
   const a = config.accent;
 
-  if (stored === null) return <div data-theme="clean" className="ca-root pt-root" style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text-primary)", fontFamily: F }}><ThemeStyle theme="clean" /><style>{PORTAL_CSS}</style><p className="pt-quiet">Loading.</p></div>;
+  if (stored === null) return embedded ? <p className="pt-quiet">Loading.</p> : <div data-theme="clean" className="ca-root pt-root" style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text-primary)", fontFamily: F }}><ThemeStyle theme="clean" /><style>{PORTAL_CSS}</style><p className="pt-quiet">Loading.</p></div>;
 
+  const Root = embedded ? ({ children }) => <div style={{ "--ca-accent": a, "--ca-accent-ink": a }}><style>{CSS}</style>{children}</div>
+    : ({ children }) => <div data-theme="clean" className="ca-root pt-root" style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text-primary)", fontFamily: F, "--ca-accent": a, "--ca-accent-ink": a }}><ThemeStyle theme="clean" /><style>{PORTAL_CSS}{CSS}</style>{children}</div>;
   return (
-    <div data-theme="clean" className="ca-root pt-root" style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text-primary)", fontFamily: F, "--ca-accent": a, "--ca-accent-ink": a }}>
-      <ThemeStyle theme="clean" />
-      <style>{PORTAL_CSS}{CSS}</style>
+    <Root>
       <div className="gg">
         <div className="pt-head" style={{ alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <h1 className="pt-h1">All grades</h1>
+          {embedded ? null : <h1 className="pt-h1">All grades</h1>}
           {sections.length > 1 ? <div className="pt-chips">{sections.map(s => <Chip key={s} on={s === section} onClick={() => setSection(s)}>{s}</Chip>)}</div> : null}
           <span className="pt-sub">{people.length} students · {assignments.length} assignments</span>
         </div>
@@ -72,7 +74,7 @@ export default function GradesGrid({ config }) {
                 <th className="gg-name">Student</th>
                 {assignments.map(asg => (
                   <th key={asg.id} title={asg.title + (asg.due ? ", due " + asg.due : "")}>
-                    <a className="gg-th pt-focus" href={config.path + "/grade?a=" + encodeURIComponent(asg.id)}>
+                    <a className="gg-th pt-focus" href={"/grades/" + config.id + "/flow?a=" + encodeURIComponent(asg.id)}>
                       <span className="gg-tt">{asg.title}</span>
                       <span className="gg-td">{asg.due || ""}{asg.weight ? <Gm>{asg.weight}%</Gm> : null}{hiddenWords(asg) ? " · " + hiddenWords(asg).toLowerCase() : ""}</span>
                     </a>
@@ -97,7 +99,7 @@ export default function GradesGrid({ config }) {
         </div>
         <p className="pt-meta">A full letter is released. A faded letter is on the board and not released. in is turned in and not graded.</p>
       </div>
-    </div>
+    </Root>
   );
 }
 

@@ -1189,7 +1189,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
         if (!strip.includes(">" + door + "<")) {
           console.error(`  FAIL  ${where}: the strip has no ${door} tab`); failedEarly++; }
       }
-      for (const app of ["Dashboard", "Repository", "Grade view", "Around the Horn"]) {
+      for (const app of ["Dashboard", "Repository", "Grades", "Around the Horn"]) {
         if (!strip.includes(">" + app + "<")) {
           console.error(`  FAIL  ${where}: the bar has no ${app} tab`); failedEarly++; }
       }
@@ -1318,9 +1318,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GradingPage: "engine/GradingPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", VisualStoryPortal: "engine/visualstory/portal.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GradesPortal: "engine/GradesPortal.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", WorksheetsPage: "engine/WorksheetsPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", VisualStoryPortal: "engine/visualstory/portal.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
-  const EXEMPT = new Set(["ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
+  const EXEMPT = new Set(["Redirect", "ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
   [...new Set(routed)].forEach(name => {
     if (EXEMPT.has(name) || SELF[name]) return;
@@ -1353,7 +1353,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   });
   try {
     const html = renderToString(<InstructorBar config={cfg0} always><div>page</div></InstructorBar>);
-    if (!html.includes('aria-label="Teaching surfaces"') || !html.includes(">My Work<") || !html.includes(">Grade view<")) say("the wrapper does not draw the same bar");
+    if (!html.includes('aria-label="Teaching surfaces"') || !html.includes(">My Work<") || !html.includes(">Grades<")) say("the wrapper does not draw the same bar");
   } catch (err) { say("the wrapper threw: " + err.message); }
 }
 
@@ -3248,7 +3248,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     const want = {
       [p]: "home", [p + "/"]: "home", [p + "/schedule"]: "schedule", [p + "/challenges"]: "assignments", [p + "/challenges/wc1"]: "assignments",
       [p + "/class"]: "class", [p + "/you"]: "class", [p + "/roster"]: "class", [p + "/messages"]: "class", [p + "/more"]: "more",
-      [p + "/dashboard"]: "dashboard", ["/repo"]: "repo", [p + "/games"]: "games", [p + "/rungame"]: "games", [p + "/grade"]: "grade",
+      [p + "/dashboard"]: "dashboard", ["/repo"]: "repo", [p + "/games"]: "games", [p + "/rungame"]: "games", ["/grades"]: "grades", ["/grades/" + cfg0.id + "/flow"]: "grades",
       [p + "/today"]: "today",
     };
     Object.entries(want).forEach(([path, id]) => { if (at(path) !== id) say(path + " lights " + JSON.stringify(at(path)) + ", not " + id); });
@@ -3261,11 +3261,11 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
       // A page that says nothing gets the tab off the address; the smoke
       // globals put the address at /, so a class path is set for the render.
       const was = globalThis.location;
-      globalThis.location = { ...was, pathname: p + "/grade", search: "" };
+      globalThis.location = { ...was, pathname: "/grades/" + cfg0.id + "/flow", search: "" };
       const bar = renderToString(<TopNav config={cfg0} tabs={NAV_CLASS} active="" />);
       globalThis.location = was;
       const lit = (bar.match(/aria-current="page"[^>]*>([^<]*)</g) || []).map(s => s.replace(/.*>([^<]*)</, "$1"));
-      if (lit.join() !== "Grade view") say("on Grade view the lit tabs are " + JSON.stringify(lit));
+      if (lit.join() !== "Grades") say("on Grades the lit tabs are " + JSON.stringify(lit));
       if (/flex-wrap:wrap/.test(bar)) say("the bar still wraps");
       if (!/overflow-x:auto/.test(bar)) say("the tabs do not scroll sideways when the bar is short of room");
     } catch (err) { say("the bar threw: " + err.message); }
@@ -3474,7 +3474,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
     // Apps: yours in More, a student's behind the top-right button.
     const mine = appsFor(acfg, "instructor").map(a => a.label).join(", ");
     if (!/Dashboard/.test(mine) || !/Repository/.test(mine) || !/Games/.test(mine) || !/Around the Horn/.test(mine)) say("your apps are missing one: " + mine);
-    if (appsFor(acfg, "student").some(a => /Dashboard|Repository|Grade view/.test(a.label))) say("a student's apps include an instructor surface");
+    if (appsFor(acfg, "student").some(a => /Dashboard|Repository|Grades/.test(a.label))) say("a student's apps include an instructor surface");
   }
 
   // Grades so far: a tile per assignment, grey until graded, then the letter.

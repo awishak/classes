@@ -63,7 +63,8 @@ export function activeFor(config, role, pathname, search = "") {
   const apps = appsFor(config, role).filter(app => app.href).sort((x, y) => y.href.length - x.href.length);
   for (const app of apps) {
     const at = app.href.replace(/\/$/, "");
-    if (here === at || here.startsWith(at + (at.includes("?") ? "" : "?"))) return app.id;
+    // The page, the page with a query, or a page under it (/grades/comm3/flow is Grades).
+    if (here === at || here.startsWith(at + (at.includes("?") ? "" : "?")) || (!at.includes("?") && here.startsWith(at + "/"))) return app.id;
   }
   if (here.replace(/\?.*$/, "") === config.path + "/rungame") return "games";
   const rest = here.replace(/\?.*$/, "").replace(config.path, "").replace(/^\//, "");

@@ -107,7 +107,7 @@ export function otherTools(config) {
     key: "sitdown", title: "Sit-Down 1", line: "Every table, its time and its documents.",
     links: [{ say: "Home", href: config.path + "/sitdown", main: true }, { say: "The prep", href: config.path + "/sitdown/prep" }, { say: "Roles", href: config.path + "/worksheets/worktopia/roles" }],
   });
-  out.push({ key: "grade", title: "Grades", line: "Every challenge, every student, what is released.", links: [{ say: "Home", href: config.path + "/grade", main: true }] });
+  out.push({ key: "grade", title: "Grades", line: "Every challenge, every student, what is released.", links: [{ say: "Home", href: "/grades/" + config.id + "/flow", main: true }, { say: "Summary", href: "/grades/" + config.id + "/summary" }] });
   return out;
 }
 

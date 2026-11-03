@@ -303,8 +303,8 @@ export function InstructorWork({ config, data, update, go, editing }) {
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Btn onClick={() => go("assignments/new")}>New challenge</Btn>
         <Chip href={config.path + "/grade"}>Grade view</Chip>
-        {toGrade ? <Chip href={config.path + "/grade"}>{toGrade} to grade</Chip> : null}
-        <Chip href={config.path + "/grades"}>All grades</Chip>
+        {toGrade ? <Chip href="/grades">{toGrade} to grade</Chip> : null}
+        <Chip href={"/grades/" + config.id + "/summary"}>All grades</Chip>
         <Chip href={config.path + "/grading"}>Grade view, round two</Chip>
       </div>
       <ToolsPanel config={config} data={data} />

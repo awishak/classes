@@ -19,7 +19,14 @@ import SitdownPage from "./engine/SitdownPage.jsx";
 import DecisionsPage from "./engine/DecisionsPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
-import GradingPage from "./engine/GradingPage.jsx";
+import GradesPortal from "./engine/GradesPortal.jsx";
+
+// An address that moved. The browser goes on to the new one, with no entry
+// left behind for the back button to land on.
+function Redirect({ to }) {
+  useEffect(() => { window.location.replace(to); }, [to]);
+  return null;
+}
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import DigestPage from "./engine/DigestPage.jsx";
 import VisualEssayPlan from "./engine/VisualEssayPlan.jsx";
@@ -28,9 +35,7 @@ import VisualStoryPortal from "./engine/visualstory/portal.jsx";
 import StoryReviews from "./engine/visualstory/reviews.jsx";
 import ClassmatesStories from "./engine/visualstory/reading.jsx";
 import SampleStory from "./engine/visualstory/sample.jsx";
-import GradeView from "./engine/GradeView.jsx";
 import GradingIdeas from "./engine/portal/GradingIdeas.jsx";
-import GradesGrid from "./engine/portal/GradesGrid.jsx";
 import CheckinAnswers from "./engine/CheckinAnswers.jsx";
 import InstructorBar from "./engine/InstructorBar.jsx";
 import PlanPage from "./PlanPage.jsx";
@@ -266,14 +271,19 @@ export default function App() {
     );
   }
 
-  // What needs grading, across every current class, oldest due date first.
-  if (path === "/grading" || path === "/grading/") {
+  // Grades, one portal: To Grade, Grade Flow, Summary. /grades,
+  // /grades/<class>/flow, /grades/<class>/summary. The addresses the three
+  // surfaces had before 2026-11-03 go there too.
+  if (/^\/grades(\/comm\w+\/(flow|summary))?\/?$/.test(path)) {
     return (
-      <InstructorGate what="Grading">
-        <GradingPage />
+      <InstructorGate what="Grades">
+        <GradesPortal />
       </InstructorGate>
     );
   }
+  if (path === "/grading" || path === "/grading/") return <Redirect to="/grades" />;
+  const oldGrade = path.match(/^\/(comm\w+)\/grades?\/?$/);
+  if (oldGrade && ENGINE[oldGrade[1]]) return <Redirect to={"/grades/" + oldGrade[1] + (oldGrade[0].includes("/grades") ? "/summary" : "/flow") + (typeof window !== "undefined" ? window.location.search : "")} />;
 
   // Everything I have, across every class, behind the same gate as a dashboard.
   if (path === "/repo" || path === "/repo/") {
@@ -382,17 +392,6 @@ export default function App() {
     return <WorksheetPage key={ws[1] + "/" + ws[2]} config={ENGINE[ws[1]]} worksheetKey={ws[2]} />;
   }
 
-  // Every student's every grade, one grid. Andrew, 2026-10-29: "I need a way
-  // to look at all student grades ... a grid of all student grades."
-  const grid = path.match(/^\/(comm\w+)\/grades\/?$/);
-  if (grid && ENGINE[grid[1]]) {
-    const cfg = ENGINE[grid[1]];
-    return (
-      <InstructorGate what={cfg.code + " grades"}>
-        <InstructorBar config={cfg} always><GradesGrid key={cfg.id} config={cfg} /></InstructorBar>
-      </InstructorGate>
-    );
-  }
 
   // One student, whole: /<class>/student/<id>. Andrew, 2026-10-29: "a
   // beautiful profile, a page for every student." StudentPage.jsx.
@@ -418,7 +417,7 @@ export default function App() {
     );
   }
 
-  const live = path.match(/^\/(comm\w+)\/(dashboard|today|board|game|rungame|games|grade|checkins)\/?$/)
+  const live = path.match(/^\/(comm\w+)\/(dashboard|today|board|game|rungame|games|checkins)\/?$/)
     || path.match(/^\/(comm\w+)\/(dashboard)\/([a-z0-9-]+)\/?$/);
   if (live && ENGINE[live[1]]) {
     const cfg = ENGINE[live[1]];
@@ -433,13 +432,6 @@ export default function App() {
       return (
         <InstructorGate what={cfg.code + " check-in answers"}>
           <InstructorBar config={cfg} always><CheckinAnswers key={cfg.id} config={cfg} /></InstructorBar>
-        </InstructorGate>
-      );
-    }
-    if (live[2] === "grade") {
-      return (
-        <InstructorGate what={cfg.code + " grade view"}>
-          <InstructorBar config={cfg} always><GradeView key={cfg.id} config={cfg} /></InstructorBar>
         </InstructorGate>
       );
     }

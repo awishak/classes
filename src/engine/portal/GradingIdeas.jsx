@@ -229,7 +229,7 @@ export default function GradingIdeas({ config }) {
             <h1 className="pt-h1">Grade view, round two</h1>
             <span className="pt-sub">{config.code} as it stands, drawn in the site's own rows</span>
           </div>
-          <Chip href={config.path + "/grade"}>The grade view today</Chip>
+          <Chip href={"/grades/" + config.id + "/flow"}>The grade view today</Chip>
         </div>
         <div className="pt-titles">
           {PAGES.map(([k, say]) => <button key={k} type="button" className={page === k ? "on" : ""} onClick={() => setPage(k)}>{say}</button>)}
@@ -418,7 +418,7 @@ function AssignmentIdeas({ config, data, counted, chosen, setAid, roster, openSt
           </div>
           <div className="pt-row off" style={{ justifyContent: "space-between" }}>
             <p className="pt-text">The sorting board, exactly as it is today, sits under this band.</p>
-            <Io kind="go" href={config.path + "/grade?a=" + encodeURIComponent(c.asg.id)}>Open the board</Io>
+            <Io kind="go" href={"/grades/" + config.id + "/flow?a=" + encodeURIComponent(c.asg.id)}>Open the board</Io>
           </div>
         </>
       ) : (

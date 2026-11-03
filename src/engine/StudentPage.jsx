@@ -164,13 +164,13 @@ export default function StudentPage({ config, id }) {
   const checkins = checkinTasksOf(config, data).map(c => ({ asg: c, answers: answersOf(data, c.id, name) })).filter(c => c.answers);
   const myStory = feed && student.email ? (feed.stories || []).find(s => lower(s.email) === lower(student.email)) : null;
   const myComments = myStory ? (feed.comments || []).filter(c => c.story === myStory.id && lower(c.authorEmail) !== lower(student.email)) : [];
-  const back = () => { if (window.history.length > 1) window.history.back(); else window.location.assign(config.path + "/grades"); };
+  const back = () => { if (window.history.length > 1) window.history.back(); else window.location.assign("/grades/" + config.id + "/summary"); };
 
   return shell(
     <>
       <div className="sp-nav">
         <button type="button" className="sp-btn sp-back" onClick={back}>{"‹ Back"}</button>
-        <a className="sp-lnk" href={config.path + "/grades"}>Grades</a>
+        <a className="sp-lnk" href={"/grades/" + config.id + "/summary"}>Grades</a>
       </div>
 
       <section className="sp-card sp-hero">

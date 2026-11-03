@@ -1,11 +1,10 @@
-// Grading, one page across every current class: /grading.
+// To Grade: what needs grading, every class together, oldest due date first.
+// The first tab of the Grades portal (GradesPortal.jsx).
 //
 // Andrew, 2026-11-03: "i want to grade stuff for my classes. let's go in
 // chrono order. what assignments need grading? also this should be a page
-// for me, with beautiful UI." The queue, oldest due date first, every class
-// together. A row is an assignment; pressing it opens that class's grade view
-// on that assignment, which takes the id in its address (GradeView.jsx). The
-// page is the queue, the grade view is the work.
+// for me, with beautiful UI." A row is an assignment; pressing it opens
+// Grade Flow on that assignment, inside the portal.
 //
 // "To grade" is the rule the instructor home already uses (waitingOn in
 // AssignmentsCard.jsx): a submission, a worksheet hand-in, a check-in or a
@@ -18,7 +17,6 @@
 // count that matters in large type, the class as a chip.
 
 import { useEffect, useMemo, useState } from "react";
-import { currentClasses } from "../config/registry.js";
 import { loadClass } from "./store.js";
 import { useWorksheetSheets, withWorksheetSubmits } from "./worksheetSubmits.js";
 import { assignmentsOf } from "./profileTask.js";
@@ -27,15 +25,7 @@ import { deadlineOf } from "./DueCard.jsx";
 import { waitingOn, turnedIn } from "./AssignmentsCard.jsx";
 import { boardOf, sortedCount } from "./grades.js";
 import { realStudents } from "./sections.js";
-import { PORTAL_CSS } from "./portal/style.js";
 import { dueWords } from "./portal/bits.jsx";
-import { baseCSS } from "./themes.js";
-import { ThemeStyle } from "./ThemeShell.jsx";
-import TopNav, { NAV_TEACH } from "./TopNav.jsx";
-import { lastClass } from "./InstructorNav.jsx";
-import * as TOKENS from "./tokens.js";
-
-const F = TOKENS.FONT.body;
 
 /** One class's assignments as queue rows: what is waiting, in, graded, released. */
 export function queueOf(config, data) {
@@ -53,7 +43,7 @@ export function queueOf(config, data) {
       at: deadlineOf(asg.due, asg.dueTime) || 0,
       toGrade: w.toGrade || 0, messages: w.messages || 0,
       in: t.in || 0, of: students.length, sorted: sortedCount(board), released: !!board.released,
-      href: config.path + "/grade?a=" + encodeURIComponent(asg.id),
+      href: "/grades/" + config.id + "/flow?a=" + encodeURIComponent(asg.id),
     };
   }).filter(r => !r.ongoing);
 }
@@ -75,13 +65,11 @@ function ClassQueue({ config, onRows }) {
 
 const whenDue = (r) => r.due ? dueWords(r.due, r.dueTime) : "";
 
-export default function GradingPage() {
-  // The demo class (config.demo names a student) is nobody's to grade.
-  const classes = useMemo(() => currentClasses().filter(c => !c.demo), []);
+/** The queue. `classes` are the configs to read; `onOpen(classId, assignmentId)` opens Grade Flow. */
+export function ToGrade({ classes, onOpen }) {
   const [byClass, setByClass] = useState({});
   const [filter, setFilter] = useState("");
   const onRows = useMemo(() => (id, rows) => setByClass(prev => ({ ...prev, [id]: rows })), []);
-  useEffect(() => { document.title = "Grading"; }, []);
 
   const loaded = classes.every(c => byClass[c.id]);
   const now = Date.now();
@@ -91,65 +79,57 @@ export default function GradingPage() {
   const ahead = all.filter(r => !r.toGrade && r.at > now);
   const total = waiting.reduce((n, r) => n + r.toGrade, 0);
   const oldest = waiting[0] || null;
+  const open = (r) => (e) => { if (!onOpen || e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return; e.preventDefault(); onOpen(r.classId, r.id); };
 
   return (
-    <div data-theme="clean" data-mode="day" className="ca-root pt-root" style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text-primary)", fontFamily: F }}>
-      <ThemeStyle theme="clean" />
-      <style>{baseCSS() + PORTAL_CSS + CSS}</style>
-      <div style={{ position: "sticky", top: 0, zIndex: 10 }}>
-        <TopNav config={lastClass()} tabs={NAV_TEACH} active="grading" />
-      </div>
+    <>
+      <style>{CSS}</style>
       {classes.map(c => <ClassQueue key={c.id} config={c} onRows={onRows} />)}
-      <div className="gq">
-        <div className="gq-head">
-          <h1 className="gq-h1">Grading</h1>
-          {loaded ? <p className="gq-sum">{total ? <><b>{total}</b> to grade{oldest ? <>, oldest due <b>{whenDue(oldest)}</b></> : null}</> : "Nothing to grade"}</p> : null}
-        </div>
+      <div className="gq-head">
+        {loaded ? <p className="gq-sum">{total ? <><b>{total}</b> to grade{oldest ? <>, oldest due <b>{whenDue(oldest)}</b></> : null}</> : "Nothing to grade"}</p> : null}
         <div className="pt-chips">
           <button type="button" className={"pt-chip pt-focus" + (!filter ? " on" : "")} onClick={() => setFilter("")}>All</button>
           {classes.map(c => <button key={c.id} type="button" className={"pt-chip pt-focus" + (filter === c.id ? " on" : "")} onClick={() => setFilter(c.id)}>{c.code}</button>)}
         </div>
-        {loaded ? (
-          <div className="pt-body">
-            {waiting.map(r => (
-              <a key={r.key} className="pt-row link due gq-row pt-focus" href={r.href}>
-                <div className="gq-n"><span className="pt-tileN">{r.toGrade}</span><span className="gq-nl">to grade</span></div>
-                <div className="pt-main">
-                  <p className="pt-title"><span className="gq-code" style={{ color: r.accent }}>{r.code}</span>{r.title}</p>
-                  <p className="pt-when due"><span>Due {whenDue(r)}</span></p>
-                  <p className="pt-meta"><span>{r.in + " of " + r.of + " in"}</span><span>·</span><span>{r.sorted + " sorted"}</span><span>·</span><span>{r.released ? "Released" : "Not released"}</span>{r.messages ? <><span>·</span><span>{r.messages + (r.messages === 1 ? " message" : " messages")}</span></> : null}</p>
-                </div>
-                <div className="pt-side"><span className="pt-io go" style={{ background: r.accent }}>Grade</span></div>
-              </a>
-            ))}
-            {quiet.map(r => (
-              <a key={r.key} className="pt-row link done gq-row gq-quiet pt-focus" href={r.href}>
-                <div className="pt-main">
-                  <p className="pt-title"><span className="gq-code" style={{ color: r.accent }}>{r.code}</span>{r.title}</p>
-                </div>
-                <p className="pt-meta"><span>{whenDue(r)}</span><span>·</span><span>{r.in + " of " + r.of + " in"}</span><span>·</span><span>{r.released ? "Released" : r.sorted ? r.sorted + " sorted" : "Nothing in"}</span></p>
-              </a>
-            ))}
-            {ahead.length ? <div className="gq-rule" /> : null}
-            {ahead.map(r => (
-              <a key={r.key} className="pt-row link off gq-row gq-quiet pt-focus" href={r.href}>
-                <div className="pt-main">
-                  <p className="pt-title"><span className="gq-code">{r.code}</span>{r.title}</p>
-                </div>
-                <p className="pt-meta"><span>Due {whenDue(r)}</span>{r.in ? <><span>·</span><span>{r.in + " of " + r.of + " in"}</span></> : null}</p>
-              </a>
-            ))}
-          </div>
-        ) : null}
       </div>
-    </div>
+      {loaded ? (
+        <div className="pt-body">
+          {waiting.map(r => (
+            <a key={r.key} className="pt-row link due gq-row pt-focus" href={r.href} onClick={open(r)}>
+              <div className="gq-n"><span className="pt-tileN">{r.toGrade}</span><span className="gq-nl">to grade</span></div>
+              <div className="pt-main">
+                <p className="pt-title"><span className="gq-code" style={{ color: r.accent }}>{r.code}</span>{r.title}</p>
+                <p className="pt-when due"><span>Due {whenDue(r)}</span></p>
+                <p className="pt-meta"><span>{r.in + " of " + r.of + " in"}</span><span>·</span><span>{r.sorted + " sorted"}</span><span>·</span><span>{r.released ? "Released" : "Not released"}</span>{r.messages ? <><span>·</span><span>{r.messages + (r.messages === 1 ? " message" : " messages")}</span></> : null}</p>
+              </div>
+              <div className="pt-side"><span className="pt-io go" style={{ background: r.accent }}>Grade</span></div>
+            </a>
+          ))}
+          {quiet.map(r => (
+            <a key={r.key} className="pt-row link done gq-row gq-quiet pt-focus" href={r.href} onClick={open(r)}>
+              <div className="pt-main">
+                <p className="pt-title"><span className="gq-code" style={{ color: r.accent }}>{r.code}</span>{r.title}</p>
+              </div>
+              <p className="pt-meta"><span>{whenDue(r)}</span><span>·</span><span>{r.in + " of " + r.of + " in"}</span><span>·</span><span>{r.released ? "Released" : r.sorted ? r.sorted + " sorted" : "Nothing in"}</span></p>
+            </a>
+          ))}
+          {ahead.length ? <div className="gq-rule" /> : null}
+          {ahead.map(r => (
+            <a key={r.key} className="pt-row link off gq-row gq-quiet pt-focus" href={r.href} onClick={open(r)}>
+              <div className="pt-main">
+                <p className="pt-title"><span className="gq-code">{r.code}</span>{r.title}</p>
+              </div>
+              <p className="pt-meta"><span>Due {whenDue(r)}</span>{r.in ? <><span>·</span><span>{r.in + " of " + r.of + " in"}</span></> : null}</p>
+            </a>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
 
 const CSS = `
-.gq{max-width:820px;margin:0 auto;padding:28px 16px 96px;display:flex;flex-direction:column;gap:18px}
-.gq-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
-.gq-h1{margin:0;font-family:var(--pt-serif);font-size:34px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.gq-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between}
 .gq-sum{margin:0;font-size:16px;color:var(--text-secondary)}
 .gq-sum b{color:var(--text-primary);font-weight:700}
 .gq-row{text-decoration:none;color:inherit}

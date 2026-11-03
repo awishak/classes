@@ -113,7 +113,9 @@ const workOf = (data, aid, name, asg) => {
     regrade: regradePending(log) ? regrade : null, lateness: latenessOf(asg, log) };
 };
 
-export default function GradeView({ config }) {
+// `embedded`: inside the Grades portal (GradesPortal.jsx), which draws the bar
+// and the tabs; the header then sticks `stickyTop` down, under that bar.
+export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
   const [stored, update] = useClassData(config.storageKey);
   // The faces live one row over; put back on the profiles here. See photos.js.
   const [photos] = usePhotos(config.storageKey);
@@ -237,13 +239,13 @@ export default function GradeView({ config }) {
     background: solid ? a : WHITE, color: solid ? "#fff" : TEXT_PRIMARY, border: "1px solid " + (solid ? a : LINE_STRONG) });
 
   return (
-    <div style={{ minHeight: "100vh", background: WHITE, color: TEXT_PRIMARY, fontFamily: F, "--gv-accent": a }}>
+    <div style={{ minHeight: embedded ? 0 : "100vh", background: WHITE, color: TEXT_PRIMARY, fontFamily: F, "--gv-accent": a }}>
       <ThemeStyle theme="clean" />
       <style>{CSS}</style>
 
-      <header style={{ position: "sticky", top: 0, zIndex: 5, background: WHITE, borderBottom: "1px solid " + LINE }}>
+      <header style={{ position: "sticky", top: embedded ? stickyTop : 0, zIndex: 5, background: WHITE, borderBottom: "1px solid " + LINE }}>
         <div style={{ maxWidth: 1600, margin: "0 auto", padding: "10px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 15, fontWeight: 600 }}>{config.code} · Grade view</div>
+          <div style={{ fontSize: 15, fontWeight: 600 }}>{config.code} · Grade Flow</div>
           {assignments.length ? (
             <select className="gv-focus" value={aid} onChange={e => pick(e.target.value)} aria-label="Challenge"
               style={{ minHeight: HIT, padding: "0 10px", borderRadius: 8, border: "1px solid " + LINE_STRONG, fontFamily: F, fontSize: 16, background: WHITE, color: TEXT_PRIMARY, maxWidth: 360 }}>
