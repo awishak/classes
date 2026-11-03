@@ -43,10 +43,11 @@ const TONE = { A: "great", Exceptional: "great", Complete: "great", B: "good", "
 /** One cell: { say, kind, tone, title } for a student on an assignment. kind is done, pending, in, missed or "". */
 export function cellOf(config, data, asg, name) {
   const st = statusOf(config, data, asg, name, new Set());
-  if (st.letter) return { say: short(st.letter), kind: "done", tone: TONE[st.letter] || "", title: st.letter, letter: st.letter };
-  const bucket = boardOf(data, asg.id).cards?.[name]?.bucket;
-  const b = bucket ? bucketOf(bucket) : null;
-  if (b) return { say: short(b.letter), kind: "pending", tone: TONE[b.letter] || "", title: b.letter + ", not released", letter: b.letter };
+  const own = (score, b) => score != null && b && score !== b.score ? " " + score : "";
+  if (st.letter) { const b = bucketOf(st.grade?.bucket); return { say: short(st.letter) + own(st.grade?.score, b), kind: "done", tone: TONE[st.letter] || "", title: st.letter + (st.grade?.score != null ? ", " + st.grade.score : ""), letter: st.letter }; }
+  const card = boardOf(data, asg.id).cards?.[name] || {};
+  const b = card.bucket ? bucketOf(card.bucket) : null;
+  if (b) return { say: short(b.letter) + own(card.score, b), kind: "pending", tone: TONE[b.letter] || "", title: b.letter + (card.score != null ? ", " + card.score : "") + ", not released", letter: b.letter };
   if (st.state === "turnedIn") return { say: "•", kind: "in", tone: "", title: "Turned in, not graded", letter: null };
   if (st.state === "missed") return { say: "–", kind: "missed", tone: "", title: "Nothing in", letter: null };
   return { say: "", kind: "", tone: "", title: "", letter: null };

@@ -162,6 +162,10 @@ const eid = (now) => "gb-" + now.toString(36) + "-" + (seq++).toString(36);
 
 // The grade a student was last sent from this board: the board's event in
 // their log, or the one Hide put aside.
+// The score a card sends: its own when it has one (Andrew, 2026-11-03: "give
+// him like 25% credit"), else the grade's.
+export const scoreOf = (card, b) => card?.score != null ? card.score : (b ? b.score : null);
+
 const sentTo = (board, log, name) => {
   const inLog = (log || []).filter(e => e.board);
   return inLog[inLog.length - 1] || board.hidden?.[name] || null;
@@ -177,7 +181,7 @@ const releaseStateOf = (board, log, name) => {
   const sent = sentTo(board, log, name);
   if (!b) return sent && (log || []).some(e => e.board) ? "withdrawn" : null;
   if (!sent) return "new";
-  const same = sent.bucket === b.id && (sent.html || null) === (toHtml(card.comment) || null);
+  const same = sent.bucket === b.id && (sent.html || null) === (toHtml(card.comment) || null) && (sent.score ?? null) === scoreOf(card, b);
   return same ? "same" : "changed";
 };
 
@@ -214,10 +218,10 @@ export const releasePatch = (data, aid, now = Date.now(), opts = {}) => {
     }
     const html = toHtml(card.comment);
     logs[name] = [...kept, { id: eid(now), ts: now, type: "grade", board: true,
-      score: b.score, letter: b.letter, bucket: b.id, html: html || null }];
+      score: scoreOf(card, b), letter: b.letter, bucket: b.id, html: html || null }];
     // An Incomplete, a D, an F or a zero brings the calendar with it, once
     // per grade, as a message of its own on the challenge.
-    if (opts.meetingLink && (NEEDS_MEETING.has(b.id) || b.score === 0)) {
+    if (opts.meetingLink && (NEEDS_MEETING.has(b.id) || scoreOf(card, b) === 0)) {
       logs[name] = [...logs[name], { id: eid(now), ts: now + 1, type: "comment", from: "instructor", auto: true,
         text: MEETING_LINE + "\n" + opts.meetingLink }];
     }

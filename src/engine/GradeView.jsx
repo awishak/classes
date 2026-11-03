@@ -499,7 +499,11 @@ function Card({ config, student, profile, due, card, work, accent, checkin, colu
   // The grade, chosen in the same box as the comment. Starts on the column
   // the card is in; tapping the lit one again puts the card back on the pile.
   const [bucket, setBucket] = useState(card.bucket || null);
-  useEffect(() => { if (editing) { setComment(card.comment || ""); setBucket(card.bucket || null); } }, [editing]);   // eslint-disable-line react-hooks/exhaustive-deps
+  // A score of the card's own. Andrew, 2026-11-03, on a Not quite that was
+  // worth less than its 50: "give him like 25% credit." Blank means the
+  // grade's own number.
+  const [score, setScore] = useState(card.score == null ? "" : String(card.score));
+  useEffect(() => { if (editing) { setComment(card.comment || ""); setBucket(card.bucket || null); setScore(card.score == null ? "" : String(card.score)); } }, [editing]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   const late = !!work.lateness?.late;
   const link = work.link;
@@ -533,7 +537,7 @@ function Card({ config, student, profile, due, card, work, accent, checkin, colu
         {/* The student wrote and nobody has answered: say so where the card is. */}
         {work.regrade ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>Regrade requested</span>
           : work.waiting ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>New message</span> : null}
-        {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}</span>
+        {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}{card.score != null ? <span style={{ fontWeight: 600, color: TEXT_SECONDARY }}> · {card.score}</span> : null}</span>
           : work.earlier ? <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>earlier: {gradeText(work.earlier)}</span> : null}
       </div>
       {/* A check-in has answers rather than a file: the first one, and the
@@ -590,8 +594,17 @@ function Card({ config, student, profile, due, card, work, accent, checkin, colu
               })}
             </div>
           </div>
+          <div>
+            <div style={label}>Score</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+              <input className="gv-focus" type="number" min={0} max={100} step={1} inputMode="numeric" value={score} onChange={e => setScore(e.target.value)} aria-label="Score"
+                placeholder={(() => { const b = bucket ? bucketOf(bucket) : null; return b && b.score != null ? String(b.score) : ""; })()}
+                style={{ width: 84, minHeight: HIT, padding: "0 10px", borderRadius: 8, border: "1px solid " + LINE_STRONG, fontFamily: F, fontSize: 15, background: WHITE, color: TEXT_PRIMARY }} />
+              <span style={{ fontSize: 13, color: TEXT_MUTED }}>out of 100. Blank is the grade's own number.</span>
+            </div>
+          </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="gv-focus" onClick={() => onSave({ comment: comment.trim() }, bucket === (card.bucket || null) ? undefined : bucket)}
+            <button className="gv-focus" onClick={() => { const n = score.trim() === "" ? null : Math.max(0, Math.min(100, Math.round(Number(score)))); onSave({ comment: comment.trim(), score: Number.isFinite(n) ? n : null }, bucket === (card.bucket || null) ? undefined : bucket); }}
               style={{ minHeight: HIT, padding: "0 14px", borderRadius: 8, background: accent, color: "#fff", border: "none", fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Save</button>
             <button className="gv-focus" onClick={onCancel}
               style={{ minHeight: HIT, padding: "0 12px", borderRadius: 8, background: "none", color: TEXT_SECONDARY, border: "1px solid " + LINE_STRONG, fontFamily: F, fontSize: 15, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
