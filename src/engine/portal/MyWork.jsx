@@ -24,6 +24,13 @@ import { useMarkThreadSeen } from "../YouCard.jsx";
 import { Sec, Row, Io, Btn, Chip, Lnk, Check, Gm, Face, DrFace, I, dcolOf, dueWords, whenWords, dayWords, firstLink, hostOf, drShort } from "./bits.jsx";
 import { visibleAssignments, workOf, unseenOf, nextOwedOf, counts, flowOf, FLOW_FILTERS, opensWords } from "./work.js";
 import { worksheetOf } from "../worksheetSubmits.js";
+import { MySheet } from "../WorksheetPage.jsx";
+import { useSession } from "../session.js";
+import { rosterOf } from "../roster.js";
+import { isLurker } from "../sections.js";
+import { usePhotos } from "../photos.js";
+import { useStudentTheme, useDayNight } from "../ThemeShell.jsx";
+import { hasNight } from "../themes.js";
 import { VISUAL_PRE_KEY, VISUAL_PRE_2_KEY } from "../visualstory/pre.jsx";
 import { PreRow, PreStanding, usePreStanding, preShort, preHref } from "../visualstory/prerow.jsx";
 import { StoriesRow, StoriesLink } from "../visualstory/door.jsx";
@@ -296,6 +303,14 @@ export function PerformanceSheet({ config, data, name, go, onClose }) {
 // ─── one challenge ───
 export function ChallengePage({ config, data, update, name, id, go }) {
   const asg = visibleAssignments(config, data).find(a => a.id === id);
+  // The student's own worksheet, read back on this page. Andrew, 2026-11-03:
+  // "They need to be able to access all their answers after they complete
+  // it by simply going to the page for that assignment."
+  const { email } = useSession();
+  const [photos] = usePhotos(config.storageKey);
+  const [theme] = useStudentTheme(config);
+  const [mode] = useDayNight(config);
+  const sheetTheme = !hasNight(theme) ? "light" : mode === "night" ? "dark" : mode === "day" ? "light" : undefined;
   const [draft, setDraft] = useState("");
   const [fold, setFold] = useState(false);
   // Turning it in late, and asking for a regrade: each a link and a reason.
@@ -396,6 +411,10 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   const preBox = isPre ? <PreStanding config={config} /> : null;
   // A second topic, on its own page: start one, or get back to the one started.
   const second = usePreStanding(isPre ? config : null, VISUAL_PRE_2_KEY);
+  const viewer = email ? { id: String(email).trim().toLowerCase(), name } : null;
+  const mine = sheet && viewer && sheet.classId === config.id
+    ? <MySheet config={config} worksheetKey={sheet.key} viewer={viewer} photos={photos} classmates={rosterOf(config, data).map(s => s.name).filter(n => n && n !== name && !isLurker(n))} theme={sheetTheme} />
+    : null;
   const sheetBtn = sheet ? (
     <div className="pt-acts">
       <Btn href={"/" + sheet.classId + "/worksheets/" + sheet.key}>{st.state === "open" || st.state === "missed" ? "Open your " + sheetWords(sheet.key) : "Reopen your " + sheetWords(sheet.key)}</Btn>
@@ -405,11 +424,12 @@ export function ChallengePage({ config, data, update, name, id, go }) {
   ) : null;
   const instructions = (words || asg.instructionsUrl) ? (
     st.state === "open" || st.state === "missed"
-      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{storiesLink}{preBox}{sheetBtn}{more}</div>
+      ? <div className="pt-stack">{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{storiesLink}{preBox}{sheetBtn}{mine}{more}</div>
       : <div className="pt-stack">
           {storiesLink}
           {preBox}
           {sheetBtn}
+          {mine}
           <div className="pt-acts"><Io onClick={() => setFold(v => !v)}>Instructions</Io>{st.state === "turnedIn" && canSend ? <span className="pt-quiet" style={{ padding: 0 }}>Send another link below.</span> : null}</div>
           {fold ? <>{words ? <p className="pt-text" style={{ fontSize: 17 }}>{words}</p> : null}{more}</> : null}
         </div>

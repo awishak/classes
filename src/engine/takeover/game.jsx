@@ -445,6 +445,7 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
   const [readings, setReadings] = useState(null);    // this student's readings, [] when there are none, null until read
   const [showReadings, setShowReadings] = useState(false);
   const [howOpen, setHowOpen] = useState(false);      // the How it works popup, open from the top row or the HUD. Andrew, 2026-11-02: "a popup on the site that explains the game."
+  const [restarting, setRestarting] = useState(false); // Start a new season, asked once before the file is erased
   const saver = useRef(null);
   const sound = useRef(null);
   const rootRef = useRef(null);
@@ -669,13 +670,30 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
       </div>
     );
   } else if (screen === "file") {
+    // A file that is not handed in opens on everything written so far, the
+    // same read-back the done screen gives. Andrew, 2026-11-03: "They need
+    // to be able to access all their answers after they complete it by
+    // simply going to the page." Start a new season, which erases the file,
+    // sits at the bottom and asks once.
+    const played = season.results.length > 0 || !blank(answers[E.F.define]);
     body = (
-      <div className="screen center">
-        <p className="say"><Words k="onFile" copy={copy} /></p>
-        {topicsFailed ? <p className="say bad">Your concepts sheet could not be read. Reload the page and try again.</p> : null}
-        <div className="row">
+      <div className="screen">
+        <div className="row end">
+          <p className="say"><Words k="onFile" copy={copy} /></p>
           <button type="button" className="btn px primary" onClick={resume} disabled={!ready}>{ready ? copy.say("resume") : "Loading"}</button>
-          <button type="button" className="btn px" onClick={restart}>{copy.say("restart")}</button>
+        </div>
+        {topicsFailed ? <p className="say bad">Your concepts sheet could not be read. Reload the page and try again.</p> : null}
+        {played ? <SeasonLog answers={answers} name={name} classmates={classmates} copy={copy} /> : null}
+        <div className="row end">
+          {restarting ? (
+            <>
+              <span className="status px bad">{copy.say("restartAsk")}</span>
+              <span className="row">
+                <button type="button" className="btn px small" onClick={() => { setRestarting(false); restart(); }}>{copy.say("restartYes")}</button>
+                <button type="button" className="btn px small primary" onClick={() => setRestarting(false)}>{copy.say("restartNo")}</button>
+              </span>
+            </>
+          ) : <button type="button" className="btn px small" onClick={() => { sound.current.blip(); setRestarting(true); }}>{copy.say("restart")}</button>}
         </div>
       </div>
     );

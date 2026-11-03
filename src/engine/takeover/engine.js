@@ -810,5 +810,8 @@ export const DEFAULT_COPY = {
   recall: "Take it back",
   resume: "Pick up where you left off",
   restart: "Start a new season",
+  restartAsk: "Start over? Everything on file is erased.",
+  restartYes: "Yes, start over",
+  restartNo: "Keep my season",
   onFile: "Your season is on file.",
 };

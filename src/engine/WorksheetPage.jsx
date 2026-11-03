@@ -113,6 +113,59 @@ function LocalSheet({ local, config, viewer, photo, photos, classmates, theme, e
   return <div ref={ref} />;
 }
 
+// The signed-in student's own sheet, read only: on the assignment's page in
+// My Work, and on the worksheet's address once the sheet has closed. Andrew,
+// 2026-11-03: "They need to be able to access all their answers after they
+// complete it by simply going to the page for that assignment." The read is
+// the student's own, under the rules; nothing is written. Draws nothing, or
+// `fallback`, when there is no file.
+export function MySheet({ config, worksheetKey, viewer, photos = {}, classmates = [], theme, fallback = null }) {
+  const ref = useRef(null);
+  const [state, setState] = useState("loading");   // loading | none | failed | shown
+  const [submitted, setSubmitted] = useState(null);
+  const names = classmates.join("\n");
+  const pics = classmates.map(n => (photos || {})[n] || "").join("\n");
+  useEffect(() => {
+    let alive = true, sheet = null;
+    (async () => {
+      try {
+        const own = supabaseStore({ supabase: gameClient, worksheetKey, groupKey: config.id, viewerId: viewer.id });
+        const got = await own.load();
+        if (!alive) return;
+        if (!got || !Object.keys(got.answers || {}).length) { setState("none"); return; }
+        setSubmitted(got.submitted_at || null);
+        setState("shown");
+        const refuse = async () => { throw new Error("This file is read only."); };
+        const store = { async load() { return got; }, save: refuse, remove: refuse, submit: refuse, recall: refuse, reset: refuse };
+        const local = localWorksheet(worksheetKey);
+        if (local) {
+          const list = names ? names.split("\n") : [];
+          const urls = pics.split("\n");
+          const photoOf = Object.fromEntries(list.map((n, i) => [n, urls[i] || ""]));
+          const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: viewer.id });
+          sheet = local.mount(ref.current, { store, viewer, photo: photoOf[viewer.name] || "", photos: photoOf, classmates: list, readOnly: true, onFile, theme, classId: config.id, storageKey: config.storageKey });
+          return;
+        }
+        const pkg = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
+        sheet = mountSheet(ref.current, {
+          store, readOnly: true, theme, accent: pkg.accent || config.accent, accentLight: pkg.accentLight || config.accentLight,
+          vars: pkg.vars, dark: pkg.dark || { accent: config.accentDark },
+        });
+      } catch { if (alive) setState("failed"); }
+    })();
+    return () => { alive = false; if (sheet) sheet.destroy(); };
+  }, [config, worksheetKey, viewer.id, viewer.name, names, pics, theme]);
+  if (state === "none") return fallback;
+  if (state === "loading") return null;
+  return (
+    <div>
+      {state === "failed" ? <p style={{ fontSize: 17, margin: 0 }}>Your sheet could not be read. Reload to try again.</p>
+        : <p style={{ fontSize: 15, color: TOKENS.TEXT.secondary, margin: "0 0 10px" }}>{submitted ? "Handed in " + new Date(submitted).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "On file, not handed in"}</p>}
+      <div ref={ref} />
+    </div>
+  );
+}
+
 // The Brady-Manning Work Index, readable: /<class>/worksheets/worktopia?index.
 // Andrew, 2026-10-01: "make sure i can see the list."
 function JobIndex() {
@@ -214,8 +267,10 @@ export default function WorksheetPage({ config, worksheetKey }) {
     body = "all";
   } else if (local && !instructor && !openTo(local, config.id, data)) {
     // Built, not sent: the instructor tries it under their own email first.
+    // A sheet that has closed still shows a student their own file.
     const at = opensAt(local, data);
-    body = <p style={{ fontSize: 17, margin: 0 }}>{at ? "This worksheet opens " + at.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }) + "." : "This worksheet is not open yet."}</p>;
+    body = <MySheet config={config} worksheetKey={worksheetKey} viewer={viewer} photos={photos} classmates={roster.map(s => s.name).filter(n => n && n !== viewer.name && !isLurker(n))} theme={sheetThemeOf(theme, mode)}
+      fallback={<p style={{ fontSize: 17, margin: 0 }}>{at ? "This worksheet opens " + at.toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }) + "." : "This worksheet is not open yet."}</p>} />;
   } else {
     body = null;
   }
