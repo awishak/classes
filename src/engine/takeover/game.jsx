@@ -712,7 +712,10 @@ export function TakeoverGame({ store, viewer, photo, photos = {}, classmates = [
         </p>
         <p className="say"><Words k="hiredWhy" copy={copy} /></p>
         {topicsFailed ? <p className="say bad">Your concepts sheet could not be read. Reload the page and try again.</p>
-          : <button type="button" className="btn px primary blink" onClick={begin} disabled={!ready || !sportId || !teamPick}>{ready ? copy.say("ready") : "Loading"}</button>}
+          : <>
+            <button type="button" className={"btn px primary" + (ready && sportId && teamPick ? " blink" : "")} onClick={begin} disabled={!ready || !sportId || !teamPick}>{ready ? copy.say("ready") : "Loading"}</button>
+            {ready && !(sportId && teamPick) ? <p className="say"><Words k={!teamPick && !sportId ? "pickBoth" : !teamPick ? "pickTeam" : "pickSport"} copy={copy} /></p> : null}
+          </>}
       </div>
     );
   } else if (screen === "meet" && sport) {

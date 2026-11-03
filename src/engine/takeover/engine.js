@@ -745,6 +745,12 @@ export const DEFAULT_COPY = {
   hiredIn: "in",
   hiredWhy: "You have to make some changes over the next 7 weeks. And it's important that you improve the culture, as you've been hired to not only make the team better, but to also make the culture better.",
   ready: "Ready to start?",
+  // The button is greyed until both picks are made. Jacqueline Cingel,
+  // 2026-11-02: "it doesn't seem like the 'ready to start' button is
+  // working after I selected my team." She had not picked a sport.
+  pickTeam: "Pick your team first.",
+  pickSport: "Pick a sport first.",
+  pickBoth: "Pick a team and a sport first.",
   meet: "Meet the team.",
   meetLine: "Five of them will decide how this goes.",
   howTitle: "How this works",

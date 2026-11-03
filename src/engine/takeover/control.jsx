@@ -110,7 +110,7 @@ export default function TakeoverControl({ config, worksheetKey, roster }) {
       <h2 className="tkc-h">A season, built</h2>
       <ol className="tkc-list">
         <li>Nothing is random. Every roll is a hash of the student's name plus where they are in the season, so a reload shows the same season and a resumed file replays exactly.</li>
-        <li>The student picks a sport (volleyball, Aussie rules football, softball) and a team from six names the hash deals them out of {E.TEAM_NAMES.length} that do not fit the place. Opponents are six other names, a different one each week.</li>
+        <li>The student picks a sport (volleyball, Aussie rules football, softball) and a team from six names the hash deals them out of {E.TEAM_NAMES.length} that do not fit the place. Opponents are six other names, a different one each week. Ready to start? stays greyed and still until both are picked, with a line under it saying which pick is missing.</li>
         <li>Five classmates are dealt the five parts below, in an order the name sets, from the roster less the student and the house accounts. The cast is saved on the file, so a roster change later never reshuffles a season.</li>
         <li>The student's five concepts come from their Concepts in Team Communication sheet, slots a to e, matched to the chapter's twenty titles. A short or missing sheet is filled from the class's most chosen: {E.CLASS_TOP.map(c => E.conceptOf(c).name).join(", ")}.</li>
         <li>Week 1 is the opener, with the first concept's question. Week 2 is the second concept's situation. Week 3 is the press: Lisa Davis of the Pacifica Times. Weeks 4 to 6 are the last three concepts' situations. Week 7 is the finale.</li>
