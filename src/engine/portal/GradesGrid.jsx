@@ -67,15 +67,18 @@ const statusById = (id) => STATUSES.find(s => s.id === id) || null;
 
 /**
  * A student's status from what is graded, released or on the board, and what
- * was never turned in after the due date. Not submitted as a grade counts as
- * a miss. Nothing graded and nothing turned in is Should drop; nothing graded
- * with work waiting is no status yet.
+ * was never turned in on an assignment whose grades have gone out. Andrew,
+ * 2026-11-03: "you are counting things that aren't graded yet." An
+ * assignment he has not released yet says nothing about anyone, so a miss
+ * on it is not a miss here. Not submitted as a grade counts as a miss.
+ * Nothing graded and nothing turned in is Should drop; nothing graded with
+ * work waiting is no status yet.
  */
 export function studentStatus(config, data, assignments, name) {
-  const cells = assignments.map(asg => cellOf(config, data, asg, name));
+  const cells = assignments.filter(asg => boardOf(data, asg.id).released).map(asg => cellOf(config, data, asg, name));
   const letters = cells.map(c => c.letter).filter(Boolean);
   const misses = cells.filter(c => c.kind === "missed").length + letters.filter(l => l === "Not submitted").length;
-  const waiting = cells.filter(c => c.kind === "in").length;
+  const waiting = assignments.some(asg => cellOf(config, data, asg, name).kind === "in") ? 1 : 0;
   const pct = computeGrade(config, data, name).pct;
   const has = (...ls) => letters.some(l => ls.includes(l));
   if (!letters.length && !misses) return waiting ? null : statusById("drop");
