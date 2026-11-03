@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { authHeaders } from "./session.js";
 import { checkinSummary, checkinLines } from "./checkinSummary.js";
+import { realStudents } from "./sections.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -84,8 +85,10 @@ const Name = ({ name, onOpen }) => (
   <button type="button" onClick={() => onOpen && onOpen(name)} style={{ background: "none", border: "none", padding: 0, font: "inherit", color: "inherit", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3 }}>{name}</button>
 );
 
-export default function CheckinSummary({ config, data, asg, roster, onOpen }) {
+export default function CheckinSummary({ config, data, asg, roster: everyone, onOpen }) {
   const a = config.accent;
+  // The test students are in nobody's count.
+  const roster = realStudents(config, everyone);
   const s = checkinSummary(data, asg, roster);
   const lines = checkinLines(data, asg, roster);
   const [shown, setShown] = useState(false);
