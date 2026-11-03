@@ -76,7 +76,8 @@ function ClassQueue({ config, onRows }) {
 const whenDue = (r) => r.due ? dueWords(r.due, r.dueTime) : "";
 
 export default function GradingPage() {
-  const classes = useMemo(() => currentClasses(), []);
+  // The demo class (config.demo names a student) is nobody's to grade.
+  const classes = useMemo(() => currentClasses().filter(c => !c.demo), []);
   const [byClass, setByClass] = useState({});
   const [filter, setFilter] = useState("");
   const onRows = useMemo(() => (id, rows) => setByClass(prev => ({ ...prev, [id]: rows })), []);
@@ -118,7 +119,7 @@ export default function GradingPage() {
                   <p className="pt-when due"><span>Due {whenDue(r)}</span></p>
                   <p className="pt-meta"><span>{r.in + " of " + r.of + " in"}</span><span>·</span><span>{r.sorted + " sorted"}</span><span>·</span><span>{r.released ? "Released" : "Not released"}</span>{r.messages ? <><span>·</span><span>{r.messages + (r.messages === 1 ? " message" : " messages")}</span></> : null}</p>
                 </div>
-                <div className="pt-side"><span className="pt-io go">Grade</span></div>
+                <div className="pt-side"><span className="pt-io go" style={{ background: r.accent }}>Grade</span></div>
               </a>
             ))}
             {quiet.map(r => (

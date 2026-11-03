@@ -33,6 +33,7 @@ export function appsFor(config, role) {
     return [
       { id: "dashboard", label: "Dashboard", href: p + "/dashboard" },
       { id: "repo", label: "Repository", href: "/repo" },
+      { id: "grading", label: "Grading", href: "/grading" },
       { id: "games", label: "Games", href: p + "/games" },
       { id: "worksheets", label: "Worksheets", href: p + "/worksheets" },
       ...answers,
