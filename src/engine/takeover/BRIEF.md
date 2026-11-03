@@ -70,6 +70,16 @@ figure out."
 - Students: `/comm118/worksheets/locker-room`, signed in with their email off
   the roster. **COMM 999 only until Andrew opens it** from the Worksheets
   page switch (`open: ["comm999"]` in `localWorksheets.js`).
+- A student's own answers, since 2026-11-03. Andrew: "They need to be able to
+  access all their answers after they complete it by simply going to the
+  page for that assignment." The assignment page in My Work draws the
+  student's file read only under the Open button (`MySheet` in
+  WorksheetPage.jsx, which does this for every worksheet an assignment
+  links to). The file screen opens on the season log with Pick up where
+  you left off above it; Start a new season sits at the bottom and asks
+  once before erasing. A sheet closed to the class still shows a student
+  their file at its address. `private/takeover-file-demo.html` is the
+  harness for the file screen, seeded with Andrew's own rows.
 - One student's file, for the instructor: `?s=<email>`.
 - Every student, for the instructor: `?review`. Who is in, what kinds of
   action the class chose, how the polls went, and each season read back.
