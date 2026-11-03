@@ -202,7 +202,8 @@ const CSS = `
 .gg-sofar{font-variant-numeric:tabular-nums}
 .gg-sofar b{font-size:16px}
 .gg-pct{color:var(--text-muted);font-size:13px}
-.gg-status{min-width:132px}
+.gg-table .gg-status{min-width:132px;position:sticky;right:0;background:var(--surface-card);z-index:1;box-shadow:-1px 0 0 var(--line-soft)}
+.gg-table thead .gg-status{z-index:3}
 .gg-st{display:inline-flex;align-items:center;height:28px;padding:0 12px;border-radius:999px;font-weight:700;font-size:13px;white-space:nowrap}
 .gg-st.great{background:#dcefdf;color:#1b6b3a}
 .gg-st.good{background:#dcefdf;color:#1b6b3a}
