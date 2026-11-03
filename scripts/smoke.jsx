@@ -5838,6 +5838,31 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if ((d2.assignmentLog["checkin-4"][N] || []).length !== 1 || ci.answersOf(d2, "checkin-4", N).going !== "better") say("an edit adds a second submission or loses the change");
 }
 
+// The Summary read of a check-in. Andrew, 2026-11-03: "do a qualitative
+// analysis and give me summary info."
+{
+  const say = (m) => { console.error("  FAIL  check-in summary: " + m); failedEarly++; };
+  const { checkinSummary, checkinLines } = await import("../src/engine/checkinSummary.js");
+  const asg = { id: "checkin-4", title: "Week 4 check-in" };
+  const roster = [{ name: "Ada Lovelace", section: "8:00" }, { name: "Bob Ross", section: "8:00" }, { name: "Cy Twombly", section: "10:30" }, { name: "Di Prima", section: "10:30" }];
+  const data = { checkins: { "checkin-4": {
+    "Ada Lovelace": { going: "Going well, I enjoy the class and the people in it a lot.", differently: "Read the textbook properly before class and start the assignments earlier in the week.", support: "Nothing at the moment.", challenge: "Time management with my other classes and my job on the weekends." },
+    "Bob Ross": { going: "Honestly I feel behind and a bit lost, the first project did not go the way I wanted.", differently: "Ask more questions in class and go to office hours when I am stuck.", support: "More examples in the assignment instructions would help me see what you mean.", challenge: "Coming up with ideas for the projects before the week runs out." },
+    "Cy Twombly": { going: "Good", differently: "Nothing", support: "N/A", challenge: "none" },
+  } } };
+  const s = checkinSummary(data, asg, roster);
+  if (s.answered !== 3 || s.of !== 4 || s.waiting.join() !== "Di Prima") say("the count is off: " + JSON.stringify([s.answered, s.of, s.waiting]));
+  if (s.bySection.map(b => b.section + b.answered + "/" + b.of).join() !== "8:002/2,10:301/2") say("sections are off: " + JSON.stringify(s.bySection));
+  if (s.asks.length !== 1 || s.asks[0].name !== "Bob Ross" || s.nothing !== 2) say("the asks are off: " + JSON.stringify(s.asks));
+  if (s.struggling.map(x => x.name).join() !== "Bob Ross" || s.fine !== 2) say("the struggle read is off: " + JSON.stringify(s.struggling));
+  if (s.thin.map(t => t.name).join() !== "Cy Twombly") say("the thin list is off: " + JSON.stringify(s.thin));
+  const theme = (list, id) => list.find(t => t.id === id)?.names || [];
+  if (theme(s.challenges, "time").join() !== "Ada Lovelace" || theme(s.challenges, "ideas").join() !== "Bob Ross" || theme(s.challenges, "none").join() !== "Cy Twombly") say("challenge themes are off: " + JSON.stringify(s.challenges.map(t => [t.id, t.names])));
+  if (theme(s.plans, "read").join() !== "Ada Lovelace" || !theme(s.plans, "speak").includes("Bob Ross") || theme(s.plans, "same").join() !== "Cy Twombly") say("plan themes are off: " + JSON.stringify(s.plans.map(t => [t.id, t.names])));
+  const lines = checkinLines(data, asg, roster);
+  if (lines.length !== 3 || lines.some(l => /Ada|Bob|Cy/.test(l))) say("the lines for Claude carry a name or the wrong count");
+}
+
 // The visual story's saver: typing is never lost. Andrew, 2026-10-13: "If you
 // have a situation in which students type something that disappears, real
 // trouble." A store that fails keeps the words in the browser copy; a reload

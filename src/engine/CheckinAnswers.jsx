@@ -22,6 +22,7 @@ import { withIds } from "./roster.js";
 import { checkinTasksOf, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { workSoFar } from "./CheckinCard.jsx";
 import { StudentLink } from "./StudentPage.jsx";
+import CheckinSummary from "./CheckinSummary.jsx";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -61,7 +62,7 @@ export default function CheckinAnswers({ config }) {
 
   const [cid, setCid] = useState(() => param("w") ? "checkin-" + param("w") : "");
   const asg = checkins.find(c => c.id === cid) || checkins.find(c => Date.parse(c.opensAt) <= Date.now() && c.id === "checkin-8") || checkins[0] || null;
-  const [view, setView] = useState(() => (param("v") === "question" ? "question" : "student"));
+  const [view, setView] = useState(() => (/^(question|summary)$/.test(param("v")) ? param("v") : "student"));
   const [who, setWho] = useState(() => param("s"));
   const [qid, setQid] = useState(() => param("q") || "going");
 
@@ -118,6 +119,7 @@ export default function CheckinAnswers({ config }) {
           <div role="radiogroup" aria-label="Read by" style={{ display: "flex", gap: 6 }}>
             <button role="radio" aria-checked={view === "student"} style={seg(view === "student")} onClick={() => go({ v: "student" })}>By student</button>
             <button role="radio" aria-checked={view === "question"} style={seg(view === "question")} onClick={() => go({ v: "question" })}>By question</button>
+            <button role="radio" aria-checked={view === "summary"} style={seg(view === "summary")} onClick={() => go({ v: "summary" })}>Summary</button>
           </div>
           {asg ? <span style={{ marginLeft: "auto", fontSize: 15, color: TEXT_SECONDARY }}>{answered.length} of {roster.length} answered</span> : null}
         </div>
@@ -174,6 +176,8 @@ export default function CheckinAnswers({ config }) {
               </section>
             </article>
           ) : <p style={{ fontSize: 17, color: TEXT_SECONDARY }}>No students on the roster.</p>
+        ) : view === "summary" ? (
+          <CheckinSummary config={config} data={data} asg={asg} roster={roster} onOpen={(name) => go({ v: "student", s: name })} />
         ) : (
           <article>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
