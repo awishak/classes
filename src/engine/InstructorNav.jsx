@@ -71,6 +71,7 @@ export default function InstructorNav({ config, here, focusClass = "" }) {
     { id: "class", label: "Class page", href: cls.path },
     { id: "dashboard", label: "Dashboard", href: cls.path + "/dashboard" },
     { id: "repo", label: "Repository", href: "/repo" },
+    { id: "grading", label: "Grading", href: "/grading" },
   ];
 
   const base = {

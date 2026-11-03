@@ -63,7 +63,7 @@ const SOLID_EDGE = "color-mix(in srgb, " + BLUE + " 28%, var(--surface-card))";
 const WEEKDAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dateOf = (s) => { const d = s ? new Date(s + ", 2026") : null; return d && !isNaN(d) ? d : null; };
 const when = (ts) => { try { return new Date(ts).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); } catch { return ""; } };
-const isOngoing = (asg) => !asg.due || asg.due === "Ongoing" || !dateOf(asg.due);
+export const isOngoing = (asg) => !asg.due || asg.due === "Ongoing" || !dateOf(asg.due);
 
 // The due dates an assignment has announced, oldest first. A date changed
 // somewhere that skips the log left the newest entry saying the old date, so

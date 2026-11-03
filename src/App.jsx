@@ -19,6 +19,7 @@ import SitdownPage from "./engine/SitdownPage.jsx";
 import DecisionsPage from "./engine/DecisionsPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
+import GradingPage from "./engine/GradingPage.jsx";
 import RepoIdeas from "./engine/RepoIdeas.jsx";
 import DigestPage from "./engine/DigestPage.jsx";
 import VisualEssayPlan from "./engine/VisualEssayPlan.jsx";
@@ -261,6 +262,15 @@ export default function App() {
     return (
       <InstructorGate what="Messages">
         <InstructorBar always><DigestPage /></InstructorBar>
+      </InstructorGate>
+    );
+  }
+
+  // What needs grading, across every current class, oldest due date first.
+  if (path === "/grading" || path === "/grading/") {
+    return (
+      <InstructorGate what="Grading">
+        <GradingPage />
       </InstructorGate>
     );
   }

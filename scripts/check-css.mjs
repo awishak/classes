@@ -90,6 +90,12 @@ const files = readdirSync(ENGINE).filter(f => /\.jsx$/.test(f)).sort();
 const styled = new Set();
 const partial = [];
 const used = [];
+// The portal's stylesheet (portal/style.js) dresses pages outside the portal
+// folder too, GradingPage for one, so its rules are in the pool.
+for (const extra of ["portal/style.js"]) {
+  const src = readFileSync(new URL(extra, ENGINE), "utf8");
+  for (const m of src.matchAll(/\.([a-zA-Z][\w-]*)/g)) styled.add(m[1]);
+}
 for (const file of files) {
   const src = readFileSync(new URL(file, ENGINE), "utf8");
   for (const m of src.matchAll(/\.([a-zA-Z][\w-]*)/g)) styled.add(m[1]);
