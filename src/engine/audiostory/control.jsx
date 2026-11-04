@@ -41,7 +41,7 @@ const when = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", da
 
 // Signed links for the clips on a set of sheets, through the server, so the
 // PIN sign-in can play them too. { [path]: url }.
-function useClipUrls(config, worksheetKey, sheets) {
+export function useClipUrls(config, worksheetKey, sheets) {
   const [urls, setUrls] = useState({});
   const paths = (sheets || []).map(s => audioOf(s.answers?.audio)?.path).filter(Boolean).sort().join("\n");
   useEffect(() => {
@@ -53,7 +53,7 @@ function useClipUrls(config, worksheetKey, sheets) {
   return urls;
 }
 
-function useAllSheets(config, worksheetKey, every = 30000) {
+export function useAllSheets(config, worksheetKey, every = 30000) {
   const [sheets, setSheets] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -351,7 +351,7 @@ const ideaFieldSay = (f) => {
 };
 const researchFieldSay = (f) => ({ picked: " the approved idea chosen, a slot (a, b, c) or pair", audio: " the 60-second audio story, JSON { path, seconds, name }", story: " the story, a line", treatment: " the paragraph treatment", includes: " what the story includes, lines", article: " articles, lines", media: " other media, lines", person: " people to interview, lines", place: " places to capture audio, lines", example: " a good audio story found, lines" })[f] || "";
 
-function Shell({ children, config, root }) {
+export function Shell({ children, config, root }) {
   const accent = config?.accent || TOKENS.TEXT.primary;
   return (
     <div ref={root} className="ca-root pt-root aic" style={{ "--ca-accent": accent, "--ca-accent-ink": accent }}>

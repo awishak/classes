@@ -48,6 +48,7 @@ import { AUDIO_RESEARCH_KEY, AUDIO_RESEARCH_TITLE, mountAudioResearch } from "./
 import AudioControl, { ResearchReview } from "./audiostory/control.jsx";
 import { AUDIO_STORY_KEY, AUDIO_STORY_TITLE, mountAudioStory } from "./audiostory/story.jsx";
 import { AudioStoryReview, AudioStoryControl } from "./audiostory/storypages.jsx";
+import { AUDIO_DROP_KEY, AUDIO_DROP_TITLE, mountAudioDrop, DropReview } from "./audiostory/drop.jsx";
 
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
@@ -79,6 +80,11 @@ export const LOCAL_WORKSHEETS = [
   // control is the instructor's page at ?control, how each sheet works.
   { key: AUDIO_IDEAS_KEY, title: AUDIO_IDEAS_TITLE, mount: mountAudioIdeas, review: IdeasReview, board: IdeasBoard, all: AllIdeas, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   { key: AUDIO_RESEARCH_KEY, title: AUDIO_RESEARCH_TITLE, mount: mountAudioResearch, review: ResearchReview, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  // The audio file drop box for Wednesday, November 4, in class. Andrew,
+  // 2026-11-04: "make me an audio file drop box page for today. Pin it for
+  // students." Names off the roster, a headline, one file; ?review lists
+  // every file, newest first.
+  { key: AUDIO_DROP_KEY, title: AUDIO_DROP_TITLE, mount: mountAudioDrop, review: DropReview, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The audio story builder, built 2026-10-29 from the mockup Andrew picked:
   // "build that and put it in now, so i can show it to students." COMM 999
   // only until he opens it; Andrew, 2026-10-30: "don't give them the audio
