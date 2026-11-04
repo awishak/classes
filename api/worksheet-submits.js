@@ -16,6 +16,22 @@ import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 
 const SLUG = /^[a-z0-9-]{1,64}$/;
 
+// Every row of a query, a page at a time. Supabase hands back at most 1000
+// rows a request whatever limit= says, and COMM 118's Locker Room passed
+// 1219 answer rows on 2026-11-04, so the last sheets came back short and
+// their seasons replayed as unfinished. Null when a page cannot be read.
+const PAGE = 1000;
+async function readAll(url) {
+  const out = [];
+  for (let from = 0; ; from += PAGE) {
+    const r = await fetch(url, { headers: { ...serviceHeaders(), Range: `${from}-${from + PAGE - 1}` } });
+    if (!r.ok && r.status !== 416) return null;
+    const rows = r.ok ? await r.json() : [];
+    out.push(...rows);
+    if (rows.length < PAGE) return out;
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   const body = readBody(req);
@@ -35,11 +51,11 @@ export default async function handler(req, res) {
     const list = await s.json();
     if (!list.length) return res.status(200).json({ ok: true, sheets: [] });
     const ids = list.map(x => x.id).join(",");
-    const a = await fetch(SUPABASE_URL + `/rest/v1/worksheet_answers?select=sheet_id,field,value,position,created_at&sheet_id=in.(${ids})&order=position&limit=20000`, { headers: serviceHeaders() });
-    if (!a.ok) return res.status(502).json({ ok: false, error: "Could not read the answers." });
+    const rows = await readAll(SUPABASE_URL + `/rest/v1/worksheet_answers?select=sheet_id,field,value,position,created_at&sheet_id=in.(${ids})&order=position,created_at`);
+    if (!rows) return res.status(502).json({ ok: false, error: "Could not read the answers." });
     // Rows to words, the way answersOf does in the browser: later row wins a position.
     const slot = {};
-    for (const r of await a.json()) slot[r.sheet_id + "\u0000" + r.field + "\u0000" + (r.position || 0)] = r;
+    for (const r of rows) slot[r.sheet_id + "\u0000" + r.field + "\u0000" + (r.position || 0)] = r;
     const answers = {};
     Object.values(slot).sort((x, y) => (x.position || 0) - (y.position || 0)).forEach(r => {
       const m = (answers[r.sheet_id] = answers[r.sheet_id] || {});
@@ -167,9 +183,9 @@ export default async function handler(req, res) {
     // can credit each. Andrew, 2026-10-21: "if students work together make
     // sure both names are on there."
     if (key === "3x5" && list.length) {
-      const a = await fetch(SUPABASE_URL + `/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${list.map(x => x.id).join(",")})&field=like.roll:*&order=position&limit=20000`, { headers: serviceHeaders() });
+      const rolls = await readAll(SUPABASE_URL + `/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${list.map(x => x.id).join(",")})&field=like.roll:*&order=position,created_at`);
       const slot = {};
-      for (const row of a.ok ? await a.json() : []) slot[row.sheet_id + "\u0000" + row.field + "\u0000" + (row.position || 0)] = row;
+      for (const row of rolls || []) slot[row.sheet_id + "\u0000" + row.field + "\u0000" + (row.position || 0)] = row;
       const joined = {};
       Object.values(slot).sort((x, y) => (x.position || 0) - (y.position || 0)).forEach(row => {
         const m = (joined[row.sheet_id] = joined[row.sheet_id] || {});
