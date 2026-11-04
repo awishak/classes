@@ -41,6 +41,7 @@ import TopicsReview from "./teamtopics/review.jsx";
 import { TAKEOVER_KEY, TAKEOVER_TITLE, mountTakeover } from "./takeover/game.jsx";
 import TakeoverReview from "./takeover/review.jsx";
 import TakeoverControl from "./takeover/control.jsx";
+import LockerRoomBoard from "./takeover/board.jsx";
 import { AUDIO_IDEAS_KEY, AUDIO_IDEAS_TITLE, mountAudioIdeas } from "./audiostory/ideas.jsx";
 import IdeasReview, { IdeasBoard } from "./audiostory/board.jsx";
 import AllIdeas from "./audiostory/all.jsx";
@@ -73,7 +74,9 @@ export const LOCAL_WORKSHEETS = [
   // since 2026-10-30 (Andrew: "locker room is not opening for students fix
   // that immediately"). control is the instructor's page at ?control: how
   // every roll works and what each student gets.
-  { key: TAKEOVER_KEY, title: TAKEOVER_TITLE, mount: mountTakeover, review: TakeoverReview, control: TakeoverControl, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
+  // board is the room's screen at ?board, the seasons ranked. Andrew,
+  // 2026-11-04: "a page i can put on the screen with who 'won' locker room."
+  { key: TAKEOVER_KEY, title: TAKEOVER_TITLE, mount: mountTakeover, review: TakeoverReview, board: LockerRoomBoard, control: TakeoverControl, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
   // COMM 3's audio story, 2026-10-29. Ideas on Friday, October 30, in class,
   // marked from the review page and shown on the board (?board, no names)
   // for the projector. Research on the okayed idea, due Tuesday, November 3.

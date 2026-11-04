@@ -35,7 +35,7 @@ export { TAKEOVER_KEY, TAKEOVER_TITLE } from "./engine.js";
 const TOPICS_KEY = "team-topics";
 
 const FONT_HREF = "https://fonts.googleapis.com/css2?family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;500;600&display=swap";
-const loadFont = () => {
+export const loadFont = () => {
   if (typeof document === "undefined" || document.querySelector(`link[href="${FONT_HREF}"]`)) return;
   const l = document.createElement("link"); l.rel = "stylesheet"; l.href = FONT_HREF; document.head.appendChild(l);
 };
