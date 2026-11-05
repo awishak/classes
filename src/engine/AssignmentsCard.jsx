@@ -958,7 +958,7 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
           </button>
         ))}
       </div>
-      <Muted style={{ marginTop: 6 }}>{scale === "complete" ? "Complete, Completed with Revisions, Not quite, Incomplete or Not submitted." : "A, B, C, D, Completed with Revisions, Incomplete or F."}</Muted>
+      <Muted style={{ marginTop: 6 }}>{scale === "complete" ? "Complete, Completed with Revisions, Late but complete, Not quite, Incomplete or Not submitted." : "A, B, C, D, Completed with Revisions, Incomplete or F."}</Muted>
       {/* Whether students can see this challenge at all. */}
       <label style={{ ...fieldL, display: "flex", alignItems: "center", gap: 12, minHeight: TAP, cursor: "pointer" }}>
         <input type="checkbox" checked={visible} onChange={e => setVisible(e.target.checked)} style={{ width: 20, height: 20, accentColor: a }} />

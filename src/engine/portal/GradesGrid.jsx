@@ -35,10 +35,10 @@ import * as TOKENS from "../tokens.js";
 
 const F = TOKENS.FONT.body;
 // What a cell reads. The long words need short forms to fit a cell.
-const SHORT = { Incomplete: "Inc", Complete: "✓", "Not quite": "NQ", "Not submitted": "NS", "Completed with Revisions": "Rev" };
+const SHORT = { Incomplete: "Inc", Complete: "✓", "Not quite": "NQ", "Not submitted": "NS", "Completed with Revisions": "Rev", "Late but complete": "Late" };
 const short = (letter) => SHORT[letter] || letter || "";
 // What a letter means, as a color: great, good, ok, bad.
-const TONE = { A: "great", Exceptional: "great", Complete: "great", B: "good", "Completed with Revisions": "good", C: "ok", "Not quite": "ok", D: "bad", F: "bad", Incomplete: "bad", "Not submitted": "bad" };
+const TONE = { A: "great", Exceptional: "great", Complete: "great", B: "good", "Completed with Revisions": "good", "Late but complete": "good", C: "ok", "Not quite": "ok", D: "bad", F: "bad", Incomplete: "bad", "Not submitted": "bad" };
 
 /** One cell: { say, kind, tone, title } for a student on an assignment. kind is done, pending, in, missed or "". */
 export function cellOf(config, data, asg, name) {
@@ -85,7 +85,7 @@ export function studentStatus(config, data, assignments, name) {
   if (has("F") || misses >= 3 || (pct != null && pct < 60)) return statusById("drop");
   if (has("D", "Incomplete") || misses >= 2) return statusById("worried");
   if (has("C", "Not quite") || misses === 1) return statusById("fine");
-  if (has("B", "Completed with Revisions")) return statusById("good");
+  if (has("B", "Completed with Revisions", "Late but complete")) return statusById("good");
   return statusById("great");
 }
 

@@ -52,6 +52,9 @@ export const BUCKETS = [
 export const COMPLETE_BUCKETS = [
   { id: "complete", label: "Complete", letter: "Complete", score: 100, blurb: "did what was asked", means: "" },
   { id: "revisions-c", label: "Completed with Revisions", letter: "Completed with Revisions", score: null, blurb: "done once it was revised", means: "" },
+  // Andrew, 2026-11-05: late work that was all there is neither Complete
+  // nor revised nor Not quite; it is "marked as late but complete."
+  { id: "late-c", label: "Late but complete", letter: "Late but complete", score: null, blurb: "all there, after the deadline", means: "" },
   { id: "notquite", label: "Not quite", letter: "Not quite", score: 50, blurb: "tried, not what was asked", means: "" },
   { id: "incomplete-c", label: "Incomplete", letter: "Incomplete", score: 0, blurb: "counts as a zero", means: "" },
   { id: "notsubmitted", label: "Not submitted", letter: "Not submitted", score: 0, blurb: "counts as a zero", means: "" },
