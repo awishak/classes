@@ -96,7 +96,7 @@ export function assignmentTools(config, asg) {
 
 // Every page a challenge has, in one order everywhere: Control, Grade,
 // then the sheet's pages, then any pages written on the challenge itself
-// (`links`, [{ say, href }], such as a sorted read Claude made). Andrew,
+// (`links`, [{ say, href }], such as TA mode, the sorted read Claude made). Andrew,
 // 2026-11-05: "we have to be better about combining review and grading.
 // links should be connected." `here` is the page drawing the strip, marked.
 export function challengePages(config, asg, data) {

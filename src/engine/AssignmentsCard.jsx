@@ -982,7 +982,7 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       <div style={fieldL}>Link to more instructions</div>
       <input value={instructionsUrl} onChange={e => setInstructionsUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, marginTop: 6 }} />
       <div style={fieldL}>More pages</div>
-      <textarea value={links} onChange={e => setLinks(e.target.value)} placeholder="Sorted by Claude | https://..." style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
+      <textarea value={links} onChange={e => setLinks(e.target.value)} placeholder="TA mode | https://..." style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
       <div style={fieldL}>Submissions close (optional)</div>
       <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />
       <Muted style={{ marginTop: 6 }}>Comments stay open after the deadline.</Muted>

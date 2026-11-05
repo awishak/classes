@@ -4,7 +4,7 @@
 //
 // What this writes, on comm3-f26-v1-plan:
 //   assignments   the one with id "audio-ideas" gets
-//                 links: [{ say: "Sorted by Claude", href: <artifact> }]
+//                 links: [{ say: "TA mode", href: <artifact> }]
 //
 //   node scripts/comm3-audio-ideas-sorted-link.mjs           prints
 //   node scripts/comm3-audio-ideas-sorted-link.mjs --write   writes
@@ -20,13 +20,14 @@ if (!key) { console.error("No SUPABASE_SERVICE_ROLE_KEY in .env.local."); proces
 const H = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
 const write = process.argv.includes("--write");
 const ID = "comm3-f26-v1-plan";
-const LINK = { say: "Sorted by Claude", href: "https://claude.ai/artifact/STMUE8TRgDQBTaUZT9ShSr" };
+const LINK = { say: "TA mode", href: "https://claude.ai/artifact/STMUE8TRgDQBTaUZT9ShSr" };
 
 const r = await fetch(`${SUPABASE_URL}/rest/v1/app_data?id=eq.${ID}&select=data`, { headers: H });
 if (!r.ok) throw new Error(`read ${ID}: ${r.status}`);
 const plan = ((await r.json())[0] || {}).data;
 const asg = (plan?.assignments || []).find(a => a.id === "audio-ideas");
 if (!asg) { console.error("no audio-ideas challenge on the plan row"); process.exit(1); }
+// Andrew, 2026-11-05: "call sorted by claude TA mode." The same address, renamed.
 const links = (Array.isArray(asg.links) ? asg.links : []).filter(l => l.href !== LINK.href).concat([LINK]);
 console.log(`${asg.title}: links now ${JSON.stringify(asg.links || [])}\n  -> ${JSON.stringify(links)}`);
 if (write) {
