@@ -69,6 +69,25 @@ export const STATES = [
 ];
 const stateOf = (id) => STATES.find(s => s.id === id) || STATES[STATES.length - 1];
 
+// The ledger's sorts. Default is the work owed first: nothing in, then
+// started, then what came in again, then ungraded, then graded; a name
+// breaks ties. A header sorts by that column, again reverses it.
+export const DEFAULT_SORT = { key: "grade", dir: 1 };
+const OWED = ["missed", "open", "started", "resubmitted", "ungraded", "late", "graded"];
+const gradeRank = (r) => OWED.indexOf(r.state) * 10 + (r.letter ? ["A", "B", "C", "D", "F"].indexOf(String(r.letter)[0]) + 1 : 0) / 10;
+const SORTS = {
+  name: (x, y) => x.name.localeCompare(y.name),
+  section: (x, y) => x.section.localeCompare(y.section),
+  handed: (x, y) => (x.handedAt || 0) - (y.handedAt || 0),
+  pct: (x, y) => (x.pct || 0) - (y.pct || 0),
+  grade: (x, y) => gradeRank(x) - gradeRank(y),
+};
+export function sortRows(rows, sort) {
+  const by = SORTS[sort?.key] || SORTS.grade;
+  const dir = sort?.dir || 1;
+  return rows.slice().sort((x, y) => (by(x, y) * dir) || x.name.localeCompare(y.name));
+}
+
 /** Every sheet row for a worksheet, with answers and review, through the server. */
 function useAllSheets(config, key) {
   const [sheets, setSheets] = useState(null);
@@ -147,6 +166,10 @@ export default function ControlPage({ config, id }) {
   const pickView = (v) => { setView(v); try { localStorage.setItem("control-view", v); } catch { /* fine */ } };
   const sections = sectionsOf(config);
   const [section, setSection] = useState("");
+  // The sort, remembered. Andrew, 2026-11-05: "default sort order should be
+  // who has not submitted first."
+  const [sort, setSort] = useState(() => { try { return JSON.parse(localStorage.getItem("control-sort") || "null") || DEFAULT_SORT; } catch { return DEFAULT_SORT; } });
+  const pickSort = (key) => { const next = sort.key === key ? { key, dir: -sort.dir } : { key, dir: 1 }; setSort(next); try { localStorage.setItem("control-sort", JSON.stringify(next)); } catch { /* fine */ } };
 
   const assignments = assignmentsOf(config, data || {});
   const sheetKeyAsked = (String(id).match(SHEET_ID) || [])[1] || "";
@@ -188,8 +211,10 @@ export default function ControlPage({ config, id }) {
   const count = (st) => shown.filter(r => r.state === st).length;
   const inAll = shown.filter(r => r.handedAt).length;
   const seg = STATES.map(s => ({ ...s, n: count(s.id) })).filter(s => s.n);
-  const order = Object.fromEntries(STATES.map((s, i) => [s.id, i]));
-  const ledger = shown.slice().sort((x, y) => (order[x.state] - order[y.state]) || x.name.localeCompare(y.name));
+  const ledger = sortRows(shown, sort);
+  const th = (key, say, cls = "") => (
+    <th className={cls}><button type="button" className={"cp-th pt-focus" + (sort.key === key ? " on" : "")} onClick={() => pickSort(key)}>{say}{sort.key === key ? <span className="cp-arrow">{sort.dir > 0 ? "\u2193" : "\u2191"}</span> : null}</button></th>
+  );
   const studentUrl = sheet ? config.path + "/worksheets/" + sheet.key : "";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const reviewUrl = local && local.review ? origin + studentUrl + "?review" : "";
@@ -246,12 +271,19 @@ export default function ControlPage({ config, id }) {
             <button type="button" role="tab" aria-selected={view === "ledger"} className={view === "ledger" ? "on" : ""} onClick={() => pickView("ledger")}>Ledger</button>
             <button type="button" role="tab" aria-selected={view === "map"} className={view === "map" ? "on" : ""} onClick={() => pickView("map")}>Map</button>
           </div>
+          {view === "map" ? (
+            <div className="pt-chips cp-wrap" role="group" aria-label="Sort">
+              {[["grade", "Owed first"], ["name", "Name"], ...(sections.length > 1 ? [["section", "Section"]] : []), ["handed", "Handed in"], ...(sheet ? [["pct", "Filled"]] : [])].map(([key, say]) => (
+                <Chip key={key} on={sort.key === key} onClick={() => pickSort(key)}>{say}{sort.key === key ? " " + (sort.dir > 0 ? "\u2193" : "\u2191") : ""}</Chip>
+              ))}
+            </div>
+          ) : null}
           {sheet && sheets === null ? <span className="pt-quiet">Reading every sheet.</span> : null}
         </div>
 
         {view === "ledger" ? (
           <table className="cp-t">
-            <thead><tr><th>Student</th>{sections.length > 1 ? <th>Section</th> : null}<th>Handed in</th>{sheet ? <th className="r">Filled</th> : null}<th>Grade</th><th></th></tr></thead>
+            <thead><tr>{th("name", "Student")}{sections.length > 1 ? th("section", "Section") : null}{th("handed", "Handed in")}{sheet ? th("pct", "Filled", "r") : null}{th("grade", "Grade")}<th></th></tr></thead>
             <tbody>
               {ledger.map(r => (
                 <tr key={r.name} className={"cp-r-" + r.state}>
@@ -267,7 +299,7 @@ export default function ControlPage({ config, id }) {
           </table>
         ) : (
           <div className="cp-map">
-            {shown.slice().sort((x, y) => x.name.localeCompare(y.name)).map(r => {
+            {ledger.map(r => {
               const href = sheet && (r.handedAt || r.pct > 0) ? studentUrl + "?s=" + encodeURIComponent(idOf(r.student)) : r.link || "";
               const sub = r.state === "resubmitted" ? "Resubmitted" : r.state === "ungraded" ? "Ungraded" : r.handedAt ? whenWords(r.handedAt) + (r.late ? " · late" : "") : r.state === "started" ? r.pct + "% filled" : r.state === "missed" ? "Nothing in" : "";
               const inner = <><Face config={config} data={data} name={r.name} size={28} /><span className="cp-nm"><b>{nameShown(data, r.name)}</b>{r.letter && r.state !== "resubmitted" ? <span className="cp-g">{r.letter}</span> : null}<small>{sub}</small></span></>;
@@ -340,9 +372,13 @@ const CSS = `
 .cp-key{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;color:var(--text-secondary)}
 .cp-key span{display:inline-flex;align-items:center;gap:6px}.cp-key i{width:10px;height:10px;border-radius:2px;display:inline-block}
 .cp-s-graded{background:var(--ca-accent)}.cp-s-late{background:#b45309}.cp-s-ungraded{background:#d97706}.cp-s-resubmitted{background:#dc2626}.cp-s-started{background:#a8a29e}.cp-s-missed{background:#f1a5a5}.cp-s-open{background:var(--line-strong)}
-.cp-viewbar{display:flex;align-items:center;gap:14px}
+.cp-viewbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .cp-t{width:100%;border-collapse:collapse;font-size:15px}
-.cp-t th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line-strong)}
+.cp-t th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);font-weight:600;text-align:left;padding:4px 4px;border-bottom:1px solid var(--line-strong)}
+.cp-t th.r .cp-th{justify-content:flex-end;width:100%}
+.cp-th{font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;background:none;border:0;padding:4px 6px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.cp-th:hover{background:var(--surface-sunk);color:var(--text-primary)}.cp-th.on{color:var(--text-primary)}
+.cp-arrow{font-size:12px}
 .cp-t td{padding:8px 10px;border-bottom:1px solid var(--line-soft);vertical-align:middle}
 .cp-t td.n{font-weight:600}.cp-t td.m{color:var(--text-secondary)}.cp-t .r{text-align:right;font-variant-numeric:tabular-nums}
 .cp-t tr.cp-r-missed td,.cp-t tr.cp-r-open td{color:var(--text-muted)}
