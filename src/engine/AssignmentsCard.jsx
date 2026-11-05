@@ -11,6 +11,7 @@
 // remove scores from the classes." Weight is the percent of the final grade.
 
 import { latenessOf } from "./lateness.js";
+import { parseLinks, linksText } from "./portal/Tools.jsx";
 import { useState, useRef, useEffect } from "react";
 import { assignmentsOf, isProfileTask, profileComplete, PROFILE_TASK_OFF } from "./profileTask.js";
 import { realStudents, studentsIn, hasSections, sectionsOf } from "./sections.js";
@@ -906,6 +907,9 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
   // none, an object is the page. Andrew, 2026-10-25: every submission
   // "should feel like a worksheet submission." See submissionPages.js.
   const [page, setPage] = useState(asg?.page);
+  // Other pages of the challenge, one a line, "Name | https://...": a read
+  // Claude sorted, a doc, anything the control page should link.
+  const [links, setLinks] = useState(linksText(asg?.links));
 
 
   const save = () => {
@@ -926,6 +930,7 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       // unless the box was changed.
       visible: visible === (asg?.visible !== false) && typeof asg?.visible === "string" ? asg.visible : visible, opens, opensAt: opens === "date" ? opensAt : "",
       ...(pageOut === undefined ? {} : { page: pageOut }),
+      links: parseLinks(links),
     });
   };
 
@@ -976,6 +981,8 @@ export function AssignmentEditor({ config, asg, onSave, onCancel, onDelete }) {
       <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="What the challenge asks for" style={{ ...inputStyle, minHeight: 96, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
       <div style={fieldL}>Link to more instructions</div>
       <input value={instructionsUrl} onChange={e => setInstructionsUrl(e.target.value)} placeholder="https://..." style={{ ...inputStyle, marginTop: 6 }} />
+      <div style={fieldL}>More pages</div>
+      <textarea value={links} onChange={e => setLinks(e.target.value)} placeholder="Sorted by Claude | https://..." style={{ ...inputStyle, minHeight: 64, lineHeight: 1.5, resize: "vertical", marginTop: 6 }} />
       <div style={fieldL}>Submissions close (optional)</div>
       <input type="datetime-local" value={closeAt} onChange={e => setCloseAt(e.target.value)} style={{ ...inputStyle, marginTop: 6 }} />
       <Muted style={{ marginTop: 6 }}>Comments stay open after the deadline.</Muted>

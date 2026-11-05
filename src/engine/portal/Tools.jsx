@@ -94,6 +94,40 @@ export function assignmentTools(config, asg) {
   return links;
 }
 
+// Every page a challenge has, in one order everywhere: Control, Grade,
+// then the sheet's pages, then any pages written on the challenge itself
+// (`links`, [{ say, href }], such as a sorted read Claude made). Andrew,
+// 2026-11-05: "we have to be better about combining review and grading.
+// links should be connected." `here` is the page drawing the strip, marked.
+export function challengePages(config, asg, data) {
+  if (!asg) return [];
+  const out = [{ say: "Control", href: controlHref(config, asg.id), key: "control" }];
+  if (asg.submission !== "none") out.push({ say: "Grade", href: "/grades/" + config.id + "/flow?a=" + encodeURIComponent(asg.id), key: "grade" });
+  assignmentTools(config, asg).forEach(l => { if (!l.main) out.push({ ...l, key: keyOfLink(l) }); });
+  (Array.isArray(asg.links) ? asg.links : []).forEach(l => { if (l && l.href) out.push({ say: String(l.say || l.href), href: String(l.href), key: "link:" + l.href, outside: true }); });
+  return out;
+}
+const keyOfLink = (l) => /\?review$/.test(l.href) ? "review" : /\?board$/.test(l.href) ? "board" : /\?control$/.test(l.href) ? "sheet-control" : /\/readout$/.test(l.href) ? "readout" : l.say === "Student view" ? "student" : "link:" + l.href;
+
+/** The strip of a challenge's pages, the current one lit. */
+export function PagesStrip({ config, asg, data, here }) {
+  const links = challengePages(config, asg, data);
+  if (!links.length) return null;
+  return (
+    <div className="pt-chips" style={{ flexWrap: "wrap", overflow: "visible", gap: 8 }} aria-label="Pages">
+      {links.map(l => <Chip key={l.key} href={l.href} on={l.key === here}>{l.say}</Chip>)}
+    </div>
+  );
+}
+
+/** Lines of "Name | https://..." to the links a challenge carries, and back. */
+export const parseLinks = (text) => String(text || "").split("\n").map(l => l.trim()).filter(Boolean).map(l => {
+  const i = l.indexOf("|");
+  const say = i >= 0 ? l.slice(0, i).trim() : "", href = (i >= 0 ? l.slice(i + 1) : l).trim();
+  return href ? { say: say || href, href } : null;
+}).filter(Boolean);
+export const linksText = (links) => (Array.isArray(links) ? links : []).map(l => (l.say && l.say !== l.href ? l.say + " | " : "") + l.href).join("\n");
+
 // The sheets the assignments already carry, so the Tools panel skips them.
 export function carriedKeys(config, data) {
   const keys = new Set();

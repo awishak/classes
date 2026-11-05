@@ -26,6 +26,9 @@ import TopNav, { NAV_STUDENT } from "./TopNav.jsx";
 import { isLurker } from "./sections.js";
 import { assignmentSheet } from "./SubmissionPage.jsx";
 import { SHEET_PREFIX } from "./submissionPages.js";
+import { PagesStrip, sheetOfAssignment } from "./portal/Tools.jsx";
+import { assignmentsOf } from "./profileTask.js";
+import { PORTAL_CSS } from "./portal/style.js";
 
 // The sheet is told day or night only when the page is holding one. Auto
 // leaves it to follow the machine, which is what the page does. A theme with
@@ -283,6 +286,12 @@ export default function WorksheetPage({ config, worksheetKey }) {
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
+      {body === "review" || body === "control" || body === "board" ? (
+        <div className="pt-root" style={{ maxWidth: 1600, margin: "0 auto", padding: "14px 16px 0" }}>
+          <style>{PORTAL_CSS}</style>
+          <PagesStrip config={config} asg={assignmentsOf(config, data || {}).find(x => sheetOfAssignment(config, x)?.key === worksheetKey) || null} data={data} here={body === "review" ? "review" : body === "board" ? "board" : "sheet-control"} />
+        </div>
+      ) : null}
       {body === "review"
         ? <local.review config={config} worksheetKey={worksheetKey} roster={roster} />
         : body === "control"

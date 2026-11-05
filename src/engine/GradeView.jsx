@@ -21,6 +21,7 @@ import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeC
 import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
 import { studentHref } from "./StudentPage.jsx";
+import { challengePages } from "./portal/Tools.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -267,6 +268,10 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
             </div>
           ) : null}
           {isCheckin(asg) ? <a className="gv-focus" href={config.path + "/checkins?w=" + asg.week} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none" }}>Read every answer</a> : null}
+          {/* The challenge's other pages, the same strip its control and review pages carry. */}
+          {asg ? challengePages(config, asg, data).filter(l => l.key !== "grade").map(l => (
+            <a key={l.key} className="gv-focus" href={l.href} style={{ fontSize: 15, fontWeight: 600, color: a, textDecoration: "none" }}>{l.say}</a>
+          )) : null}
           {/* The walk starts on the pile, so the first card up is the first
               file nobody has looked at. With the pile empty it walks the
               sorted cards, for a second look. */}

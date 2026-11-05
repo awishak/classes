@@ -42,7 +42,7 @@ import { useSession, authHeaders } from "./session.js";
 import { savedPin } from "../InstructorGate.jsx";
 import { LOCAL_WORKSHEETS, openTo } from "./localWorksheets.js";
 import { progressOf, percentOf } from "./worksheetProgress.js";
-import { sheetOfAssignment, assignmentTools, sheetsFor, sheetLinks } from "./portal/Tools.jsx";
+import { sheetOfAssignment, sheetsFor, sheetLinks, PagesStrip } from "./portal/Tools.jsx";
 import { opensState, opensWords } from "./portal/work.js";
 import { Chip, Io, Face, dueWords, whenWords } from "./portal/bits.jsx";
 import { PORTAL_CSS } from "./portal/style.js";
@@ -204,9 +204,8 @@ export default function ControlPage({ config, id }) {
   const due = !asg ? "" : ongoing ? "Ongoing" : open !== "open" ? opensWords(asg) : "Due " + dueWords(asg.due, asg.dueTime);
   const isOpen = local ? openTo(local, config.id, data) : null;
   const setOpen = (on) => update(prev => ({ ...prev, worksheetsOpen: { ...(prev.worksheetsOpen || {}), [sheet.key]: on } }));
-  // The pages: the sheet's buttons, Grade for the challenge, Edit.
-  const links = (asg ? assignmentTools(config, asg) : sheet ? sheetLinks(config, sheet) : []).filter(l => !l.main);
-  if (asg) links.unshift({ say: "Grade", href: "/grades/" + config.id + "/flow?a=" + encodeURIComponent(asg.id) });
+  // The pages: the same strip every page of the challenge carries.
+  const sheetOnly = !asg && sheet ? sheetLinks(config, sheet, data).filter(l => !l.main) : [];
 
   const count = (st) => shown.filter(r => r.state === st).length;
   const inAll = shown.filter(r => r.handedAt).length;
@@ -257,7 +256,7 @@ export default function ControlPage({ config, id }) {
           </div>
         </div>
 
-        {links.length ? <div className="pt-chips cp-wrap">{links.map(l => <Chip key={l.href} href={l.href}>{l.say}</Chip>)}</div> : null}
+        {asg ? <PagesStrip config={config} asg={asg} data={data} here="control" /> : sheetOnly.length ? <div className="pt-chips cp-wrap">{sheetOnly.map(l => <Chip key={l.href} href={l.href}>{l.say}</Chip>)}</div> : null}
 
         {shown.length ? (
           <div className="cp-bar">
