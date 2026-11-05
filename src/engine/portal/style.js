@@ -68,6 +68,12 @@ export const PORTAL_CSS = `
 .pt-main{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:4px;background:none;border:0;padding:0;text-align:left;color:inherit}
 .pt-title{font-size:17px;font-weight:600;line-height:1.25;overflow-wrap:anywhere}
 .pt-title.say{font-weight:500}
+.pt-pencil{display:inline-flex;width:24px;height:24px;border-radius:999px;align-items:center;justify-content:center;border:0;background:transparent;color:var(--text-muted);margin-left:6px;vertical-align:middle;padding:0;cursor:pointer}
+.pt-pencil:hover{background:var(--surface-card);color:var(--text-primary)}
+.pt-inbar{display:flex;align-items:center;gap:10px;margin-top:4px}
+.pt-inbar-track{flex:1;height:8px;border-radius:999px;background:rgba(0,0,0,.08);overflow:hidden}
+.pt-inbar-track i{display:block;height:100%;border-radius:999px;background:var(--ca-accent)}
+.pt-inbar-n{font-size:14px;font-weight:600;white-space:nowrap}
 .pt-kind{font-weight:500}
 .pt-row.due .pt-kind{color:var(--pt-due-ink)}.pt-row.done .pt-kind{color:var(--pt-done-ink)}.pt-row.dr .pt-kind{color:var(--pt-dr-ink)}.pt-row.late .pt-kind{color:var(--pt-late-ink)}
 .pt-when{font-size:15px;font-weight:600;line-height:1.3;display:flex;align-items:center;gap:8px;flex-wrap:wrap}

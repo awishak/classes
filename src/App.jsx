@@ -11,7 +11,8 @@ import BoardPage from "./engine/BoardPage.jsx";
 import GamePage, { RunGamePage } from "./engine/GamePage.jsx";
 import GamesPage from "./engine/GamesPage.jsx";
 import WorksheetPage from "./engine/WorksheetPage.jsx";
-import WorksheetsPage from "./engine/WorksheetsPage.jsx";
+import ControlPage from "./engine/ControlPage.jsx";
+import { controlHref } from "./engine/portal/Tools.jsx";
 import ReadoutPage from "./engine/ReadoutPage.jsx";
 import WorktopiaAnswersPage from "./engine/WorktopiaAnswersPage.jsx";
 import SitdownRolesPage from "./engine/SitdownRolesPage.jsx";
@@ -337,11 +338,21 @@ export default function App() {
   // A worksheet, one student's copy: /<class>/worksheets/<key>. The sheet is
   // the worksheets package; the page signs it in as the student.
   // And every student's, for the instructor: /<class>/worksheets.
+  // The Worksheets page is gone (Andrew, 2026-11-05: "too messy"). Its
+  // address goes to the sheet's control page when it names one, else to My
+  // work, where every challenge has a Control button.
   const wsAll = path.match(/^\/(comm\w+)\/worksheets\/?$/);
   if (wsAll && ENGINE[wsAll[1]]) {
+    const cfg = ENGINE[wsAll[1]];
+    const w = new URLSearchParams(window.location.search).get("w") || "";
+    return <Redirect to={/^[a-z0-9-]+$/.test(w) ? controlHref(cfg, "sheet-" + w) : cfg.path + "/assignments"} />;
+  }
+  // A challenge's control page: /<class>/control/<id>. ControlPage.jsx.
+  const ctl = path.match(/^\/(comm\w+)\/control\/([A-Za-z0-9_-]+)\/?$/);
+  if (ctl && ENGINE[ctl[1]]) {
     return (
-      <InstructorGate what={ENGINE[wsAll[1]].code + " worksheets"}>
-        <WorksheetsPage key={wsAll[1]} config={ENGINE[wsAll[1]]} />
+      <InstructorGate what={ENGINE[ctl[1]].code + " control"}>
+        <ControlPage key={ctl[1] + "/" + ctl[2]} config={ENGINE[ctl[1]]} id={decodeURIComponent(ctl[2])} />
       </InstructorGate>
     );
   }

@@ -43,7 +43,7 @@ const emailOf = (s) => String(s?.email || "").trim().toLowerCase();
 export const sheetsFor = (config) => [...WORKSHEETS, ...LOCAL_WORKSHEETS].filter(w => listedFor(w, config.id));
 
 // The addresses of one worksheet, for the instructor.
-export function sheetLinks(config, sheet) {
+export function sheetLinks(config, sheet, data) {
   const student = config.path + "/worksheets/" + sheet.key;
   const local = LOCAL_WORKSHEETS.find(w => w.key === sheet.key) || null;
   // The same buttons on every row, in the same order. Andrew, 2026-10-16:
@@ -51,7 +51,9 @@ export function sheetLinks(config, sheet) {
   // Home is the instructor's page for the sheet, with who is done and every
   // student's completion. Review is the review where one exists. Student
   // view is the sheet as students open it.
-  const links = [{ say: "Home", href: config.path + "/worksheets?w=" + encodeURIComponent(sheet.key), main: true }];
+  // Home is the control page since 2026-11-05: the challenge that carries
+  // the sheet, or the sheet's own page when no challenge does.
+  const links = [{ say: "Home", href: controlHrefOfSheet(config, sheet, data), main: true }];
   if (local && local.review) links.push({ say: "Review", href: student + "?review" });
   links.push({ say: "Student view", href: student });
   if (hasReadout(config.id, sheet.key)) links.push({ say: "Readout", href: student + "/readout" });
@@ -59,6 +61,14 @@ export function sheetLinks(config, sheet) {
   if (local && local.control) links.push({ say: "Control", href: student + "?control" });
   if (sheet.key === WORKTOPIA_KEY) links.push({ say: "Answers by question", href: student + "/answers" });
   return links;
+}
+
+/** The address of a challenge's control page (ControlPage.jsx). A sheet with no challenge is sheet-<key>. */
+export const controlHref = (config, id) => config.path + "/control/" + encodeURIComponent(id);
+/** The control page for a sheet: its challenge's, or its own. */
+export function controlHrefOfSheet(config, sheet, data) {
+  const asg = assignmentsOf(config, data || {}).find(a => sheetOfAssignment(config, a)?.key === sheet.key);
+  return controlHref(config, asg ? asg.id : "sheet-" + sheet.key);
 }
 
 // The sheet an assignment is, if any: the worksheet its link names, or the
@@ -78,6 +88,7 @@ export function assignmentTools(config, asg) {
   const sheet = sheetOfAssignment(config, asg);
   if (!sheet) return [];
   const links = sheetLinks(config, sheet);
+  links[0] = { say: "Home", href: controlHref(config, asg.id), main: true };
   if (sheet.key === VISUAL_STORY_KEY && STORIES_CLASSES.includes(config.id)) links.push({ say: "Classmates' stories", href: storiesHref(config) });
   if (sheet.key === VISUAL_PRE_KEY) links.push({ say: "Second topic review", href: config.path + "/worksheets/" + VISUAL_PRE_2_KEY + "?review" });
   return links;
@@ -111,7 +122,9 @@ export function otherTools(config) {
   return out;
 }
 
-// How many of the class submitted each sheet: { key: n }, or null while reading.
+// Who submitted each sheet and when: { key: Map(email -> submitted_at) },
+// or null while reading. The time is the latest submit, which is how a
+// resubmit after a grade is seen (InstructorHome.jsx).
 export function useSubmitCounts(config, keys) {
   const [counts, setCounts] = useState(null);
   const joined = keys.join(",");
@@ -127,7 +140,7 @@ export function useSubmitCounts(config, keys) {
         const out = r.ok ? await r.json() : null;
         if (!alive) return;
         const got = {};
-        joined.split(",").forEach(k => { got[k] = new Set((out?.ok && out.sheets?.[k] || []).map(s => String(s.viewer_id || "").toLowerCase())); });
+        joined.split(",").forEach(k => { got[k] = new Map((out?.ok && out.sheets?.[k] || []).map(s => [String(s.viewer_id || "").toLowerCase(), s.submitted_at || ""])); });
         setCounts(got);
       } catch { if (alive) setCounts({}); }
     })();
@@ -153,9 +166,9 @@ export function ToolsPanel({ config, data, counts: wantCounts = true, name = "To
   const rows = sheets.map(sheet => {
     const local = LOCAL_WORKSHEETS.find(w => w.key === sheet.key) || null;
     const open = local ? openTo(local, config.id, data) : true;
-    const done = counts && counts[sheet.key] ? [...counts[sheet.key]].filter(e => emails.has(e)).length : null;
+    const done = counts && counts[sheet.key] ? [...counts[sheet.key].keys()].filter(e => emails.has(e)).length : null;
     const line = !wantCounts ? "" : (open ? "Open to students" : "Closed to students") + (counts === null ? "" : " · " + (done ?? 0) + " of " + people.length + " submitted");
-    return { key: sheet.key, title: sheet.title, line, tint: !wantCounts ? "" : open ? "due" : "off", links: sheetLinks(config, sheet) };
+    return { key: sheet.key, title: sheet.title, line, tint: !wantCounts ? "" : open ? "due" : "off", links: sheetLinks(config, sheet, data) };
   }).concat(otherTools(config).filter(t => !carried.has(t.key)).map(t => ({ ...t, line: wantCounts ? t.line : "", tint: "" })));
   if (!rows.length) return null;
   return (

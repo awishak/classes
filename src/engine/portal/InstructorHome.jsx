@@ -12,7 +12,7 @@ import { AwayList } from "../Attendance.jsx";
 import { assignmentsOf } from "../profileTask.js";
 import { turnedIn, waitingOn, AssignmentEditor } from "../AssignmentsCard.jsx";
 import { inDueOrder } from "../AssignmentCards.jsx";
-import { hasSections, sectionsOf } from "../sections.js";
+import { hasSections, sectionsOf, realStudents, isHouse } from "../sections.js";
 import { rosterOf, nameShown } from "../roster.js";
 import { useQuestions } from "../questions.js";
 import { onThePage, isAnswered } from "../QuestionsCard.jsx";
@@ -25,7 +25,7 @@ import { deadlineOf } from "../DueCard.jsx";
 import { waitingOnInstructor } from "../YouCard.jsx";
 import { Hero, StoryPhaseBar, StoryDoor, AudioExerciseDoor, AudioStoryDoor, LockerRoomDoor, DOOR_CSS } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
-import { ToolsPanel, Links, assignmentTools, useSubmitCounts, sheetOfAssignment } from "./Tools.jsx";
+import { ToolsPanel, useSubmitCounts, sheetOfAssignment, controlHref } from "./Tools.jsx";
 import { INSTRUCTOR_EMAILS } from "../../instructors.js";
 
 const secs = (config) => hasSections(config) ? sectionsOf(config) : [""];
@@ -39,27 +39,54 @@ const InLine = ({ config, data, asg }) => (
 
 const past = (asg) => { const d = asg.due ? new Date(asg.due + ", 2026") : null; return d && !isNaN(d) && d.getTime() + 86400000 < Date.now(); };
 
-// One challenge as he reads it: the state, the weight, how many are waiting
-// to be graded, and how much of each section is in.
-//
-// An assignment that is a worksheet carries the sheet's buttons here, Home
-// first beside Edit, since 2026-10-29 (Tools.jsx). `sheetLine` is the
-// sheet's own count, submitted off its rows.
-export function HisWorkRow({ config, data, asg, toGrade, side, tools = [], sheetLine = "" }) {
+// One challenge as he reads it. Andrew, 2026-11-05: "instead of a
+// submission button, I need a link to the control for that assignment, and I
+// need a status of how many have submitted," and "a small pencil on the
+// front page for edit." So: the title with a pencil, the due line, a bar of
+// who is in over the roster with the count at its end, what is ungraded and
+// what came in again after its grade, and Control in the button's place.
+// `count` is { in, of, toGrade, resubmitted }.
+export function HisWorkRow({ config, data, asg, count, onEdit }) {
   const ongoing = !asg.due || asg.due === "Ongoing";
   const open = opensState(asg);
   const tint = ongoing ? "" : open !== "open" ? "off" : past(asg) ? "done" : "due";
   const line = ongoing ? "Ongoing, all quarter" : open !== "open" ? opensWords(asg) : past(asg) ? "Closed " + dueWords(asg.due, asg.dueTime) : "Due " + dueWords(asg.due, asg.dueTime);
-  const home = tools.find(l => l.main) || null;
-  const rail = home ? <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "stretch" }}><Io kind="go" href={home.href}>{home.say}</Io>{side}</div> : side;
+  const c = count || { in: 0, of: 0, toGrade: 0, resubmitted: 0 };
   return (
-    <Row tint={tint} d={ongoing ? ["", ""] : dcolOf(asg.due)} side={rail}>
-      <p className="pt-title">{asg.title}{hiddenWords(asg) ? <span className="pt-kind" style={{ color: "var(--text-muted)" }}> · {hiddenWords(asg)}</span> : null}</p>
-      <p className={"pt-when " + tint}><span>{line}{sheetLine ? " · " + sheetLine : ""}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}{toGrade ? <span className="pt-gm" style={{ color: "var(--pt-due-ink)" }}>{toGrade} to grade</span> : null}</p>
-      {ongoing || open !== "open" ? null : <InLine config={config} data={data} asg={asg} />}
-      {tools.length > 1 ? <Links links={tools} /> : null}
+    <Row tint={tint} d={ongoing ? ["", ""] : dcolOf(asg.due)} side={<Io kind="go" href={controlHref(config, asg.id)}>Control</Io>}>
+      <p className="pt-title">{asg.title}{hiddenWords(asg) ? <span className="pt-kind" style={{ color: "var(--text-muted)" }}> · {hiddenWords(asg)}</span> : null}
+        <button type="button" className="pt-pencil pt-focus" aria-label={"Edit " + asg.title} onClick={onEdit}>{PENCIL}</button></p>
+      <p className={"pt-when " + tint}><span>{line}</span>{asg.weight ? <Gm>{asg.weight}%</Gm> : null}
+        {c.toGrade ? <span className="pt-gm" style={{ color: "var(--pt-due-ink)" }}>{c.toGrade} ungraded</span> : null}
+        {c.resubmitted ? <span className="pt-gm" style={{ color: "var(--pt-late-ink)" }}>{c.resubmitted} resubmitted</span> : null}</p>
+      {asg.submission === "none" || isProfileTask(asg) ? null : (
+        <div className="pt-inbar"><div className="pt-inbar-track"><i style={{ width: (c.of ? Math.round(c.in / c.of * 100) : 0) + "%" }} /></div><span className="pt-inbar-n">{c.in} of {c.of}</span></div>
+      )}
     </Row>
   );
+}
+
+const PENCIL = <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>;
+
+// Who is in on a challenge, what is ungraded, and what came in again after
+// its grade. The log carries every sheet's first submit (worksheetSubmits
+// .js); `times` is the sheet's latest submit by email, for the resubmits.
+export function countOf(config, data, asg, people, times) {
+  const byStudent = data?.assignmentLog?.[asg.id] || {};
+  let inN = 0, toGrade = 0, resubmitted = 0;
+  people.forEach(s => {
+    const log = alive(byStudent[s.name]);
+    const subs = log.filter(e => e.type === "submission");
+    const grades = log.filter(e => e.type === "grade");
+    const g = grades[grades.length - 1] || null;
+    const sheetAt = times && s.email ? Date.parse(times.get(String(s.email).trim().toLowerCase()) || "") || 0 : 0;
+    const last = Math.max(subs[subs.length - 1]?.ts || 0, sheetAt);
+    const done = isProfileTask(asg) ? !!data?.profiles?.[s.name] : subs.length > 0 || sheetAt > 0;
+    if (done) inN += 1;
+    if (last && g && last > g.ts) resubmitted += 1;
+    else if (last && !g && !isProfileTask(asg)) toGrade += 1;
+  });
+  return { in: inN, of: people.length, toGrade, resubmitted };
 }
 
 // The inbox as mail: every thread, newest first, a line or two of the last
@@ -287,31 +314,27 @@ export function InstructorWork({ config, data, update, go, editing }) {
   const months = {};
   dated.forEach(a => { const d = new Date(a.due + ", 2026"); const k = isNaN(d) ? "Later" : d.toLocaleDateString("en-US", { month: "long" }); (months[k] = months[k] || []).push(a); });
   const toGrade = waiting.reduce((n, w) => n + (w.toGrade || 0), 0);
-  // Each assignment that is a sheet: its buttons, and its own submitted count.
+  // Each challenge that is a sheet: its latest submit a student, for the resubmits.
   const sheetKeys = [...new Set(assignments.map(a => sheetOfAssignment(config, a)?.key).filter(Boolean))];
-  const counts = useSubmitCounts(config, sheetKeys);
-  const people = rosterOf(config, data).filter(s => s.email && !INSTRUCTOR_EMAILS.includes(String(s.email).trim().toLowerCase()));
-  const emails = new Set(people.map(s => String(s.email).trim().toLowerCase()));
-  const sheetLineOf = (asg) => {
+  const times = useSubmitCounts(config, sheetKeys);
+  const people = realStudents(config, rosterOf(config, data)).filter(s => !isHouse(s.name) && !INSTRUCTOR_EMAILS.includes(String(s.email || "").trim().toLowerCase()));
+  const row = (asg) => {
     const key = sheetOfAssignment(config, asg)?.key;
-    if (!key || !counts || !counts[key]) return "";
-    return [...counts[key]].filter(e => emails.has(e)).length + " of " + people.length + " submitted the sheet";
+    return <HisWorkRow key={asg.id} config={config} data={data} asg={asg} count={countOf(config, data, asg, people, key && times ? times[key] : null)} onEdit={() => go("assignments/" + asg.id)} />;
   };
-  const row = (asg) => <HisWorkRow key={asg.id} config={config} data={data} asg={asg} toGrade={toGradeOf(asg)} tools={assignmentTools(config, asg)} sheetLine={sheetLineOf(asg)} side={<Io kind="go" onClick={() => go("assignments/" + asg.id)}>Edit</Io>} />;
   return (
     <div className="pt-body" style={{ gap: 16 }}>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <Btn onClick={() => go("assignments/new")}>New challenge</Btn>
-        <Chip href={config.path + "/grade"}>Grade view</Chip>
         {toGrade ? <Chip href="/grades">{toGrade} to grade</Chip> : null}
         <Chip href={"/grades/" + config.id + "/summary"}>All grades</Chip>
-        <Chip href={config.path + "/grading"}>Grade view, round two</Chip>
       </div>
-      <ToolsPanel config={config} data={data} />
       {Object.entries(months).map(([m, rows]) => (
         <div key={m} className="pt-day"><Sec name={m} /><div className="pt-stack">{rows.map(row)}</div></div>
       ))}
       {ongoing.length ? <div className="pt-day"><Sec name="All quarter" /><div className="pt-stack">{ongoing.map(row)}</div></div> : null}
+      {/* Sheets no challenge carries yet, and the rest of the class's pages, links only. */}
+      <ToolsPanel config={config} data={data} counts={false} name="Tools" />
     </div>
   );
 }
