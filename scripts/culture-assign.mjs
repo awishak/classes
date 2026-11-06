@@ -31,7 +31,7 @@ const CACHE = new URL("private/culture-assign.json", ROOT);
 const write = process.argv.includes("--write"), suggestOnly = process.argv.includes("--suggest"), show = process.argv.includes("--show");
 const lower = (s) => String(s || "").trim().toLowerCase();
 
-const SYSTEM = "You are helping a college instructor (COMM 118, Communication and Sport) assign two concepts to one student for a Culture Guide the student writes before a ten-minute one-on-one meeting. The student chooses four of six concepts; the instructor chooses the other two. You are given the twenty concepts from the chapter, what this student already wrote about some of them, and which the student has already chosen. Choose two the student has NOT already chosen. Prefer a concept the student's own writing keeps pointing toward without naming, or a concept that would stretch them, over one they have already covered well. Answer with JSON only, no prose around it: {\"first\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"},\"second\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"}}. Each why is one plain full sentence under 30 words, addressed to the instructor, grounded in what the student wrote. No em dashes. No names.";
+const SYSTEM = "You are helping a college instructor (COMM 118, Communication and Sport) assign two concepts to one student for a Culture Guide the student writes before a ten-minute one-on-one meeting. The student chooses four of six concepts; the instructor chooses the other two. You are given the twenty concepts from the chapter, what this student already wrote about some of them, and which the student has already chosen. Choose two the student has NOT already chosen, and never culture, which is the guide itself. Prefer a concept the student's own writing keeps pointing toward without naming, or a concept that would stretch them, over one they have already covered well. Answer with JSON only, no prose around it: {\"first\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"},\"second\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"}}. Each why is one plain full sentence under 30 words, addressed to the instructor, grounded in what the student wrote. No em dashes. No names.";
 
 async function sheetsOf(worksheetKey) {
   const s = await (await fetch(SUPABASE_URL + `/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${worksheetKey}&group_key=eq.${CLASS}`, { headers: H })).json();
@@ -44,7 +44,7 @@ async function sheetsOf(worksheetKey) {
   return out;
 }
 function briefOf(topics, locker, picks) {
-  const lines = ["Concepts, by id: " + E.CONCEPTS.map(c => c.id + " = " + c.name).join("; ")];
+  const lines = ["Concepts, by id: " + E.CONCEPTS.filter(c => c.id !== "culture").map(c => c.id + " = " + c.name).join("; ")];
   const sheet = [];
   ["a", "b", "c", "d", "e"].forEach(s => {
     const t = String((topics || {})["topic:" + s] || "").trim();

@@ -22,7 +22,7 @@ import { setClassFavicon } from "../favicon.js";
 import TopNav, { NAV_TEACH } from "../TopNav.jsx";
 import { TEAM_TOPICS_KEY, PARTS as TOPIC_PARTS, linesOf } from "../teamtopics/sheet.jsx";
 import * as E from "../takeover/engine.js";
-import { CULTURE_GUIDE_KEY, chosenOf, writtenOf, lockerAbout, nameOf } from "./guide.jsx";
+import { CULTURE_GUIDE_KEY, chosenOf, writtenOf, lockerAbout, nameOf, allowed } from "./guide.jsx";
 import { slotFor, whenOf, assignedFor, withAssigned, suggestedFor, withSuggested, sitdown2Href, guideHref } from "./facts.js";
 
 const lower = (s) => String(s || "").trim().toLowerCase();
@@ -33,12 +33,12 @@ const call = async (body) => {
   return out;
 };
 
-const SYSTEM = "You are helping a college instructor (COMM 118, Communication and Sport) assign two concepts to one student for a Culture Guide the student writes before a ten-minute one-on-one meeting. The student chooses four of six concepts; the instructor chooses the other two. You are given the twenty concepts from the chapter, what this student already wrote about some of them, and which the student has already chosen. Choose two the student has NOT already chosen. Prefer a concept the student's own writing keeps pointing toward without naming, or a concept that would stretch them, over one they have already covered well. Answer with JSON only, no prose around it: {\"first\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"},\"second\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"}}. Each why is one plain full sentence under 30 words, addressed to the instructor, grounded in what the student wrote. No em dashes. No names.";
+const SYSTEM = "You are helping a college instructor (COMM 118, Communication and Sport) assign two concepts to one student for a Culture Guide the student writes before a ten-minute one-on-one meeting. The student chooses four of six concepts; the instructor chooses the other two. You are given the twenty concepts from the chapter, what this student already wrote about some of them, and which the student has already chosen. Choose two the student has NOT already chosen, and never culture, which is the guide itself. Prefer a concept the student's own writing keeps pointing toward without naming, or a concept that would stretch them, over one they have already covered well. Answer with JSON only, no prose around it: {\"first\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"},\"second\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"}}. Each why is one plain full sentence under 30 words, addressed to the instructor, grounded in what the student wrote. No em dashes. No names.";
 
 // What one student wrote, with no name, for the prompt.
 function briefOf(topics, locker, picks) {
   const lines = [];
-  lines.push("Concepts, by id: " + E.CONCEPTS.map(c => c.id + " = " + c.name).join("; "));
+  lines.push("Concepts, by id: " + E.CONCEPTS.filter(c => allowed(c.id)).map(c => c.id + " = " + c.name).join("; "));
   const sheet = [];
   ["a", "b", "c", "d", "e"].forEach(s => {
     const t = String((topics || {})["topic:" + s] || "").trim();
@@ -148,7 +148,7 @@ function Row({ row, busy, onAsk, onSave }) {
     <td>
       <select className="sel" value={ids[i] || ""} onChange={e => setId(i, e.target.value)}>
         <option value="">Not set</option>
-        {E.CONCEPTS.map(c => <option key={c.id} value={c.id} disabled={row.picks.includes(c.id) || ids[1 - i] === c.id}>{c.name + (row.picks.includes(c.id) ? " (their pick)" : "")}</option>)}
+        {E.CONCEPTS.filter(c => allowed(c.id)).map(c => <option key={c.id} value={c.id} disabled={row.picks.includes(c.id) || ids[1 - i] === c.id}>{c.name + (row.picks.includes(c.id) ? " (their pick)" : "")}</option>)}
       </select>
       {ids[i] ? <textarea className="why" rows={3} value={text[ids[i]] || ""} placeholder="Why" onChange={e => setWhy(ids[i], e.target.value)} onBlur={() => onSave(ids, text)} /> : null}
     </td>

@@ -113,8 +113,14 @@ export const shortOf = (id) => SHORT[id] || (E.conceptOf(id) || {}).name || id;
 export const nameOf = (id) => (E.conceptOf(id) || {}).name || "";
 
 const blank = (v) => !String(v || "").trim();
+// Culture is the guide itself, not one of its concepts. Andrew, 2026-11-06:
+// "culture cannot be one of their topics. if they choose culture, drill down
+// and find something else." It is off every chooser, and a file that holds it
+// reads as no pick.
+export const EXCLUDED = ["culture"];
+export const allowed = (id) => !!E.conceptOf(id) && !EXCLUDED.includes(id);
 /** The six concept ids on the file, in page order; "" where a page has none. */
-export const chosenOf = (answers) => PAGES.map(n => { const id = String((answers || {})[F.concept(n)] || "").trim(); return E.conceptOf(id) ? id : ""; });
+export const chosenOf = (answers) => PAGES.map(n => { const id = String((answers || {})[F.concept(n)] || "").trim(); return allowed(id) ? id : ""; });
 /** How many of a concept's three boxes are filled. */
 export const BOXES = 4;
 export const filledOf = (answers, id) => [F.define(id), F.why(id), F.guide1(id), F.guide2(id)].filter(f => !blank((answers || {})[f])).length;
@@ -196,9 +202,9 @@ export function writtenOf(topics, locker, name) {
 
 /** The chooser's three groups for one page: required, written, rest; each [{ id, where }]. */
 export function groupsOf(assigned, written) {
-  const req = (assigned || []).filter(id => E.conceptOf(id));
-  const wrote = Object.keys(written || {}).filter(id => !req.includes(id));
-  const rest = E.CONCEPTS.map(c => c.id).filter(id => !req.includes(id) && !wrote.includes(id));
+  const req = (assigned || []).filter(allowed);
+  const wrote = Object.keys(written || {}).filter(id => allowed(id) && !req.includes(id));
+  const rest = E.CONCEPTS.map(c => c.id).filter(id => allowed(id) && !req.includes(id) && !wrote.includes(id));
   return { required: req, written: wrote, rest };
 }
 
