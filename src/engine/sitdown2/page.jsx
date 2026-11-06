@@ -22,7 +22,7 @@ import { CSS as SD_CSS, FONTS } from "../SitdownPage.jsx";
 import { useStudentTheme, useDayNight, ThemeStyle } from "../ThemeShell.jsx";
 import { setClassFavicon } from "../favicon.js";
 import TopNav, { NAV_STUDENT } from "../TopNav.jsx";
-import { SITDOWN2, BLOCKS, SLOTS, slotsIn, slotOf, whenOf, blockHours, clock, bookings, slotFor, unplaced, book, mergeSlots, countdown, locked, pastDue, assignHref, guideHref } from "./facts.js";
+import { SITDOWN2, BLOCKS, slotsIn, slotOf, whenOf, blockHours, bookings, slotFor, unplaced, book, mergeSlots, countdown, locked, pastDue, assignHref, guideHref } from "./facts.js";
 
 export const WORDS_ROW = "sitdown2-words-plan";
 export const WORDS = {
@@ -184,39 +184,27 @@ function Mine({ config, data, name, copy, editing, place, canMove, guide }) {
   </>);
 }
 
-// The chooser as a calendar: the days across, the hours down the left, every
-// slot a block at its minute. Andrew, 2026-11-06: "make the time chooser look
-// like google calendar in a way. dates across, times in a list going down."
-const PX = 2.2;   // pixels a minute
-const DAYS = BLOCKS.reduce((out, b) => { const d = out.find(x => x.day === b.day) || (out.push({ day: b.day, month: b.month, date: b.date, blocks: [] }), out[out.length - 1]); d.blocks.push(b); return out; }, []);
-const CAL_FROM = Math.floor(Math.min(...BLOCKS.map(b => b.from[0] * 60 + b.from[1])) / 60) * 60;
-const CAL_TO = Math.ceil(Math.max(...BLOCKS.map(b => b.to[0] * 60 + b.to[1])) / 60) * 60;
-const HOURS = []; for (let m = CAL_FROM; m <= CAL_TO; m += 60) HOURS.push(m);
-const minuteOf = (slot) => { const d = new Date(slot.ms); return d.getHours() * 60 + d.getMinutes(); };
+// The chooser as a calendar: the four blocks across like days, each block's
+// times in a list going down. Andrew, 2026-11-06: "make the time chooser look
+// like google calendar in a way. dates across, times in a list going down",
+// then "do four dates: thursday morning, thurs afternoon, and so on."
 function Calendar({ data, name, canMove, busy, mine, onTap }) {
   const all = bookings(data);
-  const height = (CAL_TO - CAL_FROM) * PX;
   return (
     <div className="cal" role="group" aria-label="Times">
       <div className="calhead">
-        <div className="calgut" />
-        {DAYS.map(d => <div key={d.day} className="calday"><b>{d.day.split(",")[0]}</b><span>{d.day.split(",")[1].trim()}</span></div>)}
+        {BLOCKS.map(b => <div key={b.key} className="calday"><b>{b.day.split(",")[0] + " " + b.part}</b><span>{b.day.split(",")[1].trim() + ", " + blockHours(b)}</span></div>)}
       </div>
-      <div className="calbody" style={{ height }}>
-        <div className="calgut">
-          {HOURS.map(m => <div key={m} className="calhour" style={{ top: (m - CAL_FROM) * PX }}>{clock(Math.floor(m / 60), 0).replace(":00", "")}</div>)}
-        </div>
-        {DAYS.map(d => (
-          <div key={d.day} className="calcol">
-            {HOURS.map(m => <div key={m} className="calline" style={{ top: (m - CAL_FROM) * PX }} />)}
-            {SLOTS.filter(s => s.day === d.day).map(s => {
+      <div className="calbody">
+        {BLOCKS.map(b => (
+          <div key={b.key} className="calcol">
+            {slotsIn(b).map(s => {
               const who = all[s.key];
               const isMine = who && same(who.name, name);
-              const style = { top: (minuteOf(s) - CAL_FROM) * PX, height: SITDOWN2.minutes * PX - 2 };
-              if (isMine) return <span key={s.key} className="cs mine" style={style}><b>{s.say}</b><i>You</i>{canMove ? <button type="button" className="px" aria-label="Clear my time" disabled={!!busy} onClick={() => onTap("")}>×</button> : null}</span>;
-              if (who) return <span key={s.key} className="cs gone" style={style}><b>{s.say}</b><i>{nameShown(data, who.name)}</i></span>;
-              if (!canMove) return <span key={s.key} className="cs free" style={style}><b>{s.say}</b></span>;
-              return <button key={s.key} type="button" className="cs free" style={style} disabled={!!busy} aria-label={(mine ? "Move to " : "Pick ") + whenOf(s)} onClick={() => onTap(s.key)}><b>{busy === s.key ? "Saving" : s.say}</b></button>;
+              if (isMine) return <span key={s.key} className="cs mine"><b>{s.say}</b><i>You</i>{canMove ? <button type="button" className="px" aria-label="Clear my time" disabled={!!busy} onClick={() => onTap("")}>×</button> : null}</span>;
+              if (who) return <span key={s.key} className="cs gone"><b>{s.say}</b><i>{nameShown(data, who.name)}</i></span>;
+              if (!canMove) return <span key={s.key} className="cs free"><b>{s.say}</b></span>;
+              return <button key={s.key} type="button" className="cs free" disabled={!!busy} aria-label={(mine ? "Move to " : "Pick ") + whenOf(s)} onClick={() => onTap(s.key)}><b>{busy === s.key ? "Saving" : s.say}</b></button>;
             })}
           </div>
         ))}
@@ -285,20 +273,18 @@ const CSS = `
 .sd .slot .lnk.small{font-size:14px;min-height:36px}
 .sd .slot .pick{font-family:var(--sans);font-size:15px;min-height:36px;max-width:60%;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 8px}
 @media (max-width:720px){.sd .blocks{grid-template-columns:1fr}}
-/* The student's chooser as a calendar: days across, hours down, a block a slot. */
+/* The student's chooser as a calendar: four blocks across, each block's times down. */
 .sd .cal{width:100%;border:1px solid var(--line);border-radius:var(--rr);overflow:hidden;background:var(--card)}
-.sd .calhead{display:grid;grid-template-columns:64px repeat(2,minmax(0,1fr));border-bottom:1px solid var(--line);background:var(--sunk)}
-.sd .calday{padding:10px 12px;display:grid;gap:0;border-left:1px solid var(--line)}
-.sd .calday b{font-family:var(--serif);font-size:18px;font-weight:500;line-height:1.2}
-.sd .calday span{font-size:13px;color:var(--ink2)}
-.sd .calbody{display:grid;grid-template-columns:64px repeat(2,minmax(0,1fr));position:relative}
-.sd .calgut{position:relative}
-.sd .calhour{position:absolute;right:8px;transform:translateY(-50%);font-size:12px;color:var(--ink2);font-variant-numeric:tabular-nums}
-.sd .calcol{position:relative;border-left:1px solid var(--line)}
-.sd .calline{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
-.sd .cs{position:absolute;left:4px;right:4px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:6px;font-family:var(--sans);font-size:13px;line-height:1;border:1.5px solid transparent;overflow:hidden;white-space:nowrap}
-.sd .cs b{font-weight:600;font-variant-numeric:tabular-nums}
-.sd .cs i{font-style:normal;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.sd .calhead,.sd .calbody{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.sd .calhead{border-bottom:1px solid var(--line);background:var(--sunk)}
+.sd .calday{padding:10px 12px;display:grid;gap:2px;border-left:1px solid var(--line);min-width:0}
+.sd .calday:first-child,.sd .calcol:first-child{border-left:0}
+.sd .calday b{font-family:var(--serif);font-size:17px;font-weight:500;line-height:1.2}
+.sd .calday span{font-size:12px;color:var(--ink2);line-height:1.3}
+.sd .calcol{border-left:1px solid var(--line);display:grid;gap:4px;padding:6px;align-content:start;min-width:0}
+.sd .cs{box-sizing:border-box;display:flex;align-items:center;gap:8px;min-height:32px;padding:0 9px;border-radius:6px;font-family:var(--sans);font-size:13px;line-height:1;border:1.5px solid transparent;overflow:hidden;white-space:nowrap;text-align:left;min-width:0}
+.sd .cs b{font-weight:600;font-variant-numeric:tabular-nums;flex:none}
+.sd .cs i{font-style:normal;font-size:12px;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .sd .cs.free{background:var(--accent-tint);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,transparent);cursor:pointer}
 .sd .cs.free:hover:not(:disabled){background:var(--accent);color:var(--on-accent)}
 .sd .cs.free:disabled{opacity:.5;cursor:default}
@@ -306,7 +292,7 @@ const CSS = `
 .sd .cs.gone i{color:var(--ink)}
 .sd .cs.mine{background:var(--accent);color:var(--on-accent)}
 .sd .cs.mine i{letter-spacing:.06em;text-transform:uppercase;opacity:.9}
-.sd .cs .px{font:inherit;font-size:14px;line-height:1;width:20px;height:20px;border-radius:999px;border:0;background:rgba(255,255,255,.25);color:inherit;cursor:pointer;display:inline-grid;place-items:center;margin-left:auto}
+.sd .cs .px{font:inherit;font-size:14px;line-height:1;width:20px;height:20px;border-radius:999px;border:0;background:rgba(255,255,255,.25);color:inherit;cursor:pointer;display:inline-grid;place-items:center;margin-left:auto;flex:none}
 .sd .cs:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media (max-width:640px){.sd .calhead,.sd .calbody{grid-template-columns:52px repeat(2,minmax(0,1fr))}.sd .cs{padding:0 5px;gap:5px}.sd .cs i{display:none}.sd .cs.gone i{display:inline}}
+@media (max-width:720px){.sd .calhead,.sd .calbody{grid-template-columns:repeat(2,minmax(0,1fr))}.sd .calday:nth-child(3),.sd .calcol:nth-child(3){border-left:0}.sd .calday{padding:8px}.sd .cs{padding:0 6px;gap:5px}}
 `;
