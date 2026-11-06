@@ -183,6 +183,8 @@ function Mine({ config, data, name, copy, editing, place, canMove, guide }) {
 // then "do four dates: thursday morning, thurs afternoon, and so on."
 function Calendar({ data, name, canMove, busy, mine, onTap }) {
   const all = bookings(data);
+  // A tap picks; Confirm books. Andrew, 2026-11-06: "the way a student chooses a time is weird."
+  const [pending, setPending] = useState("");
   return (
     <div className="cal" role="group" aria-label="Times">
       <div className="calhead">
@@ -196,8 +198,15 @@ function Calendar({ data, name, canMove, busy, mine, onTap }) {
               const isMine = who && same(who.name, name);
               if (isMine) return <span key={s.key} className="cs mine"><b>{s.say}</b><i>You</i>{canMove ? <button type="button" className="px" aria-label="Clear my time" disabled={!!busy} onClick={() => onTap("")}>×</button> : null}</span>;
               if (who) return <span key={s.key} className="cs gone"><b>{s.say}</b><i>{nameShown(data, who.name)}</i></span>;
-              if (!canMove) return <span key={s.key} className="cs free"><b>{s.say}</b></span>;
-              return <button key={s.key} type="button" className="cs free" disabled={!!busy} aria-label={(mine ? "Move to " : "Pick ") + whenOf(s)} onClick={() => onTap(s.key)}><b>{busy === s.key ? "Saving" : s.say}</b></button>;
+              if (!canMove) return <span key={s.key} className="cs free"><b>{s.say}</b><i>Open</i></span>;
+              if (pending === s.key) return (
+                <span key={s.key} className="cs ask">
+                  <b>{s.say}</b>
+                  <button type="button" className="go small" disabled={!!busy} onClick={() => { setPending(""); onTap(s.key); }}>{busy === s.key ? "Saving" : mine ? "Move here" : "Confirm"}</button>
+                  <button type="button" className="px" aria-label="Not this time" onClick={() => setPending("")}>×</button>
+                </span>
+              );
+              return <button key={s.key} type="button" className="cs free" disabled={!!busy} aria-label={(mine ? "Move to " : "Pick ") + whenOf(s)} onClick={() => setPending(s.key)}><b>{s.say}</b><i>Open</i></button>;
             })}
           </div>
         ))}
@@ -278,9 +287,13 @@ const CSS = `
 .sd .cs{box-sizing:border-box;display:flex;align-items:center;gap:8px;min-height:32px;padding:0 9px;border-radius:6px;font-family:var(--sans);font-size:13px;line-height:1;border:1.5px solid transparent;overflow:hidden;white-space:nowrap;text-align:left;min-width:0}
 .sd .cs b{font-weight:600;font-variant-numeric:tabular-nums;flex:none}
 .sd .cs i{font-style:normal;font-size:12px;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.sd .cs.free{background:var(--accent-tint);color:var(--accent);border-color:color-mix(in srgb,var(--accent) 35%,transparent);cursor:pointer}
-.sd .cs.free:hover:not(:disabled){background:var(--accent);color:var(--on-accent)}
+.sd .cs.free{background:var(--card);color:var(--ink);border-color:var(--line);cursor:pointer;justify-content:space-between}
+.sd .cs.free i{color:var(--accent);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.sd .cs.free:hover:not(:disabled){border-color:var(--accent);background:var(--accent-tint)}
 .sd .cs.free:disabled{opacity:.5;cursor:default}
+.sd .cs.ask{background:var(--accent-tint);color:var(--ink);border-color:var(--accent);min-height:40px}
+.sd .cs.ask .go.small{font-size:13px;font-weight:600;min-height:28px;line-height:28px;padding:0 12px;margin-left:auto}
+.sd .cs.ask .px{background:var(--card);color:var(--ink);margin-left:0}
 .sd .cs.gone{background:var(--sunk);color:var(--ink2);border-color:var(--line)}
 .sd .cs.gone i{color:var(--ink)}
 .sd .cs.mine{background:var(--accent);color:var(--on-accent)}
