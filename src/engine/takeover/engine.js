@@ -325,7 +325,7 @@ export const SITUATIONS = [
       opt("fire", "Use the fire", "Tell {name} to stay angry and point it at the other team.", 1, -2, 1, "skills", ["star"], ["quiet"], "The common move. The research says angry play is worse play.", 1),
     ] },
   { id: "nonverbal", concept: "nonverbal", who: "transfer", text: "The team has hand signals. {name} keeps reading them wrong and nobody says so.",
-    research: "Early-season touch, high fives and fist bumps, predicted later NBA performance (Kraus, Huang & Keltner, 2010; Will's finding). Female athletes rated visual signals the fastest channel (Emme and Vianna's finding). Addison asked whether signal-heavy teams win from understanding or from time together. Alexa asked whether long-time teams build a secret language.",
+    research: "Early-season touch, high fives and fist bumps, predicted later NBA performance (Kraus, Huang & Keltner, 2010; Will's finding). Female athletes rated visual signals the fastest channel (Emme and Emma's finding). Addison asked whether signal-heavy teams win from understanding or from time together. Alexa asked whether long-time teams build a secret language.",
     options: [
       opt("same", "Leave it", "{name} will pick it up.", 0, -2, -1, "same", [], ["transfer"], "The misreads keep costing points."),
       opt("session", "Signals session", "One practice on the signals, {name} and the rookies at the front.", 1, 3, 4, "skills", ["transfer", "rookie"], [], "Teach the language instead of waiting for it."),
@@ -341,7 +341,7 @@ export const SITUATIONS = [
       opt("ask", "Ask the team", "Ask who has what at six, and build the week around it.", 1, 3, 1, "care", ["rookie", "quiet"], [], "Autonomy support: the team has a say in its own time."),
     ] },
   { id: "gender", concept: "gender", who: "veteran", text: "A visiting coach jokes that your team talks too much. {name} heard every word.",
-    research: "Female athletes reported talk and visual signals as their fastest channels (Emme and Vianna's finding). Jacqueline asked why female athletes set performance goals and male athletes outcome goals. Addison asked for gender as a topic; Ruby and Haixing chose it.",
+    research: "Female athletes reported talk and visual signals as their fastest channels (Emme and Emma's finding). Jacqueline asked why female athletes set performance goals and male athletes outcome goals. Addison asked for gender as a topic; Ruby and Haixing chose it.",
     options: [
       opt("same", "Let it go", "Other coaches say things.", 0, -2, 0, "same", [], ["veteran"], "The team heard it too."),
       opt("speak", "Say something to that coach", "Before you leave the gym.", 1, 4, 0, "standards", ["veteran", "star", "quiet"], [], "The team sees who the coach stands with."),
@@ -421,7 +421,7 @@ export const SITUATIONS = [
       opt("repeat", "{veteran} repeats it", "The captain says the one thing again in the huddle.", 1, 3, 2, "care", ["veteran", "rookie"], [], "The message through a teammate, which Alexa noticed lands differently."),
     ] },
   { id: "negative", concept: "negative", who: "star", text: "{name} told {rookie}, in front of everyone, that the pass was garbage.",
-    research: "Negative messaging (Vianna, Emme, Lucy Kate, Sophia A, Paul chose it). Paul asked what split of positive and negative talk works. Jacqueline noted coaches who use verbal aggression read as less credible and less competent. Sarcasm can build cohesion only when everyone reads it as play.",
+    research: "Negative messaging (Emma, Emme, Lucy Kate, Sophia A, Paul chose it). Paul asked what split of positive and negative talk works. Jacqueline noted coaches who use verbal aggression read as less credible and less competent. Sarcasm can build cohesion only when everyone reads it as play.",
     options: [
       opt("same", "Let them sort it", "Teammates talk.", 0, -4, 0, "same", [], ["rookie", "quiet"], "The rookie stops passing to the star."),
       opt("private", "A private word with {name}", "After practice, alone.", 1, 3, 1, "care", ["rookie", "quiet", "star"], [], "Hard words in private, which is the rule you are about to need."),

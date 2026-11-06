@@ -27,7 +27,7 @@ import { AssignmentsSummary, AssignmentsDetail, ungradedCount } from "./Assignme
 import { DayPlanSummary, DayPlanDetail } from "./DayPlanCard.jsx";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
-import { withIds, idOf, rosterOf, withHouse, pointsOf as studentPoints } from "./roster.js";
+import { withIds, idOf, rosterOf, withHouse, nameShown, pointsOf as studentPoints } from "./roster.js";
 import { setAway, mergeAway } from "./attendance.js";
 import { useStudentTheme, useDayNight, ThemeStyle, ThemePicker, DayNightPicker } from "./ThemeShell.jsx";
 import { useSession, studentFor, myCode, getSession } from "./session.js";
@@ -844,7 +844,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
       style={{ fontFamily: F, fontSize: 15, fontWeight: 600, minHeight: TAP, padding: "0 10px", maxWidth: 230,
         borderRadius: 999, border: "1px solid " + BORDER_STRONG, background: "#fff", color: TEXT_PRIMARY, cursor: "pointer" }}>
       <option value="">View as a student</option>
-      {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
+      {roster.map(st => <option key={st.name} value={st.name}>{nameShown(data, st.name)}</option>)}
     </select>
   );
 
@@ -1067,7 +1067,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
                 onChange={e => { setPreview(e.target.value); setSaving(isTestStudent(config, e.target.value)); go(null); }}
                 style={adminSelect}>
                 <option value="">View as a student</option>
-                {roster.map(st => <option key={st.name} value={st.name}>{st.name}</option>)}
+                {roster.map(st => <option key={st.name} value={st.name}>{nameShown(data, st.name)}</option>)}
               </select>
             ) : null}
           </div>

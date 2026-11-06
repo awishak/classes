@@ -15,6 +15,7 @@ import { realStudents, sectionOf } from "../sections.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { StudentLink } from "../StudentPage.jsx";
+import { nameShown } from "../roster.js";
 import { CSS as SD_CSS, FONTS } from "../SitdownPage.jsx";
 import { TEAM_TOPICS_KEY } from "../teamtopics/sheet.jsx";
 import * as E from "../takeover/engine.js";
@@ -79,7 +80,7 @@ function Shell({ config, title, intro, children, here }) {
 }
 
 export function CultureReview({ config, worksheetKey, roster }) {
-  const { rows, sheets, error, classmates } = useRows(config, roster, [CULTURE_GUIDE_KEY, TEAM_TOPICS_KEY, E.TAKEOVER_KEY]);
+  const { data, rows, sheets, error, classmates } = useRows(config, roster, [CULTURE_GUIDE_KEY, TEAM_TOPICS_KEY, E.TAKEOVER_KEY]);
   const handed = rows.filter(r => r.guide?.submitted_at).length;
   return (
     <Shell config={config} title="Every Culture Guide" here="review" intro={error ? "Could not read the sheets: " + error : !sheets ? "Reading the sheets." : handed + " handed in, " + (rows.filter(r => r.guide && !r.guide.submitted_at).length) + " started, " + rows.filter(r => !r.guide).length + " not opened. In the order of the meetings; a student with no time yet is at the end. This page asks again every half minute."}>
@@ -97,7 +98,7 @@ export function CultureReview({ config, worksheetKey, roster }) {
               <>
                 {q.length ? <div className="asks"><div className="h5">Asks you to ask</div><ol className="askl">{q.map((x, i) => <li key={i} className="q">{x}</li>)}</ol></div> : null}
                 {r.assigned.ids.length ? <p className="p">{"Required: " + r.assigned.ids.map(nameOf).join(" and ") + "."}</p> : <p className="p">No concepts assigned yet.</p>}
-                <div className="cg ro"><Printout answers={r.answers} name={r.student.name} topics={r.topics} locker={r.locker} classmates={classmates.filter(n => n !== r.student.name)} assigned={r.assigned.ids} /></div>
+                <div className="cg ro"><Printout answers={r.answers} name={nameShown(data, r.student.name)} topics={r.topics} locker={r.locker} classmates={classmates.filter(n => n !== r.student.name)} assigned={r.assigned.ids} /></div>
                 <a className="lnk" href={guideHref(config) + "?s=" + encodeURIComponent(r.email)}>Open the file</a>
               </>
             ) : null}

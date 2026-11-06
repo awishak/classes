@@ -18,7 +18,7 @@ import { usePhotos, useWithPhotos } from "./photos.js";
 import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
-import { withIds } from "./roster.js";
+import { withIds, nameShown } from "./roster.js";
 import { checkinTasksOf, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { workSoFar } from "./CheckinCard.jsx";
 import { StudentLink } from "./StudentPage.jsx";
@@ -133,7 +133,7 @@ export default function CheckinAnswers({ config }) {
               <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
                 <button style={stepBtn} onClick={() => step(-1)} aria-label="Previous student">←</button>
                 <select value={student.name} onChange={e => go({ s: e.target.value })} aria-label="Student" style={select}>
-                  {order.map(s => <option key={s.name} value={s.name}>{s.name}{answersOf(data, asg.id, s.name) ? "" : " (no answer yet)"}</option>)}
+                  {order.map(s => <option key={s.name} value={s.name}>{nameShown(data, s.name)}{answersOf(data, asg.id, s.name) ? "" : " (no answer yet)"}</option>)}
                 </select>
                 <button style={stepBtn} onClick={() => step(1)} aria-label="Next student">→</button>
                 <span style={{ fontSize: 15, color: TEXT_MUTED }}>{si + 1} of {order.length}</span>

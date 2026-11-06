@@ -367,7 +367,7 @@ function StudentYou({ config, data, update, setPhoto, asStudent, setAsStudent })
             Viewing as
             <select value={asStudent} onChange={e => setAsStudent(e.target.value)}
               style={{ fontFamily: F, fontSize: 15, padding: "8px 10px", borderRadius: 10, border: "1px solid " + BORDER_STRONG, minHeight: TAP }}>
-              {roster.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+              {roster.map(s => <option key={s.name} value={s.name}>{nameShown(data, s.name)}</option>)}
             </select>
           </label>
         ) : null}

@@ -14,7 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { useClassData, saveMerged } from "../store.js";
-import { rosterOf } from "../roster.js";
+import { rosterOf, nameShown } from "../roster.js";
 import { realStudents } from "../sections.js";
 import { useSession, studentFor } from "../session.js";
 import { useCopy, Words } from "../visualstory/pre.jsx";
@@ -104,7 +104,7 @@ export default function Sitdown2Page({ config }) {
                 <label className="as"><span>See the page as</span>
                   <select value={as} onChange={e => pickAs(e.target.value)}>
                     <option value="">Me, every slot</option>
-                    {students.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                    {students.map(s => <option key={s.name} value={s.name}>{nameShown(data, s.name)}</option>)}
                   </select>
                 </label>
                 <a className="btn" href={assignHref(config)}>Assign the two concepts</a>
@@ -167,26 +167,24 @@ function Mine({ config, data, name, copy, editing, place, canMove }) {
     <section className="sec" id="times">
       <Words k="head.times" copy={copy} editing={editing} as="h2" className="h2" />
       <Words k={canMove ? "times.note" : "times.locked"} copy={copy} editing={editing} as="p" className="p" />
-      <div className="blocks">
+      <div className="picks">
         {BLOCKS.map(b => (
-          <div key={b.key} className="block">
-            <div className="bh"><b>{b.day + ", " + b.part}</b><span>{blockHours(b)}</span></div>
-            {slotsIn(b).map(s => {
-              const who = all[s.key];
-              const isMine = who && same(who.name, name);
-              return (
-                <div key={s.key} className={"slot" + (isMine ? " mine" : who ? " gone" : " free")}>
-                  <span className="t">{s.say}</span>
-                  {isMine ? <span className="who">You{canMove ? <button type="button" className="lnk small" disabled={!!busy} onClick={() => tap("")}>Clear</button> : null}</span>
-                    : who ? <span className="who">Taken</span>
-                    : canMove ? <button type="button" className="open" disabled={!!busy} onClick={() => tap(s.key)}>{busy === s.key ? "Saving" : mine ? "Move here" : "Open"}</button>
-                    : <span className="who">Open</span>}
-                </div>
-              );
-            })}
+          <div key={b.key} className="pblock">
+            <div className="pbh"><b>{b.day}</b><span>{blockHours(b)}</span></div>
+            <div className="ptimes">
+              {slotsIn(b).map(s => {
+                const who = all[s.key];
+                const isMine = who && same(who.name, name);
+                if (isMine) return <span key={s.key} className="pt mine">{s.say}<i>You</i>{canMove ? <button type="button" className="px" aria-label="Clear my time" disabled={!!busy} onClick={() => tap("")}>×</button> : null}</span>;
+                if (who) return <span key={s.key} className="pt gone">{s.say}</span>;
+                if (!canMove) return <span key={s.key} className="pt free">{s.say}</span>;
+                return <button key={s.key} type="button" className="pt free" disabled={!!busy} aria-label={(mine ? "Move to " : "Pick ") + whenOf(s)} onClick={() => tap(s.key)}>{busy === s.key ? "Saving" : s.say}</button>;
+              })}
+            </div>
           </div>
         ))}
       </div>
+      <p className="meta">Grey times are taken.</p>
       {said ? <p className="meta" aria-live="polite">{said}</p> : null}
     </section>
 
@@ -213,13 +211,13 @@ function Everyone({ config, data, students, place }) {
     setBusy(key); setSaid("");
     const r = name ? await place(key, name) : await place("", (all[key] || {}).name);
     setBusy("");
-    setSaid(r.ok ? (name ? name + " has " + whenOf(slotOf(key)) + "." : "Cleared.") : r.why);
+    setSaid(r.ok ? (name ? nameShown(data, name) + " has " + whenOf(slotOf(key)) + "." : "Cleared.") : r.why);
   };
   const placed = Object.keys(all).length;
   return (<>
     <section className="sec">
       <h2 className="h2">{placed + " of " + students.length + " have a time"}</h2>
-      <p className="p">{none.length ? "No time yet: " + none.map(s => s.name).join(", ") + "." : "Everyone has a time."}</p>
+      <p className="p">{none.length ? "No time yet: " + none.map(s => nameShown(data, s.name)).join(", ") + "." : "Everyone has a time."}</p>
       {said ? <p className="meta" aria-live="polite">{said}</p> : null}
       <div className="blocks">
         {BLOCKS.map(b => (
@@ -232,8 +230,8 @@ function Everyone({ config, data, students, place }) {
                   <span className="t">{s.say}</span>
                   <select className="pick" value={who ? who.name : ""} disabled={!!busy} aria-label={"Who has " + whenOf(s)} onChange={e => set(s.key, e.target.value)}>
                     <option value="">{who ? "Clear" : "Open"}</option>
-                    {who && !students.some(x => same(x.name, who.name)) ? <option value={who.name}>{who.name}</option> : null}
-                    {students.map(x => <option key={x.name} value={x.name}>{x.name + (slotFor(data, x.name) && !same(x.name, who?.name) ? " (has " + slotFor(data, x.name).say + ")" : "")}</option>)}
+                    {who && !students.some(x => same(x.name, who.name)) ? <option value={who.name}>{nameShown(data, who.name)}</option> : null}
+                    {students.map(x => <option key={x.name} value={x.name}>{nameShown(data, x.name) + (slotFor(data, x.name) && !same(x.name, who?.name) ? " (has " + slotFor(data, x.name).say + ")" : "")}</option>)}
                   </select>
                 </div>
               );
@@ -263,4 +261,20 @@ const CSS = `
 .sd .slot .lnk.small{font-size:14px;min-height:36px}
 .sd .slot .pick{font-family:var(--sans);font-size:15px;min-height:36px;max-width:60%;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 8px}
 @media (max-width:720px){.sd .blocks{grid-template-columns:1fr}}
+/* The student's chooser: one row a block, the times as small pills. Andrew, 2026-11-06: "make time chooser more compact for students." */
+.sd .picks{display:grid;gap:10px;width:100%}
+.sd .pblock{display:grid;gap:8px;padding:12px 14px;border-radius:var(--rr);background:var(--sunk)}
+.sd .pbh{display:flex;gap:6px 14px;align-items:baseline;flex-wrap:wrap}
+.sd .pbh b{font-family:var(--serif);font-size:18px;font-weight:500;line-height:1.2}
+.sd .pbh span{font-size:14px;color:var(--ink2)}
+.sd .ptimes{display:flex;flex-wrap:wrap;gap:6px}
+.sd .pt{font-family:var(--sans);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1;min-height:36px;padding:0 11px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;border:1.5px solid transparent}
+.sd .pt.free{background:var(--card);color:var(--accent);border-color:var(--accent);cursor:pointer}
+.sd .pt.free:hover:not(:disabled){background:var(--accent);color:var(--on-accent)}
+.sd .pt.free:disabled{opacity:.5;cursor:default}
+.sd .pt.gone{background:transparent;color:var(--ink2);border-color:var(--line);font-weight:400}
+.sd .pt.mine{background:var(--accent);color:var(--on-accent)}
+.sd .pt.mine i{font-style:normal;font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.9}
+.sd .px{font:inherit;font-size:16px;line-height:1;width:24px;height:24px;border-radius:999px;border:0;background:rgba(255,255,255,.25);color:inherit;cursor:pointer;display:inline-grid;place-items:center;margin-right:-4px}
+.sd .pt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 `;

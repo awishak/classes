@@ -14,7 +14,7 @@ import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
 import { useBoards, postsOf, idForPrompt } from "./boards.js";
 import { useLive } from "./live.js";
-import { lastNameOf } from "./roster.js";
+import { lastNameOf, nameShown } from "./roster.js";
 import * as TOKENS from "./tokens.js";
 import { setClassFavicon } from "./favicon.js";
 import { withIds, idOf, pointsOf as studentPoints } from "./roster.js";
@@ -119,7 +119,7 @@ export default function BoardPage({ config }) {
             }}
               style={{ minHeight: TAP, textAlign: "left", padding: "0 14px", fontSize: 17, fontFamily: F,
                 background: SURFACE_CARD, border: "1px solid " + BORDER, borderRadius: 12, cursor: "pointer", color: TEXT }}>
-              {s.name}
+              {nameShown(stored, s.name)}
             </button>
           ))}
         </div>

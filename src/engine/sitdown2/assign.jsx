@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { useClassData } from "../store.js";
-import { rosterOf } from "../roster.js";
+import { rosterOf, nameShown } from "../roster.js";
 import { realStudents } from "../sections.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
@@ -87,7 +87,7 @@ export default function AssignPage({ config }) {
   const rows = roster.map(s => {
     const em = lower(s.email);
     const topics = sheets?.topics.get(em)?.answers || {}, locker = sheets?.locker.get(em)?.answers || {}, guide = sheets?.guide.get(em)?.answers || {};
-    return { student: s, email: em, topics, locker, picks: chosenOf(guide).filter(Boolean), written: writtenOf(topics, locker, s.name), assigned: assignedFor(data, em), slot: slotFor(data, s.name) };
+    return { student: s, email: em, shown: nameShown(data, s.name), topics, locker, picks: chosenOf(guide).filter(Boolean), written: writtenOf(topics, locker, s.name), assigned: assignedFor(data, em), slot: slotFor(data, s.name) };
   });
 
   const save = (email, ids, why) => update(d => withAssigned(d, email, ids, why));
@@ -97,7 +97,7 @@ export default function AssignPage({ config }) {
       const got = await suggest(briefOf(row.topics, row.locker, row.picks));
       save(row.email, got.ids, got.why);
       setNote("");
-    } catch (e) { setNote(row.student.name + ": " + String(e.message || e)); }
+    } catch (e) { setNote(row.shown + ": " + String(e.message || e)); }
     setBusy(b => ({ ...b, [row.email]: false }));
   };
   const askAll = async () => { for (const row of rows) if (!row.assigned.ids.length) await ask(row); };   // eslint-disable-line no-await-in-loop
@@ -152,7 +152,7 @@ function Row({ row, busy, onAsk, onSave }) {
   );
   return (
     <tr>
-      <td><b>{row.student.name}</b><div className="muted">{row.slot ? whenOf(row.slot) : "No time yet"}</div></td>
+      <td><b>{row.shown}</b><div className="muted">{row.slot ? whenOf(row.slot) : "No time yet"}</div></td>
       <td className="muted">{row.picks.length ? row.picks.map(nameOf).join(", ") : "Nothing yet"}</td>
       <td className="muted">{Object.keys(row.written).length ? Object.keys(row.written).map(nameOf).join(", ") : "Nothing on file"}</td>
       {pickCell(0)}{pickCell(1)}

@@ -21,6 +21,7 @@
 // the assignments' own titles. The AI summary he mentioned is for later.
 
 import { readingsRow, readingsFor } from "./takeover/engine.js";
+import { mergedView } from "./store.js";
 import { useEffect, useMemo, useState } from "react";
 import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
@@ -65,7 +66,8 @@ export const studentHref = (config, student) => config.path + "/student/" + enco
  * name; the words are the children, or the name.
  */
 export function StudentLink({ config, student, children, className, style }) {
-  const who = typeof student === "string" ? student : student?.name || "";
+  // The name they go by, off their profile, the way every surface that shows people reads it (roster.js shownName).
+  const who = nameShown(mergedView(config.storageKey), typeof student === "string" ? student : student?.name || "");
   return <a href={studentHref(config, student)} className={className} style={{ color: "inherit", textDecoration: "none", ...(style || {}) }} onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }} onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}>{children ?? who}</a>;
 }
 

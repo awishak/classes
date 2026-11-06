@@ -45,6 +45,7 @@ import { TEAM_TOPICS_KEY, PARTS as TOPIC_PARTS, linesOf } from "../teamtopics/sh
 import * as E from "../takeover/engine.js";
 import { parseConcepts, castOf, teamOf, benchNameOf } from "../takeover/game.jsx";
 import { SITDOWN2, assignedFor } from "./facts.js";
+import { nameShown } from "../roster.js";
 
 export const CULTURE_GUIDE_KEY = "culture-guide";
 export const CULTURE_GUIDE_TITLE = "Culture Guide";
@@ -304,6 +305,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
   if (!answers) return <div {...root}><style>{CSS}</style><div className="sheet"><p className="status">{STATUS[status] || "Loading…"}</p></div></div>;
 
   const name = viewer?.name || "";
+  const shown = nameShown(classData, name);
   const chosen = chosenOf(answers);
   const written = writtenOf(topics, locker, name);
   const left = missingOf(answers, assigned.ids);
@@ -461,11 +463,11 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
           <div className="bar">
             <button type="button" className="btn primary" disabled={handing === "sending"} onClick={handIn}>{handing === "sending" ? "Handing in…" : submitted ? copy.say("handInAgain") : copy.say("handIn")}</button>
             <button type="button" className="btn" onClick={() => { try { window.print(); } catch { /* fine */ } }}>{copy.say("print")}</button>
-            <button type="button" className="btn" onClick={() => { try { navigator.clipboard.writeText(plainOf(answers, name)); } catch { /* fine */ } }}>{copy.say("copy")}</button>
+            <button type="button" className="btn" onClick={() => { try { navigator.clipboard.writeText(plainOf(answers, shown)); } catch { /* fine */ } }}>{copy.say("copy")}</button>
             <span className="say" aria-live="polite">{say}</span>
           </div>
         ) : null}
-        <Printout answers={answers} name={name} topics={topics} locker={locker} classmates={classmates} assigned={assigned.ids} onGo={readOnly ? null : go} />
+        <Printout answers={answers} name={shown} topics={topics} locker={locker} classmates={classmates} assigned={assigned.ids} onGo={readOnly ? null : go} />
       </section>
     );
   }
