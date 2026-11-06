@@ -135,6 +135,18 @@ function Mine({ config, data, name, copy, editing, place, canMove, guide }) {
     setSaid(r.ok ? (key ? "You have " + whenOf(slotOf(key)) + "." : "Your time is cleared.") : r.why);
   };
   const all = bookings(data);
+  const timesFirst = !mine;
+  const timesSection = (
+    <section className="sec" id="times">
+      <Words k="head.times" copy={copy} editing={editing} as="h2" className="h2" />
+      <Words k={canMove ? "times.note" : "times.locked"} copy={copy} editing={editing} as="p" className="p" />
+      <Calendar data={data} name={name} canMove={canMove} busy={busy} mine={mine} onTap={tap} />
+      {said ? <p className="meta" aria-live="polite">{said}</p> : null}
+    </section>
+
+  );
+  // The chooser first, before the steps, until a time is picked. Andrew,
+  // 2026-11-06: "the time chooser needs to be obvious on the first page."
   return (<>
     <section className="sec snap" id="when">
       <div className="band">
@@ -144,6 +156,7 @@ function Mine({ config, data, name, copy, editing, place, canMove, guide }) {
       </div>
     </section>
 
+    {timesFirst ? timesSection : null}
     <section className="sec" id="steps">
       <Words k="head.steps" copy={copy} editing={editing} as="h2" className="h2" />
       <ol className="steps">
@@ -161,19 +174,13 @@ function Mine({ config, data, name, copy, editing, place, canMove, guide }) {
       </ol>
     </section>
 
-    <section className="sec" id="times">
-      <Words k="head.times" copy={copy} editing={editing} as="h2" className="h2" />
-      <Words k={canMove ? "times.note" : "times.locked"} copy={copy} editing={editing} as="p" className="p" />
-      <Calendar data={data} name={name} canMove={canMove} busy={busy} mine={mine} onTap={tap} />
-      {said ? <p className="meta" aria-live="polite">{said}</p> : null}
-    </section>
-
     <section className="sec" id="guide">
       <Words k="head.guide" copy={copy} editing={editing} as="h2" className="h2" />
       <Words k="guide.p" copy={copy} editing={editing} as="p" className="p" />
       <a className="btn" href={guide}>{copy.say("step.2.link")}</a>
     </section>
 
+    {timesFirst ? null : timesSection}
   </>);
 }
 
