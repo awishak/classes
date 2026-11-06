@@ -22,6 +22,7 @@ import { localWorksheet, listedFor, openTo } from "../localWorksheets.js";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
 import { AUDIO_STORY_KEY } from "../audiostory/story.jsx";
 import { AUDIO_RESEARCH_KEY, AUDIO_RESEARCH_TITLE, researchHref } from "../audiostory/research.jsx";
+import { AUDIO_PRE_KEY, AUDIO_PRE_TITLE, preHref } from "../audiostory/pre.jsx";
 import { barUp } from "../visualstory/model.js";
 import { StoriesRow, useStoriesStage, storiesHref, STORIES_CLASSES } from "../visualstory/door.jsx";
 import { portalHref } from "../visualstory/portal.jsx";
@@ -104,6 +105,19 @@ export function AudioExerciseDoor({ config, data, now = Date.now() }) {
   if (!end || now > end) return null;
   return <DueBar href={researchHref(config.id)} name={"Work on the " + AUDIO_RESEARCH_TITLE.toLowerCase()} say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
     done={submittedOf(standing)} doneName={"Your " + AUDIO_RESEARCH_TITLE.toLowerCase() + " is in"} doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
+}
+
+// The pre-production's door, the same way, until the Audio story
+// pre-production challenge (audio-pre) is due.
+export function AudioPreDoor({ config, data, now = Date.now() }) {
+  const sheet = localWorksheet(AUDIO_PRE_KEY);
+  const standing = usePreStanding(config, AUDIO_PRE_KEY);
+  if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
+  const asg = assignmentsOf(config, data).find(a => a.id === "audio-pre");
+  const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
+  if (!end || now > end) return null;
+  return <DueBar href={preHref(config.id)} name={"Work on your " + AUDIO_PRE_TITLE.toLowerCase()} say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
+    done={submittedOf(standing)} doneName={"Your " + AUDIO_PRE_TITLE.toLowerCase() + " is in"} doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
 }
 
 // A sheet's standing says submitted once it has a hand-in time (waiting), or
@@ -324,6 +338,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
       <StoryPhaseBar config={config} />
       <StoryDoor config={config} data={data} />
       <AudioExerciseDoor config={config} data={data} />
+      <AudioPreDoor config={config} data={data} />
       <AudioStoryDoor config={config} data={data} />
       <LockerRoomDoor config={config} data={data} />
       <PinBar data={data} go={go} />

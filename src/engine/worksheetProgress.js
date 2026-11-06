@@ -13,6 +13,7 @@ import { VISUAL_STORY_KEY } from "./visualstory/story.jsx";
 import { storyOf, wordCount, imageCount, MIN_IMAGES, MIN_WORDS } from "./visualstory/model.js";
 import { AUDIO_STORY_KEY } from "./audiostory/story.jsx";
 import { audioStoryOf, progressOf as audioProgress } from "./audiostory/storymodel.js";
+import { AUDIO_PRE_KEY, progressOf as preProgress } from "./audiostory/pre.jsx";
 
 const has = (a, f) => !!String(a?.[f] ?? "").trim();
 const clamp = (x) => Math.max(0, Math.min(1, x));
@@ -46,6 +47,8 @@ const MEASURES = {
   [VISUAL_STORY_KEY]: visualStory,
   // The audio story: the file, the cover, the headline, the listen line, a voice.
   [AUDIO_STORY_KEY]: (a) => audioProgress(audioStoryOf(a || {})),
+  // The pre-production: its parts filled over the parts Submit wants.
+  [AUDIO_PRE_KEY]: (a) => preProgress(a || {}),
 };
 
 const answered = (a) => Object.keys(a || {}).filter(f => has(a, f)).length;

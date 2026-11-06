@@ -48,6 +48,8 @@ import AllIdeas from "./audiostory/all.jsx";
 import { AUDIO_RESEARCH_KEY, AUDIO_RESEARCH_TITLE, mountAudioResearch } from "./audiostory/research.jsx";
 import AudioControl, { ResearchReview } from "./audiostory/control.jsx";
 import { AUDIO_STORY_KEY, AUDIO_STORY_TITLE, mountAudioStory } from "./audiostory/story.jsx";
+import { AUDIO_PRE_KEY, AUDIO_PRE_TITLE, mountAudioPre } from "./audiostory/pre.jsx";
+import { PreReview as AudioPreReview, PreControl as AudioPreControl } from "./audiostory/prepages.jsx";
 import { AudioStoryReview, AudioStoryControl } from "./audiostory/storypages.jsx";
 import { AUDIO_DROP_KEY, AUDIO_DROP_TITLE, mountAudioDrop, DropReview } from "./audiostory/drop.jsx";
 import { CULTURE_GUIDE_KEY, CULTURE_GUIDE_TITLE, mountCultureGuide } from "./sitdown2/guide.jsx";
@@ -90,6 +92,11 @@ export const LOCAL_WORKSHEETS = [
   // control is the instructor's page at ?control, how each sheet works.
   { key: AUDIO_IDEAS_KEY, title: AUDIO_IDEAS_TITLE, mount: mountAudioIdeas, review: IdeasReview, board: IdeasBoard, all: AllIdeas, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   { key: AUDIO_RESEARCH_KEY, title: AUDIO_RESEARCH_TITLE, mount: mountAudioResearch, review: ResearchReview, control: AudioControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  // The audio story pre-production, built 2026-11-06, due Wednesday,
+  // November 11. The exercise's story, treatment, includes and sources
+  // come across once; three of his seven questions; a five-minute first
+  // attempt; a checklist. Andrew: "open this to comm 3 the moment it's built."
+  { key: AUDIO_PRE_KEY, title: AUDIO_PRE_TITLE, mount: mountAudioPre, review: AudioPreReview, control: AudioPreControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The audio file drop box for Wednesday, November 4, in class. Andrew,
   // 2026-11-04: "make me an audio file drop box page for today. Pin it for
   // students." Names off the roster, a headline, one file; ?review lists

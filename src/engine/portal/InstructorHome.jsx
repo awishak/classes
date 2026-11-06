@@ -23,7 +23,7 @@ import { Days } from "./MyWork.jsx";
 import { opensState, opensWords } from "./work.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { waitingOnInstructor } from "../YouCard.jsx";
-import { Hero, StoryPhaseBar, StoryDoor, AudioExerciseDoor, AudioStoryDoor, LockerRoomDoor, DOOR_CSS } from "./StudentHome.jsx";
+import { Hero, StoryPhaseBar, StoryDoor, AudioExerciseDoor, AudioPreDoor, AudioStoryDoor, LockerRoomDoor, DOOR_CSS } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
 import { ToolsPanel, useSubmitCounts, sheetOfAssignment, controlHref } from "./Tools.jsx";
 import { INSTRUCTOR_EMAILS } from "../../instructors.js";
@@ -236,6 +236,7 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
       <StoryPhaseBar config={config} />
       <StoryDoor config={config} data={data} />
       <AudioExerciseDoor config={config} data={data} />
+      <AudioPreDoor config={config} data={data} />
       <AudioStoryDoor config={config} data={data} />
       <LockerRoomDoor config={config} data={data} />
       <PinnedLinks data={data} update={update} instructor seat={{ background: "var(--surface-sunk)", borderRadius: 16 }} />

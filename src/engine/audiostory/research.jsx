@@ -261,7 +261,7 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
 // length is read before anything goes up, and a file over the limit or in
 // another format is refused with the reason. Remove clears the field; a
 // new file goes up under a new name.
-export function AudioBox({ value, readOnly, classId, viewerId, onChange, url: givenUrl }) {
+export function AudioBox({ value, readOnly, classId, viewerId, onChange, url: givenUrl, maxSeconds }) {
   const clip = audioOf(value);
   const [progress, setProgress] = useState(-1);   // -1 idle, 0..1 sending
   const [why, setWhy] = useState("");
@@ -277,7 +277,7 @@ export function AudioBox({ value, readOnly, classId, viewerId, onChange, url: gi
     if (!file) return;
     setWhy(""); setProgress(0);
     try {
-      const v = await sendAudio({ file, classId, viewerId, onProgress: setProgress });
+      const v = await sendAudio({ file, classId, viewerId, onProgress: setProgress, ...(maxSeconds ? { maxSeconds } : {}) });
       onChange(v);
     } catch (e) {
       const m = String(e.message || "");
