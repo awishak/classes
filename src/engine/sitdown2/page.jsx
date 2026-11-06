@@ -176,7 +176,8 @@ function Mine({ config, data, name, copy, editing, place, canMove }) {
                 const who = all[s.key];
                 const isMine = who && same(who.name, name);
                 if (isMine) return <span key={s.key} className="pt mine">{s.say}<i>You</i>{canMove ? <button type="button" className="px" aria-label="Clear my time" disabled={!!busy} onClick={() => tap("")}>×</button> : null}</span>;
-                if (who) return <span key={s.key} className="pt gone">{s.say}</span>;
+                // The name of whoever has it, the name they go by. Andrew, 2026-11-06: "show the student name instead of taken."
+                if (who) return <span key={s.key} className="pt gone">{s.say}<i>{nameShown(data, who.name)}</i></span>;
                 if (!canMove) return <span key={s.key} className="pt free">{s.say}</span>;
                 return <button key={s.key} type="button" className="pt free" disabled={!!busy} aria-label={(mine ? "Move to " : "Pick ") + whenOf(s)} onClick={() => tap(s.key)}>{busy === s.key ? "Saving" : s.say}</button>;
               })}
@@ -184,7 +185,6 @@ function Mine({ config, data, name, copy, editing, place, canMove }) {
           </div>
         ))}
       </div>
-      <p className="meta">Grey times are taken.</p>
       {said ? <p className="meta" aria-live="polite">{said}</p> : null}
     </section>
 
@@ -273,6 +273,7 @@ const CSS = `
 .sd .pt.free:hover:not(:disabled){background:var(--accent);color:var(--on-accent)}
 .sd .pt.free:disabled{opacity:.5;cursor:default}
 .sd .pt.gone{background:transparent;color:var(--ink2);border-color:var(--line);font-weight:400}
+.sd .pt.gone i{font-style:normal;font-size:13px;color:var(--ink)}
 .sd .pt.mine{background:var(--accent);color:var(--on-accent)}
 .sd .pt.mine i{font-style:normal;font-size:12px;letter-spacing:.06em;text-transform:uppercase;opacity:.9}
 .sd .px{font:inherit;font-size:16px;line-height:1;width:24px;height:24px;border-radius:999px;border:0;background:rgba(255,255,255,.25);color:inherit;cursor:pointer;display:inline-grid;place-items:center;margin-right:-4px}
