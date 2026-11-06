@@ -285,7 +285,9 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
   }, [store, viewer?.id, classId, readOnly, storage, topicsStore, lockerStore, preloaded]);
 
   const set = (field, value) => {
-    if (readOnly) return;
+    // On a read-only copy a concept can still be opened to see what was
+    // written on it; the pick stays on this screen and nothing is saved.
+    if (readOnly) { if (field.startsWith("concept:")) setAnswers(a => ({ ...a, [field]: value })); return; }
     setAnswers(a => ({ ...a, [field]: value }));
     saver.current.change(field, value);
   };
@@ -363,7 +365,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
       const chip = (cid, kind) => {
         const t = takenBy(cid);
         return (
-          <button key={cid} type="button" className={"chip" + (kind === "required" ? " req" : "") + (t ? " taken" : "")} disabled={readOnly || !!t} onClick={() => set(F.concept(n), cid)}>
+          <button key={cid} type="button" className={"chip" + (kind === "required" ? " req" : "") + (t ? " taken" : "")} disabled={!!t} onClick={() => set(F.concept(n), cid)}>
             <span className="cn">{nameOf(cid)}</span>
             <small>{t ? "Concept " + t : kind === "required" ? copy.say("required") : kind === "written" ? (written[cid] || []).join(", ") : ""}</small>
           </button>
@@ -389,7 +391,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
           <div className="cap">{"Concept " + n + " of 6"}</div>
           <div className="picked">
             <span className={"chip on" + (isReq ? " req" : "")}><span className="cn">{nameOf(id)}</span><small>{isReq ? copy.say("required") : (written[id] || []).join(", ")}</small></span>
-            {!readOnly ? <button type="button" className="lnk" onClick={() => set(F.concept(n), "")}>{copy.say("change")}</button> : null}
+            <button type="button" className="lnk" onClick={() => set(F.concept(n), "")}>{copy.say("change")}</button>
           </div>
           <h1 className="h1">{nameOf(id)}</h1>
           {editBar}
