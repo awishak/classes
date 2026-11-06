@@ -73,8 +73,8 @@ export const DEFAULT_COPY = {
   "faq.a.3": "Your Culture Guide. I will ask about what you wrote, and I will ask how your concepts connect to each other.",
   "faq.q.4": "How many concepts will I be asked about?",
   "faq.a.4": "Any of the six. You should know all of them well.",
-  choose: "While we can focus on a multitude of topics, I'm going to allow you to choose four of the six concepts that go into your Culture Guide. I will choose the remaining two. You'll make your choices on the following pages.",
-  explain: "For each concept you choose, you're going to have to give me a clear definition. You're going to have to give me a reason why we should pay attention to it. And you're also going to have to give me two guidelines that you would use going forward, given what you've learned about this topic.",
+  choose: "While we can focus on a multitude of concepts, I'm going to allow you to choose four of the six concepts that go into your Culture Guide. I will choose the remaining two. You'll make your choices on the following pages.",
+  explain: "For each concept you choose, you're going to have to give me a clear definition. You're going to have to give me a reason why we should pay attention to it. And you're also going to have to give me two guidelines that you would use going forward, given what you've learned about this concept.",
   start: "Start",
   chooseHead: "Choose a concept",
   "group.required": "Required",
@@ -83,10 +83,10 @@ export const DEFAULT_COPY = {
   required: "Required",
   change: "Choose a different concept",
   beforeHead: "What you already wrote on this concept",
-  define: "What is a definition of this topic? Please include your source.",
-  why: "Why is it important for us to think about this topic when it comes to team communication? Please include a source.",
+  define: "What is a definition of this concept? Please include your source.",
+  why: "Why is it important for us to think about this concept when it comes to team communication? Please include a source.",
   guideline: "Guideline",
-  guidelineAsk: "What's something you will do regarding {topic} going forward?",
+  guidelineAsk: "What's something you will do regarding {concept} going forward?",
   "read.define": "Definition",
   "read.why": "Why it matters",
   "read.guideline": "Guideline",
@@ -446,7 +446,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
           </label>
           {[1, 2].map(i => (
             <label key={i} className="field">
-              <span className="lb"><Words k="guideline" copy={copy} editing={editing} as="span" /> {i}: {editing ? <Words k="guidelineAsk" copy={copy} editing as="span" /> : copy.say("guidelineAsk").replace("{topic}", nameOf(id).toLowerCase())}</span>
+              <span className="lb"><Words k="guideline" copy={copy} editing={editing} as="span" /> {i}: {editing ? <Words k="guidelineAsk" copy={copy} editing as="span" /> : copy.say("guidelineAsk").replace("{concept}", nameOf(id).toLowerCase())}</span>
               <textarea className="fld" rows={3} value={answers[F["guide" + i](id)] || ""} readOnly={readOnly} maxLength={4000} onChange={e => set(F["guide" + i](id), e.target.value)} />
             </label>
           ))}
