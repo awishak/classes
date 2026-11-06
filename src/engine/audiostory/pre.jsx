@@ -253,10 +253,35 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
   const tick = (ok) => <span className="sub">{ok ? "✓" : ""}</span>;
   const me = lower(viewer?.id);
   const others = pair ? (pair.names || []).filter((n, i) => pair.members[i] !== me) : [];
+  // The bar across the top: one pill a part, ticked as the part is done, a
+  // tap scrolls there. Andrew, 2026-11-06: "give them like a checklist at the
+  // top as they go through each part. sticky menu bar."
+  const answered = asked.filter(id => !blank(answers, "q:" + id)).length;
+  const parts = [
+    { id: "sofar", say: copy.say("soFarHead"), ok: !blank(answers, "story") && !blank(answers, "treatment") && !blank(answers, "includes") },
+    { id: "questions", say: copy.say("questionsHead"), ok: answered === PICK, n: answered + " of " + PICK },
+    { id: "audio", say: copy.say("audioHead"), ok: !!clip },
+    { id: "sources", say: copy.say("sourcesHead"), ok: !blank(answers, "sources") },
+    { id: "reflect", say: copy.say("reflectHead"), ok: !blank(answers, "reflect") },
+    { id: "forward", say: copy.say("forwardHead"), ok: todoOf(answers.todo).some(t => t.text.trim()) },
+  ];
+  const go = (id) => { const el = document.getElementById("asp-" + id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
+  const bar = (
+    <nav className="asp-bar" aria-label="Parts">
+      {parts.map(p => (
+        <button key={p.id} type="button" className={"asp-bar-item focusable" + (p.ok ? " on" : "")} onClick={() => go(p.id)}>
+          <span className="asp-bar-box" aria-hidden="true">{p.ok ? "\u2713" : ""}</span>
+          <span>{p.say}{p.n ? <b className="asp-bar-n">{p.n}</b> : null}</span>
+        </button>
+      ))}
+      <span className="asp-bar-count"><b>{PARTS_TO_FILL - left.length} of {PARTS_TO_FILL}</b> answered</span>
+    </nav>
+  );
 
   return (
     <div {...root}>
       <style>{CSS + PRE_CSS}</style>
+      {bar}
       <div className="asp-work">
         <div className="sheet asp-build">
           <div className="head">
@@ -273,7 +298,7 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
             </div>
           </div>
 
-          <section className="part" aria-label={copy.say("soFarHead")}>
+          <section className="part" id="asp-sofar" aria-label={copy.say("soFarHead")}>
             <div className="phead"><Words k="soFarHead" copy={copy} editing={editing} className="n" />{tick(!blank(answers, "story") && !blank(answers, "treatment") && !blank(answers, "includes"))}</div>
             {ideas && ideas.length ? (
               <div className="ideas asp-ideas" role="group" aria-label="Your ideas">
@@ -306,7 +331,7 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
             </div>
           </section>
 
-          <section className="part" aria-label={copy.say("questionsHead")}>
+          <section className="part" id="asp-questions" aria-label={copy.say("questionsHead")}>
             <div className="phead"><Words k="questionsHead" copy={copy} editing={editing} className="n" /><span className="sub">{asked.filter(id => !blank(answers, "q:" + id)).length} of {PICK}</span></div>
             <Words k="questionsSay" copy={copy} editing={editing} as="p" className="pickhead" />
             <div className="asp-qs" role="group" aria-label={copy.say("questionsHead")}>
@@ -326,7 +351,7 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
             </div>
           </section>
 
-          <section className="part" aria-label={copy.say("audioHead")}>
+          <section className="part" id="asp-audio" aria-label={copy.say("audioHead")}>
             <div className="phead"><Words k="audioHead" copy={copy} editing={editing} className="n" />{tick(!!clip)}</div>
             <div className="field">
               <Words k="audioSay" copy={copy} editing={editing} as="p" className="hint" />
@@ -335,7 +360,7 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
             </div>
           </section>
 
-          <section className="part" aria-label={copy.say("sourcesHead")}>
+          <section className="part" id="asp-sources" aria-label={copy.say("sourcesHead")}>
             <div className="phead"><Words k="sourcesHead" copy={copy} editing={editing} className="n" />{tick(!blank(answers, "sources"))}</div>
             {haveSources.length ? (
               <div className="asp-have">
@@ -349,7 +374,7 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
             </div>
           </section>
 
-          <section className="part" aria-label={copy.say("reflectHead")}>
+          <section className="part" id="asp-reflect" aria-label={copy.say("reflectHead")}>
             <div className="phead"><Words k="reflectHead" copy={copy} editing={editing} className="n" />{tick(!blank(answers, "reflect"))}</div>
             <label className="field">
               <Words k="reflectAsk" copy={copy} editing={editing} className="ask" />
@@ -357,7 +382,7 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
             </label>
           </section>
 
-          <section className="part" aria-label={copy.say("forwardHead")}>
+          <section className="part" id="asp-forward" aria-label={copy.say("forwardHead")}>
             <div className="phead"><Words k="forwardHead" copy={copy} editing={editing} className="n" />{tick(todoOf(answers.todo).some(t => t.text.trim()))}</div>
             <div className="field">
               <Words k="forwardAsk" copy={copy} editing={editing} className="ask" />
@@ -397,7 +422,17 @@ export const PRE_CSS = `
 .as.asp{padding-inline:20px}
 .asp-work{max-width:1360px;margin:0 auto;display:grid;grid-template-columns:minmax(380px,600px) minmax(0,1fr);gap:28px;align-items:start}
 .asp-build{max-width:none;margin:0}
-.asp-see{position:sticky;top:80px;min-width:0}
+.asp-see{position:sticky;top:140px;min-width:0}
+.asp-bar{position:sticky;top:64px;z-index:6;max-width:1360px;margin:0 auto 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;border-radius:14px;background:var(--card);box-shadow:0 1px 2px rgba(0,0,0,.06),0 0 0 1px var(--line-soft)}
+.as .asp-bar-item{display:inline-flex;align-items:center;gap:8px;font-family:var(--font);font-size:14px;font-weight:600;line-height:1.2;padding:6px 12px 6px 7px;border-radius:999px;border:1px solid var(--line-strong);background:var(--sunk);color:var(--ink);cursor:pointer;text-align:left}
+.as .asp-bar-item:hover{border-color:var(--accent)}
+.as .asp-bar-item.on{border-color:var(--ok);color:var(--ok)}
+.as .asp-bar-box{flex:none;width:20px;height:20px;border-radius:50%;border:2px solid var(--line-strong);background:var(--card);display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff}
+.as .asp-bar-item.on .asp-bar-box{background:var(--ok);border-color:var(--ok)}
+.as .asp-bar-n{font-weight:700;margin-left:6px;color:inherit}
+.as .asp-bar-count{margin-left:auto;font-size:14px;color:var(--secondary)}
+.as .asp-bar-count b{color:var(--ink)}
+.as .asp-build .part{scroll-margin-top:130px}
 .asp-see-frame{border-radius:16px;overflow:auto;max-height:calc(100vh - 110px);box-shadow:0 10px 40px -12px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.08);background:#fff}
 .asp-solo{max-width:820px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px -12px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.08);background:#fff}
 .as .asp-ideas .pickbox{border-color:var(--line-strong);box-shadow:none}
@@ -446,6 +481,8 @@ export const PRE_CSS = `
 .aspd-box{flex:none;width:22px;height:22px;border-radius:6px;border:2px solid #a8a29e;display:grid;place-items:center;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-top:2px}
 .aspd-check li.done .aspd-box{background:${ST.ok};border-color:${ST.ok}}
 @media (max-width:1060px){
+  .asp-bar{top:56px}
+  .as .asp-bar-count{display:none}
   .asp-work{grid-template-columns:1fr}
   .asp-see{position:static}
   .asp-see-frame{max-height:none}
