@@ -35,7 +35,7 @@ export const WORDS = {
   "step.2.link": "Open your Culture Guide",
   "step.3": "Come to " + SITDOWN2.room + " five minutes early.",
   "head.times": "Step 1: Pick your time",
-  "times.note": "All times are Pacific. A slot that says Open is free.",
+  "times.note": "All times are Pacific. Tap a time to take it.",
   "times.locked": "Times are locked now. Message Dr. Ishak if you need to move.",
   "head.guide": "Step 2: Write your Culture Guide",
   "guide.p": "Your Culture Guide lives on this site. When you hand it in, the page shows the whole thing read back, and you can print it or copy it to keep after the class is over.",
