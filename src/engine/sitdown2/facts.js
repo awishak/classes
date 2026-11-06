@@ -16,6 +16,8 @@
 export const SITDOWN2_CLASSES = ["comm118", "comm999"];
 export const SLOTS_KEY = "sitdown2Slots";
 export const ASSIGNED_KEY = "cultureAssigned";
+// Claude's suggested pair, kept apart from the assigned one so a suggestion never shows a student a Required chip.
+export const SUGGESTED_KEY = "cultureSuggested";
 
 const YEAR = 2026;
 export const SITDOWN2 = {
@@ -118,6 +120,16 @@ export const assignedFor = (data, email) => {
 export const withAssigned = (data, email, ids, why) => ({
   ...(data || {}),
   [ASSIGNED_KEY]: { ...((data || {})[ASSIGNED_KEY] || {}), [String(email || "").trim().toLowerCase()]: { ids: (ids || []).filter(Boolean).slice(0, 2), why: why || {} } },
+});
+
+export const suggestedFor = (data, email) => {
+  const a = (data && data[SUGGESTED_KEY]) || {};
+  const got = a[String(email || "").trim().toLowerCase()];
+  return got && Array.isArray(got.ids) ? { ids: got.ids.filter(Boolean).slice(0, 2), why: got.why || {} } : { ids: [], why: {} };
+};
+export const withSuggested = (data, email, ids, why) => ({
+  ...(data || {}),
+  [SUGGESTED_KEY]: { ...((data || {})[SUGGESTED_KEY] || {}), [String(email || "").trim().toLowerCase()]: { ids: (ids || []).filter(Boolean).slice(0, 2), why: why || {} } },
 });
 
 export const sitdown2Href = (config) => config.path + "/sitdown2";

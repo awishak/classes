@@ -1,6 +1,7 @@
 // The two concepts Andrew assigns each COMM 118 student for the Culture Guide.
 //
 //   node scripts/culture-assign.mjs            asks Claude for every student not yet assigned and prints the table
+//   node scripts/culture-assign.mjs --suggest  writes the table to the plan row as cultureSuggested, for the assign page to show
 //   node scripts/culture-assign.mjs --write    writes the table to the plan row as cultureAssigned
 //   node scripts/culture-assign.mjs --show     prints what the plan row holds now
 //
@@ -27,7 +28,7 @@ if (!key || !anthropic) { console.error("Need SUPABASE_SERVICE_ROLE_KEY and ANTH
 const H = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
 const CLASS = "comm118", PLAN = "comm118-f26-v1-plan";
 const CACHE = new URL("private/culture-assign.json", ROOT);
-const write = process.argv.includes("--write"), show = process.argv.includes("--show");
+const write = process.argv.includes("--write"), suggestOnly = process.argv.includes("--suggest"), show = process.argv.includes("--show");
 const lower = (s) => String(s || "").trim().toLowerCase();
 
 const SYSTEM = "You are helping a college instructor (COMM 118, Communication and Sport) assign two concepts to one student for a Culture Guide the student writes before a ten-minute one-on-one meeting. The student chooses four of six concepts; the instructor chooses the other two. You are given the twenty concepts from the chapter, what this student already wrote about some of them, and which the student has already chosen. Choose two the student has NOT already chosen. Prefer a concept the student's own writing keeps pointing toward without naming, or a concept that would stretch them, over one they have already covered well. Answer with JSON only, no prose around it: {\"first\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"},\"second\":{\"id\":\"<concept id>\",\"why\":\"<one full sentence>\"}}. Each why is one plain full sentence under 30 words, addressed to the instructor, grounded in what the student wrote. No em dashes. No names.";
@@ -101,9 +102,10 @@ for (const s of roster) {
   if (!a) { console.log("  no suggestion"); continue; }
   a.ids.forEach(id => console.log("  " + nameOf(id) + ": " + (a.why?.[id] || "")));
 }
-if (!write) { console.log("\nNothing written. Say --write to put these on the plan row."); process.exit(0); }
-const next = { ...have };
-roster.forEach(s => { const em = lower(s.email); if (!(next[em]?.ids?.length === 2) && cache[em]) next[em] = { ids: cache[em].ids, why: cache[em].why }; });
+if (!write && !suggestOnly) { console.log("\nNothing written. Say --suggest to show these on the assign page, or --write to assign them."); process.exit(0); }
 const fresh = (await (await fetch(SUPABASE_URL + "/rest/v1/app_data?id=eq." + PLAN + "&select=data", { headers: H })).json())?.[0]?.data;
-const r = await fetch(SUPABASE_URL + "/rest/v1/app_data?on_conflict=id", { method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify([{ id: PLAN, data: { ...fresh, cultureAssigned: next } }]) });
-console.log(r.ok ? "\nWritten: " + Object.keys(next).length + " students assigned." : "\nWrite failed: " + r.status + " " + await r.text());
+const keyName = suggestOnly ? "cultureSuggested" : "cultureAssigned";
+const next = { ...(fresh[keyName] || {}) };
+roster.forEach(s => { const em = lower(s.email); if (cache[em] && (suggestOnly || !(next[em]?.ids?.length === 2))) next[em] = { ids: cache[em].ids, why: cache[em].why }; });
+const r = await fetch(SUPABASE_URL + "/rest/v1/app_data?on_conflict=id", { method: "POST", headers: { ...H, Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify([{ id: PLAN, data: { ...fresh, [keyName]: next } }]) });
+console.log(r.ok ? "\nWritten: " + Object.keys(next).length + " students on " + keyName + "." : "\nWrite failed: " + r.status + " " + await r.text());

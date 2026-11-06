@@ -38,10 +38,7 @@ export const WORDS = {
   "times.note": "All times are Pacific. Tap the time you want.",
   "times.locked": "Times are locked now. Message Dr. Ishak if you need to move.",
   "head.guide": "Step 2: Write your Culture Guide",
-  "guide.p": "Your Culture Guide lives on this site. When you hand it in, the page shows the whole thing read back, and you can print it or copy it to keep after the class is over.",
-  "head.guidelines": "Guidelines",
-  "guide.1": "Please be five minutes early. We will start on time.",
-  "guide.2": "The sit-down is recorded on audio. You're welcome to come listen to the recording afterward if you'd like.",
+  "guide.p": "Your Culture Guide lives on this site. Once you complete it, you'll have the opportunity to read it as a whole here, or export it so you can keep it as a Google Doc or another format.",   // voice-ok: his sentence
   "band.none": "You have not picked a time yet.",
   where: SITDOWN2.room + ", Dr. Ishak's office",
 };
@@ -177,10 +174,6 @@ function Mine({ config, data, name, copy, editing, place, canMove, guide }) {
       <a className="btn" href={guide}>{copy.say("step.2.link")}</a>
     </section>
 
-    <section className="sec">
-      <Words k="head.guidelines" copy={copy} editing={editing} as="h2" className="h2" />
-      <ul className="list">{["guide.1", "guide.2"].map(k => <li key={k}><Words k={k} copy={copy} editing={editing} as="span" /></li>)}</ul>
-    </section>
   </>);
 }
 

@@ -23,7 +23,7 @@ import TopNav, { NAV_TEACH } from "../TopNav.jsx";
 import { TEAM_TOPICS_KEY, PARTS as TOPIC_PARTS, linesOf } from "../teamtopics/sheet.jsx";
 import * as E from "../takeover/engine.js";
 import { CULTURE_GUIDE_KEY, chosenOf, writtenOf, lockerAbout, nameOf } from "./guide.jsx";
-import { slotFor, whenOf, assignedFor, withAssigned, sitdown2Href, guideHref } from "./facts.js";
+import { slotFor, whenOf, assignedFor, withAssigned, suggestedFor, withSuggested, sitdown2Href, guideHref } from "./facts.js";
 
 const lower = (s) => String(s || "").trim().toLowerCase();
 const call = async (body) => {
@@ -87,7 +87,7 @@ export default function AssignPage({ config }) {
   const rows = roster.map(s => {
     const em = lower(s.email);
     const topics = sheets?.topics.get(em)?.answers || {}, locker = sheets?.locker.get(em)?.answers || {}, guide = sheets?.guide.get(em)?.answers || {};
-    return { student: s, email: em, shown: nameShown(data, s.name), topics, locker, picks: chosenOf(guide).filter(Boolean), written: writtenOf(topics, locker, s.name), assigned: assignedFor(data, em), slot: slotFor(data, s.name) };
+    return { student: s, email: em, shown: nameShown(data, s.name), topics, locker, picks: chosenOf(guide).filter(Boolean), written: writtenOf(topics, locker, s.name), assigned: assignedFor(data, em), suggested: suggestedFor(data, em), slot: slotFor(data, s.name) };
   });
 
   const save = (email, ids, why) => update(d => withAssigned(d, email, ids, why));
@@ -95,12 +95,14 @@ export default function AssignPage({ config }) {
     setBusy(b => ({ ...b, [row.email]: true }));
     try {
       const got = await suggest(briefOf(row.topics, row.locker, row.picks));
-      save(row.email, got.ids, got.why);
+      update(d => withSuggested(d, row.email, got.ids, got.why));
       setNote("");
     } catch (e) { setNote(row.shown + ": " + String(e.message || e)); }
     setBusy(b => ({ ...b, [row.email]: false }));
   };
-  const askAll = async () => { for (const row of rows) if (!row.assigned.ids.length) await ask(row); };   // eslint-disable-line no-await-in-loop
+  const askAll = async () => { for (const row of rows) if (!row.suggested.ids.length && !row.assigned.ids.length) await ask(row); };   // eslint-disable-line no-await-in-loop
+  // Use these moves a suggestion over to the assignment; Use every moves them all.
+  const useAll = () => update(d => rows.reduce((acc, row) => { const sg = suggestedFor(d, row.email); return sg.ids.length === 2 && assignedFor(d, row.email).ids.length < 2 ? withAssigned(acc, row.email, sg.ids, sg.why) : acc; }, d));
 
   const done = rows.filter(r => r.assigned.ids.length === 2).length;
   return (
@@ -113,16 +115,17 @@ export default function AssignPage({ config }) {
         <header className="top">
           <div className="eyebrow"><a className="crumb" href={sitdown2Href(config)}>{config.code + " · Sit-Down 2"}</a></div>
           <h1 className="h1">Assign two concepts</h1>
-          <p className="intro">Each row is one student. Suggest asks Claude for the pair and a reason each, from that student's own writing, with no name sent. Change either from the menu or rewrite the reason. A change is saved as you make it, and the student's guide shows the two as Required at once.</p>
+          <p className="intro">One row a student: what they already wrote about, Claude's suggested pair with a reason each, and the two you assign. Use these takes the suggestion; the menus set anything else. A change is saved as you make it, and the student's guide shows the two as Required at once.</p>
           <div className="bar">
-            <button type="button" className="btn" disabled={!sheets || Object.values(busy).some(Boolean)} onClick={askAll}>Suggest for everyone not yet assigned</button>
+            <button type="button" className="btn" disabled={!rows.some(r => r.suggested.ids.length === 2 && r.assigned.ids.length < 2)} onClick={useAll}>Use every suggestion not yet assigned</button>
+            <button type="button" className="btn" disabled={!sheets || Object.values(busy).some(Boolean)} onClick={askAll}>Ask Claude for anyone without a suggestion</button>
             <a className="lnk" href={guideHref(config) + "?control"}>How the guide works</a>
             <span className="meta" aria-live="polite">{error ? "Could not read the sheets: " + error : !sheets ? "Reading the sheets." : done + " of " + rows.length + " assigned." + (note ? " " + note : "")}</span>
           </div>
         </header>
         <section className="sec">
           <table className="tbl">
-            <thead><tr><th>Student</th><th>Picked so far</th><th>Already wrote about</th><th>Assigned 1</th><th>Assigned 2</th><th /></tr></thead>
+            <thead><tr><th>Student</th><th>Already wrote about</th><th>Claude suggests</th><th>Assigned 1</th><th>Assigned 2</th></tr></thead>
             <tbody>
               {rows.map(row => <Row key={row.email} row={row} busy={!!busy[row.email]} onAsk={() => ask(row)} onSave={(ids, why) => save(row.email, ids, why)} />)}
             </tbody>
@@ -150,13 +153,21 @@ function Row({ row, busy, onAsk, onSave }) {
       {ids[i] ? <textarea className="why" rows={3} value={text[ids[i]] || ""} placeholder="Why" onChange={e => setWhy(ids[i], e.target.value)} onBlur={() => onSave(ids, text)} /> : null}
     </td>
   );
+  const sg = row.suggested;
+  const taken = sg.ids.length === 2 && sg.ids.every((id, i) => ids[i] === id);
   return (
     <tr>
-      <td><b>{row.shown}</b><div className="muted">{row.slot ? whenOf(row.slot) : "No time yet"}</div></td>
-      <td className="muted">{row.picks.length ? row.picks.map(nameOf).join(", ") : "Nothing yet"}</td>
+      <td><b>{row.shown}</b><div className="muted">{row.slot ? whenOf(row.slot) : "No time yet"}</div>{row.picks.length ? <div className="muted">{"Picked: " + row.picks.map(nameOf).join(", ")}</div> : null}</td>
       <td className="muted">{Object.keys(row.written).length ? Object.keys(row.written).map(nameOf).join(", ") : "Nothing on file"}</td>
+      <td>
+        {sg.ids.length === 2 ? (
+          <div className="sg">
+            {sg.ids.map(id => <div key={id}><b>{nameOf(id)}</b><div className="muted">{sg.why[id] || ""}</div></div>)}
+            <div className="row"><button type="button" className="btn small" disabled={taken} onClick={() => onSave(sg.ids, sg.why)}>{taken ? "Assigned" : "Use these"}</button><button type="button" className="lnk small" disabled={busy} onClick={onAsk}>{busy ? "Asking" : "Ask again"}</button></div>
+          </div>
+        ) : <button type="button" className="btn small" disabled={busy} onClick={onAsk}>{busy ? "Asking" : "Ask Claude"}</button>}
+      </td>
       {pickCell(0)}{pickCell(1)}
-      <td><button type="button" className="btn" disabled={busy} onClick={onAsk}>{busy ? "Asking" : ids.length ? "Suggest again" : "Suggest"}</button></td>
     </tr>
   );
 }
@@ -165,7 +176,11 @@ const CSS = `
 .sd.wide{max-width:1400px}
 .sd .tbl{width:100%;border-collapse:collapse;font-size:15px;line-height:1.4}
 .sd .tbl th{text-align:left;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);padding:0 10px 10px 0;border-bottom:1px solid var(--line)}
-.sd .tbl td{vertical-align:top;padding:12px 10px 12px 0;border-bottom:1px solid var(--line);max-width:260px}
+.sd .tbl td{vertical-align:top;padding:12px 10px 12px 0;border-bottom:1px solid var(--line);max-width:300px}
+.sd .sg{display:grid;gap:8px;font-size:15px}
+.sd .sg b{font-weight:600}
+.sd .sg .row{gap:12px}
+.sd .btn.small,.sd .lnk.small{font-size:14px;min-height:36px;padding:0 14px}
 .sd .tbl .muted{color:var(--ink2);font-size:14px}
 .sd .sel{font-family:var(--sans);font-size:15px;min-height:40px;width:100%;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:0 8px}
 .sd .why{font-family:var(--sans);font-size:14px;line-height:1.4;width:100%;margin-top:6px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 8px;resize:vertical}
