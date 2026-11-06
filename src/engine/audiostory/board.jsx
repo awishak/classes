@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
-import { SLOTS, MARKS, marksOf, markOf, saysOf, noteFor, reasonsOf, statusFor, Mark, POLL, DEFAULT_COPY } from "./ideas.jsx";
+import { SLOTS, MARKS, marksOf, markOf, saysOf, noteFor, reopenOf, reasonsOf, statusFor, Mark, POLL, DEFAULT_COPY } from "./ideas.jsx";
 import { linesOf as linesOfIdea, loadFont } from "./bits.jsx";
 import { PAIRS_ROW, parseWant, suggest, join, split, pairOf } from "./pairs.js";
 import { StudentLink } from "../StudentPage.jsx";
@@ -143,7 +143,7 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
   const write = async (row, slot, marks, says) => {
     setBusy(row.student.email + slot); setFailed("");
     try {
-      const out = await call({ groupKey: config.id, key: worksheetKey, viewer: lower(row.student.email), review: { status: statusFor(marks), note: noteFor(marks, says) } });
+      const out = await call({ groupKey: config.id, key: worksheetKey, viewer: lower(row.student.email), review: { status: statusFor(marks), note: noteFor(marks, says, reopenOf(row.review)) } });
       setSheets(list => list.map(s => s.viewer_id === out.sheet.viewer_id ? { ...s, review: out.review } : s));
     } catch (e) { setFailed(e.message); }
     setBusy("");

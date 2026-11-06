@@ -31,7 +31,7 @@ import { gameClient } from "../gameClient.js";
 import { useCopy, Words } from "../visualstory/pre.jsx";
 import { supabaseStore } from "../worktopia/store.js";
 import { CSS, STATUS, when, blank, useSheet, handIn, handSay, Lines, Line, Para } from "./bits.jsx";
-import { AUDIO_IDEAS_KEY, SLOTS, marksOf, markOf, reviewFor, Mark, ideasHref } from "./ideas.jsx";
+import { AUDIO_IDEAS_KEY, SLOTS, marksOf, markOf, reopenOf, reviewFor, Mark, ideasHref } from "./ideas.jsx";
 import { audioOf, sendAudio, linkFor, FORMAT_SAY, MAX_SECONDS } from "./audio.js";
 import { pairsFor } from "./all.jsx";
 import { pairOf } from "./pairs.js";
@@ -50,9 +50,9 @@ export const RESEARCH = [
 export const FIELDS = ["picked", "story", "treatment", "includes", ...RESEARCH.map(r => r.field), "example", "audio"];
 export const REQUIRED = FIELDS;
 export const missingOf = (answers) => REQUIRED.filter(f => blank(answers, f));
-/** The approved ideas a student can pick from: their own okayed ones, and the story Andrew set for their pair. */
-export const approvedOf = (ideas, pair) => {
-  const list = (ideas || []).filter(x => x.mark && markOf(x.mark)?.good);
+/** The approved ideas a student can pick from: their own okayed ones, and the story Andrew set for their pair. Reopened (ideas.jsx reopenOf), every idea of theirs counts. */
+export const approvedOf = (ideas, pair, reopened = false) => {
+  const list = (ideas || []).filter(x => reopened || (x.mark && markOf(x.mark)?.good));
   const story = String(pair?.story || "").trim();
   if (story && !list.some(x => x.idea.toLowerCase() === story.toLowerCase())) list.push({ slot: "pair", idea: story, mark: null });
   return list;
@@ -75,6 +75,8 @@ export const DEFAULT_COPY = {
   // of his is.
   ideasGo: "Go look at your audio story ideas",
   pickSay: "Choose one of the ideas approved by Dr. Ishak to move forward. You can modify the idea, but you must choose one idea.",
+  // Andrew, 2026-11-06, for a student he reopened the exercise for.
+  reopenSay: "Dr. Ishak reopened this for you. Choose any of your ideas to move forward.",
   blockedSay: "This assignment cannot be started until you get an idea approved. The deadlines for me to review your audio story ideas are Friday, October 30, at 5 PM, and Monday, November 2, at 5 PM. If you don't have an idea approved, you won't be able to move forward.",
   treatmentAsk: "A paragraph treatment",
   treatmentSay: "Share a preview of this story in 2 to 4 sentences.",
@@ -91,12 +93,13 @@ export const DEFAULT_COPY = {
   again: "submit again",
 };
 
-/** The student's ideas off the ideas sheet with his marks, [{ slot, idea, mark }], read under the rules. Andrew, 2026-11-01: "list all three, but they can't choose the one that's not approved." */
+/** The student's ideas off the ideas sheet with his marks, { ideas: [{ slot, idea, mark }], reopened }, read under the rules. Andrew, 2026-11-01: "list all three, but they can't choose the one that's not approved." */
 export async function markedIdeas({ classId, viewerId }) {
   const store = supabaseStore({ supabase: gameClient, worksheetKey: AUDIO_IDEAS_KEY, groupKey: classId, viewerId });
   const [got, review] = await Promise.all([store.load(), reviewFor({ worksheetKey: AUDIO_IDEAS_KEY, classId, viewerId })]);
   const marks = marksOf(review);
-  return SLOTS.map(s => ({ slot: s, idea: String(got.answers["idea:" + s] || "").trim(), mark: marks[s] || null })).filter(x => x.idea);
+  const ideas = SLOTS.map(s => ({ slot: s, idea: String(got.answers["idea:" + s] || "").trim(), mark: marks[s] || null })).filter(x => x.idea);
+  return { ideas, reopened: reopenOf(review) };
 }
 
 export function ResearchSheet({ store, viewer, classId, readOnly = false, storage, editor = false, theme, ideas: givenIdeas }) {
@@ -105,20 +108,21 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
   const [handing, setHanding] = useState("");
   const [ideas, setIdeas] = useState(givenIdeas || null);   // null until read; given for a mockup or a test
   const [pair, setPair] = useState(null);
+  const [reopened, setReopened] = useState(false);
   const draftKey = AUDIO_RESEARCH_KEY + ":" + (classId || "") + ":" + (viewer?.id || "");
   const { answers, set, submitted, setSubmitted, status, saver } = useSheet({ store, draftKey, readOnly, storage });
 
   useEffect(() => {
     if (readOnly || givenIdeas || !classId || !viewer?.id) return undefined;
     let alive = true;
-    markedIdeas({ classId, viewerId: viewer.id }).then(list => { if (alive) setIdeas(list); }).catch(() => {});
+    markedIdeas({ classId, viewerId: viewer.id }).then(got => { if (alive) { setIdeas(got.ideas); setReopened(got.reopened); } }).catch(() => {});
     pairsFor(classId).then(list => { if (alive) setPair(pairOf(list)[String(viewer.id).trim().toLowerCase()] || null); });
     return () => { alive = false; };
   }, [readOnly, classId, viewer?.id]);
 
   const root = { className: "as" + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
   if (!answers) return <div {...root}><style>{CSS}</style><div className="sheet"><div className="foot"><span className="status">{STATUS[status] || "Loading…"}</span></div></div></div>;
-  const approved = approvedOf(ideas, pair);
+  const approved = approvedOf(ideas, pair, reopened);
   const chosen = chosenOf(answers, approved);
   // The pick counts only while it names an idea still approved.
   const left = [...missingOf(answers), ...(!readOnly && ideas && !chosen && !blank(answers, "picked") ? ["picked"] : [])];
@@ -157,7 +161,7 @@ export function ResearchSheet({ store, viewer, classId, readOnly = false, storag
   };
   const pickPart = !readOnly && !shut && listed.length ? (
     <section className="part pickpart" aria-label="Choose an idea">
-      <Words k="pickSay" copy={copy} editing={editing} as="p" className="pickhead" />
+      <Words k={reopened ? "reopenSay" : "pickSay"} copy={copy} editing={editing} as="p" className="pickhead" />
       <div className="ideas" role="group" aria-label={copy.say("sideHead")}>{listed.map(boxOf)}</div>
       {goIdeas}
     </section>

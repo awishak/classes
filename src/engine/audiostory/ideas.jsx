@@ -88,8 +88,14 @@ export const saysOf = (review) => {
     return out;
   } catch { return {}; }
 };
-/** The note for a set of marks and reasons; a reason stays only on a marked idea. */
-export const noteFor = (marks, says) => {
+/** Whether Andrew reopened the audio exercise for this student with no idea
+ * approved: the note's reopen key. Andrew, 2026-11-06: "the 11 shut out need
+ * it to be reopened." His marks stay as they are; the exercise lets a
+ * reopened student choose any of their ideas. Written by a script, never
+ * from a browser. */
+export const reopenOf = (review) => { try { return JSON.parse(review?.note || "{}")?.reopen === true; } catch { return false; } };
+/** The note for a set of marks and reasons; a reason stays only on a marked idea. A reopen already on the row stays. */
+export const noteFor = (marks, says, reopen = false) => {
   const out = {};
   SLOTS.forEach(s => { if (markOf(marks?.[s])) out[s] = marks[s]; });
   const kept = {};
@@ -98,6 +104,7 @@ export const noteFor = (marks, says) => {
     if (list.length) kept[s] = once(list);
   });
   if (Object.keys(kept).length) out.says = kept;
+  if (reopen) out.reopen = true;
   return JSON.stringify(out);
 };
 /** Every reason on any sheet, after his three, each once. */
