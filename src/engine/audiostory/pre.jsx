@@ -109,7 +109,8 @@ export const DEFAULT_COPY = {
   audioSay: "This is your first attempt at the story. There should be efforts to edit, include music, sound effects, and more. The expectation is that this story is a version of your final story, but your final version will be better.",
   audioHint: FORMAT_SAY + ". Up to five minutes.",
   sourcesHead: "Sources",
-  sourcesHave: "The sources you already have",
+  // Andrew, 2026-11-06, above the sources that came across from the exercise.
+  sourcesHave: "You have sources listed, but it’s always good to update sources.",
   sourcesAsk: "What sources would you like to add or edit?",
   reflectHead: "Your work",
   reflectAsk: "What do you think about your work so far?",
