@@ -19,7 +19,7 @@ import { nameShown } from "../roster.js";
 import { CSS as SD_CSS, FONTS } from "../SitdownPage.jsx";
 import { TEAM_TOPICS_KEY } from "../teamtopics/sheet.jsx";
 import * as E from "../takeover/engine.js";
-import { CULTURE_GUIDE_KEY, CSS as GUIDE_CSS, F, Printout, CultureGuide, chosenOf, filledOf, missingOf, nameOf } from "./guide.jsx";
+import { CULTURE_GUIDE_KEY, CSS as GUIDE_CSS, F, BOXES, Printout, CultureGuide, chosenOf, filledOf, missingOf, nameOf } from "./guide.jsx";
 import { readStore } from "../worktopia/store.js";
 import { realStudents } from "../sections.js";
 import { SITDOWN2, SLOTS, slotFor, whenOf, assignedFor, sitdown2Href, assignHref, guideHref, bookings } from "./facts.js";
@@ -82,7 +82,7 @@ function Shell({ config, title, intro, children, here }) {
 }
 
 export function CultureReview({ config, worksheetKey, roster }) {
-  const { data, rows, sheets, error, classmates } = useRows(config, roster, [CULTURE_GUIDE_KEY, TEAM_TOPICS_KEY, E.TAKEOVER_KEY]);
+  const { data, rows, sheets, error } = useRows(config, roster, [CULTURE_GUIDE_KEY]);
   const handed = rows.filter(r => r.guide?.submitted_at).length;
   return (
     <Shell config={config} title="Every Culture Guide" here="review" intro={error ? "Could not read the sheets: " + error : !sheets ? "Reading the sheets." : handed + " handed in, " + (rows.filter(r => r.guide && !r.guide.submitted_at).length) + " started, " + rows.filter(r => !r.guide).length + " not opened. In the order of the meetings; a student with no time yet is at the end. This page asks again every half minute."}>
@@ -100,7 +100,7 @@ export function CultureReview({ config, worksheetKey, roster }) {
               <>
                 {q.length ? <div className="asks"><div className="h5">Asks you to ask</div><ol className="askl">{q.map((x, i) => <li key={i} className="q">{x}</li>)}</ol></div> : null}
                 {r.assigned.ids.length ? <p className="p">{"Required: " + r.assigned.ids.map(nameOf).join(" and ") + "."}</p> : <p className="p">No concepts assigned yet.</p>}
-                <div className="cg ro"><Printout answers={r.answers} name={nameShown(data, r.student.name)} topics={r.topics} locker={r.locker} classmates={classmates.filter(n => n !== r.student.name)} assigned={r.assigned.ids} /></div>
+                <div className="cg ro"><Printout answers={r.answers} name={nameShown(data, r.student.name)} assigned={r.assigned.ids} /></div>
                 <a className="lnk" href={guideHref(config) + "?s=" + encodeURIComponent(r.email)}>Open the file</a>
               </>
             ) : null}
@@ -124,8 +124,8 @@ export function CultureControl({ config, worksheetKey, roster }) {
         <h2 className="h2">The two concepts you assign</h2>
         <p className="p">{"The assign page holds one row a student. Suggest sends that student's Concepts sheet entries, their Locker Room choices and reflections, and their picks so far to Claude with no name, and asks for two concepts not among their picks with a sentence of reason each. Your choice is saved to the plan row as cultureAssigned, keyed by email, the moment you change it, and only an instructor session can write that row. The guide reads it on every load: the two show first on every chooser as Required, and Hand in refuses until both are among the six."}</p>
         <h2 className="h2">The guide</h2>
-        <p className="p">{"Nine pages: Start, six concept pages, Questions, Your guide. Each concept page opens with the chooser, in three groups: Required (yours), the concepts the student already wrote about (read off their Concepts sheet and Locker Room file, with where), and the rest in chapter order. A concept already used on another page shows as taken with that page's number. A pick loads the page: everything they wrote about that concept on the two earlier files (the Locker Room choices read back as full sentences, never the clipped labels), then a definition with a source, two guidelines, and an optional Anything else. The concept pick is saved as concept:1 through concept:6; the writing is keyed by the concept, not the page (define:motivation, guide1:motivation, guide2:motivation, more:motivation), so swapping a concept out and back keeps what was written. The last page asks for two questions, q:1 and q:2, in your words."}</p>
-        <p className="p">{"Every box saves a field at a time as they type, to this browser first and then the server, and a failed save is retried. Hand in needs all six concepts chosen with a definition and two guidelines each, both Required concepts in, and both questions; otherwise it names what is missing. A hand-in stamps the sheet, the student can keep editing and hand in again until " + SITDOWN2.dueText + ", and Your guide reads the whole thing back before and after with Print and Copy. Each student's file is at the student view with ?s=<email>; the review page reads every guide in meeting order under the two questions."}</p>
+        <p className="p">{"Nine pages: Start, six concept pages, Questions, Your guide. Each concept page opens with the chooser, in three groups: Required (yours), the concepts the student already wrote about (read off their Concepts sheet and Locker Room file, with where), and the rest in chapter order. A concept already used on another page shows as taken with that page's number. A pick loads the page: everything they wrote about that concept on the two earlier files (the Locker Room choices read back as full sentences, never the clipped labels), then a definition with a source, why it matters with a source, two guidelines, and an optional Anything else. The concept pick is saved as concept:1 through concept:6; the writing is keyed by the concept, not the page (define:motivation, why:motivation, guide1:motivation, guide2:motivation, more:motivation), so swapping a concept out and back keeps what was written. The last page asks for two questions, q:1 and q:2, in your words."}</p>
+        <p className="p">{"Every box saves a field at a time as they type, to this browser first and then the server, and a failed save is retried. Hand in needs all six concepts chosen with a definition, why it matters and two guidelines each, both Required concepts in, and both questions; otherwise it names what is missing. A hand-in stamps the sheet, the student can keep editing and hand in again until " + SITDOWN2.dueText + ", and Your guide reads the whole thing back before and after with Print and Copy. Each student's file is at the student view with ?s=<email>; the review page reads every guide in meeting order under the two questions."}</p>
       </section>
       <section className="sec">
         <table className="tbl">
@@ -142,7 +142,7 @@ export function CultureControl({ config, worksheetKey, roster }) {
                   <td>{r.slot ? whenOf(r.slot) : <span className="muted">None</span>}</td>
                   <td>{r.assigned.ids.length ? r.assigned.ids.map(nameOf).join(", ") : <span className="muted">Not yet</span>}</td>
                   <td>{ids.length ? ids.length + " of 6: " + ids.map(nameOf).join(", ") : <span className="muted">None</span>}</td>
-                  <td>{boxes + " of 18"}</td>
+                  <td>{boxes + " of " + 6 * BOXES}</td>
                   <td>{qs + " of 2"}</td>
                   <td>{!r.guide ? <span className="muted">Not opened</span> : r.guide.submitted_at ? when(r.guide.submitted_at) : <span className="muted">Started</span>}</td>
                 </tr>

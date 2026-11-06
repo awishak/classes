@@ -53,6 +53,7 @@ export const PAGES = [1, 2, 3, 4, 5, 6];
 export const F = {
   concept: (n) => "concept:" + n,
   define: (id) => "define:" + id,
+  why: (id) => "why:" + id,
   guide1: (id) => "guide1:" + id,
   guide2: (id) => "guide2:" + id,
   more: (id) => "more:" + id,
@@ -73,6 +74,7 @@ export const DEFAULT_COPY = {
   "faq.q.4": "How many concepts will I be asked about?",
   "faq.a.4": "Any of the six. You should know all of them well.",
   choose: "While we can focus on a multitude of topics, I'm going to allow you to choose four of the six concepts that go into your Culture Guide. I will choose the remaining two. You'll make your choices on the following pages.",
+  explain: "For each concept you choose, you're going to have to give me a clear definition. You're going to have to give me a reason why we should pay attention to it. And you're also going to have to give me two guidelines that you would use going forward, given what you've learned about this topic.",
   start: "Start",
   chooseHead: "Choose a concept",
   "group.required": "Required",
@@ -81,9 +83,14 @@ export const DEFAULT_COPY = {
   required: "Required",
   change: "Choose a different concept",
   beforeHead: "What you already wrote on this concept",
-  define: "A clear definition, with a source",
+  define: "What is a definition of this topic? Please include your source.",
+  why: "Why is it important for us to think about this topic when it comes to team communication? Please include a source.",
   guideline: "Guideline",
-  guidelineHint: "Something you would choose to do on any future team regarding this topic",
+  guidelineAsk: "What's something you will do regarding {topic} going forward?",
+  "read.define": "Definition",
+  "read.why": "Why it matters",
+  "read.guideline": "Guideline",
+  "read.more": "Anything else",
   more: "Anything else (optional)",
   previewHead: "How this concept reads in your guide",
   next: "Continue",
@@ -109,7 +116,8 @@ const blank = (v) => !String(v || "").trim();
 /** The six concept ids on the file, in page order; "" where a page has none. */
 export const chosenOf = (answers) => PAGES.map(n => { const id = String((answers || {})[F.concept(n)] || "").trim(); return E.conceptOf(id) ? id : ""; });
 /** How many of a concept's three boxes are filled. */
-export const filledOf = (answers, id) => [F.define(id), F.guide1(id), F.guide2(id)].filter(f => !blank((answers || {})[f])).length;
+export const BOXES = 4;
+export const filledOf = (answers, id) => [F.define(id), F.why(id), F.guide1(id), F.guide2(id)].filter(f => !blank((answers || {})[f])).length;
 
 /** What is still missing before Hand in, in words. assigned is the two required ids. */
 export function missingOf(answers, assigned = []) {
@@ -118,6 +126,7 @@ export function missingOf(answers, assigned = []) {
   ids.forEach((id, i) => {
     if (!id) { out.push("Concept " + (i + 1) + ": no concept chosen"); return; }
     if (blank(answers[F.define(id)])) out.push(nameOf(id) + ": the definition");
+    if (blank(answers[F.why(id)])) out.push(nameOf(id) + ": why it matters");
     if (blank(answers[F.guide1(id)])) out.push(nameOf(id) + ": guideline 1");
     if (blank(answers[F.guide2(id)])) out.push(nameOf(id) + ": guideline 2");
   });
@@ -197,6 +206,7 @@ export function groupsOf(assigned, written) {
 export const guideOf = (answers) => chosenOf(answers).map((id, i) => ({
   n: i + 1, id, name: id ? nameOf(id) : "",
   define: id ? String(answers[F.define(id)] || "").trim() : "",
+  why: id ? String(answers[F.why(id)] || "").trim() : "",
   guide1: id ? String(answers[F.guide1(id)] || "").trim() : "",
   guide2: id ? String(answers[F.guide2(id)] || "").trim() : "",
   more: id ? String(answers[F.more(id)] || "").trim() : "",
@@ -244,7 +254,15 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
   const [classData] = useClassState(storageKey);
   const assigned = useMemo(() => assignedFor(classData, viewer?.id), [classData, viewer?.id]);
 
-  useEffect(() => { loadFont(); }, []);
+  const [top, setTop] = useState(0);
+  useEffect(() => {
+    loadFont();
+    // The site's bar is sticky above this sheet; the menu sticks just under it.
+    const measure = () => { const bar = document.querySelector('div[style*="sticky"]'); setTop(bar ? bar.getBoundingClientRect().height : 0); };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
   useEffect(() => {
     const onHash = () => setPage(pageFromHash());
     window.addEventListener("hashchange", onHash);
@@ -305,7 +323,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
     } catch { setHanding("failed"); }
   };
 
-  const root = { className: "cg" + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
+  const root = { className: "cg" + (readOnly ? " ro" : ""), "data-theme": theme || undefined, style: { "--cg-top": top + "px" } };
   if (!answers) return <div {...root}><style>{CSS}</style><div className="sheet"><p className="status">{STATUS[status] || "Loading…"}</p></div></div>;
 
   const name = viewer?.name || "";
@@ -322,7 +340,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
         const n = k.startsWith("c") ? Number(k.slice(1)) : 0;
         const id = n ? chosen[n - 1] : "";
         const label = k === "start" ? copy.say("nav.start") : k === "questions" ? copy.say("nav.questions") : k === "guide" ? copy.say("nav.guide") : id ? shortOf(id) : "Concept " + n;
-        const done = k === "start" ? pageIndex > 0 : n ? !!id && filledOf(answers, id) === 3 : k === "questions" ? !blank(answers[F.q(1)]) && !blank(answers[F.q(2)]) : !!submitted;
+        const done = k === "start" ? pageIndex > 0 : n ? !!id && filledOf(answers, id) === BOXES : k === "questions" ? !blank(answers[F.q(1)]) && !blank(answers[F.q(2)]) : !!submitted;
         return <button key={k} type="button" className={"ni" + (k === page ? " cur" : "") + (done ? " done" : "") + (n && !id ? " ph" : "")} aria-current={k === page ? "page" : undefined} onClick={() => go(k)}>{label}</button>;
       })}
     </nav>
@@ -353,6 +371,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
           ))}
         </dl>
         <Words k="choose" copy={copy} editing={editing} as="p" className="p" />
+        <Words k="explain" copy={copy} editing={editing} as="p" className="p" />
         <p><button type="button" className="btn primary" onClick={() => go("c1")}>{copy.say("start")}</button></p>
       </section>
     );
@@ -421,10 +440,13 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
             <Words k="define" copy={copy} editing={editing} as="span" className="lb" />
             <textarea className="fld" rows={4} value={answers[F.define(id)] || ""} readOnly={readOnly} maxLength={4000} onChange={e => set(F.define(id), e.target.value)} />
           </label>
+          <label className="field">
+            <Words k="why" copy={copy} editing={editing} as="span" className="lb" />
+            <textarea className="fld" rows={4} value={answers[F.why(id)] || ""} readOnly={readOnly} maxLength={4000} onChange={e => set(F.why(id), e.target.value)} />
+          </label>
           {[1, 2].map(i => (
             <label key={i} className="field">
-              <span className="lb"><Words k="guideline" copy={copy} editing={editing} as="span" /> {i}</span>
-              <Words k="guidelineHint" copy={copy} editing={editing} as="span" className="hint" />
+              <span className="lb"><Words k="guideline" copy={copy} editing={editing} as="span" /> {i}: {editing ? <Words k="guidelineAsk" copy={copy} editing as="span" /> : copy.say("guidelineAsk").replace("{topic}", nameOf(id).toLowerCase())}</span>
               <textarea className="fld" rows={3} value={answers[F["guide" + i](id)] || ""} readOnly={readOnly} maxLength={4000} onChange={e => set(F["guide" + i](id), e.target.value)} />
             </label>
           ))}
@@ -433,7 +455,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
             <textarea className="fld" rows={3} value={answers[F.more(id)] || ""} readOnly={readOnly} maxLength={4000} onChange={e => set(F.more(id), e.target.value)} />
           </label>
           <Words k="previewHead" copy={copy} editing={editing} as="h2" className="h2" />
-          <div className="paper"><Chapter ch={guideOf(answers)[n - 1]} /></div>
+          <div className="paper"><Chapter ch={guideOf(answers)[n - 1]} copy={copy} /></div>
           <p><button type="button" className="btn primary" onClick={() => go(nextPage)}>{copy.say("next") + (n < 6 ? " to Concept " + (n + 1) : "")}</button></p>
         </section>
       );
@@ -471,7 +493,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
             <span className="say" aria-live="polite">{say}</span>
           </div>
         ) : null}
-        <Printout answers={answers} name={shown} topics={topics} locker={locker} classmates={classmates} assigned={assigned.ids} onGo={readOnly ? null : go} />
+        <Printout answers={answers} name={shown} assigned={assigned.ids} onGo={readOnly ? null : go} copy={copy} />
       </section>
     );
   }
@@ -488,50 +510,42 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
   );
 }
 
-function Chapter({ ch, earlier = null, onGo }) {
+const sayOf = (copy, k, fallback) => (copy ? copy.say(k) : fallback);
+function Chapter({ ch, onGo, copy = null }) {
   if (!ch) return null;
-  const empty = !ch.id || !(ch.define || ch.guide1 || ch.guide2 || ch.more);
+  const empty = !ch.id || !(ch.define || ch.why || ch.guide1 || ch.guide2 || ch.more);
+  const line = (label, text) => text ? <p className="ln"><b>{label}:</b> {text}</p> : null;
   return (
     <div className="ch">
-      <div className="chn">{ch.n}</div>
       <div className="cht">{ch.name || "Concept " + ch.n}{onGo ? <button type="button" className="lnk small" onClick={() => onGo("c" + ch.n)}>{ch.id ? "Change" : "Add"}</button> : null}</div>
       {empty ? <p className="muted">Not written yet.</p> : (
         <>
-          {ch.define ? <p className="def"><b>Definition.</b> {ch.define}</p> : null}
-          {ch.guide1 ? <div className="rl"><span className="rn">{ch.n}.1</span><p>{ch.guide1}</p></div> : null}
-          {ch.guide2 ? <div className="rl"><span className="rn">{ch.n}.2</span><p>{ch.guide2}</p></div> : null}
-          {ch.more ? <p className="def">{ch.more}</p> : null}
-          {earlier ? <p className="def muted"><b>What I wrote earlier.</b> {earlier}</p> : null}
+          {line(sayOf(copy, "read.define", "Definition"), ch.define)}
+          {line(sayOf(copy, "read.why", "Why it matters"), ch.why)}
+          {line(sayOf(copy, "read.guideline", "Guideline") + " 1", ch.guide1)}
+          {line(sayOf(copy, "read.guideline", "Guideline") + " 2", ch.guide2)}
+          {line(sayOf(copy, "read.more", "Anything else"), ch.more)}
         </>
       )}
     </div>
   );
 }
 
-// The Concepts sheet and Locker Room lines on a concept, as one paragraph for the printout.
-const earlierOf = (topics, locker, id, name, classmates) => {
-  const bits = [];
-  topicsAbout(topics, id).forEach(t => { TOPIC_PARTS.forEach(p => t[p.field].forEach(l => bits.push(l))); });
-  lockerAbout(locker, id, name, classmates).forEach(w => { if (w.wrote) bits.push(w.wrote); });
-  return bits.join(" ");
-};
-
 /** The guide read back whole: the cover, the contents, every chapter, the two questions. */
-export function Printout({ answers, name, topics = {}, locker = {}, classmates = [], assigned = [], onGo = null, term = "COMM 118, Fall 2026" }) {
+export function Printout({ answers, name, assigned = [], onGo = null, copy = null, term = "COMM 118, Fall 2026" }) {
   const chapters = guideOf(answers);
   const q1 = String(answers[F.q(1)] || "").trim(), q2 = String(answers[F.q(2)] || "").trim();
   return (
     <div className="paper book">
       <div className="cover"><div className="cv1">Culture Guide</div><div className="cv3">{[name, term].filter(Boolean).join(" · ")}</div></div>
       <div className="toc">
-        {chapters.map(ch => <div key={ch.n} className="tocr"><span>{ch.n}</span>{ch.name || "Concept " + ch.n}<em>{[assigned.includes(ch.id) ? "Required" : "", ch.id && filledOf(answers, ch.id) === 3 ? "Written" : "Not written yet"].filter(Boolean).join(" · ")}</em></div>)}
+        {chapters.map(ch => <div key={ch.n} className="tocr"><span>{ch.n}</span>{ch.name || "Concept " + ch.n}<em>{[assigned.includes(ch.id) ? "Required" : "", ch.id && filledOf(answers, ch.id) === BOXES ? "Written" : "Not written yet"].filter(Boolean).join(" · ")}</em></div>)}
         <div className="tocr"><span /> Two questions for my sit-down<em>{q1 && q2 ? "Written" : "Not written yet"}</em></div>
       </div>
-      {chapters.map(ch => <Chapter key={ch.n} ch={ch} earlier={ch.id ? earlierOf(topics, locker, ch.id, name, classmates) : ""} onGo={onGo} />)}
+      {chapters.map(ch => <Chapter key={ch.n} ch={ch} onGo={onGo} copy={copy} />)}
       <div className="ch">
-        <div className="chn" />
         <div className="cht">Two questions for my sit-down{onGo ? <button type="button" className="lnk small" onClick={() => onGo("questions")}>{q1 || q2 ? "Change" : "Add"}</button> : null}</div>
-        {q1 || q2 ? <>{q1 ? <div className="rl"><span className="rn">1</span><p>{q1}</p></div> : null}{q2 ? <div className="rl"><span className="rn">2</span><p>{q2}</p></div> : null}</> : <p className="muted">Not written yet.</p>}
+        {q1 || q2 ? <>{q1 ? <p className="ln"><b>Question 1:</b> {q1}</p> : null}{q2 ? <p className="ln"><b>Question 2:</b> {q2}</p> : null}</> : <p className="muted">Not written yet.</p>}
       </div>
     </div>
   );
@@ -542,10 +556,11 @@ export function plainOf(answers, name) {
   const lines = ["Culture Guide", name, ""];
   guideOf(answers).forEach(ch => {
     lines.push(ch.n + ". " + (ch.name || "Concept " + ch.n));
-    if (ch.define) lines.push("Definition. " + ch.define);
-    if (ch.guide1) lines.push(ch.n + ".1 " + ch.guide1);
-    if (ch.guide2) lines.push(ch.n + ".2 " + ch.guide2);
-    if (ch.more) lines.push(ch.more);
+    if (ch.define) lines.push("Definition: " + ch.define);
+    if (ch.why) lines.push("Why it matters: " + ch.why);
+    if (ch.guide1) lines.push("Guideline 1: " + ch.guide1);
+    if (ch.guide2) lines.push("Guideline 2: " + ch.guide2);
+    if (ch.more) lines.push("Anything else: " + ch.more);
     lines.push("");
   });
   lines.push("Two questions for my sit-down");
@@ -570,8 +585,8 @@ export const CSS = `
 .cg[data-theme="dark"]{${DARK}}
 .cg{box-sizing:border-box;color:var(--ink);font-family:var(--sans);font-size:18px;line-height:1.5;background:var(--page);padding:16px 16px 64px}
 .cg *{box-sizing:border-box}
-.cg .sheet{max-width:920px;margin:0 auto;background:var(--card);border-radius:18px;border:1px solid var(--line);overflow:hidden}
-.cg .nav{position:sticky;top:0;z-index:5;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line);scrollbar-width:none}
+.cg .sheet{max-width:920px;margin:0 auto;background:var(--card);border-radius:18px;border:1px solid var(--line)}
+.cg .nav{position:sticky;top:var(--cg-top,0px);z-index:5;display:flex;gap:4px;overflow-x:auto;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--line);border-radius:18px 18px 0 0;scrollbar-width:none}
 .cg .ni{font:inherit;font-size:14px;font-weight:600;white-space:nowrap;padding:8px 12px;min-height:36px;border-radius:999px;border:1px solid transparent;background:transparent;color:var(--ink2);cursor:pointer}
 .cg .ni.done{color:var(--ok)}
 .cg .ni.done::before{content:"✓ ";font-size:12px}
@@ -641,18 +656,13 @@ export const CSS = `
 .cg .tocr span{font-family:var(--serif);color:var(--accent)}
 .cg .tocr em{font-style:normal;font-size:14px;color:var(--ink2)}
 .cg .ch{display:grid;gap:8px}
-.cg .chn{font-family:var(--serif);font-size:34px;line-height:1;color:var(--accent)}
 .cg .cht{font-family:var(--serif);font-size:24px;font-weight:500;line-height:1.2;display:flex;align-items:baseline;flex-wrap:wrap}
-.cg .def{margin:0;font-size:16px;color:var(--ink)}
-.cg .def b{font-weight:600}
-.cg .rl{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:baseline}
-.cg .rl .rn{font-family:var(--serif);font-size:17px;color:var(--accent)}
-.cg .rl p{margin:0;font-family:var(--serif);font-size:19px;line-height:1.4}
+.cg .ln{margin:0;font-size:17px;line-height:1.5}
+.cg .ln b{font-weight:600;color:var(--accent)}
 .cg .vsp-edit{display:block;width:100%;font:inherit;color:inherit;line-height:1.5;padding:4px 8px;margin:0;border:1.5px dashed var(--line);border-radius:8px;background:var(--card);resize:none;overflow:hidden}
 .cg .vsp-edit.h1{font-family:var(--serif);font-size:clamp(32px,5vw,44px);font-weight:500}
 .cg .vsp-edit.h2{font-family:var(--serif);font-size:25px}
 .cg .vsp-edit.lead{font-family:var(--serif);font-size:21px}
-.cg.ro .nav,.cg.ro .foot{position:static}
 @media (max-width:720px){.cg{padding:8px 8px 48px}.cg .pg{padding:20px 16px 24px}.cg .qa{grid-template-columns:1fr}.cg .sr{grid-template-columns:1fr}.cg .paper.book{padding:20px}.cg .foot{padding-inline:16px}}
 @media print{.cg{background:#fff;padding:0}.cg .nav,.cg .bar,.cg .foot,.cg .editbar,.cg .lnk{display:none!important}.cg .sheet{border:0;max-width:none}.cg .paper.book{border:0;padding:0}.cg .ch{break-inside:avoid}}
 `;
