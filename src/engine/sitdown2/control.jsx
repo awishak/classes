@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { useClassState } from "../store.js";
-import { realStudents, sectionOf } from "../sections.js";
+import { sectionOf } from "../sections.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { StudentLink } from "../StudentPage.jsx";
@@ -19,7 +19,9 @@ import { nameShown } from "../roster.js";
 import { CSS as SD_CSS, FONTS } from "../SitdownPage.jsx";
 import { TEAM_TOPICS_KEY } from "../teamtopics/sheet.jsx";
 import * as E from "../takeover/engine.js";
-import { CULTURE_GUIDE_KEY, CSS as GUIDE_CSS, F, Printout, chosenOf, filledOf, missingOf, nameOf } from "./guide.jsx";
+import { CULTURE_GUIDE_KEY, CSS as GUIDE_CSS, F, Printout, CultureGuide, chosenOf, filledOf, missingOf, nameOf } from "./guide.jsx";
+import { readStore } from "../worktopia/store.js";
+import { realStudents } from "../sections.js";
 import { SITDOWN2, SLOTS, slotFor, whenOf, assignedFor, sitdown2Href, assignHref, guideHref, bookings } from "./facts.js";
 
 const lower = (s) => String(s || "").trim().toLowerCase();
@@ -166,3 +168,41 @@ const CSS = `
 .sd .tbl td{vertical-align:top;padding:10px 10px 10px 0;border-bottom:1px solid var(--line)}
 .sd .muted{color:var(--ink2)}
 `;
+
+// One student's guide as they see it: /<class>/worksheets/culture-guide?s=<id>.
+// The whole sheet, every page, read only, with their Concepts sheet and
+// Locker Room read back the way the chooser and the concept pages show them,
+// whether or not they have opened the guide yet. Andrew, 2026-11-06, on his
+// own test sheet: "this is not what lila wrote, it's what i wrote."
+export function CultureRead({ config, worksheetKey, roster, student }) {
+  const [data] = useClassState(config.storageKey);
+  const [got, setGot] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    call({ groupKey: config.id, key: CULTURE_GUIDE_KEY, viewer: student.email })
+      .then(out => { if (alive) setGot({ answers: out.answers || {}, submitted: out.sheet?.submitted_at || null, opened: !!out.sheet }); })
+      .catch(e => { if (alive) setError(e.message); });
+    return () => { alive = false; };
+  }, [config.id, student.email]);
+  const shown = nameShown(data, student.name);
+  const classmates = realStudents(config, roster).map(s => s.name).filter(n => n && n !== student.name);
+  return (
+    <div className="sd-root">
+      {FONTS}
+      <style>{SD_CSS}</style>
+      <div className="sd" style={{ paddingBottom: 0 }}>
+        <header className="top">
+          <div className="eyebrow"><a className="crumb" href={sitdown2Href(config)}>{config.code + " · Sit-Down 2"}</a></div>
+          <h1 className="h1">{shown + "'s Culture Guide"}</h1>
+          <p className="intro">{error ? "Could not read the file: " + error : !got ? "Reading the file." : got.submitted ? "Handed in " + when(got.submitted) + ". Every page as " + shown.split(" ")[0] + " sees it, read only." : got.opened ? "Started, not handed in. Every page as " + shown.split(" ")[0] + " sees it, read only." : "Not opened yet. Every page as " + shown.split(" ")[0] + " will see it, read only."}</p>
+          <div className="bar">
+            <a className="btn" href={guideHref(config) + "?review"}>Every guide</a>
+            <a className="lnk" href={sitdown2Href(config) + "?as=" + encodeURIComponent(student.name)}>{shown.split(" ")[0] + "'s slot page"}</a>
+          </div>
+        </header>
+      </div>
+      {got ? <CultureGuide key={student.email} store={readStore([], got.submitted)} viewer={{ id: lower(student.email), name: student.name }} classId={config.id} storageKey={config.storageKey} readOnly classmates={classmates} preloaded={got.answers} /> : null}
+    </div>
+  );
+}

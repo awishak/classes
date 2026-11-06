@@ -230,7 +230,7 @@ const loadFont = () => {
 const PAGE_KEYS = ["start", ...PAGES.map(n => "c" + n), "questions", "guide"];
 const pageFromHash = () => { try { const h = window.location.hash.replace(/^#/, ""); return PAGE_KEYS.includes(h) ? h : "start"; } catch { return "start"; } };
 
-export function CultureGuide({ store, viewer, classId, storageKey, readOnly = false, storage, editor = false, theme, classmates = [], topicsStore = null, lockerStore = null }) {
+export function CultureGuide({ store, viewer, classId, storageKey, readOnly = false, storage, editor = false, theme, classmates = [], topicsStore = null, lockerStore = null, preloaded = null }) {
   const copy = useCopy(editor, COPY_ROW, DEFAULT_COPY);
   const [editing, setEditing] = useState(false);
   const [answers, setAnswers] = useState(null);
@@ -261,7 +261,9 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
     const s = createSaver({ store, draftKey, storage: readOnly ? null : (storage ?? (typeof localStorage !== "undefined" ? localStorage : null)), onStatus: setStatus });
     saver.current = s;
     let alive = true;
-    s.load().then(got => { if (alive) { setAnswers(got.answers); setSubmitted(got.submitted_at); } }).catch(() => { if (alive) setStatus("failed-load"); });
+    // Answers handed in by the page (the instructor reading one student) skip the store.
+    if (preloaded) { setAnswers(preloaded); setStatus("saved"); s.load().then(got => { if (alive) setSubmitted(got.submitted_at); }).catch(() => {}); }
+    else s.load().then(got => { if (alive) { setAnswers(got.answers); setSubmitted(got.submitted_at); } }).catch(() => { if (alive) setStatus("failed-load"); });
     // The two earlier files: a store handed in (the demo harness), else read as this viewer.
     const other = (key, given) => given ? given.load().then(g => g.answers || {}).catch(() => ({})) : classId && viewer?.id ? otherFile(key, classId, viewer.id, readOnly) : Promise.resolve({});
     other(TEAM_TOPICS_KEY, topicsStore).then(a => { if (alive) setTopics(a); });
@@ -280,7 +282,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
       window.removeEventListener("beforeunload", leaving);
       s.flush(); s.destroy();
     };
-  }, [store, viewer?.id, classId, readOnly, storage, topicsStore, lockerStore]);
+  }, [store, viewer?.id, classId, readOnly, storage, topicsStore, lockerStore, preloaded]);
 
   const set = (field, value) => {
     if (readOnly) return;

@@ -114,7 +114,7 @@ export default function Sitdown2Page({ config }) {
             ) : null}
           </header>
           {viewerName
-            ? <Mine config={config} data={data} name={viewerName} copy={copy} editing={editing} place={place} canMove={instructor || !locked()} />
+            ? <Mine config={config} data={data} name={viewerName} copy={copy} editing={editing} place={place} canMove={instructor || !locked()} guide={guideHref(config) + (instructor && as ? "?s=" + encodeURIComponent(as) : "")} />
             : <Everyone config={config} data={data} students={students} place={place} />}
         </div>
       )}
@@ -122,7 +122,7 @@ export default function Sitdown2Page({ config }) {
   );
 }
 
-function Mine({ config, data, name, copy, editing, place, canMove }) {
+function Mine({ config, data, name, copy, editing, place, canMove, guide }) {
   const mine = slotFor(data, name);
   const count = countdown(mine);
   const [said, setSaid] = useState("");
@@ -157,7 +157,7 @@ function Mine({ config, data, name, copy, editing, place, canMove }) {
         <li className={rowClass(1)}><span className="num" aria-hidden="true">2</span>
           <div className="sw"><div className="sws"><Words k="step.2" copy={copy} editing={editing} as="span" /></div>
             <div className={"sdt" + (pastDue() ? " late" : "")}>{(pastDue() ? "Was due " : "Due ") + SITDOWN2.dueText}</div>
-            <a className="btn" href={guideHref(config)}>{copy.say("step.2.link")}</a></div></li>
+            <a className="btn" href={guide}>{copy.say("step.2.link")}</a></div></li>
         <li className={rowClass(2)}><span className="num" aria-hidden="true">{done[2] ? "✓" : "3"}</span>
           <div className="sw"><div className="sws"><Words k="step.3" copy={copy} editing={editing} as="span" /></div>
             <div className="sdt">{(mine ? whenOf(mine) + ", " : "") + SITDOWN2.room}</div></div></li>
@@ -191,7 +191,7 @@ function Mine({ config, data, name, copy, editing, place, canMove }) {
     <section className="sec" id="guide">
       <Words k="head.guide" copy={copy} editing={editing} as="h2" className="h2" />
       <Words k="guide.p" copy={copy} editing={editing} as="p" className="p" />
-      <a className="btn" href={guideHref(config)}>{copy.say("step.2.link")}</a>
+      <a className="btn" href={guide}>{copy.say("step.2.link")}</a>
     </section>
 
     <section className="sec">

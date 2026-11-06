@@ -51,7 +51,7 @@ import { AUDIO_STORY_KEY, AUDIO_STORY_TITLE, mountAudioStory } from "./audiostor
 import { AudioStoryReview, AudioStoryControl } from "./audiostory/storypages.jsx";
 import { AUDIO_DROP_KEY, AUDIO_DROP_TITLE, mountAudioDrop, DropReview } from "./audiostory/drop.jsx";
 import { CULTURE_GUIDE_KEY, CULTURE_GUIDE_TITLE, mountCultureGuide } from "./sitdown2/guide.jsx";
-import { CultureReview, CultureControl } from "./sitdown2/control.jsx";
+import { CultureReview, CultureControl, CultureRead } from "./sitdown2/control.jsx";
 
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
@@ -83,7 +83,7 @@ export const LOCAL_WORKSHEETS = [
   // reshaped that morning. Six concepts, four theirs and two his, a
   // definition and two guidelines each, two questions at the end. review is
   // every guide in meeting order, control is how it all works.
-  { key: CULTURE_GUIDE_KEY, title: CULTURE_GUIDE_TITLE, mount: mountCultureGuide, review: CultureReview, control: CultureControl, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
+  { key: CULTURE_GUIDE_KEY, title: CULTURE_GUIDE_TITLE, mount: mountCultureGuide, review: CultureReview, control: CultureControl, read: CultureRead, open: ["comm999", "comm118"], classes: ["comm118", "comm999"] },
   // COMM 3's audio story, 2026-10-29. Ideas on Friday, October 30, in class,
   // marked from the review page and shown on the board (?board, no names)
   // for the projector. Research on the okayed idea, due Tuesday, November 3.
