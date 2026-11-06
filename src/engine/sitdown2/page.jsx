@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 import { useClassData, saveMerged } from "../store.js";
 import { rosterOf } from "../roster.js";
-import { isLurker } from "../sections.js";
+import { realStudents } from "../sections.js";
 import { useSession, studentFor } from "../session.js";
 import { useCopy, Words } from "../visualstory/pre.jsx";
 import { CSS as SD_CSS, FONTS } from "../SitdownPage.jsx";
@@ -73,7 +73,7 @@ export default function Sitdown2Page({ config }) {
   else if (data === null) gate = <p className="p">Loading the class.</p>;
   else if (!allowed) gate = <p className="p">{email} is not on the roster for {config.code} yet.</p>;
 
-  const students = roster.filter(s => s.name && !isLurker(s.name));
+  const students = realStudents(config, roster).filter(s => s.name);
   const viewerName = instructor && !as ? "" : (as || me?.name || "");
 
   // The one write: this writer's change on the server's row.

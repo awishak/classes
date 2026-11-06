@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 import { useClassState } from "../store.js";
-import { isLurker, sectionOf } from "../sections.js";
+import { realStudents, sectionOf } from "../sections.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { StudentLink } from "../StudentPage.jsx";
@@ -45,7 +45,7 @@ function useRows(config, roster, keys) {
     const t = setInterval(ask, 30000);
     return () => { alive = false; clearInterval(t); };
   }, [config.id, keys.join(",")]);   // eslint-disable-line react-hooks/exhaustive-deps
-  const people = roster.filter(s => s.email && !isLurker(s.name));
+  const people = realStudents(config, roster).filter(s => s.email);
   const rows = people.map(s => {
     const em = lower(s.email);
     const g = sheets?.[CULTURE_GUIDE_KEY]?.get(em) || null;

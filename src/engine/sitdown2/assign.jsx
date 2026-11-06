@@ -13,7 +13,7 @@
 import { useEffect, useState } from "react";
 import { useClassData } from "../store.js";
 import { rosterOf } from "../roster.js";
-import { isLurker } from "../sections.js";
+import { realStudents } from "../sections.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { CSS as SD_CSS, FONTS } from "../SitdownPage.jsx";
@@ -83,7 +83,7 @@ export default function AssignPage({ config }) {
     return () => { alive = false; };
   }, [config.id]);
 
-  const roster = rosterOf(config, data).filter(s => s.email && !isLurker(s.name)).sort((a, b) => a.name.localeCompare(b.name));
+  const roster = realStudents(config, rosterOf(config, data)).filter(s => s.email).sort((a, b) => a.name.localeCompare(b.name));
   const rows = roster.map(s => {
     const em = lower(s.email);
     const topics = sheets?.topics.get(em)?.answers || {}, locker = sheets?.locker.get(em)?.answers || {}, guide = sheets?.guide.get(em)?.answers || {};
