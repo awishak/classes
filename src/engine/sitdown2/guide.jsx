@@ -77,8 +77,8 @@ export const DEFAULT_COPY = {
   explain: "For each concept you choose, you're going to have to give me a clear definition. You're going to have to give me a reason why we should pay attention to it. And you're also going to have to give me two guidelines that you would use going forward, given what you've learned about this concept.",
   start: "Start",
   chooseHead: "Choose a concept",
-  "group.required": "Required",
-  "group.written": "You have already written about these",
+  "group.written": "You have already written about these and I encourage you to continue to use them for this assignment.",
+  "group.required": "These next two are required by me for you specifically.",
   "group.rest": "The rest",
   required: "Required",
   change: "Choose a different concept",
@@ -395,8 +395,8 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
           <div className="cap">{"Concept " + n + " of 6"}</div>
           <Words k="chooseHead" copy={copy} editing={editing} as="h1" className="h1" />
           {editBar}
-          {g.required.length ? <><Words k="group.required" copy={copy} editing={editing} as="div" className="gh" /><div className="chips">{g.required.map(c => chip(c, "required"))}</div></> : null}
-          {g.written.length ? <><Words k="group.written" copy={copy} editing={editing} as="div" className="gh" /><div className="chips">{g.written.map(c => chip(c, "written"))}</div></> : null}
+          {g.written.length ? <><Words k="group.written" copy={copy} editing={editing} as="p" className="gh" /><div className="chips">{g.written.map(c => chip(c, "written"))}</div></> : null}
+          {g.required.length ? <><Words k="group.required" copy={copy} editing={editing} as="p" className="gh" /><div className="chips">{g.required.map(c => chip(c, "required"))}</div></> : null}
           <Words k="group.rest" copy={copy} editing={editing} as="div" className="gh" />
           <div className="chips">{g.rest.map(c => chip(c, "rest"))}</div>
         </section>
@@ -608,7 +608,7 @@ export const CSS = `
 .cg .qa a,.cg .lnk{color:var(--accent);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cg .lnk{font:inherit;background:none;border:0;padding:0;cursor:pointer;min-height:44px}
 .cg .lnk.small{font-size:14px;font-weight:600;min-height:0;margin-left:12px}
-.cg .gh{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin-top:2px}
+.cg .gh{margin:6px 0 0;font-size:18px;font-weight:600;line-height:1.4;max-width:68ch}
 .cg .chips{display:flex;flex-wrap:wrap;gap:6px;width:100%}
 .cg .chip{font:inherit;font-size:15px;display:inline-flex;align-items:center;gap:8px;text-align:left;padding:0 13px;min-height:38px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;line-height:1.2}
 .cg .chip:hover:not(:disabled){border-color:var(--accent)}
