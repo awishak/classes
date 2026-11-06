@@ -367,7 +367,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
         return (
           <button key={cid} type="button" className={"chip" + (kind === "required" ? " req" : "") + (t ? " taken" : "")} disabled={!!t} onClick={() => set(F.concept(n), cid)}>
             <span className="cn">{nameOf(cid)}</span>
-            <small>{t ? "Concept " + t : kind === "required" ? copy.say("required") : kind === "written" ? (written[cid] || []).join(", ") : ""}</small>
+            {t ? <small>{"Concept " + t}</small> : kind === "required" ? <small>{copy.say("required")}</small> : null}
           </button>
         );
       };
@@ -390,7 +390,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
         <section className="pg">
           <div className="cap">{"Concept " + n + " of 6"}</div>
           <div className="picked">
-            <span className={"chip on" + (isReq ? " req" : "")}><span className="cn">{nameOf(id)}</span><small>{isReq ? copy.say("required") : (written[id] || []).join(", ")}</small></span>
+            <span className={"chip on" + (isReq ? " req" : "")}><span className="cn">{nameOf(id)}</span>{isReq ? <small>{copy.say("required")}</small> : null}</span>
             <button type="button" className="lnk" onClick={() => set(F.concept(n), "")}>{copy.say("change")}</button>
           </div>
           <h1 className="h1">{nameOf(id)}</h1>
@@ -593,12 +593,12 @@ export const CSS = `
 .cg .qa a,.cg .lnk{color:var(--accent);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cg .lnk{font:inherit;background:none;border:0;padding:0;cursor:pointer;min-height:44px}
 .cg .lnk.small{font-size:14px;font-weight:600;min-height:0;margin-left:12px}
-.cg .gh{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin-top:6px}
-.cg .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;width:100%}
-.cg .chip{font:inherit;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;padding:10px 14px;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.cg .gh{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin-top:2px}
+.cg .chips{display:flex;flex-wrap:wrap;gap:6px;width:100%}
+.cg .chip{font:inherit;font-size:15px;display:inline-flex;align-items:center;gap:8px;text-align:left;padding:0 13px;min-height:38px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;line-height:1.2}
 .cg .chip:hover:not(:disabled){border-color:var(--accent)}
 .cg .chip .cn{font-weight:600}
-.cg .chip small{font-size:13px;color:var(--ink2);white-space:nowrap}
+.cg .chip small{font-size:12px;color:var(--ink2);white-space:nowrap;letter-spacing:.04em;text-transform:uppercase}
 .cg .chip.req{border-color:var(--req);background:var(--req-tint)}
 .cg .chip.req small{color:var(--req);font-weight:600}
 .cg .chip.taken{opacity:.45;cursor:default}
