@@ -32,6 +32,8 @@ import { TAKEOVER_KEY, TAKEOVER_TITLE } from "../takeover/engine.js";
 import { assignmentsOf } from "../profileTask.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { SITDOWN_CLASSES, SITDOWN, released, sessionOf, tableOf, sitdownAssignment, linkOf } from "../worktopia/sitdown.js";
+import { SITDOWN2_CLASSES, SITDOWN2, SLOTS, slotFor, whenOf, countdown, sitdown2Href, guideHref } from "../sitdown2/facts.js";
+import { CULTURE_GUIDE_KEY, CULTURE_GUIDE_TITLE } from "../sitdown2/guide.jsx";
 
 // The door to Sit-Down 1, in the classes that hold one, from now until the
 // last sit-down is over. Andrew, 2026-10-15: "how do students reach the
@@ -192,6 +194,37 @@ export function LockerRoomDoor({ config, data, now = Date.now() }) {
     done={submittedOf(standing)} doneName={TAKEOVER_TITLE + ": submitted"} doneSay={"Submitted. Due " + dueWords(asg.due, asg.dueTime) + "."} />;
 }
 
+// The doors to Sit-Down 2, on the COMM 118 home from now until the last
+// slot is over. Andrew, 2026-11-06: "so do they see this on their front
+// page?" The first door is the time: pick one until they have, then their
+// day and time with the room. The second is the Culture Guide, bright green
+// until it is handed in, until its due date on the plan.
+const LAST_SITDOWN2 = Math.max(...SLOTS.map(s => s.ms)) + SITDOWN2.minutes * 60000;
+export function Sitdown2Door({ config, data, name, now = Date.now() }) {
+  if (!SITDOWN2_CLASSES.includes(config.id) || now > LAST_SITDOWN2) return null;
+  const mine = slotFor(data, name);
+  const count = mine ? countdown(mine, now) : "";
+  return (
+    <a className="pt-door pt-focus" href={sitdown2Href(config)}>
+      <span className="pt-door-main">
+        <span className="pt-door-name">{SITDOWN2.title + ": " + (mine ? whenOf(mine) + ", " + SITDOWN2.room : "pick your time")}</span>
+        <span className="pt-door-say">{mine ? (count ? count + ". " : "") + "Ten minutes, just you and me. You can move your time until " + SITDOWN2.lockText + "." : "Ten minutes, just you and me, Thursday, November 12, or Friday, November 13. Pick your time on the page."}</span>
+      </span>
+      <span className="pt-door-go" aria-hidden="true">Open</span>
+    </a>
+  );
+}
+export function CultureGuideDoor({ config, data, now = Date.now() }) {
+  const sheet = localWorksheet(CULTURE_GUIDE_KEY);
+  const standing = usePreStanding(config, CULTURE_GUIDE_KEY);
+  if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
+  const asg = assignmentsOf(config, data).find(a => a.id === "s2-memo");
+  const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
+  if (!end || now > end) return null;
+  return <DueBar href={guideHref(config)} name={CULTURE_GUIDE_TITLE} say={"Due " + dueWords(asg.due, asg.dueTime) + ", before your sit-down. Your work saves as you go."}
+    done={submittedOf(standing)} doneName={CULTURE_GUIDE_TITLE + ": handed in"} doneSay={"Handed in. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
+}
+
 // The week the class is in: its number and its first and last class day.
 export function weekWords(config, data) {
   const weeks = data?.schedule || config.scheduleWeeks || [];
@@ -341,6 +374,8 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
       <AudioPreDoor config={config} data={data} />
       <AudioStoryDoor config={config} data={data} />
       <LockerRoomDoor config={config} data={data} />
+      <Sitdown2Door config={config} data={data} name={name} />
+      <CultureGuideDoor config={config} data={data} />
       <PinBar data={data} go={go} />
       <SitdownDoor config={config} data={data} name={name} />
       <Hero config={config} data={data} blockOf={blockOf} section={section} me={name} mark={mark} go={go} />
