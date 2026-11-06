@@ -17,6 +17,8 @@ import ReadoutPage from "./engine/ReadoutPage.jsx";
 import WorktopiaAnswersPage from "./engine/WorktopiaAnswersPage.jsx";
 import SitdownRolesPage from "./engine/SitdownRolesPage.jsx";
 import SitdownPage from "./engine/SitdownPage.jsx";
+import Sitdown2Page from "./engine/sitdown2/page.jsx";
+import AssignPage from "./engine/sitdown2/assign.jsx";
 import DecisionsPage from "./engine/DecisionsPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
@@ -374,6 +376,13 @@ export default function App() {
   const sd = path.match(/^\/(comm118|comm999)\/sitdown(?:\/(prep|sheet)(?:\/([a-z]{3}-\d{3,4}))?)?\/?$/);
   if (sd && ENGINE[sd[1]]) {
     return <SitdownPage key={sd[1] + (sd[2] || "") + (sd[3] || "")} config={ENGINE[sd[1]]} page={sd[2] || "home"} group={sd[2] === "sheet" ? sd[3] || "" : ""} />;
+  }
+  // Sit-Down 2, for the student: /<class>/sitdown2, the slots and the
+  // guide. The two concepts Andrew assigns: /<class>/sitdown2/assign, his.
+  const sd2 = path.match(/^\/(comm118|comm999)\/sitdown2(?:\/(assign))?\/?$/);
+  if (sd2 && ENGINE[sd2[1]]) {
+    if (sd2[2] === "assign") return <InstructorGate what={ENGINE[sd2[1]].code + " Sit-Down 2"}><AssignPage key={sd2[1]} config={ENGINE[sd2[1]]} /></InstructorGate>;
+    return <Sitdown2Page key={sd2[1]} config={ENGINE[sd2[1]]} />;
   }
   // Sit-Down 1, the role each student plays at their table, for the
   // instructor: /<class>/worksheets/worktopia/roles.

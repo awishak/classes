@@ -38,6 +38,7 @@ import { gameClient } from "./gameClient.js";
 import GradeDeck from "./GradeDeck.jsx";
 import { unseenGrades, markSeen } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
+import Sitdown2Card, { sitdownToday, dismissSitdown } from "./sitdown2/card.jsx";
 import CheckinCard from "./CheckinCard.jsx";
 import { checkinDue } from "./checkins.js";
 import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
@@ -583,6 +584,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const [deckDone, setDeckDone] = useState(false);
   // The same, for the due-soon cards.
   const [dueDone, setDueDone] = useState(false);
+  const [sd2Done, setSd2Done] = useState(false);
   // And for the card he writes for the class.
   const [noticeDone, setNoticeDone] = useState(false);
   // And for the week 4 and week 8 check-in. Later lasts the visit, so it is
@@ -1230,6 +1232,18 @@ export default function ClassApp({ config: classConfig, initialCard }) {
         <style>{CSS + accentCSS(a, config.accentDark)}</style>
         <DueDeck config={config} items={dueCards} onDismiss={(asg) => write(prev => dismissDue(prev, asg, seenAs))} onDone={() => setDueDone(true)}
           onOpen={(asg) => go("assignments/" + asg.id)} />
+      </div>
+    );
+  }
+
+  // The morning of a sit-down: the time and the room, once per device. See sitdown2/card.jsx.
+  const sd2Slot = data !== null && view !== "instructor" && !sd2Done ? sitdownToday(config, data, seenAs) : null;
+  if (sd2Slot) {
+    return (
+      <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">
+        <ThemeStyle theme={theme} />
+        <style>{CSS + accentCSS(a, config.accentDark)}</style>
+        <Sitdown2Card config={config} slot={sd2Slot} onDone={() => { dismissSitdown(config, seenAs, sd2Slot); setSd2Done(true); }} />
       </div>
     );
   }
