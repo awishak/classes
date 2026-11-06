@@ -75,8 +75,10 @@ export const missingOf = (answers) => {
   const a = answers || {};
   const out = [];
   ["story", "treatment", "includes"].forEach(f => { if (blank(a, f)) out.push(f); });
+  // Three answered questions count as three parts: an unchosen slot is a
+  // part still to fill, the same as a chosen question left blank.
   const asked = askedOf(a);
-  if (asked.length < PICK) out.push("asked");
+  for (let i = asked.length; i < PICK; i++) out.push("asked");
   asked.forEach(id => { if (blank(a, "q:" + id)) out.push("q:" + id); });
   if (!audioOf(a.audio)) out.push("audio");
   if (blank(a, "sources")) out.push("sources");
@@ -84,7 +86,7 @@ export const missingOf = (answers) => {
   if (!todoOf(a.todo).some(t => t.text.trim())) out.push("todo");
   return out;
 };
-export const PARTS_TO_FILL = 8 + PICK;
+export const PARTS_TO_FILL = 7 + PICK;
 export const progressOf = (answers) => Math.max(0, Math.min(1, 1 - missingOf(answers).length / PARTS_TO_FILL));
 
 export const COPY_ROW = "worksheet-audio-pre-plan";
