@@ -183,7 +183,7 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
         <button type="button" role="tab" aria-selected={view === "flow"} className={view === "flow" ? "on" : ""} onClick={() => setView("flow")}>Flow</button>
         <button type="button" role="tab" aria-selected={view === "list"} className={view === "list" ? "on" : ""} onClick={() => setView("list")}>List</button>
       </div>
-      <Chip onClick={onPerformance}>My performance</Chip>
+      <Btn onClick={onPerformance}>My performance so far</Btn>
     </div>
   );
 
@@ -269,11 +269,11 @@ export function PerformanceSheet({ config, data, name, go, onClose }) {
   }, [onClose]);
   return (
     <div className="pt-scrim" onClick={onClose}>
-      <div className="pt-sheet pt-root" role="dialog" aria-label="My performance" onClick={e => e.stopPropagation()}>
+      <div className="pt-sheet pt-root" role="dialog" aria-label="My performance so far" onClick={e => e.stopPropagation()}>
         <div className="pt-handle" />
         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-            <span className="pt-secSub" style={{ color: "var(--ca-accent-ink)" }}>My performance</span>
+            <span className="pt-secSub" style={{ color: "var(--ca-accent-ink)" }}>My performance so far</span>
             <h3 className="pt-h1" style={{ fontSize: 26 }}>{name}</h3>
           </div>
           <button type="button" className="pt-close pt-focus" onClick={onClose} aria-label="Close">{I.x(18)}</button>

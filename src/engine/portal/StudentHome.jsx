@@ -13,7 +13,7 @@ import { kindOf } from "../dayplan.js";
 import { daySlug } from "../days.js";
 import { unreadNotes } from "../YouCard.jsx";
 import { unseenGrades } from "../grades.js";
-import { Sec, Row, Io, Btn, Chip, DrFace, I, dueWords, whenWords } from "./bits.jsx";
+import { Sec, Row, Io, Btn, DrFace, I, dueWords, whenWords } from "./bits.jsx";
 import { nextOwedOf } from "./work.js";
 import { WorkRow } from "./MyWork.jsx";
 import { QuestionsSection } from "./Questions.jsx";
@@ -382,14 +382,15 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
       {fresh.length ? <div className="pt-day"><Sec name="New" sub="Today" /><div className="pt-stack">{fresh}</div></div> : null}
       <div className="pt-day">
         <Sec name={<button type="button" className="pt-focus" onClick={() => go("assignments")} style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }}>My work</button>}
-          sub={owed ? "Next up" : ""} right={<Chip onClick={() => go("performance")}>My performance</Chip>} />
+          sub={owed ? "Next up" : ""} />
         <div className="pt-stack">
           <PreRow config={config} />
           <StoriesRow config={config} />
           {owed ? <WorkRow asg={owed.asg} st={owed.st} ring config={config} onOpen={() => go("assignments/" + owed.asg.id)} />
             : <p className="pt-quiet">Nothing is waiting on you.</p>}
           {/* Andrew, 2026-10-19: "make it easy for them to get to their assignments." The heading was the only way in, and it did not look like one. */}
-          <div className="pt-acts"><Btn onClick={() => go("assignments")}>All my work</Btn></div>
+          {/* Andrew, 2026-11-09: the recap of their performance has to be easy to find, and in his words. */}
+          <div className="pt-acts"><Btn onClick={() => go("performance")}>My performance so far</Btn><Btn kind="plain" onClick={() => go("assignments")}>All my work</Btn></div>
         </div>
       </div>
       <QuestionsSection config={config} name={name} profiles={data?.profiles} go={go} />

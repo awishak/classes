@@ -10,7 +10,7 @@
 // ClassApp still owns the session, the data, the decks in front of the site,
 // the preview bar and the top bar; this draws what comes after them.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ThemeStyle } from "../ThemeShell.jsx";
 import { ThemeChrome, ThemeTopper, ThemeStickers, StoryBar, cardStyle } from "../ThemeChrome.jsx";
 import { StudentThread } from "../YouCard.jsx";
@@ -53,6 +53,11 @@ export default function PortalShell(p) {
   const instructor = view === "instructor";
   const name = seenAs;
   const [sheet, setSheet] = useState("");
+  // The home's "My performance so far" button goes to the performance key; the
+  // sheet opens over My work. Andrew, 2026-11-09: "make it easier to find a
+  // student's recap of their performance." Before this the button landed on
+  // My work with the sheet shut.
+  useEffect(() => { if (openKey === "performance") setSheet("performance"); }, [openKey]);
   const loading = data === null;
   const d = data || {};
   const section = instructor ? "" : (hasSections(config) ? sectionFor(rosterOf(config, d), name) : "");
