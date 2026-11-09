@@ -42,7 +42,7 @@ export const profileTaskOf = (config, data) => config?.profileTask && !data?.[PR
 
 // The class's challenges as a student sees them: the store's list over the
 // config's, with the card challenge in front when the class asks for it.
-// The week 4 and week 8 check-ins come last, built from the term. See
+// The week 4 and week 9 check-ins come last, built from the term. See
 // checkins.js.
 // A challenge students cannot see: `visible` false, or a time students
 // cannot see the challenge before. Andrew, 2026-10-29: "don't show students

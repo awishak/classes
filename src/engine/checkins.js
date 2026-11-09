@@ -1,4 +1,4 @@
-// The check-ins: week 4 and week 8, in every class.
+// The check-ins: week 4 and week 9, in every class.
 //
 // Andrew, 2026-10-06: "a check in at the start of week 4 and the start of
 // week 8. You show them a card with their work so far and evals, and we ask:
@@ -8,7 +8,8 @@
 // differently to support you? What is your biggest challenge for the rest of
 // the quarter?" And: "just create it as a challenge and make me the same kind
 // of sorting for it", ungraded, open the whole week, editable, "make it
-// standard in all classes."
+// standard in all classes." 2026-11-09: the second one moved from week 8 to
+// week 9.
 //
 // Each check-in is a challenge built here from the term, the way the card
 // challenge is built in profileTask.js, so no class has to carry it. It opens
@@ -25,7 +26,7 @@
 
 import { parseDay } from "./days.js";
 
-export const CHECKIN_WEEKS = [4, 8];
+export const CHECKIN_WEEKS = [4, 9];
 export const checkinId = (week) => "checkin-" + week;
 export const isCheckin = (asg) => asg?.completes === "checkin";
 

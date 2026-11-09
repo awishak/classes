@@ -61,7 +61,7 @@ export default function CheckinAnswers({ config }) {
     .sort((x, y) => (x.name || "").localeCompare(y.name || "")), [data, config]);
 
   const [cid, setCid] = useState(() => param("w") ? "checkin-" + param("w") : "");
-  const asg = checkins.find(c => c.id === cid) || checkins.find(c => Date.parse(c.opensAt) <= Date.now() && c.id === "checkin-8") || checkins[0] || null;
+  const asg = checkins.find(c => c.id === cid) || [...checkins].reverse().find(c => Date.parse(c.opensAt) <= Date.now()) || checkins[0] || null;
   const [view, setView] = useState(() => (/^(question|summary)$/.test(param("v")) ? param("v") : "student"));
   const [who, setWho] = useState(() => param("s"));
   const [qid, setQid] = useState(() => param("q") || "going");

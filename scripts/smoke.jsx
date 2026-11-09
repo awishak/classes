@@ -5811,17 +5811,18 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (pending([...log, { id: "c2", ts: 40, type: "comment", from: "student", text: "hello?" }])) {} else say("the student's own comment answered the request");
 }
 
-// The week 4 and week 8 check-ins. Andrew, 2026-10-06.
+// The week 4 and week 9 check-ins. Andrew, 2026-10-06; the second moved to week 9 on 2026-11-09.
 {
   const say = (m) => { console.error("  FAIL  check-ins: " + m); failedEarly++; };
   const ci = await import("../src/engine/checkins.js");
   const { assignmentsOf } = await import("../src/engine/profileTask.js");
   const { dueSoon } = await import("../src/engine/DueCard.jsx");
-  const weeks = [["Sep 21", "Sep 23"], ["Sep 28"], ["Oct 5"], ["Oct 14", "Oct 16"], ["Oct 19"], ["Oct 26"], ["Nov 2"], ["Nov 9"]].map((dates, i) => ({ id: "w" + i, dates }));
+  const weeks = [["Sep 21", "Sep 23"], ["Sep 28"], ["Oct 5"], ["Oct 14", "Oct 16"], ["Oct 19"], ["Oct 26"], ["Nov 2"], ["Nov 9"], ["Nov 16"]].map((dates, i) => ({ id: "w" + i, dates }));
   const c = { storageKey: "smoke-ci", scheduleWeeks: weeks, assignments: [] };
-  const [w4, w8] = ci.checkinTasksOf(c, {});
+  const [w4, w9] = ci.checkinTasksOf(c, {});
   if (!w4 || w4.opensAt !== "2026-10-12T00:00" || w4.due !== "Oct 18") say("week 4 does not run Monday Oct 12 to Sunday Oct 18: " + JSON.stringify(w4));
-  if (!w8 || w8.opensAt !== "2026-11-09T00:00" || w8.due !== "Nov 15") say("week 8 does not run Nov 9 to Nov 15");
+  if (!w9 || w9.opensAt !== "2026-11-16T00:00" || w9.due !== "Nov 22") say("week 9 does not run Nov 16 to Nov 22");
+  if (ci.checkinTasksOf({ scheduleWeeks: weeks.slice(0, 8) }, {}).length !== 1) say("a term with eight weeks has a week 9 check-in");
   if (ci.checkinTasksOf({ scheduleWeeks: weeks.slice(0, 3) }, {}).length) say("a term with three weeks has a check-in");
   if (!assignmentsOf(c, {}).some(a => a.id === "checkin-4")) say("the check-in is not among the class's challenges");
   const N = "Ada Lovelace";

@@ -5,21 +5,21 @@
 // ask a few new questions, get a 5-min audio clip, ask for a few sources, and
 // ask them what they think about their work, and what they have to do going
 // forward. I think a lot of this stuff can be pre-filled to be edited as
-// well. Make this pretty." Then by voice: keep what they included on the
+// well. Make this pretty." The going-forward part was a checklist; he had it
+// removed 2026-11-09. Then by voice: keep what they included on the
 // exercise and let them edit it; seven questions, "choose 3 of these
 // questions and answer them as part of your audio story pre-production"; the
 // clip "is your first attempt at the story"; show the sources they already
-// have, then "what sources would you like to add or edit?"; a checklist they
-// can edit; open to COMM 3 the moment it is built.
+// have, then "what sources would you like to add or edit?"; open to COMM 3
+// the moment it is built.
 //
 // The shape is the audio story builder's: the sheet on the left and, on the
 // right, the pre-production document, live, the way Dr. Ishak reads it on
 // the review. Every answer is a worksheet row (bits.jsx useSheet). The first
 // time the sheet opens, the story line, the treatment, what the story
 // includes and the four sources come across from the student's audio
-// exercise sheet, read under the rules, into this sheet's own fields, and the
-// checklist is laid in; the field prefilled says it happened, so nothing is
-// copied twice and nothing typed is ever overwritten. The ideas and his marks
+// exercise sheet, read under the rules, into this sheet's own fields; the
+// field prefilled says it happened, so nothing is copied twice and nothing typed is ever overwritten. The ideas and his marks
 // are read live off the ideas sheet and only shown.
 
 import { useEffect, useState } from "react";
@@ -51,23 +51,9 @@ export const QUESTIONS = [
   ["after", "What questions do you think a listener might have after listening to your story?"],
 ];
 export const PICK = 3;
-// The checklist laid into Going forward, theirs to edit. His to change here or in place.
-export const CHECKLIST = [
-  "Record every interview",
-  "Capture sound at your place",
-  "Pull your music and sound effects, and note where each came from",
-  "Edit a full cut, under five minutes",
-  "Write your headline and your listen line",
-  "Listen back with someone and fix what they caught",
-];
-
-export const FIELDS = ["story", "treatment", "includes", "asked", ...QUESTIONS.map(q => "q:" + q[0]), "audio", "sources", "reflect", "todo", "prefilled"];
+export const FIELDS = ["story", "treatment", "includes", "asked", ...QUESTIONS.map(q => "q:" + q[0]), "audio", "sources", "reflect", "prefilled"];
 /** The question ids the student chose, in order, at most PICK. */
 export const askedOf = (answers) => linesOf(answers?.asked).filter(id => QUESTIONS.some(q => q[0] === id)).slice(0, PICK);
-/** The checklist, [{ text, done }], from its field. */
-export const todoOf = (value) => {
-  try { const v = JSON.parse(value || "[]"); return Array.isArray(v) ? v.filter(x => x && typeof x.text === "string").map(x => ({ text: x.text, done: !!x.done })) : []; } catch { return []; }
-};
 /** The sources on the exercise sheet, [{ ask, lines }], only the filled ones. */
 export const exerciseSourcesOf = (ex) => RESEARCH.map(r => ({ field: r.field, ask: r.ask, lines: linesOf(ex?.[r.field]) })).filter(r => r.lines.length);
 /** What still has to be there before Submit. */
@@ -83,10 +69,9 @@ export const missingOf = (answers) => {
   if (!audioOf(a.audio)) out.push("audio");
   if (blank(a, "sources")) out.push("sources");
   if (blank(a, "reflect")) out.push("reflect");
-  if (!todoOf(a.todo).some(t => t.text.trim())) out.push("todo");
   return out;
 };
-export const PARTS_TO_FILL = 7 + PICK;
+export const PARTS_TO_FILL = 6 + PICK;
 export const progressOf = (answers) => Math.max(0, Math.min(1, 1 - missingOf(answers).length / PARTS_TO_FILL));
 
 export const COPY_ROW = "worksheet-audio-pre-plan";
@@ -114,9 +99,6 @@ export const DEFAULT_COPY = {
   sourcesAsk: "What sources would you like to add or edit?",
   reflectHead: "Your work",
   reflectAsk: "What do you think about your work so far?",
-  forwardHead: "Going forward",
-  forwardAsk: "What do you have to do going forward?",
-  forwardSay: "Here is a checklist. Edit it so it is yours.",
   docKicker: "Audio story pre-production",
   submit: "submit",
   again: "submit again",
@@ -134,7 +116,6 @@ export function PreView({ answers, url = "", by = "", copy = null }) {
   const clip = audioOf(a.audio);
   const includes = linesOf(a.includes);
   const sources = linesOf(a.sources);
-  const todo = todoOf(a.todo).filter(t => t.text.trim());
   const qSay = (id) => say("q." + id);
   return (
     <article className="aspd">
@@ -158,44 +139,11 @@ export function PreView({ answers, url = "", by = "", copy = null }) {
       ) : null}
       {sources.length ? <section className="aspd-sec"><h2 className="aspd-h2">{say("sourcesHead")}</h2><ul className="aspd-list">{sources.map((l, i) => <li key={i}>{l}</li>)}</ul></section> : null}
       {String(a.reflect || "").trim() ? <section className="aspd-sec"><h2 className="aspd-h2">{say("reflectAsk")}</h2><p className="aspd-a">{a.reflect}</p></section> : null}
-      {todo.length ? (
-        <section className="aspd-sec">
-          <h2 className="aspd-h2">{say("forwardHead")}</h2>
-          <ul className="aspd-check">{todo.map((t, i) => <li key={i} className={t.done ? "done" : ""}><span className="aspd-box" aria-hidden="true">{t.done ? "✓" : ""}</span><span>{t.text}</span></li>)}</ul>
-        </section>
-      ) : null}
     </article>
   );
 }
 
 // ─── the pieces of the sheet ───
-
-// The checklist: a box, the words, and a × on each row; a row to add the next.
-function Checklist({ value, readOnly, onChange, label }) {
-  const items = todoOf(value);
-  const [draft, setDraft] = useState("");
-  const write = (next) => onChange(JSON.stringify(next));
-  const add = () => { const t = draft.trim(); if (!t) return; write([...items, { text: t, done: false }]); setDraft(""); };
-  return (
-    <div className="asp-check" role="group" aria-label={label}>
-      {items.map((t, i) => (
-        <div key={i} className={"asp-check-row" + (t.done ? " done" : "")}>
-          <input type="checkbox" className="asp-check-box focusable" checked={t.done} disabled={readOnly} aria-label={"Done: " + t.text} onChange={e => write(items.map((x, k) => k === i ? { ...x, done: e.target.checked } : x))} />
-          {readOnly ? <span className="asp-check-text">{t.text}</span>
-            : <input className="asp-check-text focusable" value={t.text} maxLength={300} aria-label={"Step " + (i + 1)} onChange={e => write(items.map((x, k) => k === i ? { ...x, text: e.target.value } : x))} />}
-          {readOnly ? null : <button type="button" className="chip-x focusable" aria-label={"Remove: " + t.text} onClick={() => write(items.filter((_, k) => k !== i))}>×</button>}
-        </div>
-      ))}
-      {readOnly ? null : (
-        <div className="row">
-          <input className="focusable" value={draft} maxLength={300} aria-label="Add a step" onChange={e => setDraft(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); add(); } }} onBlur={() => { if (draft.trim()) add(); }} />
-          <button type="button" className="save focusable" aria-label="Add" onClick={add}>+</button>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ─── the student's sheet ───
 
@@ -220,7 +168,7 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
     return () => { alive = false; };
   }, [readOnly, classId, viewer?.id]);
 
-  // The one-time copy across from the exercise, and the checklist laid in.
+  // The one-time copy across from the exercise.
   useEffect(() => {
     if (readOnly || !answers || !ex || answers.prefilled === "1") return;
     const fill = (f, v) => { if (blank(answers, f) && String(v || "").trim()) set(f, String(v)); };
@@ -228,7 +176,6 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
     fill("treatment", ex.treatment);
     fill("includes", ex.includes);
     fill("sources", exerciseSourcesOf(ex).flatMap(r => r.lines).join("\n"));
-    if (!todoOf(answers.todo).length) set("todo", JSON.stringify(CHECKLIST.map(text => ({ text, done: false }))));
     set("prefilled", "1");
   }, [readOnly, answers === null, ex]);   // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -266,7 +213,6 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
     { id: "audio", say: copy.say("audioHead"), ok: !!clip },
     { id: "sources", say: copy.say("sourcesHead"), ok: !blank(answers, "sources") },
     { id: "reflect", say: copy.say("reflectHead"), ok: !blank(answers, "reflect") },
-    { id: "forward", say: copy.say("forwardHead"), ok: todoOf(answers.todo).some(t => t.text.trim()) },
   ];
   const go = (id) => { const el = document.getElementById("asp-" + id); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); };
   const bar = (
@@ -385,15 +331,6 @@ export function PreSheet({ store, viewer, classId, readOnly = false, storage, ed
             </label>
           </section>
 
-          <section className="part" id="asp-forward" aria-label={copy.say("forwardHead")}>
-            <div className="phead"><Words k="forwardHead" copy={copy} editing={editing} className="n" />{tick(todoOf(answers.todo).some(t => t.text.trim()))}</div>
-            <div className="field">
-              <Words k="forwardAsk" copy={copy} editing={editing} className="ask" />
-              <Words k="forwardSay" copy={copy} editing={editing} as="p" className="hint" />
-              <Checklist value={answers.todo} readOnly={readOnly} label={copy.say("forwardAsk")} onChange={v => set("todo", v)} />
-            </div>
-          </section>
-
           <div className="foot">
             <div className="say" aria-live="polite">{say}</div>
             <span className={"status" + (status === "retrying" || status === "failed-load" ? " bad" : "")} aria-live="polite">{STATUS[status]}</span>
@@ -457,12 +394,6 @@ export const PRE_CSS = `
 .as .asp-have-row{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr);gap:12px;font-size:15px;line-height:1.4}
 .as .asp-have-ask{color:var(--secondary)}
 .as .asp-have-lines{overflow-wrap:anywhere}
-.as .asp-check{display:grid;gap:8px}
-.as .asp-check-row{display:flex;align-items:center;gap:10px}
-.as .asp-check-row.done .asp-check-text{text-decoration:line-through;color:var(--secondary)}
-.as .asp-check-box{width:22px;height:22px;flex:none;accent-color:var(--accent);cursor:pointer}
-.as .asp-check-text{flex:1;min-width:0;font-family:var(--font);font-size:16px;min-height:40px;padding:0 12px;border:1px solid var(--line-strong);border-radius:10px;background:var(--card);color:var(--ink);outline:none}
-.as span.asp-check-text{display:flex;align-items:center;border-color:transparent;background:none;padding:0}
 
 .aspd{font-family:${SERIF};color:#1c1917;background:#fff;padding:36px 40px 44px;display:grid;gap:22px;min-height:320px}
 .aspd-head{display:grid;gap:10px}
@@ -478,11 +409,6 @@ export const PRE_CSS = `
 .aspd-list{margin:0;padding-left:22px;font-size:17px;line-height:1.5;display:grid;gap:4px}
 .aspd-player{width:100%}
 .aspd-wait{font-family:'Outfit',-apple-system,BlinkMacSystemFont,sans-serif;font-size:14px;color:#78716c}
-.aspd-check{list-style:none;margin:0;padding:0;display:grid;gap:8px;font-size:17px;line-height:1.45}
-.aspd-check li{display:flex;align-items:flex-start;gap:12px}
-.aspd-check li.done{color:#78716c;text-decoration:line-through}
-.aspd-box{flex:none;width:22px;height:22px;border-radius:6px;border:2px solid #a8a29e;display:grid;place-items:center;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700;color:#fff;margin-top:2px}
-.aspd-check li.done .aspd-box{background:${ST.ok};border-color:${ST.ok}}
 @media (max-width:1060px){
   .asp-bar{top:56px}
   .as .asp-bar-count{display:none}

@@ -587,7 +587,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   const [sd2Done, setSd2Done] = useState(false);
   // And for the card he writes for the class.
   const [noticeDone, setNoticeDone] = useState(false);
-  // And for the week 4 and week 8 check-in. Later lasts the visit, so it is
+  // And for the week 4 and week 9 check-in. Later lasts the visit, so it is
   // back the next time they open the class. Andrew, 2026-10-06: "get it again
   // on next visit."
   const [checkinDone, setCheckinDone] = useState(false);
