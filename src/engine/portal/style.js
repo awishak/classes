@@ -87,12 +87,12 @@ export const PORTAL_CSS = `
 .pt-chev{font-size:22px;line-height:1;color:var(--text-muted)}
 .pt-quiet{font-size:13px;color:var(--text-secondary);padding:0 4px;line-height:1.35}
 
-.pt-btn{font-size:15px;font-weight:600;border:0;border-radius:12px;min-height:44px;padding:0 16px;color:#fff;background:var(--ca-accent);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;white-space:nowrap}
-.pt-btn.light{background:#fff;color:var(--pt-hero)}
-.pt-btn.glass{background:rgba(255,255,255,.16);color:#fff}
-.pt-btn.plain{background:var(--surface-card);color:var(--text-primary);box-shadow:0 0 0 1px var(--line-strong)}
-.pt-btn.wide{width:100%}
-.pt-btn:disabled{opacity:.5;cursor:default}
+.pt-root .pt-btn{font-size:15px;font-weight:600;border:0;border-radius:12px;min-height:44px;padding:0 16px;color:#fff;background:var(--ca-accent);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;white-space:nowrap}
+.pt-root .pt-btn.light{background:#fff;color:var(--pt-hero)}
+.pt-root .pt-btn.glass{background:rgba(255,255,255,.16);color:#fff}
+.pt-root .pt-btn.plain{background:var(--surface-card);color:var(--text-primary);box-shadow:0 0 0 1px var(--line-strong)}
+.pt-root .pt-btn.wide{width:100%}
+.pt-root .pt-btn:disabled{opacity:.5;cursor:default}
 .pt-io{font-size:14px;font-weight:600;min-height:36px;padding:0 12px;border-radius:12px;border:0;background:var(--surface-card);box-shadow:0 0 0 1px var(--line-strong);color:var(--text-primary);white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
 .pt-io.go{background:var(--ca-accent);color:#fff;box-shadow:none}
 .pt-io.off{background:var(--surface-card);color:var(--text-muted);box-shadow:0 0 0 1px var(--line-strong);cursor:not-allowed}
