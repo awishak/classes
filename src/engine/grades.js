@@ -41,7 +41,19 @@ export const BUCKETS = [
     means: "Not finished, or not enough of the challenge to grade. An Incomplete counts as a zero until you finish." },
   { id: "f", label: "F", letter: "F", score: 0, blurb: "zero",
     means: "No credit for this one." },
+  // Andrew, 2026-11-10, on the visual story: "she didn't submit it. So she
+  // gets not submitted." Nothing turned in on a lettered challenge is its own
+  // word, not an F. No sentence under it; his comment is the message.
+  { id: "nosub", label: "Not submitted", letter: "Not submitted", score: 0, blurb: "counts as a zero", means: "" },
 ];
+
+// A plus or a minus on a lettered card. Andrew, 2026-11-10: "I'd like to give
+// some minuses on these things", then, asked what number sits behind each: "i
+// don't need numbers behind the grades." So the sign is on the letter the
+// student reads and nowhere else: a B+ sits in the B column and counts what a
+// B counts.
+export const signOf = (card) => (card?.sign === "+" || card?.sign === "-" ? card.sign : "");
+export const cardLetter = (card, b) => (b ? b.letter + (/^[A-D]$/.test(b.letter) ? signOf(card) : "") : "");
 
 // The other way to grade a challenge: did the student do what was asked.
 // Andrew, 2026-09-15: "on some challenges, i don't want to give letter
@@ -184,7 +196,7 @@ const releaseStateOf = (board, log, name) => {
   const sent = sentTo(board, log, name);
   if (!b) return sent && (log || []).some(e => e.board) ? "withdrawn" : null;
   if (!sent) return "new";
-  const same = sent.bucket === b.id && (sent.html || null) === (toHtml(card.comment) || null) && (sent.score ?? null) === scoreOf(card, b);
+  const same = sent.bucket === b.id && (sent.letter || b.letter) === cardLetter(card, b) && (sent.html || null) === (toHtml(card.comment) || null) && (sent.score ?? null) === scoreOf(card, b);
   return same ? "same" : "changed";
 };
 
@@ -202,7 +214,7 @@ const releaseStateOf = (board, log, name) => {
 // A grade this rough comes with a way to talk about it. Andrew, 2026-09-15:
 // "make a meeting should automatically go into the chat with a student who
 // gets an incomplete or a D or an F or a 0."
-const NEEDS_MEETING = new Set(["d", "f", "incomplete", "incomplete-c", "notsubmitted"]);
+const NEEDS_MEETING = new Set(["d", "f", "incomplete", "incomplete-c", "notsubmitted", "nosub"]);
 export const MEETING_LINE = "Automated message: here's a link to make a meeting with Dr. Ishak";
 
 export const releasePatch = (data, aid, now = Date.now(), opts = {}) => {
@@ -221,7 +233,7 @@ export const releasePatch = (data, aid, now = Date.now(), opts = {}) => {
     }
     const html = toHtml(card.comment);
     logs[name] = [...kept, { id: eid(now), ts: now, type: "grade", board: true,
-      score: scoreOf(card, b), letter: b.letter, bucket: b.id, html: html || null }];
+      score: scoreOf(card, b), letter: cardLetter(card, b), bucket: b.id, html: html || null }];
     // An Incomplete, a D, an F or a zero brings the calendar with it, once
     // per grade, as a message of its own on the challenge.
     if (opts.meetingLink && (NEEDS_MEETING.has(b.id) || scoreOf(card, b) === 0)) {
@@ -320,7 +332,7 @@ export const unseenGrades = (config, data, name) => {
     const subs = log.filter(e => e.type === "submission");
     const last = subs[subs.length - 1] || null;
     const linked = [...subs].reverse().find(e => e.link) || null;
-    return [{ aid: asg.id, title: asg.title, due: asg.due || "", letter: b.letter, bucket: b.id, means: b.means,
+    return [{ aid: asg.id, title: asg.title, due: asg.due || "", letter: sent.letter || b.letter, bucket: b.id, means: b.means,
       comment, more, gradedAt,
       link: linked?.link || "", note: String(last?.text || "").trim(), submittedAt: last?.ts || null }];
   });

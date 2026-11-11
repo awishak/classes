@@ -39,7 +39,7 @@ export default function GradeDeck({ config, items, onSeen, onDone, onOpen, child
 
   const card = stack[i];
   const gotIt = () => { onSeen?.(card.aid); if (i + 1 >= stack.length) onDone?.(); setI(i + 1); };
-  const missed = !card.submittedAt && !card.link && (card.bucket === "notsubmitted" || card.letter === "F" || card.letter === "Incomplete");
+  const missed = !card.submittedAt && !card.link && (card.bucket === "notsubmitted" || card.bucket === "nosub" || card.letter === "F" || card.letter === "Incomplete");
   const who = config.instructor?.name || "your instructor";
   const ghost = { minHeight: TAP, padding: "0 16px", borderRadius: 12, background: WHITE, border: "1px solid " + LINE_STRONG,
     fontFamily: F, fontSize: 16, fontWeight: 600, color: a, cursor: "pointer", display: "inline-flex", alignItems: "center", textDecoration: "none" };

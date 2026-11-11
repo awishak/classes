@@ -44,7 +44,7 @@ const TONE = { A: "great", Exceptional: "great", Complete: "great", B: "good", "
 export function cellOf(config, data, asg, name) {
   const st = statusOf(config, data, asg, name, new Set());
   const own = (score, b) => score != null && b && score !== b.score ? " " + score : "";
-  if (st.letter) { const b = bucketOf(st.grade?.bucket); return { say: short(st.letter) + own(st.grade?.score, b), kind: "done", tone: TONE[st.letter] || "", title: st.letter + (st.grade?.score != null ? ", " + st.grade.score : ""), letter: st.letter }; }
+  if (st.letter) { const b = bucketOf(st.grade?.bucket); return { say: short(st.letter) + own(st.grade?.score, b), kind: "done", tone: TONE[st.letter] || TONE[String(st.letter)[0]] || "", title: st.letter + (st.grade?.score != null ? ", " + st.grade.score : ""), letter: st.letter }; }
   const card = boardOf(data, asg.id).cards?.[name] || {};
   const b = card.bucket ? bucketOf(card.bucket) : null;
   if (b) return { say: short(b.letter) + own(card.score, b), kind: "pending", tone: TONE[b.letter] || "", title: b.letter + (card.score != null ? ", " + card.score : "") + ", not released", letter: b.letter };

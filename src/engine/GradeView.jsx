@@ -17,7 +17,7 @@ import { checkinTasksOf, isCheckin, answersOf, CHECKIN_QUESTIONS } from "./check
 import { schedulingLinkOf } from "../instructors.js";
 import { unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
 import { latenessOf } from "./lateness.js";
-import { regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
+import { signOf, regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
 import { studentHref } from "./StudentPage.jsx";
@@ -542,7 +542,16 @@ function Card({ config, student, profile, due, card, work, accent, checkin, colu
         {/* The student wrote and nobody has answered: say so where the card is. */}
         {work.regrade ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>Regrade requested</span>
           : work.waiting ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>New message</span> : null}
-        {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}{card.score != null ? <span style={{ fontWeight: 600, color: TEXT_SECONDARY }}> · {card.score}</span> : null}</span>
+        {/* A plus or a minus on a lettered card, in the column it is already
+            in. Andrew, 2026-11-10: "I'd like to give some minuses on these
+            things." Pressing the lit one takes the sign off again. */}
+        {grade && /^[A-D]$/.test(grade.letter) ? ["+", "-"].map(sg => (
+          <button key={sg} type="button" className="gv-focus" aria-pressed={signOf(card) === sg} aria-label={(sg === "+" ? "Plus" : "Minus") + " for " + student.name}
+            onClick={() => onSave({ sign: signOf(card) === sg ? "" : sg }, undefined)}
+            style={{ flex: "none", minWidth: HIT, minHeight: HIT, borderRadius: 8, cursor: "pointer", fontFamily: F, fontSize: 17, fontWeight: 700,
+              background: signOf(card) === sg ? accent : WHITE, color: signOf(card) === sg ? "#fff" : TEXT_PRIMARY, border: "1px solid " + (signOf(card) === sg ? accent : LINE_STRONG) }}>{sg === "+" ? "+" : "−"}</button>
+        )) : null}
+        {grade ? <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: accent }}>{grade.label}{/^[A-D]$/.test(grade.letter) ? signOf(card).replace("-", "−") : ""}{card.score != null ? <span style={{ fontWeight: 600, color: TEXT_SECONDARY }}> · {card.score}</span> : null}</span>
           : work.earlier ? <span style={{ flex: "none", fontSize: 13, color: TEXT_MUTED }}>earlier: {gradeText(work.earlier)}</span> : null}
       </div>
       {/* A check-in has answers rather than a file: the first one, and the
