@@ -377,7 +377,11 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
             // link and the place to hand the work in are.
             const href = it.type === "assignment" && it.asgId && config.path
               ? config.path + "/challenges/" + encodeURIComponent(it.asgId) : "";
-            return <ItemView key={it.id} item={it} picked={isPicked(it)} href={href} when=""
+            // Andrew, 2026-11-11: "all the readings in teh schedule should be
+            // links." A row with no address of its own opens its block's
+            // address, or the file attached to the block.
+            const open = it.url ? it : { ...it, url: block?.url || block?.media?.src || "" };
+            return <ItemView key={it.id} item={open} picked={isPicked(it)} href={href} when=""
               source={href ? "" : sourceOf(it, block)} />;
           };
           // A day is the site's card, the same one the front page draws, so a
