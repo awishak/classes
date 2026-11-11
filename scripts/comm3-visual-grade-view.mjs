@@ -52,6 +52,34 @@ const preOf = (s) => {
     topic: one(a.topic), learn: one(a.learn), headline: one(a.headline), kept: mine.kept || "", say: mine.say || "",
   };
 };
+// Directions and Work as the student reads them. Andrew, 2026-11-10: "i do
+// want all the letters in there, all four parts."
+const dirSay = (r, st, a) => {
+  if (a.dSay) return a.dSay;
+  const out = [], miss = (st?.missing || []).join(" ");
+  if (st && !st.html && (st.images < 6 || st.words < 150)) out.push(`Your story has ${st.images} images and ${st.words} words. I asked for 6 to 8 images and 150 to 300 words.`);
+  if (st?.late && a.d !== "A") out.push("Your story came in late.");
+  if (st && !st.submitted) out.push("You never pressed Submit on your story.");
+  if (/mark why|write a few words/.test(miss)) out.push("Some of your images are missing the reason they made the cut.");
+  if (/source line/.test(miss) || (r.slips || []).some(x => /No Source|no source/.test(x))) out.push("Every graphic needs a source line.");
+  if ((r.slips || []).some(x => /not marked as/.test(x))) out.push("One of your graphics isn't marked as a graphic.");
+  if ((r.slips || []).some(x => /topic is not/.test(x))) out.push("The topic is not the one I approved.");
+  if ((r.slips || []).some(x => /press photo/.test(x))) out.push("Image 7 needs a credit for the photographer.");
+  return out.length ? out.join(" ") : "Everything I asked for is here, and on time.";
+};
+const workOf = (s, a) => {
+  const p = s.pre, c = s.comments.onOthers;
+  const written = p && Object.values(p.answers || {}).some(v => String(v || "").trim());
+  // preOk: Andrew reviewed the page before its Submit stamp, so the stamp does not show the page was late.
+  const pre = p?.onTime || (a.preOk && p?.submitted) ? 2 : p?.submitted || written ? 1 : 0;
+  const com = c >= 8 ? 2 : c >= 4 ? 1 : c >= 1 ? 0.5 : 0;
+  const sum = pre + com;
+  const say = [
+    pre === 2 ? "Your pre-production was in on time" : p?.submitted ? "Your pre-production came in late" : written ? "You wrote your pre-production and never submitted it" : "You didn't turn in pre-production",
+    c >= 8 ? `you commented on ${c} classmates' stories.` : c > 0 ? `you commented on ${c} classmates' ${c === 1 ? "story" : "stories"}. I asked for 8.` : "you didn't comment on any classmates' stories. I asked for 8.",
+  ].join(pre === 2 && c >= 8 ? ", and " : ", and ");
+  return { letter: sum >= 4 ? "A" : sum >= 3 ? "B" : sum >= 2 ? "C" : sum > 0 ? "D" : "None", say };
+};
 const people = rows.slice().sort((a, b) => rank(a) - rank(b) || scoreOf(b) - scoreOf(a) || surname(a.name).localeCompare(surname(b.name))).map(r => {
   const s = byId.get(r.id), st = s.story, a = andrew[r.id] || {}, n = { ...(notes[r.id] || {}), ...a };
   const hasStory = !!(st && (st.images || st.html));
@@ -69,8 +97,8 @@ const people = rows.slice().sort((a, b) => rank(a) - rank(b) || scoreOf(b) - sco
     parts: [
       r.imagery ? { label: "Imagery", letter: a.i || r.imagery, yours: !!a.i, near: !a.i && !a.overall && r.near === "i", plus: n.ip || "", enc: n.ie || "" } : null,
       r.story ? { label: "Storytelling", letter: a.s || r.story, yours: !!a.s, near: !a.s && !a.overall && r.near === "s", plus: n.sp || "", enc: n.se || "" } : null,
-      { label: "Directions", letter: a.d || (r.directions === "-" ? "None" : r.directions === "revise" ? "Short of the minimum" : r.directions), yours: !!a.d, plus: a.d || !r.slips.length ? "Everything asked for is there." : "", off: a.d ? "" : r.slips.join("; ") },
-      { label: "Work", letter: r.work === "-" ? "None" : r.work, counted: r.workSay },
+      { label: "Directions", letter: a.d || (r.directions === "-" ? "None" : r.directions === "revise" ? "Short of the minimum" : r.directions), yours: !!a.d, plus: dirSay(r, st, a) },
+      { label: "Work", letter: a.w || workOf(s, a).letter, yours: !!a.w, plus: workOf(s, a).say },
     ].filter(Boolean),
   };
 });

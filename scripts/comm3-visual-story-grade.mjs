@@ -41,9 +41,13 @@ if (!BUCKETS.find(b => b.id === "nosub")) throw new Error("the Not submitted col
 const commentOf = (p) => {
   const out = [];
   if (p.note) out.push(p.note);
-  p.parts.filter(x => x.label === "Imagery" || x.label === "Storytelling").forEach(x => {
-    const lines = [x.plus, x.enc].filter(Boolean);
-    if (lines.length) out.push("**" + x.label + "**\n" + lines.join("\n"));
+  // All four parts, each with its letter. Andrew, 2026-11-10: "i do want all
+  // the letters in there, all four parts." A student with no story gets his
+  // line and nothing else.
+  if (p.overall !== "Not submitted") p.parts.forEach(x => {
+    const letter = x.letter === "Short of the minimum" ? "D" : x.letter;
+    if (letter === "None") return;
+    out.push("**" + x.label + ": " + letter.replace("-", "−") + "**\n" + [x.plus, x.enc].filter(Boolean).join("\n"));
   });
   return out.join("\n\n");
 };
