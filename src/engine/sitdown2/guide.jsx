@@ -41,7 +41,7 @@ import { gameClient } from "../gameClient.js";
 import { useClassState } from "../store.js";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
-import { TEAM_TOPICS_KEY, PARTS as TOPIC_PARTS, linesOf } from "../teamtopics/sheet.jsx";
+import { TEAM_TOPICS_KEY, TEAM_TOPICS_TITLE, topicsHref, DEFAULT_COPY as TOPICS_COPY, PARTS as TOPIC_PARTS, linesOf } from "../teamtopics/sheet.jsx";
 import * as E from "../takeover/engine.js";
 import { parseConcepts, castOf, teamOf, benchNameOf } from "../takeover/game.jsx";
 import { SITDOWN2, assignedFor } from "./facts.js";
@@ -105,6 +105,15 @@ export const DEFAULT_COPY = {
   "nav.start": "Start",
   "nav.questions": "Questions",
   "nav.guide": "Your guide",
+  // The three things a student needs open while writing. Andrew, 2026-11-11:
+  // "students needs links to their concepts assignment from a few weeks
+  // prior, as well as the Ishak 2017 and Ishak 2021 articles. make those
+  // prominent." The names and the files are the Concepts sheet's own.
+  "link.concepts": TEAM_TOPICS_TITLE,
+  "read.2017.title": TOPICS_COPY["read.2017.title"],
+  "read.2017.url": TOPICS_COPY["read.2017.url"],
+  "read.2021.title": TOPICS_COPY["read.2021.title"],
+  "read.2021.url": TOPICS_COPY["read.2021.url"],
 };
 
 // The nav's short names, so six concepts fit on one line.
@@ -359,6 +368,15 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
     </div>
   ) : null;
 
+  const links = (
+    <div className="reads">
+      {classId ? <a className="read" href={topicsHref(classId)} target="_blank" rel="noreferrer">{copy.say("link.concepts")} ↗</a> : null}
+      {["2017", "2021"].map(y => editing
+        ? <span key={y} className="readedit"><Words k={"read." + y + ".title"} copy={copy} editing /><Words k={"read." + y + ".url"} copy={copy} editing /></span>
+        : <a key={y} className="read" href={copy.say("read." + y + ".url")} target="_blank" rel="noreferrer">{copy.say("read." + y + ".title")} ↗</a>)}
+    </div>
+  );
+
   let body;
   if (page === "start") {
     body = (
@@ -367,6 +385,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
         <Words k="credit" copy={copy} editing={editing} as="p" className="credit" />
         {editBar}
         <Words k="intro" copy={copy} editing={editing} as="p" className="p lead" />
+        {links}
         <Words k="faqHead" copy={copy} editing={editing} as="h2" className="h2" />
         <dl className="faq">
           {[1, 2, 3, 4].map(i => (
@@ -420,6 +439,7 @@ export function CultureGuide({ store, viewer, classId, storageKey, readOnly = fa
           </div>
           <h1 className="h1">{nameOf(id)}</h1>
           {editBar}
+          {links}
           {ta.length || la.length ? (
             <>
               <Words k="beforeHead" copy={copy} editing={editing} as="h2" className="h2 badge" />
@@ -614,6 +634,11 @@ export const CSS = `
 .cg .qa a,.cg .lnk{color:var(--accent);text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:3px}
 .cg .lnk{font:inherit;background:none;border:0;padding:0;cursor:pointer;min-height:44px}
 .cg .lnk.small{font-size:14px;font-weight:600;min-height:0;margin-left:12px}
+.cg .reads{display:flex;flex-wrap:wrap;gap:10px;width:100%}
+.cg .read{display:inline-flex;align-items:center;min-height:48px;padding:10px 18px;border-radius:12px;background:var(--accent);color:var(--on-accent);font-size:17px;font-weight:600;line-height:1.25;text-decoration:none}
+.cg .read:hover{filter:brightness(1.08)}
+.cg .read:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.cg .readedit{display:grid;gap:4px;flex:1 1 280px}
 .cg .gh{margin:6px 0 0;font-size:18px;font-weight:600;line-height:1.4;max-width:68ch}
 .cg .chips{display:flex;flex-wrap:wrap;gap:6px;width:100%}
 .cg .chip{font:inherit;font-size:15px;display:inline-flex;align-items:center;gap:8px;text-align:left;padding:0 13px;min-height:38px;border-radius:999px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;line-height:1.2}
@@ -670,5 +695,5 @@ export const CSS = `
 .cg .vsp-edit.h2{font-family:var(--serif);font-size:25px}
 .cg .vsp-edit.lead{font-family:var(--serif);font-size:21px}
 @media (max-width:720px){.cg{padding:8px 8px 48px}.cg .pg{padding:20px 16px 24px}.cg .qa{grid-template-columns:1fr}.cg .sr{grid-template-columns:1fr}.cg .paper.book{padding:20px}.cg .foot{padding-inline:16px}}
-@media print{.cg{background:#fff;padding:0}.cg .nav,.cg .bar,.cg .foot,.cg .editbar,.cg .lnk{display:none!important}.cg .sheet{border:0;max-width:none}.cg .paper.book{border:0;padding:0}.cg .ch{break-inside:avoid}}
+@media print{.cg{background:#fff;padding:0}.cg .nav,.cg .bar,.cg .foot,.cg .editbar,.cg .lnk,.cg .reads{display:none!important}.cg .sheet{border:0;max-width:none}.cg .paper.book{border:0;padding:0}.cg .ch{break-inside:avoid}}
 `;

@@ -71,13 +71,12 @@ export const DEFAULT_COPY = {
   credit: "COMM 118 · Due end of day Wednesday, October 28",
   intro: "Before class on Wednesday, October 28, please read some of the article and/or chapter I've written and posted for you here: Communication in Sports Teams: A Review (2017) or Communicating in Sports Teams (2021). The second one is based on the first one, so you'll see some overlap.\n\nThere are a number of concepts relating to team communication and culture. Peruse the different concepts and choose five that you are interested in. Read those sections. Then, please note three things for each chapter:\n\n1. Something you noticed (an interesting finding)\n2. Something you think (an opinion about that finding or another one)\n3. Something you wonder about (a question that you would want to explore on this concept.\n\nThe goal here is to be observant, opinionated, and most of all, curious. Please complete this by end of day on Wednesday.",
   readings: "The readings",
-  // The 2017 review is the file he attached to its block on October 23. The
-  // 2021 chapter has no file yet, so its link goes to Wednesday on the
-  // schedule, where the file shows up once attached; the line is his to edit.
+  // Both are the files he attached to their blocks on October 23; the lines
+  // are his to edit.
   "read.2017.title": "Communication in Sports Teams: A Review (Ishak, 2017)",
   "read.2017.url": "https://ybuchgebudixbyrcxpik.supabase.co/storage/v1/object/public/notes/comm118/2026-10/mvll4dr9-communication-in-sports-teams-a-review.pdf",
   "read.2021.title": "Communicating in Sports Teams (Ishak, 2021)",
-  "read.2021.url": "/comm118/schedule/oct-28",
+  "read.2021.url": "https://ybuchgebudixbyrcxpik.supabase.co/storage/v1/object/public/notes/shared/2026-10/mvll4s2y-ch032-9781800435018.pdf",
   conceptAsk: "Concept",
   conceptHint: "Name the concept, or tap one from the chapters.",
   moreAsk: "What topics are not covered here that you think would be interesting?",
