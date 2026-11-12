@@ -7,7 +7,7 @@
 // 2026-10-29: "an instructor page that tells me exactly why everything's
 // happening and exactly how everything is happening").
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
@@ -15,7 +15,9 @@ import { Shell, useAllSheets, useClipUrls, useInstructorRead } from "./control.j
 import { Face, Chip } from "../portal/bits.jsx";
 import { StudentLink } from "../StudentPage.jsx";
 import { audioOf, FORMAT_SAY, MAX_BYTES } from "./audio.js";
-import { MAX_STORY_SECONDS } from "./storymodel.js";
+import { MAX_STORY_SECONDS, clock } from "./storymodel.js";
+import { linesOf } from "./bits.jsx";
+import { sentencesOf, passageOf, paragraphsOf, sourcePieces, nameOfLink } from "./readtext.js";
 import * as P from "./pre.jsx";
 import * as R from "./research.jsx";
 import * as I from "./ideas.jsx";
@@ -36,53 +38,134 @@ const when = (iso) => new Date(iso).toLocaleString("en-US", { month: "short", da
 // alone (control.jsx useInstructorRead), written by
 // scripts/comm3-audio-pre-read-push.mjs: { at, notes: [..], students: {
 // [email]: { read, meets, opener, thesis, closer, interview, structure, news,
-// gaps, transcript } } }. Students never see the file.
+// gaps, transcript } }, links: { [url]: { site, title, host } } }. Students
+// never see the file.
 export const READ_SHEET = "audio-pre";
 const VERDICT = { meets: "Meets the board", partly: "Partly", not: "Not yet" };
 const MARKS = [["direct", "Direct"], ["eloquent", "Eloquent"], ["shift", "Shift"], ["tension", "Tension"], ["bigger", "Bigger picture"], ["money", "Money"]];
 
-function ReadPart({ label, part, marks = false }) {
+// Andrew, 2026-11-12, on the first version: "make this page prettier. put
+// their quotes in quotes," "give me more of the openers. you are giving me
+// too little info for the opener, thesis, and closer," "can you tell me what
+// their sources are besides the urls?", "let me pop open a transcript of each
+// one. make it look nice," and "any time you want to give me numbers as a
+// summary of class, give me bar charts or a table. not the individual boxes
+// with a number." So each part shows the quoted line inside the words around
+// the line, in quotation marks (readtext.js passageOf); the sources are named
+// by site and headline (read.links, from scripts/comm3-audio-pre-links.mjs);
+// the transcript opens as a page over the review; and the class counts are
+// bars.
+const curl = (s) => String(s || "").replace(/"([^"]+)"/g, "“$1”");
+
+function ReadPart({ label, part, id, sents, marks = false }) {
   const p = part || {};
+  const v = p.verdict in VERDICT ? p.verdict : "not";
+  const more = p.quote ? passageOf(sents, p.quote, id) : null;
   return (
-    <section className={"apr-part apr-" + (p.verdict || "not")}>
-      <div className="apr-ph">
+    <section className={"apr-row apr-" + v}>
+      <div className="apr-side">
         <h3 className="apr-pl">{label}</h3>
         {p.kind ? <span className="apr-kind">{p.kind}</span> : null}
-        <span className="apr-v">{VERDICT[p.verdict] || VERDICT.not}</span>
+        <span className="apr-v">{VERDICT[v]}</span>
+        {p.at ? <span className="apr-at">{p.at}</span> : null}
       </div>
-      {p.quote ? <p className="apr-quote">{p.at ? <span className="apr-at">{p.at}</span> : null}{p.quote}</p> : null}
-      {p.say ? <p className="apr-say">{p.say}</p> : null}
-      {marks ? <div className="apr-marks">{MARKS.map(([id, say]) => <span key={id} className={"apr-mark" + ((p.marks || []).includes(id) ? " on" : "")}>{say}</span>)}</div> : null}
+      <div className="apr-main">
+        {p.quote ? (
+          <blockquote className="apr-quote">
+            {more
+              ? <>“{more.cutStart ? "… " : ""}{more.before ? more.before + " " : ""}<mark className="apr-hl">{more.mark}</mark>{more.after ? " " + more.after : ""}{more.cutEnd ? " …" : ""}”</>
+              : <>“<mark className="apr-hl">{p.quote}</mark>”</>}
+          </blockquote>
+        ) : null}
+        {p.say ? <p className="apr-say">{curl(p.say)}</p> : null}
+        {marks ? <div className="apr-marks">{MARKS.map(([m, say]) => <span key={m} className={"apr-mark" + ((p.marks || []).includes(m) ? " on" : "")}>{say}</span>)}</div> : null}
+      </div>
     </section>
   );
 }
 
-export function ReadPanel({ read, sheet, at }) {
-  const fact = (label, x) => (x && x.say ? <p className="apr-fact"><b>{label}</b> {x.say}</p> : null);
+// The student's sources, named: an address shows its site and its headline.
+function Sources({ text, links }) {
+  const lines = linesOf(text);
+  if (!lines.length) return null;
+  return (
+    <ul className="apr-src">
+      {lines.map((line, i) => (
+        <li key={i}>
+          {sourcePieces(line).map((piece, j) => {
+            if (!piece.url) return <span key={j}>{piece.text}</span>;
+            const n = nameOfLink(piece.url, links);
+            return <a key={j} className="apr-link" href={piece.url} target="_blank" rel="noreferrer"><b>{n.site}</b>{n.title ? <span>{"“" + n.title + "”"}</span> : null}</a>;
+          })}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const PART_SAY = { opener: "Opener", thesis: "Thesis", closer: "Closer" };
+
+// The transcript as a page over the review, the three quoted lines marked.
+export function Transcript({ read, sents, title, name, url, onClose }) {
+  useEffect(() => {
+    const key = (e) => { if (e.key === "Escape") onClose(); };
+    const was = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", key);
+    return () => { window.removeEventListener("keydown", key); document.body.style.overflow = was; };
+  }, [onClose]);
+  const paras = paragraphsOf(sents, ["opener", "thesis", "closer"].map(k => [k, read[k]?.quote]));
+  const verdict = (k) => (read[k]?.verdict in VERDICT ? read[k].verdict : "not");
+  return (
+    <div className="apr-pop" role="dialog" aria-modal="true" aria-label={"Transcript, " + (name || "")} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <article className="apr-page">
+        <div className="apr-page-top">
+          {url ? <audio className="apr-page-audio" controls preload="metadata" src={url} /> : <span />}
+          <button type="button" className="apr-close pt-focus" onClick={onClose}>Close</button>
+        </div>
+        <header className="apr-page-head">
+          <span className="apr-page-kicker">{"Transcript" + (read.seconds ? " · " + clock(read.seconds) : "")}</span>
+          {title ? <h2 className="apr-page-h">{title}</h2> : null}
+          {name ? <p className="apr-page-by">{name}</p> : null}
+        </header>
+        <div className="apr-page-body">
+          {paras.map((p, i) => (
+            <p key={i} className="apr-para">
+              {p.at ? <span className="apr-para-at">{p.at}</span> : null}
+              {p.runs.map((r, j) => (r.part
+                ? <span key={j}><span className={"apr-tag apr-" + verdict(r.part)}>{PART_SAY[r.part]}{read[r.part]?.at ? " " + read[r.part].at : ""}</span><mark className={"apr-hl apr-" + verdict(r.part)}>{r.text}</mark>{" "}</span>
+                : <span key={j}>{r.text + " "}</span>))}
+            </p>
+          ))}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+export function ReadPanel({ read, sheet, at, links, title = "", name = "", url = "" }) {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  const sents = useMemo(() => sentencesOf(read.transcript), [read.transcript]);
+  const fact = (label, x) => (x && x.say ? <div className="apr-row apr-fact"><h3 className="apr-pl">{label}</h3><p className="apr-say">{curl(x.say)}</p></div> : null);
   // A read written before the student handed in again says so.
   const again = !!(sheet?.submitted_at && at && new Date(sheet.submitted_at).getTime() > new Date(at).getTime());
+  const sources = String(sheet?.answers?.sources || "").trim();
   return (
     <div className="apr-read">
       <div className="apr-rh"><h2 className="apr-rt">Claude's read</h2><span className="apr-n">{read.meets} of 3 meet the board</span></div>
-      {again ? <p className="apr-fact"><b>{"Handed in again " + when(sheet.submitted_at) + ", after this read was written."}</b></p> : null}
-      {read.read ? <p className="apr-fact">{read.read}</p> : null}
-      <div className="apr-parts">
-        <ReadPart label="Opener" part={read.opener} />
-        <ReadPart label="Thesis" part={read.thesis} marks />
-        <ReadPart label="Closer" part={read.closer} />
-      </div>
-      <div className="apr-facts">
-        {fact("Interview.", read.interview)}
-        {fact("Structure.", read.structure)}
-        {fact("New information.", read.news)}
-        {fact("Music and field audio.", read.gaps)}
-      </div>
-      {(read.transcript || []).length ? (
-        <details className="aic-fold">
-          <summary className="pt-focus">The transcript</summary>
-          <div className="apr-script">{read.transcript.map((t, i) => <p key={i}><span className="apr-at">{t.at}</span>{t.text}</p>)}</div>
-        </details>
-      ) : null}
+      {again ? <p className="apr-lede"><b>{"Handed in again " + when(sheet.submitted_at) + ", after this read was written."}</b></p> : null}
+      {read.read ? <p className="apr-lede">{curl(read.read)}</p> : null}
+      <ReadPart label="Opener" id="opener" part={read.opener} sents={sents} />
+      <ReadPart label="Thesis" id="thesis" part={read.thesis} sents={sents} marks />
+      <ReadPart label="Closer" id="closer" part={read.closer} sents={sents} />
+      {fact("Interview", read.interview)}
+      {fact("Structure", read.structure)}
+      {fact("New information", read.news)}
+      {fact("Music and field audio", read.gaps)}
+      {sources ? <div className="apr-row apr-fact"><h3 className="apr-pl">Sources</h3><Sources text={sources} links={links} /></div> : null}
+      {sents.length ? <div className="apr-row apr-open"><button type="button" className="apr-btn pt-focus" onClick={() => setOpen(true)}>The transcript</button></div> : null}
+      {open ? <Transcript read={read} sents={sents} title={title} name={name} url={url} onClose={close} /> : null}
     </div>
   );
 }
@@ -94,22 +177,57 @@ const tally = (list) => {
   return Object.entries(n).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 };
 
+// Class counts as bars, one row a count. rows is [[label, n, tone], ..].
+function Bars({ label, rows, of }) {
+  const top = of || Math.max(1, ...rows.map(r => r[1]));
+  return (
+    <table className="apr-bars">
+      {label ? <caption>{label}</caption> : null}
+      <tbody>
+        {rows.map(([say, n, tone]) => (
+          <tr key={say}>
+            <th scope="row">{say}</th>
+            <td className="apr-bar-n">{n}</td>
+            <td className="apr-bar-cell"><span className={"apr-bar" + (tone ? " apr-" + tone : "")} style={{ width: (n / top) * 100 + "%" }} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// Opener, thesis and closer as a table: how many meet, partly meet, and do not yet.
+function VerdictTable({ reads }) {
+  const n = (k, v) => reads.filter(r => (r[k]?.verdict in VERDICT ? r[k].verdict : "not") === v).length;
+  return (
+    <table className="apr-bars apr-vt">
+      <thead><tr><th /><th scope="col">{VERDICT.meets}</th><th scope="col">{VERDICT.partly}</th><th scope="col">{VERDICT.not}</th><th /></tr></thead>
+      <tbody>
+        {[["opener", "Opener"], ["thesis", "Thesis"], ["closer", "Closer"]].map(([k, say]) => (
+          <tr key={k}>
+            <th scope="row">{say}</th>
+            <td className="apr-bar-n">{n(k, "meets")}</td><td className="apr-bar-n">{n(k, "partly")}</td><td className="apr-bar-n">{n(k, "not")}</td>
+            <td className="apr-bar-cell"><span className="apr-stack">{["meets", "partly", "not"].map(v => (n(k, v) ? <span key={v} className={"apr-bar apr-" + v} style={{ flexGrow: n(k, v) }} /> : null))}</span></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
 export function ReadSummary({ reads, notes }) {
   if (!reads.length) return null;
-  const meets = (k) => reads.filter(r => r[k]?.verdict === "meets").length;
-  const row = (label, pairs) => <p className="apr-fact"><b>{label}</b> {pairs.map(([k, n]) => k + " " + n).join(", ")}.</p>;
+  const talk = reads.filter(r => r.interview?.has).length;
   return (
     <section className="apr-sum" aria-label="Claude's read of the class">
       <h2 className="apr-rt">Claude's read, {reads.length} clips in this section</h2>
-      <div className="pt-tiles apr-tiles">
-        <div className="pt-tile"><span className="pt-tileN">{meets("opener")}</span><span className="pt-tileL">Openers meet the board</span></div>
-        <div className="pt-tile"><span className="pt-tileN">{meets("thesis")}</span><span className="pt-tileL">Thesis statements meet</span></div>
-        <div className="pt-tile"><span className="pt-tileN">{meets("closer")}</span><span className="pt-tileL">Closers meet</span></div>
-        <div className="pt-tile"><span className="pt-tileN">{reads.filter(r => r.interview?.has).length}</span><span className="pt-tileL">Have an interview</span></div>
+      <VerdictTable reads={reads} />
+      <div className="apr-pair">
+        <Bars label="Openers by kind" rows={tally(reads.map(r => r.opener?.kind))} />
+        <Bars label="Closers by kind" rows={tally(reads.map(r => r.closer?.kind))} />
       </div>
-      {row("Openers by kind.", tally(reads.map(r => r.opener?.kind)))}
-      {row("Closers by kind.", tally(reads.map(r => r.closer?.kind)))}
-      {(notes || []).map((n, i) => <p key={i} className="apr-fact">{n}</p>)}
+      <Bars label="Interview" rows={[["Have an interview", talk, "meets"], ["No interview yet", reads.length - talk, "not"]]} of={reads.length} />
+      {(notes || []).map((n, i) => <p key={i} className="apr-lede">{curl(n)}</p>)}
     </section>
   );
 }
@@ -152,10 +270,8 @@ export function PreReview({ config, worksheetKey, roster }) {
           </div>
         ) : null}
       </header>
-      <div className="pt-tiles" aria-label="Running summary">
-        <div className="pt-tile aic-t-done"><span className="pt-tileN">{submitted}</span><span className="pt-tileL">Submitted</span></div>
-        <div className="pt-tile aic-t-due"><span className="pt-tileN">{started}</span><span className="pt-tileL">Started</span></div>
-        <div className="pt-tile"><span className="pt-tileN">{rows.length - submitted - started}</span><span className="pt-tileL">Not opened</span></div>
+      <div className="apr-in" aria-label="Running summary">
+        <Bars rows={[["Submitted", submitted, "meets"], ["Started", started, "partly"], ["Not opened", rows.length - submitted - started, "none"]]} of={rows.length} />
       </div>
       {notIn.length ? (
         <details className="aic-fold">
@@ -176,6 +292,7 @@ export function PreReview({ config, worksheetKey, roster }) {
           const a = sheet.answers || {};
           const clip = audioOf(a.audio);
           const left = P.missingOf(a).length;
+          const url = clip ? urls[clip.path] || "" : "";
           return (
             <article key={student.email} className={"pt-row aic-card" + (sheet.submitted_at ? "" : " due")}>
               <div className="aic-head">
@@ -188,9 +305,9 @@ export function PreReview({ config, worksheetKey, roster }) {
                   </div>
                 </div>
               </div>
-              {mine ? <ReadPanel read={mine} sheet={sheet} at={read.at} /> : null}
+              {mine ? <ReadPanel read={mine} sheet={sheet} at={read.at} links={read.links} title={String(a.story || "").trim()} name={student.name} url={url} /> : null}
               {mine ? <p className="apr-work">{student.name.split(" ")[0] + "'s pre-production, as written"}</p> : null}
-              <div className="apr-doc"><style>{P.PRE_CSS}</style><P.PreView answers={a} url={clip ? urls[clip.path] || "" : ""} /></div>
+              <div className="apr-doc"><style>{P.PRE_CSS}</style><P.PreView answers={a} url={url} /></div>
             </article>
           );
         })}
@@ -202,34 +319,81 @@ export function PreReview({ config, worksheetKey, roster }) {
 const REVIEW_CSS = `
 .apr-doc{margin-top:12px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
 .apr-doc .aspd{padding:26px 28px 30px}
-.apr-sum{display:flex;flex-direction:column;gap:10px;margin:16px 0;padding:18px 20px;border-radius:16px;background:var(--surface-card);box-shadow:0 0 0 1px var(--line-strong)}
-.aic .apr-tiles{max-width:none}
-.apr-read{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:14px;background:var(--surface-sunk)}
-.apr-rh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
-.apr-rt{margin:0;font-size:20px;font-weight:700}
+.apr-in{margin:16px 0 4px;max-width:560px}
+.apr-sum{display:flex;flex-direction:column;gap:18px;margin:20px 0;padding:22px 24px 24px;border-radius:16px;background:var(--surface-card);box-shadow:0 0 0 1px var(--line-soft)}
+.apr-pair{display:grid;grid-template-columns:1fr 1fr;gap:18px 40px}
+.apr-bars{width:100%;border-collapse:collapse;font-size:16px;line-height:1.3}
+.apr-bars caption{text-align:left;font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary);padding-bottom:6px}
+.apr-bars th{font-weight:500;text-align:left;white-space:nowrap;padding:6px 16px 6px 0;width:1%}
+.apr-bars thead th{font-size:14px;font-weight:600;color:var(--text-secondary);padding:0 14px 4px 0;text-align:right}
+.apr-bars td{padding:6px 0}
+.apr-bars tbody tr+tr th,.apr-bars tbody tr+tr td{border-top:1px solid var(--line-soft)}
+.apr-bar-n{width:1%;white-space:nowrap;text-align:right;padding-right:14px!important;font-weight:700;font-variant-numeric:tabular-nums}
+.apr-bar-cell{width:100%}
+.apr-bar{display:block;height:14px;min-width:3px;border-radius:4px;background:var(--text-primary)}
+.apr-bar.apr-meets{background:var(--pt-done-ink)}
+.apr-bar.apr-partly{background:var(--pt-due-ink)}
+.apr-bar.apr-not{background:var(--pt-late-ink)}
+.apr-bar.apr-none{background:var(--text-muted)}
+.apr-stack{display:flex;gap:2px;width:100%}
+.apr-stack .apr-bar{flex-basis:0;min-width:3px}
+.apr-read{display:flex;flex-direction:column;padding-top:4px}
+.apr-rh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--line-strong)}
+.apr-rt{margin:0;font-family:var(--pt-serif);font-size:24px;font-weight:600;line-height:1.2}
 .apr-n{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums}
-.apr-parts{display:flex;flex-direction:column;gap:10px}
-.apr-part{display:flex;flex-direction:column;gap:8px;padding:14px 16px 14px 20px;border-radius:12px;background:var(--surface-card);box-shadow:inset 5px 0 0 var(--pt-late-ink)}
-.apr-part.apr-meets{box-shadow:inset 5px 0 0 var(--pt-done-ink)}
-.apr-part.apr-partly{box-shadow:inset 5px 0 0 var(--pt-due-ink)}
-.apr-work{margin:4px 0 0;padding-top:16px;border-top:1px solid var(--line-strong);font-size:16px;font-weight:600}
-.apr-ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.apr-pl{margin:0;font-size:17px;font-weight:700}
-.apr-kind{font-size:15px;font-weight:600;padding:2px 10px;border-radius:999px;background:var(--surface-sunk);color:var(--text-primary)}
-.apr-v{margin-left:auto;font-size:15px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--pt-late);color:var(--pt-late-ink)}
+.apr-lede{margin:10px 0 0;font-size:18px;line-height:1.55;max-width:860px}
+.apr-lede b{font-weight:700}
+.apr-read .apr-lede:last-of-type{margin-bottom:18px}
+.apr-row{display:grid;grid-template-columns:168px minmax(0,1fr);gap:8px 28px;padding:20px 0;border-top:1px solid var(--line-soft)}
+.apr-side{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.apr-main{display:flex;flex-direction:column;gap:12px;min-width:0}
+.apr-pl{margin:0;font-size:17px;font-weight:700;line-height:1.35}
+.apr-kind{font-size:15px;color:var(--text-secondary)}
+.apr-v{font-size:14px;font-weight:700;padding:2px 10px;border-radius:999px;background:var(--pt-late);color:var(--pt-late-ink)}
 .apr-meets .apr-v{background:var(--pt-done);color:var(--pt-done-ink)}
 .apr-partly .apr-v{background:var(--pt-due);color:var(--pt-due-ink)}
-.apr-quote{margin:0;font-family:var(--pt-serif);font-size:17px;line-height:1.45;overflow-wrap:anywhere}
-.apr-at{font-family:var(--font,inherit);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-secondary);margin-right:8px}
-.apr-say{margin:0;font-size:17px;line-height:1.5;color:var(--text-primary)}
+.apr-at{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-secondary)}
+.apr-quote{margin:0;padding-left:18px;border-left:3px solid var(--pt-late-ink);font-family:var(--pt-serif);font-size:19px;line-height:1.6;color:var(--text-primary);overflow-wrap:anywhere;max-width:780px}
+.apr-meets .apr-quote{border-left-color:var(--pt-done-ink)}
+.apr-partly .apr-quote{border-left-color:var(--pt-due-ink)}
+.apr-hl{color:inherit;font-weight:600;background:var(--pt-late);padding:2px 3px;border-radius:4px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.apr-meets .apr-hl,.apr-hl.apr-meets{background:var(--pt-done)}
+.apr-partly .apr-hl,.apr-hl.apr-partly{background:var(--pt-due)}
+.apr-say{margin:0;font-size:17px;line-height:1.55;color:var(--text-primary);max-width:780px}
 .apr-marks{display:flex;flex-wrap:wrap;gap:6px}
 .apr-mark{font-size:14px;font-weight:600;padding:2px 10px;border-radius:999px;box-shadow:0 0 0 1px var(--line-strong);color:var(--text-secondary)}
 .apr-mark.on{background:var(--text-primary);color:var(--surface-page);box-shadow:none}
-.apr-facts{display:flex;flex-direction:column;gap:8px}
-.apr-fact{margin:0;font-size:17px;line-height:1.5}
-.apr-fact b{font-weight:700}
-.apr-script{display:flex;flex-direction:column;gap:10px;padding:8px 4px}
-.apr-script p{margin:0;font-size:16px;line-height:1.55;overflow-wrap:anywhere}
+.apr-fact{padding:14px 0}
+.apr-src{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:17px;line-height:1.5;max-width:780px;overflow-wrap:anywhere}
+.apr-link{color:var(--text-primary);text-decoration:none}
+.apr-link b{font-weight:700;margin-right:8px}
+.apr-link span{text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
+.apr-link:hover span{text-decoration-color:var(--text-primary)}
+.apr-open{padding:16px 0 4px;grid-template-columns:1fr}
+.apr-btn{justify-self:start;font:inherit;font-size:16px;font-weight:600;min-height:44px;padding:0 20px;border-radius:999px;border:0;cursor:pointer;background:var(--text-primary);color:var(--surface-page)}
+.apr-work{margin:4px 0 0;padding-top:16px;border-top:1px solid var(--line-strong);font-size:16px;font-weight:600}
+.apr-pop{position:fixed;inset:0;z-index:80;overflow:auto;padding:48px 16px 64px;background:rgba(0,0,0,.55)}
+.apr-page{max-width:760px;margin:0 auto;border-radius:18px;background:var(--surface-card);color:var(--text-primary);box-shadow:0 24px 80px -20px rgba(0,0,0,.6)}
+.apr-page-top{position:sticky;top:-48px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-radius:18px 18px 0 0;background:var(--surface-card);box-shadow:0 1px 0 var(--line-soft)}
+.apr-page-audio{flex:1 1 auto;min-width:0;height:40px}
+.apr-close{flex:none;font:inherit;font-size:15px;font-weight:600;min-height:40px;padding:0 18px;border-radius:999px;border:0;cursor:pointer;background:var(--surface-sunk);color:var(--text-primary)}
+.apr-page-head{display:flex;flex-direction:column;gap:10px;padding:34px 56px 0}
+.apr-page-kicker{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary)}
+.apr-page-h{margin:0;font-family:var(--pt-serif);font-size:32px;font-weight:600;line-height:1.15;overflow-wrap:anywhere}
+.apr-page-by{margin:0;font-size:16px;color:var(--text-secondary)}
+.apr-page-body{display:flex;flex-direction:column;gap:20px;padding:28px 56px 56px;font-family:var(--pt-serif);font-size:19px;line-height:1.7}
+.apr-para{margin:0;overflow-wrap:anywhere}
+.apr-para-at{display:block;font-family:var(--font,inherit);font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-secondary);margin-bottom:2px}
+.apr-tag{font-family:var(--font,inherit);font-size:12.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;margin-right:8px;padding:2px 8px;border-radius:999px;vertical-align:2px;background:var(--pt-late);color:var(--pt-late-ink)}
+.apr-tag.apr-meets{background:var(--pt-done);color:var(--pt-done-ink)}
+.apr-tag.apr-partly{background:var(--pt-due);color:var(--pt-due-ink)}
+@media (max-width:760px){
+  .apr-row{grid-template-columns:1fr}
+  .apr-side{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+  .apr-pair{grid-template-columns:1fr}
+  .apr-page-head{padding:26px 22px 0}
+  .apr-page-body{padding:22px 22px 40px;font-size:18px}
+}
 `;
 
 export function PreControl({ config, worksheetKey, roster }) {
@@ -267,6 +431,9 @@ export function PreControl({ config, worksheetKey, roster }) {
 
       <h2 className="aic-h2">The document on the right</h2>
       <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review shows each student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
+
+      <h2 className="aic-h2">Claude's read on the review</h2>
+      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12.</p>
 
       <h2 className="aic-h2">Now</h2>
       <p className="aic-p">{n === null ? "Reading the sheets." : n + (n === 1 ? " sheet" : " sheets") + " started, " + (sheets.filter(s => s.submitted_at).length) + " submitted, of " + roster.filter(s => s.email && !isLurker(s.name)).length + " on the roster."}</p>
