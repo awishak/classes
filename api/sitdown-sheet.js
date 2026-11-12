@@ -13,7 +13,10 @@ import { callerAllowed } from "./_auth.js";
 import { SUPABASE_URL, serviceHeaders } from "./_supabase.js";
 
 const BUCKET = "instructor";
-const objectFor = (id) => `${String(id || "").toLowerCase().replace(/[^a-z0-9-]+/g, "")}-sitdown-1.json`;
+// ?sheet=2 is the Sit-Down 2 file, Claude's read of each Culture Guide, kept
+// the same way for the same reason. Andrew, 2026-11-12: "when i meet with a
+// student, i need to see their culture guide as well as your small analysis."
+const objectFor = (id, n) => `${String(id || "").toLowerCase().replace(/[^a-z0-9-]+/g, "")}-sitdown-${String(n) === "2" ? 2 : 1}.json`;
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
@@ -23,7 +26,7 @@ export default async function handler(req, res) {
     await new Promise(r => setTimeout(r, 1000));
     return res.status(401).json({ ok: false, error: "This sheet is the instructor's." });
   }
-  const object = objectFor(q.class || "comm118");
+  const object = objectFor(q.class || "comm118", q.sheet);
   const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${object}`, { headers: serviceHeaders() });
   if (r.status === 404 || r.status === 400) return res.status(404).json({ ok: false, error: "No sheet is written for this class yet." });
   if (!r.ok) return res.status(502).json({ ok: false, error: `The store said ${r.status}.` });

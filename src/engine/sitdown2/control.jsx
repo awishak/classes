@@ -81,8 +81,47 @@ function Shell({ config, title, intro, children, here }) {
   );
 }
 
+// Claude's read of each guide, for the instructor only. Andrew, 2026-11-12:
+// "when i meet with a student, i need to see their culture guide as well as
+// your small analysis of it." The reads name students and say whose guide is
+// thin, and this repo is public, so they sit in the private bucket beside the
+// Sit-Down 1 sheet and come out through /api/sitdown-sheet?sheet=2. The file
+// is { written, people: { [email]: { seen, read, strong, check: [], ask: [] } } };
+// scripts/sitdown-sheet.mjs --sheet 2 puts a new copy up, with no deploy.
+function useReads(config) {
+  const [reads, setReads] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/sitdown-sheet?sheet=2&class=" + encodeURIComponent(config.id), { headers: await authHeaders() });
+        const out = r.ok ? await r.json().catch(() => null) : null;
+        if (alive) setReads(out && out.people ? out : {});
+      } catch { if (alive) setReads({}); }
+    })();
+    return () => { alive = false; };
+  }, [config.id]);
+  return reads;
+}
+
+function Read({ read, guide }) {
+  if (!read) return null;
+  const again = !!(guide?.submitted_at && read.seen && new Date(guide.submitted_at).getTime() > new Date(read.seen).getTime());
+  return (
+    <div className="read">
+      <div className="h5">{"Claude's read"}</div>
+      {again ? <p className="p warn">{"Handed in again " + when(guide.submitted_at) + ", after this read was written."}</p> : null}
+      {read.read ? <p className="p">{read.read}</p> : null}
+      {read.strong ? <p className="p"><b>{"Strongest: "}</b>{read.strong}</p> : null}
+      {(read.check || []).length ? <><div className="h5">Thin or worth checking</div><ul className="rl">{read.check.map((x, i) => <li key={i}>{x}</li>)}</ul></> : null}
+      {(read.ask || []).length ? <><div className="h5">You could ask</div><ol className="rl">{read.ask.map((x, i) => <li key={i}>{x}</li>)}</ol></> : null}
+    </div>
+  );
+}
+
 export function CultureReview({ config, worksheetKey, roster }) {
   const { data, rows, sheets, error } = useRows(config, roster, [CULTURE_GUIDE_KEY]);
+  const reads = useReads(config);
   const handed = rows.filter(r => r.guide?.submitted_at).length;
   return (
     <Shell config={config} title="Every Culture Guide" here="review" intro={error ? "Could not read the sheets: " + error : !sheets ? "Reading the sheets." : handed + " handed in, " + (rows.filter(r => r.guide && !r.guide.submitted_at).length) + " started, " + rows.filter(r => !r.guide).length + " not opened. In the order of the meetings; a student with no time yet is at the end. This page asks again every half minute."}>
@@ -96,6 +135,7 @@ export function CultureReview({ config, worksheetKey, roster }) {
               <span className="meta">{r.slot ? whenOf(r.slot) : "No time yet"}</span>
               <span className={"ds" + (r.guide?.submitted_at ? " ok" : "")}>{!r.guide ? "Not opened" : r.guide.submitted_at ? "Handed in " + when(r.guide.submitted_at) : "Started, " + left.length + " missing"}</span>
             </summary>
+            <Read read={reads?.people?.[r.email]} guide={r.guide} />
             {r.guide ? (
               <>
                 {q.length ? <div className="asks"><div className="h5">Asks you to ask</div><ol className="askl">{q.map((x, i) => <li key={i} className="q">{x}</li>)}</ol></div> : null}
@@ -163,6 +203,11 @@ const CSS = `
 .sd .one[open] summary::before{content:"▾"}
 .sd .one[open]>*:not(summary){margin-top:16px}
 .sd .one .cg{padding:0;background:transparent}
+.sd .read{display:grid;gap:10px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--rr);padding:18px 22px 22px;box-sizing:border-box;box-shadow:inset 5px 0 0 var(--ink2)}
+.sd .read .p{margin:0;font-size:17px;line-height:1.5;color:var(--ink)}
+.sd .read .warn{font-weight:600}
+.sd .read .rl{margin:0;padding-left:24px;display:grid;gap:8px;font-size:17px;line-height:1.5;color:var(--ink)}
+@media (max-width:640px){.sd .read{padding:16px}}
 .sd .tbl{width:100%;border-collapse:collapse;font-size:15px;line-height:1.4}
 .sd .tbl th{text-align:left;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);padding:0 10px 10px 0;border-bottom:1px solid var(--line)}
 .sd .tbl td{vertical-align:top;padding:10px 10px 10px 0;border-bottom:1px solid var(--line)}

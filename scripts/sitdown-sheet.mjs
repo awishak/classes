@@ -27,8 +27,11 @@ const flag = (n) => { const i = args.indexOf("--" + n); return i >= 0 ? args[i +
 const write = args.includes("--write");
 const classId = flag("class") || "comm118";
 export const BUCKET = "instructor";
-export const objectFor = (id) => `${String(id || "").toLowerCase().replace(/[^a-z0-9-]+/g, "")}-sitdown-1.json`;
-const object = objectFor(classId);
+// --sheet 2 is the Sit-Down 2 file: Claude's read of each Culture Guide, keyed by email.
+//   node scripts/sitdown-sheet.mjs --sheet 2 --file private/comm118-sitdown-2.json --write
+const sheetNo = flag("sheet") === "2" ? 2 : 1;
+export const objectFor = (id, n = 1) => `${String(id || "").toLowerCase().replace(/[^a-z0-9-]+/g, "")}-sitdown-${n}.json`;
+const object = objectFor(classId, sheetNo);
 
 // The bucket, private, made the first time.
 const buckets = await (await fetch(`${SUPABASE_URL}/storage/v1/bucket`, { headers: H })).json();
@@ -45,8 +48,13 @@ const file = flag("file");
 if (file) {
   const text = readFileSync(new URL(file, ROOT), "utf8");
   const sheet = JSON.parse(text);
-  const people = Object.values(sheet.tables || {}).flatMap(t => t.people || []);
-  console.log(`${file}: written ${sheet.written}, ${Object.keys(sheet.tables || {}).length} tables, ${people.length} people, ${people.reduce((n, p) => n + (p.questions || []).length, 0)} questions, ${text.length} bytes`);
+  if (sheetNo === 2) {
+    const reads = Object.values(sheet.people || {});
+    console.log(`${file}: written ${sheet.written}, ${reads.length} reads, ${reads.reduce((n, p) => n + (p.ask || []).length, 0)} things to ask, ${text.length} bytes`);
+  } else {
+    const people = Object.values(sheet.tables || {}).flatMap(t => t.people || []);
+    console.log(`${file}: written ${sheet.written}, ${Object.keys(sheet.tables || {}).length} tables, ${people.length} people, ${people.reduce((n, p) => n + (p.questions || []).length, 0)} questions, ${text.length} bytes`);
+  }
   if (!write) { console.log(`Say --write to put it at ${BUCKET}/${object}.`); process.exit(0); }
   const r = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${object}`, { method: "POST", headers: { ...H, "Content-Type": "application/json", "x-upsert": "true" }, body: text });
   if (!r.ok) { console.error(`upload: ${r.status} ${(await r.text()).slice(0, 200)}`); process.exit(1); }
