@@ -57,7 +57,7 @@ function ReadPart({ label, part, marks = false }) {
   );
 }
 
-function ReadPanel({ read, sheet, at }) {
+export function ReadPanel({ read, sheet, at }) {
   const fact = (label, x) => (x && x.say ? <p className="apr-fact"><b>{label}</b> {x.say}</p> : null);
   // A read written before the student handed in again says so.
   const again = !!(sheet?.submitted_at && at && new Date(sheet.submitted_at).getTime() > new Date(at).getTime());
@@ -94,7 +94,7 @@ const tally = (list) => {
   return Object.entries(n).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 };
 
-function ReadSummary({ reads, notes }) {
+export function ReadSummary({ reads, notes }) {
   if (!reads.length) return null;
   const meets = (k) => reads.filter(r => r[k]?.verdict === "meets").length;
   const row = (label, pairs) => <p className="apr-fact"><b>{label}</b> {pairs.map(([k, n]) => k + " " + n).join(", ")}.</p>;
