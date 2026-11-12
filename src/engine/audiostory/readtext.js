@@ -115,5 +115,5 @@ export function nameOfLink(url, links) {
     const seg = u.pathname.split("/").filter(Boolean).filter(s => /[a-z]{3,}-[a-z]/i.test(s)).pop() || "";
     slug = decodeURIComponent(seg).replace(/\.[a-z0-9]{2,5}$/i, "").replace(/[-_]+/g, " ").trim();
   } catch { /* an address that does not parse keeps its own text */ }
-  return { site: got.site || host, title: got.title || slug };
+  return { site: got.site || host, title: String(got.title || slug).replace(/[\s|–-]+$/, "") };
 }

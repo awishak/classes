@@ -370,13 +370,13 @@ const REVIEW_CSS = `
 .apr-link span{text-decoration:underline;text-decoration-color:var(--line-strong);text-underline-offset:3px}
 .apr-link:hover span{text-decoration-color:var(--text-primary)}
 .apr-open{padding:16px 0 4px;grid-template-columns:1fr}
-.apr-btn{justify-self:start;font:inherit;font-size:16px;font-weight:600;min-height:44px;padding:0 20px;border-radius:999px;border:0;cursor:pointer;background:var(--text-primary);color:var(--surface-page)}
+.aic .apr-btn{justify-self:start;font:inherit;font-size:16px;font-weight:600;min-height:44px;padding:0 20px;border-radius:999px;border:0;cursor:pointer;background:var(--text-primary);color:var(--surface-page)}
 .apr-work{margin:4px 0 0;padding-top:16px;border-top:1px solid var(--line-strong);font-size:16px;font-weight:600}
 .apr-pop{position:fixed;inset:0;z-index:80;overflow:auto;padding:48px 16px 64px;background:rgba(0,0,0,.55)}
 .apr-page{max-width:760px;margin:0 auto;border-radius:18px;background:var(--surface-card);color:var(--text-primary);box-shadow:0 24px 80px -20px rgba(0,0,0,.6)}
 .apr-page-top{position:sticky;top:-48px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-radius:18px 18px 0 0;background:var(--surface-card);box-shadow:0 1px 0 var(--line-soft)}
 .apr-page-audio{flex:1 1 auto;min-width:0;height:40px}
-.apr-close{flex:none;font:inherit;font-size:15px;font-weight:600;min-height:40px;padding:0 18px;border-radius:999px;border:0;cursor:pointer;background:var(--surface-sunk);color:var(--text-primary)}
+.aic .apr-close{flex:none;font:inherit;font-size:15px;font-weight:600;min-height:40px;padding:0 18px;border-radius:999px;border:0;cursor:pointer;background:var(--surface-sunk);color:var(--text-primary)}
 .apr-page-head{display:flex;flex-direction:column;gap:10px;padding:34px 56px 0}
 .apr-page-kicker{font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-secondary)}
 .apr-page-h{margin:0;font-family:var(--pt-serif);font-size:32px;font-weight:600;line-height:1.15;overflow-wrap:anywhere}
