@@ -103,8 +103,39 @@ function Sources({ text, links }) {
   );
 }
 
+// The clip as a coloured line. Andrew, 2026-11-12: "make the music and field
+// audio part a colored timeline. their speech, broadcast, interview, music
+// and field audio." line is { seconds, parts: [[from, to, kind], ..] } in
+// seconds, from scripts/comm3-audio-pre-timeline.mjs: the times are the
+// transcriber's, a stretch with no speech is music and field audio, and
+// whose voice a stretch is comes from Claude's reading of the transcript.
+const LINE_KINDS = [["you", "Their speech"], ["broadcast", "Broadcast"], ["interview", "Interview"], ["music", "Music and field audio"]];
+function Timeline({ line }) {
+  const total = Math.max(1, line.seconds || Math.max(...line.parts.map(p => p[1])));
+  const sum = (k) => line.parts.filter(p => p[2] === k).reduce((n, p) => n + (p[1] - p[0]), 0);
+  const say = Object.fromEntries(LINE_KINDS);
+  const marks = [];
+  for (let t = 0; t <= total; t += 60) marks.push(t);
+  return (
+    <div className="apr-line">
+      <div className="apr-track" role="img" aria-label={LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => l + " " + clock(sum(k))).join(", ")}>
+        {line.parts.map(([a, b, k], i) => <span key={i} className={"apr-seg apr-k-" + k} title={say[k] + ", " + clock(a) + " to " + clock(b)} style={{ left: (a / total) * 100 + "%", width: ((b - a) / total) * 100 + "%" }} />)}
+      </div>
+      <div className="apr-ticks" aria-hidden="true">{marks.map(t => <span key={t} style={{ left: (t / total) * 100 + "%" }}>{clock(t)}</span>)}</div>
+      <table className="apr-bars apr-key">
+        <tbody>
+          {LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => (
+            <tr key={k}><th scope="row"><span className={"apr-dot apr-k-" + k} />{l}</th><td className="apr-bar-n">{clock(sum(k))}</td><td className="apr-bar-cell"><span className={"apr-bar apr-k-" + k} style={{ width: (sum(k) / total) * 100 + "%" }} /></td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // How much of the script reads in ChatGPT's style, and the colour each level takes.
-const AI_SAY = { strong: "Strong", some: "Some", little: "Little" };
+// His labels, 2026-11-12, after "Strong" read as praise: "ah, so strong means chat GPT to you?"
+const AI_SAY = { strong: "Sounds like ChatGPT", some: "Partly sounds like ChatGPT", little: "Sounds like the student" };
 const AI_TONE = { strong: "not", some: "partly", little: "meets" };
 
 const PART_SAY = { opener: "Opener", thesis: "Thesis", closer: "Closer" };
@@ -166,7 +197,9 @@ export function ReadPanel({ read, sheet, at, links, title = "", name = "", url =
       {fact("Interview", read.interview)}
       {fact("Structure", read.structure)}
       {fact("New information", read.news)}
-      {fact("Music and field audio", read.gaps)}
+      {read.timeline?.parts?.length
+        ? <div className="apr-row apr-fact"><h3 className="apr-pl">Music and field audio</h3><Timeline line={read.timeline} /></div>
+        : fact("Music and field audio", read.gaps)}
       {read.ai ? (
         <div className={"apr-row apr-fact apr-" + (AI_TONE[read.ai.level] || "partly")}>
           <div className="apr-side"><h3 className="apr-pl">ChatGPT writing style</h3><span className="apr-v">{AI_SAY[read.ai.level] || read.ai.level}</span></div>
@@ -378,6 +411,17 @@ const REVIEW_CSS = `
 .apr-mark{font-size:14px;font-weight:600;padding:2px 10px;border-radius:999px;box-shadow:0 0 0 1px var(--line-strong);color:var(--text-secondary)}
 .apr-mark.on{background:var(--text-primary);color:var(--surface-page);box-shadow:none}
 .apr-fact{padding:14px 0}
+.apr-line{display:flex;flex-direction:column;gap:6px;max-width:860px;min-width:0}
+.apr-track{position:relative;height:30px;border-radius:8px;overflow:hidden;background:var(--surface-sunk)}
+.apr-seg{position:absolute;top:0;bottom:0;min-width:1px}
+.apr-ticks{position:relative;height:18px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-secondary)}
+.apr-ticks span{position:absolute;top:0;padding-left:4px;border-left:1px solid var(--line-strong);white-space:nowrap}
+.apr-key{max-width:560px;margin-top:4px}
+.apr-dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px}
+.apr-seg.apr-k-you,.apr-dot.apr-k-you,.apr-bar.apr-k-you{background:var(--text-primary)}
+.apr-seg.apr-k-broadcast,.apr-dot.apr-k-broadcast,.apr-bar.apr-k-broadcast{background:#2563eb}
+.apr-seg.apr-k-interview,.apr-dot.apr-k-interview,.apr-bar.apr-k-interview{background:#ea580c}
+.apr-seg.apr-k-music,.apr-dot.apr-k-music,.apr-bar.apr-k-music{background:#9333ea}
 .apr-said{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-family:var(--pt-serif);font-size:18px;line-height:1.5;max-width:780px;overflow-wrap:anywhere}
 .apr-said li{padding-left:16px;border-left:3px solid var(--line-strong)}
 .apr-src{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;font-size:17px;line-height:1.5;max-width:780px;overflow-wrap:anywhere}
@@ -449,7 +493,7 @@ export function PreControl({ config, worksheetKey, roster }) {
       <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review shows each student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
 
       <h2 className="aic-h2">Claude's read on the review</h2>
-      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (strong, some or little), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script.</p>
+      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script.</p>
 
       <h2 className="aic-h2">Now</h2>
       <p className="aic-p">{n === null ? "Reading the sheets." : n + (n === 1 ? " sheet" : " sheets") + " started, " + (sheets.filter(s => s.submitted_at).length) + " submitted, of " + roster.filter(s => s.email && !isLurker(s.name)).length + " on the roster."}</p>
