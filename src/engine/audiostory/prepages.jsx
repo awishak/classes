@@ -131,12 +131,31 @@ function Ticks({ total }) {
 // we get a screen that compares all the music and field audio charts for all
 // students so we can see the colors."
 function Compare({ rows }) {
+  // Andrew, 2026-11-12: "let me sort." By name, by the clip's length, or by
+  // how much of one kind a clip holds, most first.
+  const [by, setBy] = useState("name");
+  // "and also let me blank the names": for a screen the room can see.
+  const [named, setNamed] = useState(true);
   const total = Math.max(60, ...rows.map(r => r.line.seconds || 0));
+  const sum = (r, k) => r.line.parts.filter(p => p[2] === k).reduce((n, p) => n + (p[1] - p[0]), 0);
+  const amount = (r) => (by === "length" ? r.line.seconds || 0 : sum(r, by));
+  const list = by === "name" ? rows : [...rows].sort((x, y) => amount(y) - amount(x) || x.student.name.localeCompare(y.student.name));
   return (
     <section className="apr-cmp" aria-label="Every clip's timeline">
-      <div className="apr-legend">{LINE_KINDS.map(([k, l]) => <span key={k}><span className={"apr-dot apr-k-" + k} />{l}</span>)}</div>
+      <div className="pt-chips" role="tablist" aria-label="Sort">
+        <Chip on={by === "name"} onClick={() => setBy("name")}>Name</Chip>
+        <Chip on={by === "length"} onClick={() => setBy("length")}>Length</Chip>
+        {LINE_KINDS.map(([k, l]) => <Chip key={k} on={by === k} onClick={() => setBy(k)}><span className={"apr-dot apr-k-" + k} />{l}</Chip>)}
+        <span className="apr-cmp-gap" />
+        <Chip on={!named} onClick={() => setNamed(n => !n)}>{named ? "Hide names" : "Show names"}</Chip>
+      </div>
       <div className="apr-cmp-row"><span /><Ticks total={total} /></div>
-      {rows.map(r => <div key={r.student.email} className="apr-cmp-row"><span className="apr-cmp-name">{r.student.name}</span><Track line={r.line} of={total} /></div>)}
+      {list.map(r => (
+        <div key={r.student.email} className="apr-cmp-row">
+          <span className="apr-cmp-name"><span>{named ? r.student.name : ""}</span>{by !== "name" ? <b>{clock(amount(r))}</b> : null}</span>
+          <Track line={r.line} of={total} />
+        </div>
+      ))}
       <div className="apr-cmp-row"><span /><Ticks total={total} /></div>
     </section>
   );
@@ -459,9 +478,12 @@ const REVIEW_CSS = `
 .apr-ticks span{position:absolute;top:0;padding-left:4px;border-left:1px solid var(--line-strong);white-space:nowrap}
 .apr-key{max-width:560px;margin-top:4px}
 .apr-cmp{display:flex;flex-direction:column;gap:8px;margin:16px 0;padding:22px 24px 24px;border-radius:16px;background:var(--surface-card);box-shadow:0 0 0 1px var(--line-soft)}
-.apr-legend{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:16px;font-weight:600;margin-bottom:8px}
-.apr-cmp-row{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:center}
-.apr-cmp-name{font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.apr-cmp-row{display:grid;grid-template-columns:260px minmax(0,1fr);gap:16px;align-items:center}
+.apr-cmp-name{display:flex;justify-content:space-between;gap:8px;font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.apr-cmp-name b{font-weight:700;font-variant-numeric:tabular-nums}
+.apr-cmp .pt-chips{margin-bottom:8px}
+.apr-cmp-gap{flex:1 1 auto}
+.aic .pt-chip.on .apr-dot{box-shadow:0 0 0 1.5px var(--surface-card)}
 .apr-cmp .apr-track{height:24px;border-radius:6px}
 @media (max-width:760px){.apr-cmp-row{grid-template-columns:120px minmax(0,1fr);gap:10px}}
 .apr-dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px}
@@ -540,7 +562,7 @@ export function PreControl({ config, worksheetKey, roster }) {
       <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review shows each student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
 
       <h2 className="aic-h2">Claude's read on the review</h2>
-      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale.</p>
+      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale, sorted by name, by length, or by how much of one kind a clip holds.</p>
 
       <h2 className="aic-h2">Now</h2>
       <p className="aic-p">{n === null ? "Reading the sheets." : n + (n === 1 ? " sheet" : " sheets") + " started, " + (sheets.filter(s => s.submitted_at).length) + " submitted, of " + roster.filter(s => s.email && !isLurker(s.name)).length + " on the roster."}</p>
