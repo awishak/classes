@@ -19,7 +19,7 @@ import { StudentLink } from "../StudentPage.jsx";
 import { audioOf, FORMAT_SAY, MAX_BYTES } from "./audio.js";
 import { MAX_STORY_SECONDS, clock } from "./storymodel.js";
 import { linesOf } from "./bits.jsx";
-import { sentencesOf, paragraphsOf, sourcePieces, nameOfLink } from "./readtext.js";
+import { sentencesOf, passageOf, paragraphsOf, sourcePieces, nameOfLink } from "./readtext.js";
 import * as P from "./pre.jsx";
 import * as R from "./research.jsx";
 import * as I from "./ideas.jsx";
@@ -68,25 +68,37 @@ function At({ at, onSeek }) {
 }
 const Rate = ({ ok }) => <span className={"apr-v " + (ok ? "apr-yes" : "apr-could")}>{ok ? "\u2713" : "Could be better"}</span>;
 
-// Opening, thesis and closing: the type, the rating and the time, and nothing
-// said about them. Andrew, 2026-11-12: "do not offer commentary on opening
-// thesis and closing, just type, rating, and time."
-function Three({ read, onSeek }) {
-  const rows = [["Opening", read.opener, read.opener?.kind], ["Thesis", read.thesis, MARKS.filter(([m]) => (read.thesis?.marks || []).includes(m)).map(([, say]) => say).join(", ")], ["Closing", read.closer, read.closer?.kind]];
-  return (
-    <table className="apr-three">
-      <tbody>
-        {rows.map(([label, p, type]) => (
-          <tr key={label}>
-            <th scope="row">{label}</th>
-            <td className="apr-kind">{type || ""}</td>
-            <td><Rate ok={p?.verdict === "meets"} /></td>
-            <td className="apr-three-at"><At at={p?.at} onSeek={onSeek} /></td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+// Opening, thesis and closing: the type, the rating, the time, and the
+// student's own words around the line. Nothing of Claude's is said about
+// them. Andrew, 2026-11-12: "do not offer commentary on opening thesis and
+// closing, just type, rating, and time," then "you have to show them to me,
+// and with context."
+function Three({ read, sents, onSeek }) {
+  const rows = [["Opening", "opener", read.opener, read.opener?.kind], ["Thesis", "thesis", read.thesis, MARKS.filter(([m]) => (read.thesis?.marks || []).includes(m)).map(([, say]) => say).join(", ")], ["Closing", "closer", read.closer, read.closer?.kind]];
+  return rows.map(([label, id, p, type]) => {
+    const v = p?.verdict in VERDICT ? p.verdict : "not";
+    // "you have to show them to me, and with context": the line as said, inside the words around the line.
+    const more = p?.quote ? passageOf(sents || [], p.quote, id) : null;
+    return (
+      <section key={label} className={"apr-row apr-" + v}>
+        <div className="apr-side">
+          <h3 className="apr-pl">{label}</h3>
+          {type ? <span className="apr-kind">{type}</span> : null}
+          <Rate ok={v === "meets"} />
+          <At at={p?.at} onSeek={onSeek} />
+        </div>
+        <div className="apr-main">
+          {p?.quote ? (
+            <blockquote className="apr-quote">
+              {more
+                ? <>“{more.cutStart ? "… " : ""}{more.before ? more.before + " " : ""}<mark className="apr-hl">{more.mark}</mark>{more.after ? " " + more.after : ""}{more.cutEnd ? " …" : ""}”</>
+                : <>“<mark className="apr-hl">{p.quote}</mark>”</>}
+            </blockquote>
+          ) : null}
+        </div>
+      </section>
+    );
+  });
 }
 
 // The student's sources, named: an address shows its site and its headline.
@@ -243,7 +255,7 @@ export function ReadPanel({ read, sheet, at, links, title = "", name = "", url =
       <div className="apr-rh"><h2 className="apr-rt">Claude's read</h2><span className="apr-n">{read.meets} of 3 meet the board</span></div>
       {again ? <p className="apr-lede"><b>{"Handed in again " + when(sheet.submitted_at) + ", after this read was written."}</b></p> : null}
       {read.read ? <p className="apr-lede">{curl(read.read)}</p> : null}
-      <div className="apr-row apr-fact apr-one"><Three read={read} onSeek={onSeek} /></div>
+      <Three read={read} sents={sents} onSeek={onSeek} />
       {fact("Interview", read.interview, !!read.interview?.has)}
       {fact("Structure", read.structure, read.structure?.level === "clear")}
       {fact("New information", read.news, read.news?.level === "reported")}
@@ -646,7 +658,7 @@ export function PreControl({ config, worksheetKey, roster }) {
       <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review shows each student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
 
       <h2 className="aic-h2">Claude's read on the review</h2>
-      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. Since later that day each card opens with the clip and its timeline (pressing the timeline or any time on the card plays the clip from there), then the student's own answer on how the work is going, then his notes for that student. The notes are private: they save through <code>/api/sitdown-sheet?sheet=audio-pre-notes</code> to the instructor bucket and no student page reads them. Opening, thesis and closing show the type, the rating and the time only. Sound lists what the measurements found off, with the time. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale, sorted by name, by length, or by how much of one kind a clip holds.</p>
+      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. Since later that day each card opens with the clip and its timeline (pressing the timeline or any time on the card plays the clip from there), then the student's own answer on how the work is going, then his notes for that student. The notes are private: they save through <code>/api/sitdown-sheet?sheet=audio-pre-notes</code> to the instructor bucket and no student page reads them. Opening, thesis and closing show the type, the rating, the time and the student's words around the line, with no commentary. Sound lists what the measurements found off, with the time. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale, sorted by name, by length, or by how much of one kind a clip holds.</p>
 
       <h2 className="aic-h2">Now</h2>
       <p className="aic-p">{n === null ? "Reading the sheets." : n + (n === 1 ? " sheet" : " sheets") + " started, " + (sheets.filter(s => s.submitted_at).length) + " submitted, of " + roster.filter(s => s.email && !isLurker(s.name)).length + " on the roster."}</p>
