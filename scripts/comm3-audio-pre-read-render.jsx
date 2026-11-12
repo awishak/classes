@@ -16,7 +16,7 @@ const list = Object.entries(read.students);
 let html = renderToStaticMarkup(<ReadSummary reads={list.map(x => x[1])} notes={read.notes} />);
 for (const [email, r] of list) {
   const one = renderToStaticMarkup(<ReadPanel read={r} sheet={{ submitted_at: read.at }} at={read.at} />);
-  if (!one.includes("apr-quote")) throw new Error(email + ": no quoted line drawn");
+  if (!one.includes("apr-three")) throw new Error(email + ": opening, thesis and closing not drawn");
   html += "<h1>" + email + "</h1>" + one;
 }
 writeFileSync(BASE + "/render.html", "<!doctype html><meta charset=utf-8><body style='font-family:sans-serif;max-width:1000px;margin:auto'>" + html);

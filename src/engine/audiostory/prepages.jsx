@@ -7,7 +7,9 @@
 // 2026-10-29: "an instructor page that tells me exactly why everything's
 // happening and exactly how everything is happening").
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { authHeaders } from "../session.js";
+import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
@@ -17,7 +19,7 @@ import { StudentLink } from "../StudentPage.jsx";
 import { audioOf, FORMAT_SAY, MAX_BYTES } from "./audio.js";
 import { MAX_STORY_SECONDS, clock } from "./storymodel.js";
 import { linesOf } from "./bits.jsx";
-import { sentencesOf, passageOf, paragraphsOf, sourcePieces, nameOfLink } from "./readtext.js";
+import { sentencesOf, paragraphsOf, sourcePieces, nameOfLink } from "./readtext.js";
 import * as P from "./pre.jsx";
 import * as R from "./research.jsx";
 import * as I from "./ideas.jsx";
@@ -57,30 +59,33 @@ const MARKS = [["direct", "Direct"], ["eloquent", "Eloquent"], ["shift", "Shift"
 // bars.
 const curl = (s) => String(s || "").replace(/"([^"]+)"/g, "“$1”");
 
-function ReadPart({ label, part, id, sents, marks = false }) {
-  const p = part || {};
-  const v = p.verdict in VERDICT ? p.verdict : "not";
-  const more = p.quote ? passageOf(sents, p.quote, id) : null;
+// A time in the card: pressing it plays the clip from there.
+const secondsOf = (at) => { const m = String(at || "").match(/^(\d+):(\d{2})$/); return m ? +m[1] * 60 + +m[2] : null; };
+function At({ at, onSeek }) {
+  const t = secondsOf(at);
+  if (t == null) return null;
+  return onSeek ? <button type="button" className="apr-go pt-focus" onClick={() => onSeek(t)}>{at}</button> : <span className="apr-at">{at}</span>;
+}
+const Rate = ({ ok }) => <span className={"apr-v " + (ok ? "apr-yes" : "apr-could")}>{ok ? "\u2713" : "Could be better"}</span>;
+
+// Opening, thesis and closing: the type, the rating and the time, and nothing
+// said about them. Andrew, 2026-11-12: "do not offer commentary on opening
+// thesis and closing, just type, rating, and time."
+function Three({ read, onSeek }) {
+  const rows = [["Opening", read.opener, read.opener?.kind], ["Thesis", read.thesis, MARKS.filter(([m]) => (read.thesis?.marks || []).includes(m)).map(([, say]) => say).join(", ")], ["Closing", read.closer, read.closer?.kind]];
   return (
-    <section className={"apr-row apr-" + v}>
-      <div className="apr-side">
-        <h3 className="apr-pl">{label}</h3>
-        {p.kind ? <span className="apr-kind">{p.kind}</span> : null}
-        <span className="apr-v">{VERDICT[v]}</span>
-        {p.at ? <span className="apr-at">{p.at}</span> : null}
-      </div>
-      <div className="apr-main">
-        {p.quote ? (
-          <blockquote className="apr-quote">
-            {more
-              ? <>“{more.cutStart ? "… " : ""}{more.before ? more.before + " " : ""}<mark className="apr-hl">{more.mark}</mark>{more.after ? " " + more.after : ""}{more.cutEnd ? " …" : ""}”</>
-              : <>“<mark className="apr-hl">{p.quote}</mark>”</>}
-          </blockquote>
-        ) : null}
-        {p.say ? <p className="apr-say">{curl(p.say)}</p> : null}
-        {marks ? <div className="apr-marks">{MARKS.map(([m, say]) => <span key={m} className={"apr-mark" + ((p.marks || []).includes(m) ? " on" : "")}>{say}</span>)}</div> : null}
-      </div>
-    </section>
+    <table className="apr-three">
+      <tbody>
+        {rows.map(([label, p, type]) => (
+          <tr key={label}>
+            <th scope="row">{label}</th>
+            <td className="apr-kind">{type || ""}</td>
+            <td><Rate ok={p?.verdict === "meets"} /></td>
+            <td className="apr-three-at"><At at={p?.at} onSeek={onSeek} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -112,11 +117,12 @@ function Sources({ text, links }) {
 const LINE_KINDS = [["you", "Their speech"], ["broadcast", "Broadcast"], ["interview", "Interview"], ["music", "Music and field audio"]];
 const LINE_SAY = Object.fromEntries(LINE_KINDS);
 // One clip's bar alone, drawn against `of` seconds so several clips share a scale.
-function Track({ line, of }) {
+function Track({ line, of, onSeek }) {
   const total = Math.max(1, of || line.seconds || Math.max(...line.parts.map(p => p[1])));
   const sum = (k) => line.parts.filter(p => p[2] === k).reduce((n, p) => n + (p[1] - p[0]), 0);
   return (
-    <div className="apr-track" role="img" aria-label={LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => l + " " + clock(sum(k))).join(", ")}>
+    <div className={"apr-track" + (onSeek ? " apr-seek" : "")} role="img" aria-label={LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => l + " " + clock(sum(k))).join(", ")}
+      onClick={onSeek ? (e) => { const r = e.currentTarget.getBoundingClientRect(); onSeek(Math.max(0, ((e.clientX - r.left) / r.width) * total)); } : undefined}>
       {line.parts.map(([a, b, k], i) => <span key={i} className={"apr-seg apr-k-" + k} title={LINE_SAY[k] + ", " + clock(a) + " to " + clock(b)} style={{ left: (a / total) * 100 + "%", width: ((b - a) / total) * 100 + "%" }} />)}
     </div>
   );
@@ -161,12 +167,12 @@ function Compare({ rows }) {
   );
 }
 
-function Timeline({ line }) {
+function Timeline({ line, onSeek }) {
   const total = Math.max(1, line.seconds || Math.max(...line.parts.map(p => p[1])));
   const sum = (k) => line.parts.filter(p => p[2] === k).reduce((n, p) => n + (p[1] - p[0]), 0);
   return (
     <div className="apr-line">
-      <Track line={line} />
+      <Track line={line} onSeek={onSeek} />
       <Ticks total={total} />
       <table className="apr-bars apr-key">
         <tbody>
@@ -224,11 +230,11 @@ export function Transcript({ read, sents, title, name, url, onClose }) {
   );
 }
 
-export function ReadPanel({ read, sheet, at, links, title = "", name = "", url = "" }) {
+export function ReadPanel({ read, sheet, at, links, title = "", name = "", url = "", onSeek, lineUp = false }) {
   const [open, setOpen] = useState(false);
   const close = useCallback(() => setOpen(false), []);
   const sents = useMemo(() => sentencesOf(read.transcript), [read.transcript]);
-  const fact = (label, x) => (x && x.say ? <div className="apr-row apr-fact"><h3 className="apr-pl">{label}</h3><p className="apr-say">{curl(x.say)}</p></div> : null);
+  const fact = (label, x, ok) => (x && x.say ? <div className="apr-row apr-fact"><div className="apr-side"><h3 className="apr-pl">{label}</h3>{ok == null ? null : <Rate ok={ok} />}</div><p className="apr-say">{curl(x.say)}</p></div> : null);
   // A read written before the student handed in again says so.
   const again = !!(sheet?.submitted_at && at && new Date(sheet.submitted_at).getTime() > new Date(at).getTime());
   const sources = String(sheet?.answers?.sources || "").trim();
@@ -237,15 +243,18 @@ export function ReadPanel({ read, sheet, at, links, title = "", name = "", url =
       <div className="apr-rh"><h2 className="apr-rt">Claude's read</h2><span className="apr-n">{read.meets} of 3 meet the board</span></div>
       {again ? <p className="apr-lede"><b>{"Handed in again " + when(sheet.submitted_at) + ", after this read was written."}</b></p> : null}
       {read.read ? <p className="apr-lede">{curl(read.read)}</p> : null}
-      <ReadPart label="Opener" id="opener" part={read.opener} sents={sents} />
-      <ReadPart label="Thesis" id="thesis" part={read.thesis} sents={sents} marks />
-      <ReadPart label="Closer" id="closer" part={read.closer} sents={sents} />
-      {fact("Interview", read.interview)}
-      {fact("Structure", read.structure)}
-      {fact("New information", read.news)}
-      {read.timeline?.parts?.length
-        ? <div className="apr-row apr-fact"><h3 className="apr-pl">Music and field audio</h3><Timeline line={read.timeline} /></div>
-        : fact("Music and field audio", read.gaps)}
+      <div className="apr-row apr-fact apr-one"><Three read={read} onSeek={onSeek} /></div>
+      {fact("Interview", read.interview, !!read.interview?.has)}
+      {fact("Structure", read.structure, read.structure?.level === "clear")}
+      {fact("New information", read.news, read.news?.level === "reported")}
+      {!lineUp && read.timeline?.parts?.length ? <div className="apr-row apr-fact"><h3 className="apr-pl">Music and field audio</h3><Timeline line={read.timeline} onSeek={onSeek} /></div> : null}
+      {!read.timeline?.parts?.length ? fact("Music and field audio", read.gaps) : null}
+      {(read.sound || []).length ? (
+        <div className="apr-row apr-fact">
+          <h3 className="apr-pl">Sound</h3>
+          <ul className="apr-src">{read.sound.map((x, i) => <li key={i}>{x.say}{x.at ? <> <At at={x.at} onSeek={onSeek} /></> : null}</li>)}</ul>
+        </div>
+      ) : null}
       {read.ai ? (
         <div className={"apr-row apr-fact apr-" + (AI_TONE[read.ai.level] || "partly")}>
           <div className="apr-side"><h3 className="apr-pl">ChatGPT writing style</h3><span className="apr-v">{AI_SAY[read.ai.level] || read.ai.level}</span></div>
@@ -259,6 +268,64 @@ export function ReadPanel({ read, sheet, at, links, title = "", name = "", url =
       {sents.length ? <div className="apr-row apr-open"><button type="button" className="apr-btn pt-focus" onClick={() => setOpen(true)}>The transcript</button></div> : null}
       {open ? <Transcript read={read} sents={sents} title={title} name={name} url={url} onClose={close} /> : null}
     </div>
+  );
+}
+
+// His notes on one student, what he will say to them. Private: the words go
+// to the instructor bucket through /api/sitdown-sheet and no student page
+// reads them. The box keeps what is typed and writes on Save.
+function Notes({ first, saved, onSave }) {
+  const [text, setText] = useState(saved?.note || "");
+  const [state, setState] = useState("");
+  const seeded = useRef(!!saved);
+  useEffect(() => { if (!seeded.current && saved) { seeded.current = true; setText(saved.note || ""); } }, [saved]);
+  const dirty = text !== (saved?.note || "");
+  const save = async () => { setState("Saving"); setState((await onSave(text)) ? "Saved" : "Not saved"); };
+  return (
+    <div className="apr-notes">
+      <label className="apr-pl" htmlFor={"apr-note-" + first}>{"Your notes for " + first}</label>
+      <textarea id={"apr-note-" + first} className="apr-note pt-focus" rows={4} value={text} onChange={(e) => { setText(e.target.value); setState(""); }} />
+      <div className="apr-note-foot"><button type="button" className="apr-btn pt-focus" disabled={!dirty} onClick={save}>Save</button><span className="apr-at" aria-live="polite">{dirty ? state || "Not saved yet" : state || (saved?.at ? "Saved " + when(saved.at) : "")}</span></div>
+    </div>
+  );
+}
+
+// One student's card: the clip and its timeline first, then what they said
+// about their own work, his notes, Claude's read, and the sheet as written.
+// Andrew, 2026-11-12: "this is how i would look through their work first. so
+// can you combine what we're showing here into the review page, along with
+// their audio clip and their questions up top?"
+function Card({ config, data, student, sheet, mine, readAt, links, url, note, onNote }) {
+  const audio = useRef(null);
+  const seek = useCallback((t) => { const el = audio.current; if (!el) return; try { el.currentTime = t; el.play(); } catch { /* the player says so itself */ } }, []);
+  const a = sheet.answers || {};
+  const left = P.missingOf(a).length;
+  const first = student.name.split(" ")[0];
+  const reflect = String(a.reflect || "").trim();
+  return (
+    <article className={"pt-row aic-card" + (sheet.submitted_at ? "" : " due")}>
+      <div className="aic-head">
+        <div className="aic-who">
+          <Face config={config} data={data} name={student.name} size={40} />
+          <div className="pt-main">
+            <p className="pt-title"><StudentLink config={config} student={student} /></p>
+            <p className={"pt-when " + (sheet.submitted_at ? "done" : "due")}><span>{sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started, not submitted"}</span></p>
+            <p className="pt-meta">{left ? left + (left === 1 ? " part empty" : " parts empty") : "Every part filled"}</p>
+          </div>
+        </div>
+      </div>
+      {mine ? (
+        <div className="apr-listen">
+          {url ? <audio ref={audio} className="apr-player" controls preload="metadata" src={url} /> : null}
+          {mine.timeline?.parts?.length ? <Timeline line={mine.timeline} onSeek={url ? seek : undefined} /> : null}
+        </div>
+      ) : null}
+      {mine && reflect ? <div className="apr-own"><h3 className="apr-pl">{P.DEFAULT_COPY.reflectAsk}</h3><p className="apr-quote">{"“" + reflect + "”"}</p></div> : null}
+      {mine ? <Notes first={first} saved={note} onSave={onNote} /> : null}
+      {mine ? <ReadPanel read={mine} sheet={sheet} at={readAt} links={links} title={String(a.story || "").trim()} name={student.name} url={url} onSeek={url ? seek : undefined} lineUp /> : null}
+      {mine ? <p className="apr-work">{first + "'s pre-production, as written"}</p> : null}
+      <div className="apr-doc"><style>{P.PRE_CSS}</style><P.PreView answers={a} url={mine ? "" : url} /></div>
+    </article>
   );
 }
 
@@ -329,6 +396,24 @@ export function PreReview({ config, worksheetKey, roster }) {
   const [sheets, error] = useAllSheets(config, worksheetKey);
   const read = useInstructorRead(config, READ_SHEET);
   const [order, setOrder] = useState("read");
+  const [notes, setNotes] = useState({});
+  const notesAt = "/api/sitdown-sheet?sheet=audio-pre-notes&class=" + encodeURIComponent(config.id);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try { const pin = savedPin(); const r = await fetch(notesAt + (pin ? "&pin=" + encodeURIComponent(pin) : ""), { headers: await authHeaders() }); const out = r.ok ? await r.json() : null; if (alive && out?.notes) setNotes(out.notes); } catch { /* no notes yet */ }
+    })();
+    return () => { alive = false; };
+  }, [notesAt]);
+  const saveNote = async (email, note) => {
+    try {
+      const r = await fetch(notesAt, { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) }, body: JSON.stringify({ pin: savedPin(), email, note }) });
+      const out = r.ok ? await r.json() : null;
+      if (!out?.ok) return false;
+      setNotes(n => ({ ...n, [email]: { note, at: out.at } }));
+      return true;
+    } catch { return false; }
+  };
   // ?review&timelines opens on every clip's timeline; the chips keep the address in step.
   const [view, setView] = useState(() => (typeof window !== "undefined" && /[?&]timelines\b/.test(window.location.search) ? "lines" : "each"));
   const show = (v) => {
@@ -395,28 +480,9 @@ export function PreReview({ config, worksheetKey, roster }) {
       ) : null}
       <div className="pt-stack aic-cards">
         {(read && view === "lines" && lines.length ? [] : cards).map(({ student, sheet }) => {
-          const mine = readOf({ student });
-          const a = sheet.answers || {};
-          const clip = audioOf(a.audio);
-          const left = P.missingOf(a).length;
-          const url = clip ? urls[clip.path] || "" : "";
-          return (
-            <article key={student.email} className={"pt-row aic-card" + (sheet.submitted_at ? "" : " due")}>
-              <div className="aic-head">
-                <div className="aic-who">
-                  <Face config={config} data={data} name={student.name} size={40} />
-                  <div className="pt-main">
-                    <p className="pt-title"><StudentLink config={config} student={student} /></p>
-                    <p className={"pt-when " + (sheet.submitted_at ? "done" : "due")}><span>{sheet.submitted_at ? "Submitted " + when(sheet.submitted_at) : "Started, not submitted"}</span></p>
-                    <p className="pt-meta">{left ? left + (left === 1 ? " part empty" : " parts empty") : "Every part filled"}</p>
-                  </div>
-                </div>
-              </div>
-              {mine ? <ReadPanel read={mine} sheet={sheet} at={read.at} links={read.links} title={String(a.story || "").trim()} name={student.name} url={url} /> : null}
-              {mine ? <p className="apr-work">{student.name.split(" ")[0] + "'s pre-production, as written"}</p> : null}
-              <div className="apr-doc"><style>{P.PRE_CSS}</style><P.PreView answers={a} url={url} /></div>
-            </article>
-          );
+          const clip = audioOf(sheet.answers?.audio);
+          const email = lower(student.email);
+          return <Card key={student.email} config={config} data={data} student={student} sheet={sheet} mine={readOf({ student })} readAt={read?.at} links={read?.links} url={clip ? urls[clip.path] || "" : ""} note={notes[email]} onNote={(text) => saveNote(email, text)} />;
         })}
       </div>
     </Shell>
@@ -471,6 +537,24 @@ const REVIEW_CSS = `
 .apr-mark{font-size:14px;font-weight:600;padding:2px 10px;border-radius:999px;box-shadow:0 0 0 1px var(--line-strong);color:var(--text-secondary)}
 .apr-mark.on{background:var(--text-primary);color:var(--surface-page);box-shadow:none}
 .apr-fact{padding:14px 0}
+.apr-one{grid-template-columns:1fr}
+.apr-three{border-collapse:collapse;font-size:17px;max-width:780px}
+.apr-three th{font-weight:700;text-align:left;padding:6px 28px 6px 0;white-space:nowrap}
+.apr-three td{padding:6px 24px 6px 0;vertical-align:middle}
+.apr-three tr+tr th,.apr-three tr+tr td{border-top:1px solid var(--line-soft)}
+.apr-v.apr-yes{background:var(--pt-done);color:var(--pt-done-ink);font-size:16px}
+.apr-v.apr-could{background:var(--pt-due);color:var(--pt-due-ink)}
+.aic .apr-go{font:inherit;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;padding:3px 12px;border-radius:999px;border:0;cursor:pointer;background:var(--surface-sunk);color:var(--text-primary)}
+.aic .apr-go:hover{background:var(--text-primary);color:var(--surface-page)}
+.apr-listen{display:flex;flex-direction:column;gap:10px}
+.apr-player{width:100%;max-width:860px;height:44px}
+.apr-seek{cursor:pointer}
+.apr-own{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.apr-own .apr-quote{border-left-color:var(--line-strong)}
+.apr-notes{display:flex;flex-direction:column;gap:8px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.aic .apr-note{font:inherit;font-size:17px;line-height:1.5;color:var(--text-primary);background:var(--surface-card);border:1px solid var(--line-strong);border-radius:12px;padding:12px 14px;width:100%;max-width:860px;box-sizing:border-box;resize:vertical}
+.apr-note-foot{display:flex;align-items:center;gap:12px}
+.aic .apr-btn[disabled]{opacity:.4;cursor:default}
 .apr-line{display:flex;flex-direction:column;gap:6px;max-width:860px;min-width:0}
 .apr-track{position:relative;height:30px;border-radius:8px;overflow:hidden;background:var(--surface-sunk)}
 .apr-seg{position:absolute;top:0;bottom:0;min-width:1px}
@@ -562,7 +646,7 @@ export function PreControl({ config, worksheetKey, roster }) {
       <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review shows each student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
 
       <h2 className="aic-h2">Claude's read on the review</h2>
-      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale, sorted by name, by length, or by how much of one kind a clip holds.</p>
+      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. Since later that day each card opens with the clip and its timeline (pressing the timeline or any time on the card plays the clip from there), then the student's own answer on how the work is going, then his notes for that student. The notes are private: they save through <code>/api/sitdown-sheet?sheet=audio-pre-notes</code> to the instructor bucket and no student page reads them. Opening, thesis and closing show the type, the rating and the time only. Sound lists what the measurements found off, with the time. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale, sorted by name, by length, or by how much of one kind a clip holds.</p>
 
       <h2 className="aic-h2">Now</h2>
       <p className="aic-p">{n === null ? "Reading the sheets." : n + (n === 1 ? " sheet" : " sheets") + " started, " + (sheets.filter(s => s.submitted_at).length) + " submitted, of " + roster.filter(s => s.email && !isLurker(s.name)).length + " on the roster."}</p>
