@@ -90,7 +90,7 @@ export function paragraphsOf(sents, parts) {
   return out;
 }
 
-const URL_RE = /https?:\/\/[^\s<>"')\]]+/g;
+const URL_RE = /https?:\/\/[^\s<>")\]]+/g;
 /** A source line as pieces: [{ text } | { url }]. */
 export function sourcePieces(line) {
   const out = [];

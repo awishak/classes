@@ -42,7 +42,7 @@ const sources = {};
 for (const s of sheets) sources[s.viewer_id] = answersOf(rows.filter(x => x.sheet_id === s.id)).sources || "";
 writeFileSync(BASE + "/sources.json", JSON.stringify(sources, null, 1));
 
-export const urlsIn = (text) => (String(text || "").match(/https?:\/\/[^\s<>"')\]]+/g) || []).map(u => u.replace(/[.,;]+$/, ""));
+export const urlsIn = (text) => (String(text || "").match(/https?:\/\/[^\s<>")\]]+/g) || []).map(u => u.replace(/[.,;]+$/, ""));
 const urls = [...new Set(Object.values(sources).flatMap(urlsIn))];
 const cache = existsSync(CACHE) ? JSON.parse(readFileSync(CACHE, "utf8")) : {};
 const un = (s) => String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&#x27;|&apos;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&nbsp;/g, " ").replace(/&mdash;/g, ", ").replace(/&ndash;/g, "-").replace(/&[lr]squo;/g, "'").replace(/&[lr]dquo;/g, '"').replace(/&hellip;/g, "...")
