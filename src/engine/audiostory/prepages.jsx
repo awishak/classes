@@ -110,18 +110,45 @@ function Sources({ text, links }) {
 // transcriber's, a stretch with no speech is music and field audio, and
 // whose voice a stretch is comes from Claude's reading of the transcript.
 const LINE_KINDS = [["you", "Their speech"], ["broadcast", "Broadcast"], ["interview", "Interview"], ["music", "Music and field audio"]];
+const LINE_SAY = Object.fromEntries(LINE_KINDS);
+// One clip's bar alone, drawn against `of` seconds so several clips share a scale.
+function Track({ line, of }) {
+  const total = Math.max(1, of || line.seconds || Math.max(...line.parts.map(p => p[1])));
+  const sum = (k) => line.parts.filter(p => p[2] === k).reduce((n, p) => n + (p[1] - p[0]), 0);
+  return (
+    <div className="apr-track" role="img" aria-label={LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => l + " " + clock(sum(k))).join(", ")}>
+      {line.parts.map(([a, b, k], i) => <span key={i} className={"apr-seg apr-k-" + k} title={LINE_SAY[k] + ", " + clock(a) + " to " + clock(b)} style={{ left: (a / total) * 100 + "%", width: ((b - a) / total) * 100 + "%" }} />)}
+    </div>
+  );
+}
+function Ticks({ total }) {
+  const marks = [];
+  for (let t = 0; t <= total; t += 60) marks.push(t);
+  return <div className="apr-ticks" aria-hidden="true">{marks.map(t => <span key={t} style={{ left: (t / total) * 100 + "%" }}>{clock(t)}</span>)}</div>;
+}
+
+// Every clip's timeline on one screen, on one scale. Andrew, 2026-11-12: "can
+// we get a screen that compares all the music and field audio charts for all
+// students so we can see the colors."
+function Compare({ rows }) {
+  const total = Math.max(60, ...rows.map(r => r.line.seconds || 0));
+  return (
+    <section className="apr-cmp" aria-label="Every clip's timeline">
+      <div className="apr-legend">{LINE_KINDS.map(([k, l]) => <span key={k}><span className={"apr-dot apr-k-" + k} />{l}</span>)}</div>
+      <div className="apr-cmp-row"><span /><Ticks total={total} /></div>
+      {rows.map(r => <div key={r.student.email} className="apr-cmp-row"><span className="apr-cmp-name">{r.student.name}</span><Track line={r.line} of={total} /></div>)}
+      <div className="apr-cmp-row"><span /><Ticks total={total} /></div>
+    </section>
+  );
+}
+
 function Timeline({ line }) {
   const total = Math.max(1, line.seconds || Math.max(...line.parts.map(p => p[1])));
   const sum = (k) => line.parts.filter(p => p[2] === k).reduce((n, p) => n + (p[1] - p[0]), 0);
-  const say = Object.fromEntries(LINE_KINDS);
-  const marks = [];
-  for (let t = 0; t <= total; t += 60) marks.push(t);
   return (
     <div className="apr-line">
-      <div className="apr-track" role="img" aria-label={LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => l + " " + clock(sum(k))).join(", ")}>
-        {line.parts.map(([a, b, k], i) => <span key={i} className={"apr-seg apr-k-" + k} title={say[k] + ", " + clock(a) + " to " + clock(b)} style={{ left: (a / total) * 100 + "%", width: ((b - a) / total) * 100 + "%" }} />)}
-      </div>
-      <div className="apr-ticks" aria-hidden="true">{marks.map(t => <span key={t} style={{ left: (t / total) * 100 + "%" }}>{clock(t)}</span>)}</div>
+      <Track line={line} />
+      <Ticks total={total} />
       <table className="apr-bars apr-key">
         <tbody>
           {LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => (
@@ -283,6 +310,12 @@ export function PreReview({ config, worksheetKey, roster }) {
   const [sheets, error] = useAllSheets(config, worksheetKey);
   const read = useInstructorRead(config, READ_SHEET);
   const [order, setOrder] = useState("read");
+  // ?review&timelines opens on every clip's timeline; the chips keep the address in step.
+  const [view, setView] = useState(() => (typeof window !== "undefined" && /[?&]timelines\b/.test(window.location.search) ? "lines" : "each"));
+  const show = (v) => {
+    setView(v);
+    try { const u = new URL(window.location.href); const q = u.search.replace(/[?&]timelines\b/, "").replace(/^&/, "?"); window.history.replaceState(null, "", u.pathname + (q || "?review") + (v === "lines" ? "&timelines" : "")); } catch { /* the address is a convenience */ }
+  };
   const [data] = useClassState(config.storageKey);
   const urls = useClipUrls(config, worksheetKey, sheets);
   const sections = sectionsOf(config);
@@ -303,6 +336,7 @@ export function PreReview({ config, worksheetKey, roster }) {
     || (byRead ? (readOf(y)?.score ?? -1) - (readOf(x)?.score ?? -1) : 0)
     || (byRead ? 0 : String(y.sheet.submitted_at || "").localeCompare(String(x.sheet.submitted_at || ""))) || x.student.name.localeCompare(y.student.name));
   const reads = rows.map(readOf).filter(Boolean);
+  const lines = rows.map(r => ({ student: r.student, line: readOf(r)?.timeline })).filter(r => r.line?.parts?.length).sort((x, y) => x.student.name.localeCompare(y.student.name));
   return (
     <Shell config={config}>
       <style>{REVIEW_CSS}</style>
@@ -327,14 +361,21 @@ export function PreReview({ config, worksheetKey, roster }) {
         </details>
       ) : <p className="pt-quiet">Everyone is in.</p>}
       {read ? <ReadSummary reads={reads} notes={read.notes} /> : null}
-      {read ? (
+      {read && lines.length ? (
+        <div className="pt-chips" role="tablist" aria-label="View">
+          <Chip on={view === "each"} onClick={() => show("each")}>Each student</Chip>
+          <Chip on={view === "lines"} onClick={() => show("lines")}>All timelines</Chip>
+        </div>
+      ) : null}
+      {read && view === "lines" && lines.length ? <Compare rows={lines} /> : null}
+      {read && view !== "lines" ? (
         <div className="pt-chips" role="tablist" aria-label="Order">
           <Chip on={order === "read"} onClick={() => setOrder("read")}>Strongest first</Chip>
           <Chip on={order === "new"} onClick={() => setOrder("new")}>Newest first</Chip>
         </div>
       ) : null}
       <div className="pt-stack aic-cards">
-        {cards.map(({ student, sheet }) => {
+        {(read && view === "lines" && lines.length ? [] : cards).map(({ student, sheet }) => {
           const mine = readOf({ student });
           const a = sheet.answers || {};
           const clip = audioOf(a.audio);
@@ -417,6 +458,12 @@ const REVIEW_CSS = `
 .apr-ticks{position:relative;height:18px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-secondary)}
 .apr-ticks span{position:absolute;top:0;padding-left:4px;border-left:1px solid var(--line-strong);white-space:nowrap}
 .apr-key{max-width:560px;margin-top:4px}
+.apr-cmp{display:flex;flex-direction:column;gap:8px;margin:16px 0;padding:22px 24px 24px;border-radius:16px;background:var(--surface-card);box-shadow:0 0 0 1px var(--line-soft)}
+.apr-legend{display:flex;flex-wrap:wrap;gap:8px 24px;font-size:16px;font-weight:600;margin-bottom:8px}
+.apr-cmp-row{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px;align-items:center}
+.apr-cmp-name{font-size:16px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.apr-cmp .apr-track{height:24px;border-radius:6px}
+@media (max-width:760px){.apr-cmp-row{grid-template-columns:120px minmax(0,1fr);gap:10px}}
 .apr-dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:8px;vertical-align:-1px}
 .apr-seg.apr-k-you,.apr-dot.apr-k-you,.apr-bar.apr-k-you{background:var(--text-primary)}
 .apr-seg.apr-k-broadcast,.apr-dot.apr-k-broadcast,.apr-bar.apr-k-broadcast{background:#2563eb}
@@ -493,7 +540,7 @@ export function PreControl({ config, worksheetKey, roster }) {
       <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review shows each student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
 
       <h2 className="aic-h2">Claude's read on the review</h2>
-      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script.</p>
+      <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale.</p>
 
       <h2 className="aic-h2">Now</h2>
       <p className="aic-p">{n === null ? "Reading the sheets." : n + (n === 1 ? " sheet" : " sheets") + " started, " + (sheets.filter(s => s.submitted_at).length) + " submitted, of " + roster.filter(s => s.email && !isLurker(s.name)).length + " on the roster."}</p>
