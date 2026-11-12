@@ -105,7 +105,7 @@ export default function Sitdown2Page({ config }) {
                   </select>
                 </label>
                 <a className="btn" href={assignHref(config)}>Assign the two concepts</a>
-                <a className="lnk" href={guideHref(config) + "?review"}>Read every guide</a>
+                <a className="lnk" href={guideHref(config) + "?review"}>Culture Guide Review</a>
                 <span className="meta" aria-live="polite">{copy.status || (editing ? "Change any line students read. Clear a line to put the original back." : "")}</span>
               </div>
             ) : null}

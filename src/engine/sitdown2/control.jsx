@@ -69,7 +69,7 @@ function Shell({ config, title, intro, children, here }) {
           <h1 className="h1">{title}</h1>
           {intro ? <p className="intro">{intro}</p> : null}
           <div className="bar">
-            {here !== "review" ? <a className="btn" href={guideHref(config) + "?review"}>Every guide</a> : null}
+            {here !== "review" ? <a className="btn" href={guideHref(config) + "?review"}>Culture Guide Review</a> : null}
             {here !== "control" ? <a className="btn" href={guideHref(config) + "?control"}>How it works</a> : null}
             <a className="lnk" href={assignHref(config)}>Assign the two concepts</a>
             <a className="lnk" href={sitdown2Href(config)}>The slots</a>
@@ -113,8 +113,8 @@ function Read({ read, guide }) {
       {again ? <p className="p warn">{"Handed in again " + when(guide.submitted_at) + ", after this read was written."}</p> : null}
       {read.read ? <p className="p">{read.read}</p> : null}
       {read.strong ? <p className="p"><b>{"Strongest: "}</b>{read.strong}</p> : null}
-      {(read.check || []).length ? <><div className="h5">Thin or worth checking</div><ul className="rl">{read.check.map((x, i) => <li key={i}>{x}</li>)}</ul></> : null}
-      {(read.ask || []).length ? <><div className="h5">You could ask</div><ol className="rl">{read.ask.map((x, i) => <li key={i}>{x}</li>)}</ol></> : null}
+      {(read.check || []).length ? <><div className="h5">Thin or worth checking</div><ul className="rdl">{read.check.map((x, i) => <li key={i}>{x}</li>)}</ul></> : null}
+      {(read.ask || []).length ? <><div className="h5">You could ask</div><ol className="rdl">{read.ask.map((x, i) => <li key={i}>{x}</li>)}</ol></> : null}
     </div>
   );
 }
@@ -124,7 +124,7 @@ export function CultureReview({ config, worksheetKey, roster }) {
   const reads = useReads(config);
   const handed = rows.filter(r => r.guide?.submitted_at).length;
   return (
-    <Shell config={config} title="Every Culture Guide" here="review" intro={error ? "Could not read the sheets: " + error : !sheets ? "Reading the sheets." : handed + " handed in, " + (rows.filter(r => r.guide && !r.guide.submitted_at).length) + " started, " + rows.filter(r => !r.guide).length + " not opened. In the order of the meetings; a student with no time yet is at the end. This page asks again every half minute."}>
+    <Shell config={config} title="Culture Guide Review" here="review" intro={error ? "Could not read the sheets: " + error : !sheets ? "Reading the sheets." : handed + " handed in, " + (rows.filter(r => r.guide && !r.guide.submitted_at).length) + " started, " + rows.filter(r => !r.guide).length + " not opened. In the order of the meetings; a student with no time yet is at the end. This page asks again every half minute."}>
       {rows.map(r => {
         const left = r.guide ? missingOf(r.answers, r.assigned.ids) : [];
         const q = [1, 2].map(i => String(r.answers[F.q(i)] || "").trim()).filter(Boolean);
@@ -140,6 +140,7 @@ export function CultureReview({ config, worksheetKey, roster }) {
               <>
                 {q.length ? <div className="asks"><div className="h5">Asks you to ask</div><ol className="askl">{q.map((x, i) => <li key={i} className="q">{x}</li>)}</ol></div> : null}
                 {r.assigned.ids.length ? <p className="p">{"Required: " + r.assigned.ids.map(nameOf).join(" and ") + "."}</p> : <p className="p">No concepts assigned yet.</p>}
+                <div className="h5 work">{nameShown(data, r.student.name).split(" ")[0] + "'s guide, as written"}</div>
                 <div className="cg ro"><Printout answers={r.answers} name={nameShown(data, r.student.name)} assigned={r.assigned.ids} /></div>
                 <a className="lnk" href={guideHref(config) + "?s=" + encodeURIComponent(r.email)}>Open the file</a>
               </>
@@ -206,7 +207,11 @@ const CSS = `
 .sd .read{display:grid;gap:10px;width:100%;background:var(--card);border:1px solid var(--line);border-radius:var(--rr);padding:18px 22px 22px;box-sizing:border-box;box-shadow:inset 5px 0 0 var(--ink2)}
 .sd .read .p{margin:0;font-size:17px;line-height:1.5;color:var(--ink)}
 .sd .read .warn{font-weight:600}
-.sd .read .rl{margin:0;padding-left:24px;display:grid;gap:8px;font-size:17px;line-height:1.5;color:var(--ink)}
+.sd .read .rdl{display:block;margin:0;padding:0 0 0 24px;font-size:17px;line-height:1.5;color:var(--ink)}
+.sd .read .rdl li{display:list-item;margin:0 0 8px;padding:0}
+.sd .read .rdl li:last-child{margin-bottom:0}
+.sd .read .h5{margin-top:8px}
+.sd .one .work{font-size:15px;color:var(--ink);padding-top:16px;border-top:1px solid var(--line)}
 @media (max-width:640px){.sd .read{padding:16px}}
 .sd .tbl{width:100%;border-collapse:collapse;font-size:15px;line-height:1.4}
 .sd .tbl th{text-align:left;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);padding:0 10px 10px 0;border-bottom:1px solid var(--line)}
@@ -242,7 +247,7 @@ export function CultureRead({ config, worksheetKey, roster, student }) {
           <h1 className="h1">{shown + "'s Culture Guide"}</h1>
           <p className="intro">{error ? "Could not read the file: " + error : !got ? "Reading the file." : got.submitted ? "Handed in " + when(got.submitted) + ". Every page as " + shown.split(" ")[0] + " sees it, read only." : got.opened ? "Started, not handed in. Every page as " + shown.split(" ")[0] + " sees it, read only." : "Not opened yet. Every page as " + shown.split(" ")[0] + " will see it, read only."}</p>
           <div className="bar">
-            <a className="btn" href={guideHref(config) + "?review"}>Every guide</a>
+            <a className="btn" href={guideHref(config) + "?review"}>Culture Guide Review</a>
             <a className="lnk" href={sitdown2Href(config) + "?as=" + encodeURIComponent(student.name)}>{shown.split(" ")[0] + "'s slot page"}</a>
           </div>
         </header>
