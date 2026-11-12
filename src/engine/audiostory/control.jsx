@@ -53,6 +53,28 @@ export function useClipUrls(config, worksheetKey, sheets) {
   return urls;
 }
 
+// Claude's read of a worksheet, for the instructor alone. The reads name
+// students and this repo is public, so the file sits in the private
+// instructor bucket and comes out through /api/sitdown-sheet to an
+// instructor only, the way the Culture Guide's read does (sitdown2/
+// control.jsx useReads). undefined while asking, null when there is no file.
+export function useInstructorRead(config, sheet) {
+  const [got, setGot] = useState(undefined);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const pin = savedPin();
+        const r = await fetch("/api/sitdown-sheet?sheet=" + encodeURIComponent(sheet) + "&class=" + encodeURIComponent(config.id) + (pin ? "&pin=" + encodeURIComponent(pin) : ""), { headers: await authHeaders() });
+        const out = r.ok ? await r.json().catch(() => null) : null;
+        if (alive) setGot(out && out.students ? out : null);
+      } catch { if (alive) setGot(null); }
+    })();
+    return () => { alive = false; };
+  }, [config.id, sheet]);
+  return got;
+}
+
 export function useAllSheets(config, worksheetKey, every = 30000) {
   const [sheets, setSheets] = useState(null);
   const [error, setError] = useState("");

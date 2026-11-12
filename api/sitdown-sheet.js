@@ -16,7 +16,13 @@ const BUCKET = "instructor";
 // ?sheet=2 is the Sit-Down 2 file, Claude's read of each Culture Guide, kept
 // the same way for the same reason. Andrew, 2026-11-12: "when i meet with a
 // student, i need to see their culture guide as well as your small analysis."
-const objectFor = (id, n) => `${String(id || "").toLowerCase().replace(/[^a-z0-9-]+/g, "")}-sitdown-${String(n) === "2" ? 2 : 1}.json`;
+// ?sheet=audio-pre is Claude's read of COMM 3's audio story pre-production
+// clips, kept the same way. Andrew, 2026-11-12: "deploy a page for me to
+// see, following our standard structure for review of assignments."
+const objectFor = (id, n) => {
+  const cls = String(id || "").toLowerCase().replace(/[^a-z0-9-]+/g, "");
+  return String(n) === "audio-pre" ? `${cls}-audio-pre-read.json` : `${cls}-sitdown-${String(n) === "2" ? 2 : 1}.json`;
+};
 
 export default async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
