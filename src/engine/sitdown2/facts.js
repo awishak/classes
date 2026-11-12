@@ -33,8 +33,13 @@ export const locked = (now = Date.now()) => now > SITDOWN2.lock;
 export const pastDue = (now = Date.now()) => now > SITDOWN2.due;
 
 // The four blocks, each cut into ten-minute slots from `from` up to `to`.
+//
+// Andrew, 2026-11-11: "block off all times tomorrow morning before 9:10 am
+// and after 11:10 am." Thursday morning was 8:30 to 11:30; the six slots cut
+// (8:30 to 9:00, 11:10, 11:20) were all open. A slot's key is its clock time,
+// so the five bookings inside the new hours keep their keys.
 export const BLOCKS = [
-  { key: "thu-am", day: "Thursday, November 12", part: "morning", month: 10, date: 12, from: [8, 30], to: [11, 30] },
+  { key: "thu-am", day: "Thursday, November 12", part: "morning", month: 10, date: 12, from: [9, 10], to: [11, 10] },
   { key: "thu-pm", day: "Thursday, November 12", part: "afternoon", month: 10, date: 12, from: [14, 30], to: [15, 30] },
   { key: "fri-am", day: "Friday, November 13", part: "morning", month: 10, date: 13, from: [9, 15], to: [10, 15] },
   { key: "fri-mid", day: "Friday, November 13", part: "midday", month: 10, date: 13, from: [11, 45], to: [14, 0] },
