@@ -48,7 +48,7 @@ async function preOf({ classId, who, preview }) {
   return { sources: join("sources").trim(), story: join("story").trim(), url: clip ? urls[clip.path] || "" : "" };
 }
 
-export function StoryFeedback({ classId, viewer, onPre }) {
+export function StoryFeedback({ classId, viewer, onPre, onLinks }) {
   const [got, setGot] = useState(null);
   const [pre, setPre] = useState({ sources: "", story: "", url: "" });
   const [open, setOpen] = useState(() => { try { return localStorage.getItem("audio-story-feedback") !== "hidden"; } catch { return true; } });
@@ -65,6 +65,7 @@ export function StoryFeedback({ classId, viewer, onPre }) {
         const out = r.ok ? await r.json() : null;
         if (!alive || !out || !(out.note || out.read)) return;
         setGot(out);
+        if (onLinks) onLinks(out.links || {});
         const p = await preOf({ classId, who: as || me, preview: !!as }).catch(() => null);
         if (alive && p) { setPre(p); if (as && onPre) onPre(p); }
       } catch { /* no feedback to show */ }

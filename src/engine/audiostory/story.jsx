@@ -56,7 +56,7 @@ export const STORY_COPY = {
   before: "See what you turned in previously",
   summarySay: "This is a promotion of your work in three to five sentences. Why should somebody listen to your work? Up to 100 words.",
   voicesSay: "Add each voice. This includes broadcast voices. This includes interviews.",
-  sourcesSay: "Carried over from your pre-production. Add what you used and take out what you did not.",
+  sourcesSay2: "Carried over from your pre-production. Each source is a link, a title and a source. Add what you used and take out what you did not.",
   fontSay: "Choose a font and see your story page change.",
   chaptersSay: "The time each part starts and the name of the part. A listener can jump to any chapter.",
   "done.h": "Thanks for submitting your story!",
@@ -86,7 +86,7 @@ export function AudioStoryView({ story, urls, showPrivate = false, by = "" }) {
   useStoryFonts();
   const player = useRef(null);
   const chapters = story.chapters.filter(c => c.name.trim() && secondsOf(c.at) !== null).sort((x, y) => secondsOf(x.at) - secondsOf(y.at));
-  const sources = story.sources.split("\n").map(l => l.trim()).filter(Boolean);
+  const sources = story.sources.filter(x => x.title.trim() || x.link.trim());
   const jump = (t) => { const a = player.current; if (!a) return; a.currentTime = t; a.play().catch(() => {}); };
   const cover = story.cover && urls[story.cover.path];
   const clip = story.audio && urls[story.audio.path];
@@ -118,7 +118,7 @@ export function AudioStoryView({ story, urls, showPrivate = false, by = "" }) {
             {sounds.length ? <div><h3 className="asr-ch">Sounds</h3><p className="asr-cp">{sounds.map(s => s.what.trim() + (s.kind === "mine" ? ", my recording" : ", " + soundKindSay(s.kind).toLowerCase() + (s.from.trim() ? ", " + s.from.trim() : ""))).join(". ")}.</p></div> : null}
           </div>
         ) : null}
-        {sources.length ? <div className="asr-credits"><div><h3 className="asr-ch">Sources</h3><ul className="asr-sources">{sources.map((l, i) => <li key={i}>{l}</li>)}</ul></div></div> : null}
+        {sources.length ? <div className="asr-credits"><div><h3 className="asr-ch">Sources</h3><ul className="asr-sources">{sources.map(x => <li key={x.id}>{x.link.trim() ? <a href={x.link.trim()} target="_blank" rel="noreferrer">{x.title.trim() || x.link.trim()}</a> : x.title.trim()}{x.source.trim() ? ", " + x.source.trim() : ""}</li>)}</ul></div></div> : null}
         {by ? <p className="asr-by">Made by {by}.{story.credits.trim() ? " " + story.credits.trim() : ""}</p> : null}
       </div>
     </article>
@@ -165,6 +165,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
   // The instructor's ?as= preview shows that student's sources in the list
   // without saving them to his own sheet.
   const [borrowed, setBorrowed] = useState("");
+  const [links, setLinks] = useState(null);
   const [stepsOpen, setStepsOpen] = useState(() => remember("audio-story-steps") !== "hidden");
   const copy = useCopy(editor, AUDIO_STORY_COPY_ROW, STORY_COPY);
   const saver = useRef(null);
@@ -220,7 +221,9 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
     };
   }, [store, viewer?.id, classId, readOnly]);
 
-  const story = useMemo(() => audioStoryOf(answers || {}), [answers]);
+  // Sources carried over as plain lines read as link, title and source; the
+  // headlines come with the feedback. ?as= shows that student's, unsaved.
+  const story = useMemo(() => { const a = answers || {}; return audioStoryOf(String(a.sources || "").trim() || !borrowed ? a : { ...a, sources: borrowed }, links); }, [answers, links, borrowed]);
   const paths = [story.cover?.path, story.audio?.path].filter(p => p && !urls[p]);
   const pathKey = paths.join("|");
   useEffect(() => {
@@ -248,9 +251,9 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
   const voices = story.voices, chapters = story.chapters;
   const patchVoice = (id, patch) => setList("voices", voices.map(v => (v.id === id ? { ...v, ...patch } : v)));
   // Sources are one field, a line each, shown as a list to add to and take from.
-  const shownSources = String((answers || {}).sources || "") || borrowed;
-  const sourceLines = shownSources ? shownSources.split("\n") : [];
-  const setSources = (lines) => set("sources", lines.join("\n"));
+  const sources = story.sources;
+  const setSources = (list) => set("sources", list.length ? JSON.stringify(list) : "");
+  const patchSource = (id, patch) => setSources(sources.map(x => (x.id === id ? { ...x, ...patch } : x)));
   const patchChapter = (id, patch) => setList("chapters", chapters.map(c => (c.id === id ? { ...c, ...patch } : c)));
 
   // One upload, start to finish. A failure stays on the page with Try again.
@@ -315,7 +318,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
             <Words k="before" copy={copy} editing={editing} className="ass-door-name" />
           </a>
         </div>
-        <StoryFeedback classId={classId} viewer={viewer} onPre={(p) => setBorrowed(String(p.sources || ""))} />
+        <StoryFeedback classId={classId} viewer={viewer} onPre={(p) => setBorrowed(String(p.sources || ""))} onLinks={setLinks} />
         {editor ? (
           <div className="ass-row">
             <button type="button" className="ass-btn" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
@@ -400,16 +403,20 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
 
           <div className="ass-field">
             <span className="ass-label">Sources</span>
-            <Words k="sourcesSay" copy={copy} editing={editing} className="ass-say" />
+            <Words k="sourcesSay2" copy={copy} editing={editing} className="ass-say" />
             <ul className="ass-list">
-              {sourceLines.map((line, i) => (
-                <li key={i} className="ass-source">
-                  <input className="ass-input" value={line} maxLength={600} readOnly={!canEdit} aria-label={"Source " + (i + 1)} onChange={e => setSources(sourceLines.map((x, j) => (j === i ? e.target.value.replace(/\n/g, " ") : x)))} />
-                  <button type="button" className="ass-mini" disabled={!canEdit} onClick={() => setSources(sourceLines.filter((_, j) => j !== i))}>Remove</button>
+              {sources.map((x, i) => (
+                <li key={x.id} className="ass-card ass-source">
+                  <input className="ass-input" value={x.link} maxLength={600} readOnly={!canEdit} placeholder="Link" aria-label={"Link for source " + (i + 1)} onChange={e => patchSource(x.id, { link: e.target.value })} />
+                  <div className="ass-two">
+                    <input className="ass-input" value={x.title} maxLength={300} readOnly={!canEdit} placeholder="Title" aria-label={"Title of source " + (i + 1)} onChange={e => patchSource(x.id, { title: e.target.value })} />
+                    <input className="ass-input" value={x.source} maxLength={160} readOnly={!canEdit} placeholder="Source" aria-label={"Where source " + (i + 1) + " is from"} onChange={e => patchSource(x.id, { source: e.target.value })} />
+                  </div>
+                  <div className="ass-row"><span className="ass-grow" /><button type="button" className="ass-mini" disabled={!canEdit} onClick={() => setSources(sources.filter(y => y.id !== x.id))}>Remove</button></div>
                 </li>
               ))}
             </ul>
-            <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setSources([...sourceLines, ""])}>Add a source</button>
+            <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setSources([...sources, { id: letterId(6), link: "", title: "", source: "" }])}>Add a source</button>
           </div>
 
           <div className="ass-field">
@@ -719,7 +726,7 @@ const CSS = `
 .ass-go{background:var(--pt-hero);color:var(--pt-hero-ink)}
 .ass-drop{background:var(--pt-dr);border-color:var(--pt-dr-ink)}
 .ass-sheet{padding-top:22px}
-.ass-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.ass-source{display:flex;flex-direction:column;gap:8px}
 .ass-fonts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
 .ass-font{font-size:19px;line-height:1.2;padding:12px 10px;border-radius:12px;border:1.5px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .ass-font[aria-pressed="true"]{background:var(--pt-hero);border-color:var(--pt-hero);color:var(--pt-hero-ink)}

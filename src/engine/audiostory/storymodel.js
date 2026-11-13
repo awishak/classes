@@ -20,6 +20,8 @@
 // "Within your allotted 5 minutes" is the audio exercise's own line, so the
 // limit is five minutes; the listen line takes up to forty words.
 
+import { sourcePieces, nameOfLink } from "./readtext.js";
+
 export const MAX_STORY_SECONDS = 5 * 60;
 // Andrew, 2026-11-12: the listen line is the Summary now, "a 100 words, not
 // 40 words. way too few." The field is still `listen`.
@@ -58,10 +60,30 @@ const listOf = (v) => { const x = parse(v, []); return Array.isArray(x) ? x.filt
 const clipOf = (v) => { const x = parse(v, null); return x && typeof x.path === "string" && x.path ? { path: x.path, seconds: Number(x.seconds) || 0, name: String(x.name || "") } : null; };
 const coverOf = (v) => { const x = parse(v, null); return x && typeof x.path === "string" && x.path ? { path: x.path, w: Number(x.w) || 0, h: Number(x.h) || 0 } : null; };
 
+// Andrew, 2026-11-12: "sources should be a link, a title, and a source for
+// each one." The field is a JSON list of { id, link, title, source }. Lines
+// carried over from the pre-production are plain text until the student
+// edits the list: an address in a line is the link, the page's own headline
+// and site come from `links` when the read looked the address up, and a line
+// with no address is a title alone.
+export function sourceListOf(value, links) {
+  const v = String(value || "").trim();
+  if (!v) return [];
+  if (v.startsWith("[")) return listOf(v).map((x, i) => ({ id: String(x.id || "s" + i), link: String(x.link || ""), title: String(x.title || ""), source: String(x.source || "") }));
+  return v.split("\n").map(l => l.trim()).filter(Boolean).map((line, i) => {
+    const pieces = sourcePieces(line);
+    const url = (pieces.find(p => p.url) || {}).url || "";
+    const text = pieces.filter(p => p.text).map(p => p.text).join(" ").replace(/^[\s:,-]+|[\s:,-]+$/g, "");
+    if (!url) return { id: "s" + i, link: "", title: line, source: "" };
+    const n = nameOfLink(url, links);
+    return { id: "s" + i, link: url, title: text || n.title || "", source: n.site || "" };
+  });
+}
+
 export const wordsIn = (s) => (String(s || "").trim().match(/[^\s]+/g) || []).length;
 
 /** Answers to a story: { audio, cover, headline, listen, voices, sounds, look, credits }. */
-export function audioStoryOf(answers) {
+export function audioStoryOf(answers, links) {
   const a = answers || {};
   return {
     audio: clipOf(a.audio),
@@ -71,7 +93,7 @@ export function audioStoryOf(answers) {
     voices: listOf(a.voices).map(v => ({ id: String(v.id || ""), name: String(v.name || ""), role: String(v.role || ""), knew: v.knew === true ? true : v.knew === false ? false : null })),
     sounds: listOf(a.sounds).map(s => ({ id: String(s.id || ""), what: String(s.what || ""), kind: SOUND_KINDS.some(k => k[0] === s.kind) ? s.kind : "mine", from: String(s.from || "") })),
     look: a.look === "dark" ? "dark" : "light",
-    sources: String(a.sources || ""),
+    sources: sourceListOf(a.sources, links),
     font: fontOf(a.font)[0],
     chapters: listOf(a.chapters).map(c => ({ id: String(c.id || ""), at: String(c.at || ""), name: String(c.name || "") })),
     credits: String(a.credits || ""),

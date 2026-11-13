@@ -6163,7 +6163,7 @@ cases.push(["Audio research, loading", <ResearchSheet store={{ load: () => new P
     sounds: JSON.stringify([{ id: "a", what: "Water, lane 4", kind: "mine", from: "" }, { id: "b", what: "Early Lanes", kind: "music", from: "Free Music Archive, CC BY" }]),
     look: "dark",
     chapters: JSON.stringify([{ id: "a", at: "0:00", name: "The deck" }, { id: "b", at: "1:40", name: "Coach Ruiz" }]),
-    sources: "https://example.com/swim",
+    sources: "https://example.com/swim-at-dawn",
   });
   if (audioProblems(full).length) say("a complete story has problems: " + audioProblems(full).join(" | "));
   if (audioProgress(full) !== 1 || audioProgress(empty) !== 0) say("progress is not 0 for empty and 1 for full");
@@ -6183,7 +6183,7 @@ cases.push(["Audio research, loading", <ResearchSheet store={{ load: () => new P
   const { renderToStaticMarkup } = await import("react-dom/server");
   const urls = { "comm3/a@b/audio-x.m4a": "https://x.test/a.m4a", "comm3/a@b/c.jpg": "https://x.test/c.jpg" };
   const page = renderToStaticMarkup(<AudioStoryView story={full} urls={urls} by="Sam Okafor" />);
-  if (!/Nobody talks/.test(page) || !/4:12/.test(page) || !/https:\/\/x.test\/a.m4a/.test(page) || !/Coach Dana Ruiz/.test(page) || !/Free Music Archive/.test(page) || !/Coach Ruiz/.test(page) || !/example.com\/swim/.test(page)) say("the story page is missing a part");
+  if (!/Nobody talks/.test(page) || !/4:12/.test(page) || !/https:\/\/x.test\/a.m4a/.test(page) || !/Coach Dana Ruiz/.test(page) || !/Free Music Archive/.test(page) || !/Coach Ruiz/.test(page) || !/example.com\/swim-at-dawn/.test(page) || full.sources[0].source !== "example.com" || full.sources[0].title !== "swim at dawn") say("the story page is missing a part");
   if (/knew|did not know|not marked/.test(page)) say("a classmate's page shows the knew mark");
   const mine = renderToStaticMarkup(<AudioStoryView story={unmarked} urls={urls} showPrivate by="" />);
   if (!/not marked/.test(mine)) say("the instructor's read does not show the knew mark");
