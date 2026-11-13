@@ -20,6 +20,8 @@ import * as TOKENS from "./tokens.js";
 import { appsFor } from "./apps.js";
 import HornApp, { openHorn } from "./HornApp.jsx";
 import { hasSections, sectionsOf, useRoomSection } from "./sections.js";
+import { mayWritePlan } from "./store.js";
+import { InboxCount } from "./InboxPage.jsx";
 
 const F = TOKENS.FONT.body;
 const TEXT_PRIMARY = TOKENS.TEXT.primary;
@@ -161,7 +163,7 @@ export default function TopNav({ config, tabs, active, onPick, right, accent, mo
                 <button key={app.id} className="dash-focus ca-focus repo-focus" onClick={openHorn} style={tabStyle(false)}>{app.label}</button>
               ) : (
                 <a key={app.id} className="dash-focus ca-focus repo-focus" href={app.href || config.path + "/" + app.card}
-                  aria-current={lit === app.id ? "page" : undefined} style={tabStyle(lit === app.id)}>{app.label}</a>
+                  aria-current={lit === app.id ? "page" : undefined} style={tabStyle(lit === app.id)}>{app.label}{app.id === "inbox" && mayWritePlan() ? <InboxCount /> : null}</a>
               ))}
             </>
           ) : null}

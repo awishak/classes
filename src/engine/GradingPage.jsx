@@ -26,6 +26,7 @@ import { waitingOn, turnedIn } from "./AssignmentsCard.jsx";
 import { boardOf, sortedCount } from "./grades.js";
 import { realStudents } from "./sections.js";
 import { dueWords } from "./portal/bits.jsx";
+import { LateNotes } from "./InboxPage.jsx";
 
 /** One class's assignments as queue rows: what is waiting, in, graded, released. */
 export function queueOf(config, data) {
@@ -92,6 +93,8 @@ export function ToGrade({ classes, onOpen }) {
           {classes.map(c => <button key={c.id} type="button" className={"pt-chip pt-focus" + (filter === c.id ? " on" : "")} onClick={() => setFilter(c.id)}>{c.code}</button>)}
         </div>
       </div>
+      {/* Notes that are only about turning work in late, with the grading. owed.js. */}
+      <LateNotes filter={filter} />
       {loaded ? (
         <div className="pt-body">
           {waiting.map(r => (

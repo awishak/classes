@@ -23,6 +23,7 @@ import DecisionsPage from "./engine/DecisionsPage.jsx";
 import { TriviaPresenter as EnginePresenter } from "./engine/GameSystem.jsx";
 import RepoPage from "./engine/RepoPage.jsx";
 import GradesPortal from "./engine/GradesPortal.jsx";
+import InboxPage from "./engine/InboxPage.jsx";
 
 // An address that moved. The browser goes on to the new one, with no entry
 // left behind for the back button to land on.
@@ -270,6 +271,15 @@ export default function App() {
     return (
       <InstructorGate what="Messages">
         <InstructorBar always><DigestPage /></InstructorBar>
+      </InstructorGate>
+    );
+  }
+
+  // The inbox: what students have written that waits on him, every class.
+  if (path === "/inbox" || path === "/inbox/") {
+    return (
+      <InstructorGate what="Inbox">
+        <InboxPage />
       </InstructorGate>
     );
   }

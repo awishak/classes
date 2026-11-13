@@ -3,6 +3,7 @@
 // / Make a meeting, and ask a question. Instructor view: an inbox of every
 // student thread. Threads persist via the shared store (Supabase + realtime).
 
+import { threadWaiting } from "./owed.js";
 import { useState, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
@@ -75,10 +76,12 @@ const lastMsg = (data, name) => { const t = threadOf(data, name); return t[t.len
 // inboxSeen holds the moment he last opened each thread, on the plan row so
 // only his session writes it. Replying still clears it, since then he spoke
 // last.
-export const waitingOnInstructor = (data, name) => {
-  const m = lastMsg(data, name);
-  return !!(m && m.from === "student" && (m.ts || 0) > (data?.inboxSeen?.[name] || 0));
-};
+//
+// Andrew, 2026-11-13: "how would you make sure nothing slips between the
+// cracks." Reading no longer clears a thread; a reply, Done or Later on the
+// inbox does (owed.js), and this asks that one rule. inboxSeen is still
+// written when he opens a thread and nothing reads it.
+export const waitingOnInstructor = (data, name) => threadWaiting(data, name);
 export const inboxWaiting = (config, data) => rosterOf(config, data).filter(s => waitingOnInstructor(data, s.name)).length;
 
 // Opening a thread reads it. Written only while the thread is waiting, so an

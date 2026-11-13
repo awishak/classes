@@ -33,6 +33,8 @@ export function appsFor(config, role) {
     return [
       { id: "dashboard", label: "Dashboard", href: p + "/dashboard" },
       { id: "repo", label: "Repository", href: "/repo" },
+      // Everything students have written that waits on him, every class. InboxPage.jsx.
+      { id: "inbox", label: "Inbox", href: "/inbox" },
       { id: "grades", label: "Grades", href: "/grades" },
       { id: "games", label: "Games", href: p + "/games" },
       { id: "worksheets", label: "Worksheets", href: p + "/worksheets" },
