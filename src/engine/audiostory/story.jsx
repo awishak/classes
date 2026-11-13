@@ -678,6 +678,15 @@ const CSS = `
 .ass-sheet{background:${S.card};border-radius:16px;box-shadow:0 0 0 1px ${L.soft};padding:8px 24px 24px;gap:22px}
 .ass-h2{margin:0;font-family:${SERIF};font-weight:600;font-size:24px;line-height:1.2;padding:16px 0 0}
 .ass-h2-out{padding:8px 0 4px}
+/* "more color": the due date and Submit in the class purple, a purple rule on the sheet. */
+.ass{--pt-dr:#efe8fd;--pt-dr-ink:#4c1d95;--pt-hero:#4c1d95;--pt-hero-ink:#ffffff}
+@media (prefers-color-scheme: dark){ [data-theme="clean"]:not([data-mode="day"]) .ass{--pt-dr:#2a1f47;--pt-dr-ink:#d9c8ff;--pt-hero:#3b1a75} }
+[data-theme="clean"][data-mode="night"] .ass{--pt-dr:#2a1f47;--pt-dr-ink:#d9c8ff;--pt-hero:#3b1a75}
+.ass-due{background:var(--pt-hero);color:var(--pt-hero-ink);box-shadow:none}
+.ass-sheet{border-top:6px solid var(--pt-hero)}
+.ass-sheet .ass-label{color:var(--pt-dr-ink)}
+.ass-go{background:var(--pt-hero);color:var(--pt-hero-ink)}
+.ass-drop{background:var(--pt-dr);border-color:var(--pt-dr-ink)}
 .ass-label{font-size:17px;font-weight:600;letter-spacing:0;text-transform:none}
 .ass-see{position:static}
 .ass-see-frame{max-height:none;box-shadow:0 0 0 1px ${L.soft}}

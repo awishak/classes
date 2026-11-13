@@ -5,7 +5,9 @@
 // the note alone: "what about the timeline for them? what about the info,
 // opening closing etc? what about sources?" So the block is the mockup's: his
 // note, the clip by voice, opening, thesis and closing in their own words,
-// interview, structure and new information, and their sources.
+// interview, structure and new information, and their sources. The same day:
+// "more color, remove ALL your shitty commentary." So no sentence of Claude's
+// is on the card: a row is its mark and the student's own words.
 //
 // All of it comes from the private instructor bucket through
 // /api/sitdown-sheet?sheet=audio-pre-feedback, which hands a student their
@@ -73,16 +75,16 @@ export function StoryFeedback({ classId, viewer }) {
   // or says the part is good, `you.rate` carries his call and the mark follows.
   const read = useMemo(() => {
     const r = got?.read || null;
-    const rate = r?.you?.rate;
+    const rate = r?.rate;
     if (!r || !rate) return r;
     const out = { ...r };
     for (const k of ["opener", "thesis", "closer"]) if (out[k] && typeof rate[k] === "boolean") out[k] = { ...out[k], verdict: rate[k] ? "meets" : "partly" };
     return out;
   }, [got]);
-  const his = (k, mine) => (typeof read?.you?.rate?.[k] === "boolean" ? read.you.rate[k] : mine);
+  const his = (k, mine) => (typeof read?.rate?.[k] === "boolean" ? read.rate[k] : mine);
   const sents = useMemo(() => sentencesOf(read?.transcript || []), [read]);
   if (!got) return null;
-  const fact = (label, say, ok) => <div className="apr-row apr-fact"><div className="apr-side"><h3 className="apr-pl">{label}</h3><Rate ok={ok} /></div>{say ? <p className="apr-say">{say}</p> : <span />}</div>;
+  const fact = (label, ok) => <div className={"afb-mark " + (ok ? "afb-yes" : "afb-could")}><h3 className="apr-pl">{label}</h3><Rate ok={ok} /></div>;
   // Andrew, 2026-11-12: "make it way prettier like you had before. and let
   // people collapse my guidance and feedback." One white card of ruled rows,
   // the mockup's, with a button that folds the card and remembers the fold.
@@ -96,7 +98,7 @@ export function StoryFeedback({ classId, viewer }) {
       </div>
       {open ? (
         <div className="afb-rows apr-read">
-          {String(got.note || "").trim() ? <div className="apr-row apr-fact"><h3 className="apr-pl">From Dr. Ishak</h3><NoteBody note={got.note} /></div> : null}
+          {String(got.note || "").trim() ? <div className="afb-from"><h3 className="apr-pl">From Dr. Ishak</h3><NoteBody note={got.note} /></div> : null}
           {read ? (
             <>
               {pre.url || read.timeline?.parts?.length ? (
@@ -108,10 +110,12 @@ export function StoryFeedback({ classId, viewer }) {
                   </div>
                 </div>
               ) : null}
-              <Three read={read} sents={sents} onSeek={pre.url ? seek : undefined} says={read.you || {}} />
-              {read.interview ? fact("Interview", read.you?.interview, his("interview", !!read.interview.has)) : null}
-              {read.structure ? fact("Structure", read.you?.structure, his("structure", read.structure.level === "clear")) : null}
-              {read.news ? fact("New information", read.you?.news, his("news", read.news.level === "reported")) : null}
+              <Three read={read} sents={sents} onSeek={pre.url ? seek : undefined} />
+              <div className="afb-marks">
+                {read.interview ? fact("Interview", his("interview", !!read.interview.has)) : null}
+                {read.structure ? fact("Structure", his("structure", read.structure.level === "clear")) : null}
+                {read.news ? fact("New information", his("news", read.news.level === "reported")) : null}
+              </div>
               {pre.sources ? <div className="apr-row apr-fact"><h3 className="apr-pl">Your sources</h3><Sources text={pre.sources} links={got.links} /></div> : null}
             </>
           ) : null}
