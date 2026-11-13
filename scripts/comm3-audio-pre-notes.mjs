@@ -25,13 +25,16 @@ const name = process.argv[2];
 if (!name || name.startsWith("--")) { console.error("Name the notes file."); process.exit(1); }
 const mine = JSON.parse(readFileSync(homedir() + "/Projects/audio-pre-grading/" + name, "utf8"));
 const read = await (await fetch(BASE + "comm3-audio-pre-read.json", { headers: H })).json();
-const emails = Object.fromEntries(Object.keys(read.students).map(e => [e.split("@")[0], e]));
+// Students with no audio have no read and no card, so their emails come from
+// the local pull. Their notes are stored for the release step.
+const pull = JSON.parse(readFileSync(homedir() + "/Projects/audio-pre-grading/data.json", "utf8"));
+const emails = Object.fromEntries([...pull.students.map(x => x.email), ...Object.keys(read.students)].map(e => [e.split("@")[0], e]));
 const got = await fetch(BASE + "comm3-audio-pre-notes.json", { headers: H });
 const file = (got.ok ? await got.json().catch(() => null) : null) || { notes: {} };
 const at = new Date().toISOString();
 for (const [who, note] of Object.entries(mine)) {
   const email = emails[who];
-  if (!email) { console.error(who + ": not a student with a read"); process.exit(1); }
+  if (!email) { console.error(who + ": not a student in the pull"); process.exit(1); }
   const had = String(file.notes?.[email]?.note || "").trim();
   if (had && had !== note && !process.argv.includes("--over")) { console.log(`${who}: kept the note already there (${had.length} characters)`); continue; }
   file.notes = { ...(file.notes || {}), [email]: { note, at } };
