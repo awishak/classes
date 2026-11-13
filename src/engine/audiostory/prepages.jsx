@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
+import { NoteBody, FEEDBACK_CSS } from "./feedback.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
@@ -427,10 +428,10 @@ export function PreReview({ config, worksheetKey, roster }) {
     } catch { return false; }
   };
   // ?review&timelines opens on every clip's timeline; the chips keep the address in step.
-  const [view, setView] = useState(() => (typeof window !== "undefined" && /[?&]timelines\b/.test(window.location.search) ? "lines" : "each"));
+  const [view, setView] = useState(() => (typeof window !== "undefined" && /[?&]timelines\b/.test(window.location.search) ? "lines" : /[?&]feedback\b/.test(window.location.search) ? "notes" : "each"));
   const show = (v) => {
     setView(v);
-    try { const u = new URL(window.location.href); const q = u.search.replace(/[?&]timelines\b/, "").replace(/^&/, "?"); window.history.replaceState(null, "", u.pathname + (q || "?review") + (v === "lines" ? "&timelines" : "")); } catch { /* the address is a convenience */ }
+    try { const u = new URL(window.location.href); const q = u.search.replace(/[?&](timelines|feedback)\b/, "").replace(/^&/, "?"); window.history.replaceState(null, "", u.pathname + (q || "?review") + (v === "lines" ? "&timelines" : v === "notes" ? "&feedback" : "")); } catch { /* the address is a convenience */ }
   };
   const [data] = useClassState(config.storageKey);
   const urls = useClipUrls(config, worksheetKey, sheets);
@@ -481,17 +482,32 @@ export function PreReview({ config, worksheetKey, roster }) {
         <div className="pt-chips" role="tablist" aria-label="View">
           <Chip on={view === "each"} onClick={() => show("each")}>Each student</Chip>
           <Chip on={view === "lines"} onClick={() => show("lines")}>All timelines</Chip>
+          <Chip on={view === "notes"} onClick={() => show("notes")}>What students get</Chip>
         </div>
       ) : null}
       {read && view === "lines" && lines.length ? <Compare rows={lines} /> : null}
-      {read && view !== "lines" ? (
+      {view === "notes" ? (
+        <div className="pt-stack apr-gets">
+          <style>{FEEDBACK_CSS}</style>
+          {rows.map(({ student }) => {
+            const n = notes[lower(student.email)]?.note || "";
+            return (
+              <section key={student.email} className="apr-get">
+                <h2 className="apr-get-h"><a className="pt-focus" href={"/" + config.id + "/worksheets/audio-story?as=" + encodeURIComponent(lower(student.email))} target="_blank" rel="noreferrer">{student.name}</a></h2>
+                {n.trim() ? <div className="afb"><h3 className="afb-h">From Dr. Ishak</h3><NoteBody note={n} /></div> : <p className="pt-quiet">No note.</p>}
+              </section>
+            );
+          })}
+        </div>
+      ) : null}
+      {read && view === "each" ? (
         <div className="pt-chips" role="tablist" aria-label="Order">
           <Chip on={order === "read"} onClick={() => setOrder("read")}>Strongest first</Chip>
           <Chip on={order === "new"} onClick={() => setOrder("new")}>Newest first</Chip>
         </div>
       ) : null}
       <div className="pt-stack aic-cards">
-        {(read && view === "lines" && lines.length ? [] : cards).map(({ student, sheet }) => {
+        {((read && view === "lines" && lines.length) || view === "notes" ? [] : cards).map(({ student, sheet }) => {
           const clip = audioOf(sheet.answers?.audio);
           const email = lower(student.email);
           return <Card key={student.email} config={config} data={data} student={student} sheet={sheet} mine={readOf({ student })} readAt={read?.at} links={read?.links} url={clip ? urls[clip.path] || "" : ""} note={notes[email]} onNote={(text) => saveNote(email, text)} />;
@@ -568,6 +584,10 @@ const REVIEW_CSS = `
 .apr-note-foot{display:flex;align-items:center;gap:12px}
 .aic .apr-btn[disabled]{opacity:.4;cursor:default}
 .apr-line{display:flex;flex-direction:column;gap:6px;max-width:860px;min-width:0}
+.apr-gets{margin-top:16px;gap:28px}
+.apr-get{display:flex;flex-direction:column;gap:8px}
+.apr-get-h{margin:0;font-size:20px;font-weight:600}
+.apr-get-h a{color:inherit}
 .apr-track{position:relative;height:30px;border-radius:8px;overflow:hidden;background:var(--surface-sunk)}
 .apr-seg{position:absolute;top:0;bottom:0;min-width:1px}
 .apr-ticks{position:relative;height:18px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--text-secondary)}

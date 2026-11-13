@@ -9,7 +9,7 @@
 // GET /api/sitdown-sheet?class=comm118  with the instructor's session in the
 // bearer header, or the PIN as ?pin=.
 
-import { callerAllowed, readBody } from "./_auth.js";
+import { callerAllowed, callerEmail, readBody } from "./_auth.js";
 import { SUPABASE_URL, serviceHeaders } from "./_supabase.js";
 
 const BUCKET = "instructor";
@@ -35,6 +35,21 @@ export default async function handler(req, res) {
   if (req.method !== "GET" && !(req.method === "POST" && notes)) return res.status(405).json({ error: "Method not allowed" });
   res.setHeader("Cache-Control", "no-store");
   const body = req.method === "POST" ? readBody(req) || {} : {};
+  // ?sheet=audio-pre-feedback is the one way a note leaves this file for a
+  // student: their own note, to their own session, and only once the notes
+  // file says released. Andrew, 2026-11-12: "it should have some feedback up
+  // top" of the audio story page. An instructor reads any one student's note
+  // with &as=<email>, released or not, to see the page as that student will.
+  if (String(q.sheet) === "audio-pre-feedback") {
+    if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+    const teaches = await callerAllowed(req, { pin: q.pin });
+    const me = teaches ? String(q.as || "").trim().toLowerCase() : await callerEmail(req);
+    if (!me) return res.status(200).json({ ok: true, note: "" });
+    const f = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${objectFor(q.class || "comm3", "audio-pre-notes")}`, { headers: serviceHeaders() });
+    const file = (f.ok ? await f.json().catch(() => null) : null) || {};
+    const out = teaches || file.released === true ? String(file.notes?.[me]?.note || "") : "";
+    return res.status(200).json({ ok: true, note: out });
+  }
   if (!(await callerAllowed(req, { pin: body.pin || q.pin }))) {
     await new Promise(r => setTimeout(r, 1000));
     return res.status(401).json({ ok: false, error: "This sheet is the instructor's." });

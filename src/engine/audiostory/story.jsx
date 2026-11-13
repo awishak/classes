@@ -26,6 +26,7 @@ import { sendAudio, FORMAT_SAY } from "./audio.js";
 import { AUDIO_RESEARCH_KEY, researchHref } from "./research.jsx";
 import { AUDIO_IDEAS_KEY } from "./ideas.jsx";
 import { pairsFor } from "./all.jsx";
+import { StoryFeedback } from "./feedback.jsx";
 import { pairOf } from "./pairs.js";
 import { audioStoryOf, problemsOf, wordsIn, clock, MAX_STORY_SECONDS, MAX_LISTEN_WORDS, SOUND_KINDS, soundKindSay } from "./storymodel.js";
 import * as TOKENS from "../tokens.js";
@@ -273,6 +274,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
           <span className={"ass-status" + (status === "retrying" ? " ass-status-bad" : status === "saved" ? " ass-status-ok" : "")} aria-live="polite">{STATUS[status]}</span>
         </div>
         <Words k="sub" copy={copy} editing={editing} as="p" className="ass-hello-sub" />
+        <StoryFeedback classId={classId} />
         <nav className="ass-doors" aria-label="More for your story">
           <a className="ass-door" href={researchHref(classId)} target="_blank" rel="noreferrer">
             <span className="ass-door-name">Audio exercise</span>
