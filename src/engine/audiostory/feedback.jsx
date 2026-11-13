@@ -129,6 +129,8 @@ export function StoryFeedback({ classId, viewer, onPre }) {
                   </div>
                 </div>
               ) : null}
+              {/* Andrew, 2026-11-12, his words to every student. */}
+              <p className="afb-keep">Just because you got a green checkmark does not mean there isn't room for improvement in a particular area. I want you to keep making this better.</p>
               <div className="afb-tiles afb-three">
                 {tile("Opening", "opener", read.opener ? read.opener.verdict === "meets" : null, line("opener"))}
                 {tile("Thesis", "thesis", read.thesis ? read.thesis.verdict === "meets" : null, line("thesis"))}

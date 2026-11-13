@@ -68,6 +68,8 @@ export const FEEDBACK_CSS = `
 .afb-tile-say{margin:0;font-size:16px;line-height:1.45;font-weight:600}
 .afb-tile .apr-go{align-self:flex-start;background:var(--surface-card,#fff)}
 .afb-idea{font-style:italic}
+.afb-keep{margin:18px 0 0;font-size:17px;line-height:1.5;font-weight:600;max-width:66ch}
+.afb-keep+.afb-tiles{padding-top:12px}
 @media (max-width:860px){ .afb-three,.afb-four{grid-template-columns:1fr 1fr} }
 @media (max-width:560px){ .afb-three,.afb-four{grid-template-columns:1fr} }
 .afb-clip{display:flex;flex-direction:column;gap:10px;min-width:0}
