@@ -6193,7 +6193,7 @@ cases.push(["Audio research, loading", <ResearchSheet store={{ load: () => new P
   const w = localWorksheet("audio-story");
   if (!w || !w.review || !w.control) say("audio-story is not a local worksheet with a review and a control page");
   if (w && (!listedFor(w, "comm3") || listedFor(w, "comm118"))) say("audio-story is not COMM 3's, or is COMM 118's");
-  if (w && openTo(w, "comm3", {})) say("audio-story is open to COMM 3 before Andrew opens it");
+  if (w && !openTo(w, "comm3", {})) say("audio-story is not open to COMM 3, which Andrew opened on 2026-11-12");
   if (w && !openTo(w, "comm999", {})) say("audio-story is not open to COMM 999");
   if (w && !openTo(w, "comm3", { worksheetsOpen: { "audio-story": true } })) say("the Worksheets page switch does not open audio-story");
   const { progressOf } = await import("../src/engine/worksheetProgress.js");

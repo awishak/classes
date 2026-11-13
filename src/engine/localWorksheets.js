@@ -106,7 +106,10 @@ export const LOCAL_WORKSHEETS = [
   // "build that and put it in now, so i can show it to students." COMM 999
   // only until he opens it; Andrew, 2026-10-30: "don't give them the audio
   // story link yet." The Worksheets page switch opens it to COMM 3.
-  { key: AUDIO_STORY_KEY, title: AUDIO_STORY_TITLE, mount: mountAudioStory, review: AudioStoryReview, control: AudioStoryControl, open: ["comm999"], classes: ["comm3", "comm999"] },
+  // Andrew, 2026-11-12, after reading every student's feedback card: "okay
+  // release it to students." Open to COMM 3 from then, with the feedback on
+  // their pre-production at the top (the notes file's `released`).
+  { key: AUDIO_STORY_KEY, title: AUDIO_STORY_TITLE, mount: mountAudioStory, review: AudioStoryReview, control: AudioStoryControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
   { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },
 ];
