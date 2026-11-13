@@ -24,11 +24,11 @@ import { useCopy, Words } from "../visualstory/pre.jsx";
 import { gameClient } from "../gameClient.js";
 import { sendAudio, FORMAT_SAY } from "./audio.js";
 import { AUDIO_RESEARCH_KEY, researchHref } from "./research.jsx";
-import { AUDIO_IDEAS_KEY } from "./ideas.jsx";
+import { AUDIO_PRE_KEY } from "./pre.jsx";
 import { pairsFor } from "./all.jsx";
 import { StoryFeedback } from "./feedback.jsx";
 import { pairOf } from "./pairs.js";
-import { audioStoryOf, problemsOf, wordsIn, clock, MAX_STORY_SECONDS, MAX_LISTEN_WORDS, SOUND_KINDS, soundKindSay } from "./storymodel.js";
+import { audioStoryOf, problemsOf, wordsIn, clock, secondsOf, MAX_STORY_SECONDS, MAX_LISTEN_WORDS, soundKindSay } from "./storymodel.js";
 import * as TOKENS from "../tokens.js";
 
 export const AUDIO_STORY_KEY = "audio-story";
@@ -48,8 +48,16 @@ export const STEPS = [
   ["submit", "Listen back, then submit.", "Play your story on the page the way a classmate will. When you love it, press Submit."],
 ];
 export const STORY_COPY = {
-  hello: "Let's make your audio story!",
-  sub: "Due Sunday, November 15, at 11:59 PM. Up to five minutes. Your work saves by itself as you go.",
+  // Andrew, 2026-11-12: no exclamation point, the due date in a box, and "up
+  // to five minutes" down by the file. New keys, so words saved under the old
+  // ones do not come back.
+  title: "Let's make your audio story",
+  due: "Due Sunday, November 15, at 11:59 PM.",
+  before: "See what you turned in previously",
+  summarySay: "This is a promotion of your work in three to five sentences. Why should somebody listen to your work? Up to 100 words.",
+  voicesSay: "Add each voice. This includes broadcast voices. This includes interviews.",
+  sourcesSay: "Carried over from your pre-production. Add what you used and take out what you did not.",
+  chaptersSay: "The time each part starts and the name of the part. A listener can jump to any chapter.",
   "done.h": "Thanks for submitting your story!",
   "done.p": "You can keep editing until the due date, and your story stays submitted.",
   ...Object.fromEntries(STEPS.flatMap(([k, name, say]) => [["step." + k + ".name", name], ["step." + k + ".say", say]])),
@@ -64,8 +72,13 @@ const lower = (s) => String(s || "").trim().toLowerCase();
 
 // The story page. showPrivate draws the knew-they-were-recorded marks, for
 // the instructor's read; a classmate never sees them.
-export function AudioStoryView({ story, urls, showPrivate = false, look, by = "" }) {
-  const theme = (look || story.look) === "dark" ? "dark" : "light";
+export function AudioStoryView({ story, urls, showPrivate = false, by = "" }) {
+  // Andrew, 2026-11-12: "White page versus Black page, we can remove that."
+  const theme = "light";
+  const player = useRef(null);
+  const chapters = story.chapters.filter(c => c.name.trim() && secondsOf(c.at) !== null).sort((x, y) => secondsOf(x.at) - secondsOf(y.at));
+  const sources = story.sources.split("\n").map(l => l.trim()).filter(Boolean);
+  const jump = (t) => { const a = player.current; if (!a) return; a.currentTime = t; a.play().catch(() => {}); };
   const cover = story.cover && urls[story.cover.path];
   const clip = story.audio && urls[story.audio.path];
   const voices = story.voices.filter(v => v.name.trim());
@@ -83,14 +96,20 @@ export function AudioStoryView({ story, urls, showPrivate = false, look, by = ""
       </div>
       <div className="asr-body">
         {story.audio
-          ? (clip ? <audio className="asr-player" controls preload="metadata" src={clip} /> : <div className="asr-wait">Loading your story</div>)
+          ? (clip ? <audio ref={player} className="asr-player" controls preload="metadata" src={clip} /> : <div className="asr-wait">Loading your story</div>)
           : <p className="asr-empty">Your story's player shows up here once you upload your file on the left.</p>}
+        {chapters.length ? (
+          <ol className="asr-chapters">
+            {chapters.map(c => <li key={c.id}><button type="button" className="asr-chapter" onClick={() => jump(secondsOf(c.at))}><span className="asr-chapter-t">{clock(secondsOf(c.at))}</span>{c.name.trim()}</button></li>)}
+          </ol>
+        ) : null}
         {voices.length || sounds.length ? (
           <div className="asr-credits">
             {voices.length ? <div><h3 className="asr-ch">Voices</h3><p className="asr-cp">{voices.map(v => v.name.trim() + (v.role.trim() ? ", " + v.role.trim() : "") + (showPrivate ? (v.knew === true ? " (knew)" : v.knew === false ? " (did not know)" : " (not marked)") : "")).join(". ")}.</p></div> : null}
             {sounds.length ? <div><h3 className="asr-ch">Sounds</h3><p className="asr-cp">{sounds.map(s => s.what.trim() + (s.kind === "mine" ? ", my recording" : ", " + soundKindSay(s.kind).toLowerCase() + (s.from.trim() ? ", " + s.from.trim() : ""))).join(". ")}.</p></div> : null}
           </div>
         ) : null}
+        {sources.length ? <div className="asr-credits"><div><h3 className="asr-ch">Sources</h3><ul className="asr-sources">{sources.map((l, i) => <li key={i}>{l}</li>)}</ul></div></div> : null}
         {by ? <p className="asr-by">Made by {by}.{story.credits.trim() ? " " + story.credits.trim() : ""}</p> : null}
       </div>
     </article>
@@ -100,13 +119,14 @@ export function AudioStoryView({ story, urls, showPrivate = false, look, by = ""
 // ─── the student's sheet ───
 
 // The story line off the audio exercise, for a story with no headline yet.
-async function exerciseStory({ classId, viewerId }) {
-  const s = await gameClient.from("worksheet_sheets").select("id").eq("worksheet_key", AUDIO_RESEARCH_KEY).eq("group_key", classId).eq("viewer_id", viewerId);
+async function fieldOf({ key, field, classId, viewerId }) {
+  const s = await gameClient.from("worksheet_sheets").select("id").eq("worksheet_key", key).eq("group_key", classId).eq("viewer_id", viewerId);
   const id = s.data && s.data[0] && s.data[0].id;
   if (!id) return "";
-  const r = await gameClient.from("worksheet_answers").select("value,position").eq("sheet_id", id).eq("field", "story").order("position");
+  const r = await gameClient.from("worksheet_answers").select("value,position").eq("sheet_id", id).eq("field", field).order("position");
   return (r.data || []).map(x => x.value).join("").trim();
 }
+const exerciseStory = (who) => fieldOf({ ...who, key: AUDIO_RESEARCH_KEY, field: "story" });
 
 async function lockOf({ classId, viewerId }) {
   const d = await gameClient.from("worksheet_deadlines").select("due_at").eq("worksheet_key", AUDIO_STORY_KEY).eq("group_key", classId);
@@ -158,6 +178,16 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
           }
         }).catch(() => {});
       }
+      // The sources come across from the pre-production once; "carried" marks
+      // that they did, so a student who clears the box keeps it clear.
+      if (!readOnly && !got.answers.carried && !String(got.answers.sources || "").trim() && classId && viewer?.id) {
+        fieldOf({ key: AUDIO_PRE_KEY, field: "sources", classId, viewerId: viewer.id }).then(src => {
+          if (!alive || !src || String(live.current.sources || "").trim()) return;
+          live.current = { ...live.current, sources: src, carried: "1" };
+          setAnswers(live.current);
+          s.change("sources", src); s.change("carried", "1");
+        }).catch(() => {});
+      }
     }).catch(() => { if (alive) setStatus("failed-load"); });
     if (!readOnly && classId && viewer?.id) lockOf({ classId, viewerId: viewer.id }).then(l => { if (alive) setLock(l); }).catch(() => {});
     if (classId && viewer?.id) pairsFor(classId).then(list => { if (alive) setPair(pairOf(list)[lower(viewer.id)] || null); });
@@ -203,9 +233,9 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
     saver.current.change(field, value);
   };
   const setList = (field, list) => set(field, list.length ? JSON.stringify(list) : "");
-  const voices = story.voices, sounds = story.sounds;
+  const voices = story.voices, chapters = story.chapters;
   const patchVoice = (id, patch) => setList("voices", voices.map(v => (v.id === id ? { ...v, ...patch } : v)));
-  const patchSound = (id, patch) => setList("sounds", sounds.map(s => (s.id === id ? { ...s, ...patch } : s)));
+  const patchChapter = (id, patch) => setList("chapters", chapters.map(c => (c.id === id ? { ...c, ...patch } : c)));
 
   // One upload, start to finish. A failure stays on the page with Try again.
   const send = async (what, file) => {
@@ -255,57 +285,27 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
 
   const problems = problemsOf(story);
   const listenWords = wordsIn(story.listen);
-  const marked = voices.filter(v => v.knew !== null).length;
-  const toggleSteps = () => { const next = !stepsOpen; setStepsOpen(next); remember("audio-story-steps", next ? "open" : "hidden"); };
-  const counts = (
-    <div className="ass-counts">
-      <Meter n={story.audio ? clock(story.audio.seconds) : "0:00"} line={"of " + clock(MAX_STORY_SECONDS)} pct={story.audio ? story.audio.seconds / MAX_STORY_SECONDS : 0} ok={!!story.audio && story.audio.seconds <= MAX_STORY_SECONDS + 0.9} />
-      <Meter n={listenWords + (listenWords === 1 ? " word" : " words")} line={"listen line, up to " + MAX_LISTEN_WORDS} pct={listenWords / MAX_LISTEN_WORDS} ok={listenWords > 0 && listenWords <= MAX_LISTEN_WORDS} />
-      <Meter n={marked + " of " + voices.length} line="voices marked" pct={voices.length ? marked / voices.length : 0} ok={voices.length > 0 && marked === voices.length} />
-    </div>
-  );
-
   return (
     <div className="ass">
       <style>{CSS}</style>
       <header className="ass-hello">
         <div className="ass-hello-top">
-          <Words k="hello" copy={copy} editing={editing} as="h1" className="ass-hello-h" />
+          <Words k="title" copy={copy} editing={editing} as="h1" className="ass-hello-h" />
           <span className={"ass-status" + (status === "retrying" ? " ass-status-bad" : status === "saved" ? " ass-status-ok" : "")} aria-live="polite">{STATUS[status]}</span>
         </div>
-        <Words k="sub" copy={copy} editing={editing} as="p" className="ass-hello-sub" />
+        <Words k="due" copy={copy} editing={editing} as="p" className="ass-due" />
         <StoryFeedback classId={classId} />
-        <nav className="ass-doors" aria-label="More for your story">
-          <a className="ass-door" href={researchHref(classId)} target="_blank" rel="noreferrer">
-            <span className="ass-door-name">Audio exercise</span>
-            <span className="ass-door-say">Your story, your treatment and your research.</span>
-          </a>
-          <a className="ass-door" href={"/" + classId + "/worksheets/" + AUDIO_IDEAS_KEY + "?all"} target="_blank" rel="noreferrer">
-            <span className="ass-door-name">Everyone's ideas</span>
-            <span className="ass-door-say">Every idea in your section, and who is working with whom.</span>
-          </a>
-        </nav>
-        <div className="ass-row">
-          <button type="button" className="ass-link-btn" onClick={toggleSteps} aria-expanded={stepsOpen}>{stepsOpen ? "Hide the steps" : "Show the steps"}</button>
-          {editor ? <button type="button" className="ass-btn" aria-pressed={editing} onClick={() => { setEditing(e => !e); if (!stepsOpen) setStepsOpen(true); }}>{editing ? "Done editing the words" : "Edit the words"}</button> : null}
-          {editor && copy.status ? <span className="ass-muted" aria-live="polite">{copy.status}</span> : null}
-        </div>
-        {stepsOpen ? (
-          <ol className="ass-steps">
-            {STEPS.map(([k]) => (
-              <li key={k} className="ass-step">
-                <Words k={"step." + k + ".name"} copy={copy} editing={editing} as="b" className="ass-step-name" />
-                <Words k={"step." + k + ".say"} copy={copy} editing={editing} className="ass-step-say" />
-              </li>
-            ))}
-          </ol>
+        {editor ? (
+          <div className="ass-row">
+            <button type="button" className="ass-btn" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
+            {copy.status ? <span className="ass-muted" aria-live="polite">{copy.status}</span> : null}
+          </div>
         ) : null}
         {locked ? <div className="ass-note">The due date has passed, so your story is locked. If you need more time, talk to Dr. Ishak.</div> : null}
         {lock && lock.until && Date.parse(lock.until) > now ? <div className="ass-note">Dr. Ishak unlocked your story until {when(lock.until)}.</div> : null}
       </header>
 
       <div className="ass-bar">
-        {counts}
         <span className="ass-grow" />
         <div className="ass-tabs" role="tablist" aria-label="Build or hear your story">
           <button type="button" role="tab" aria-selected={pane === "build"} className="ass-tab" onClick={() => setPane("build")}>Build</button>
@@ -322,7 +322,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
                 {urls[story.audio.path] ? <audio controls preload="metadata" src={urls[story.audio.path]} /> : <span className="ass-muted">Loading your file</span>}
                 <div className="ass-row">
                   <span className="ass-file">{story.audio.name || "Your file"}</span>
-                  <span className={story.audio.seconds <= MAX_STORY_SECONDS + 0.9 ? "ass-good-text" : "ass-bad"}>{clock(story.audio.seconds)}{story.audio.seconds <= MAX_STORY_SECONDS + 0.9 ? ", under the five minutes" : ", over the five minutes"}</span>
+                  <span className={story.audio.seconds <= MAX_STORY_SECONDS + 0.9 ? "ass-file" : "ass-bad"}>{clock(story.audio.seconds)}{story.audio.seconds <= MAX_STORY_SECONDS + 0.9 ? "" : ", over the five minutes"}</span>
                   <button type="button" className="ass-mini" disabled={!canEdit || !!sending} onClick={() => audioInput.current && audioInput.current.click()}>Swap the file</button>
                 </div>
               </div>
@@ -356,13 +356,15 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
           </label>
 
           <label className="ass-field">
-            <span className="ass-label">Listen line</span>
-            <textarea className="ass-input" rows={3} value={answers.listen || ""} maxLength={600} readOnly={!canEdit} placeholder="What is a listener about to hear?" onChange={e => set("listen", e.target.value)} />
+            <span className="ass-label">Summary</span>
+            <Words k="summarySay" copy={copy} editing={editing} className="ass-say" />
+            <textarea className="ass-input" rows={5} value={answers.listen || ""} maxLength={1500} readOnly={!canEdit} onChange={e => set("listen", e.target.value)} />
             <span className={"ass-muted" + (listenWords > MAX_LISTEN_WORDS ? " ass-bad" : "")}>{listenWords} of {MAX_LISTEN_WORDS} words</span>
           </label>
 
           <div className="ass-field">
             <span className="ass-label">Voices</span>
+            <Words k="voicesSay" copy={copy} editing={editing} className="ass-say" />
             <ul className="ass-list">
               {voices.map((v, i) => (
                 <li key={v.id} className={"ass-card" + (v.knew === null ? " ass-card-need" : "")}>
@@ -383,22 +385,27 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
             <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setList("voices", [...voices, { id: letterId(6), name: voices.length ? "" : (viewer?.name || ""), role: voices.length ? "" : "Narrator", knew: voices.length ? null : true }])}>Add a voice</button>
           </div>
 
+          <label className="ass-field">
+            <span className="ass-label">Sources</span>
+            <Words k="sourcesSay" copy={copy} editing={editing} className="ass-say" />
+            <textarea className="ass-input" rows={6} value={answers.sources || ""} maxLength={6000} readOnly={!canEdit} onChange={e => set("sources", e.target.value)} />
+          </label>
+
           <div className="ass-field">
-            <span className="ass-label">Sounds</span>
+            <span className="ass-label">Chapters</span>
+            <Words k="chaptersSay" copy={copy} editing={editing} className="ass-say" />
             <ul className="ass-list">
-              {sounds.map(s => (
-                <li key={s.id} className={"ass-card" + (s.kind !== "mine" && !s.from.trim() ? " ass-card-need" : "")}>
-                  <input className="ass-input" value={s.what} maxLength={160} readOnly={!canEdit} placeholder="What, like water in lane 4, or the song's name" onChange={e => patchSound(s.id, { what: e.target.value })} />
-                  <div className="ass-row">
-                    {SOUND_KINDS.map(([id, name]) => <button key={id} type="button" className="ass-pill" aria-pressed={s.kind === id} disabled={!canEdit} onClick={() => patchSound(s.id, { kind: id })}>{name}</button>)}
-                    <span className="ass-grow" />
-                    <button type="button" className="ass-mini" disabled={!canEdit} onClick={() => setList("sounds", sounds.filter(x => x.id !== s.id))}>Remove</button>
+              {chapters.map(c => (
+                <li key={c.id} className={"ass-card" + (secondsOf(c.at) === null || !c.name.trim() ? " ass-card-need" : "")}>
+                  <div className="ass-chapter">
+                    <input className="ass-input ass-chapter-t" value={c.at} maxLength={8} inputMode="numeric" readOnly={!canEdit} placeholder="0:00" aria-label="When the chapter starts" onChange={e => patchChapter(c.id, { at: e.target.value })} />
+                    <input className="ass-input" value={c.name} maxLength={120} readOnly={!canEdit} aria-label="The name of the chapter" onChange={e => patchChapter(c.id, { name: e.target.value })} />
+                    <button type="button" className="ass-mini" disabled={!canEdit} onClick={() => setList("chapters", chapters.filter(x => x.id !== c.id))}>Remove</button>
                   </div>
-                  {s.kind !== "mine" ? <input className="ass-input" value={s.from} maxLength={300} readOnly={!canEdit} placeholder={s.kind === "music" ? "Where it came from, like Free Music Archive, CC BY, by Lamplight Trio" : "Where it came from, like a 2024 meet broadcast"} onChange={e => patchSound(s.id, { from: e.target.value })} /> : null}
                 </li>
               ))}
             </ul>
-            <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setList("sounds", [...sounds, { id: letterId(6), what: "", kind: "mine", from: "" }])}>Add a sound</button>
+            <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setList("chapters", [...chapters, { id: letterId(6), at: chapters.length ? "" : "0:00", name: "" }])}>Add a chapter</button>
           </div>
 
           {pair ? (
@@ -408,25 +415,16 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
               {partners.length ? <textarea className="ass-input" rows={2} value={answers.credits || ""} maxLength={600} readOnly={!canEdit} placeholder="Who did what" onChange={e => set("credits", e.target.value)} /> : null}
             </label>
           ) : null}
-
-          <div className="ass-field">
-            <span className="ass-label">Your look</span>
-            <div className="ass-looks">
-              {[["light", "White page"], ["dark", "Black page"]].map(([id, name]) => (
-                <button key={id} type="button" className={"ass-look ass-look-" + id} aria-pressed={story.look === id} disabled={!canEdit} onClick={() => set("look", id)}>
-                  <span className="ass-look-swatch" aria-hidden="true"><span>Aa</span></span>{name}
-                </button>
-              ))}
-            </div>
-          </div>
         </section>
 
         <section className="ass-see" aria-label="Story preview">
-          {counts}
+          <a className="ass-door" href={researchHref(classId)} target="_blank" rel="noreferrer">
+            <Words k="before" copy={copy} editing={editing} className="ass-door-name" />
+          </a>
           <div className="ass-see-head">
             <span className="ass-label">Your story page</span>
           </div>
-          <div className={"ass-see-frame ass-frame-" + story.look}>
+          <div className="ass-see-frame ass-frame-light">
             <AudioStoryView story={story} urls={urls} by={by} />
           </div>
         </section>
@@ -533,8 +531,8 @@ const SERIF = "'Lora', 'Iowan Old Style', Charter, Georgia, serif";
 const MONO = "'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace";
 const CSS = `
 .ass{padding:22px 20px 90px;color:${T.primary};max-width:1360px;margin:0 auto}
-.ass-p{margin:0;font-size:16px;color:${T.secondary}}
-.ass-muted{font-size:14px;color:${T.muted}}
+.ass-p{margin:0;font-size:16px;color:${T.primary}}
+.ass-muted{font-size:14px;color:${T.primary}}
 .ass-warn{color:${ST.warn};font-weight:600}
 .ass-bad{color:${ST.late};font-size:15px}
 .ass-good-text{color:${ST.ok};font-size:15px;font-weight:600}
@@ -544,24 +542,33 @@ const CSS = `
 .ass-hello{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
 .ass-hello-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .ass-hello-h{margin:0;font-family:${SERIF};font-size:40px;font-weight:600;letter-spacing:-.015em;line-height:1.1}
-.ass-hello-sub{margin:0;font-size:17px;color:${T.secondary}}
-.ass-status{margin-left:auto;font-size:13px;font-weight:600;color:${T.muted};border:1px solid ${L.soft};border-radius:999px;padding:4px 12px}
+.ass-hello-sub{margin:0;font-size:17px;color:${T.primary}}
+.ass-status{margin-left:auto;font-size:13px;font-weight:600;color:${T.primary};border:1px solid ${L.soft};border-radius:999px;padding:4px 12px}
 .ass-status-ok{color:${ST.ok};border-color:${ST.ok}}
 .ass-status-bad{color:${ST.late};border-color:${ST.late}}
 .ass-steps{list-style:none;counter-reset:step;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px 32px}
 .ass-step{counter-increment:step;position:relative;padding-left:44px;display:flex;flex-direction:column;gap:2px}
 .ass-step::before{content:counter(step);position:absolute;left:0;top:-2px;width:32px;height:32px;border-radius:50%;background:${T.primary};color:${S.page};font-weight:700;font-size:15px;display:flex;align-items:center;justify-content:center}
 .ass-step-name{font-size:17px;font-weight:700}
-.ass-step-say{font-size:15.5px;line-height:1.5;color:${T.secondary}}
+.ass-step-say{font-size:15.5px;line-height:1.5;color:${T.primary}}
+.ass-due{align-self:flex-start;margin:0;padding:10px 16px;border-radius:12px;background:${S.card};box-shadow:0 0 0 1.5px ${T.primary};font-size:18px;font-weight:600}
+.ass-say{font-size:16px;line-height:1.5}
+.ass-chapter{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:8px;align-items:center}
+.ass-chapter-t{font-variant-numeric:tabular-nums;text-align:center}
+.asr-chapters{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.asr-chapter{display:flex;align-items:baseline;gap:14px;width:100%;text-align:left;font:inherit;font-size:17px;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:transparent;color:inherit;cursor:pointer}
+.asr-chapter:hover{border-color:currentColor}
+.asr-chapter-t{font-variant-numeric:tabular-nums;font-weight:700;min-width:3.2em}
+.asr-sources{margin:0;padding-left:1.2em;font-size:15px;line-height:1.5;overflow-wrap:anywhere}
 .ass-note{border-left:4px solid ${ST.warn};padding:10px 14px;font-size:16px;background:${S.sunk};border-radius:6px}
 .ass-doors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:4px 0 2px}
 .ass-door{display:flex;flex-direction:column;gap:4px;padding:14px 18px;border-radius:14px;background:${S.card};color:${T.primary};text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,.05),0 0 0 1px ${L.strong};transition:box-shadow .15s,transform .15s}
 .ass-door:hover{box-shadow:0 6px 18px -8px rgba(0,0,0,.25),0 0 0 1.5px ${T.primary};transform:translateY(-1px)}
 .ass-door:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
 .ass-door-name{display:flex;align-items:center;gap:8px;font-family:${SERIF};font-size:20px;font-weight:600;line-height:1.2}
-.ass-door-name::after{content:"→";margin-left:auto;font-family:system-ui,sans-serif;font-size:18px;color:${T.muted}}
-.ass-door-say{font-size:14px;line-height:1.4;color:${T.secondary}}
-.ass-link-btn{font:inherit;font-size:14px;font-weight:600;padding:0;border:0;background:none;color:${T.secondary};text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-right:10px}
+.ass-door-name::after{content:"→";margin-left:auto;font-family:system-ui,sans-serif;font-size:18px;color:${T.primary}}
+.ass-door-say{font-size:14px;line-height:1.4;color:${T.primary}}
+.ass-link-btn{font:inherit;font-size:14px;font-weight:600;padding:0;border:0;background:none;color:${T.primary};text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin-right:10px}
 
 .ass-bar{position:sticky;top:60px;z-index:6;display:none;align-items:center;gap:22px;flex-wrap:wrap;padding:12px 16px;margin-bottom:18px;border-radius:14px;background:${S.card};box-shadow:0 1px 2px rgba(0,0,0,.06),0 0 0 1px ${L.soft}}
 .ass-counts{display:flex;align-self:flex-start;border-radius:12px;background:${S.card};box-shadow:0 0 0 1px ${L.soft}}
@@ -570,12 +577,12 @@ const CSS = `
 .ass-count+.ass-count{border-left:1px solid ${L.soft}}
 .ass-count-n{font-size:22px;font-weight:700;line-height:1.1;white-space:nowrap;color:${ST.warn}}
 .ass-count-ok .ass-count-n{color:${ST.ok}}
-.ass-count-l{font-size:13px;color:${T.muted};white-space:nowrap}
+.ass-count-l{font-size:13px;color:${T.primary};white-space:nowrap}
 .ass-count-bar{height:4px;margin-top:2px;border-radius:999px;background:${S.sunk};overflow:hidden}
 .ass-count-fill{display:block;height:100%;background:${ST.warn};transition:width .25s}
 .ass-count-ok .ass-count-fill{background:${ST.ok}}
 .ass-tabs{display:none;gap:4px;padding:3px;border-radius:999px;background:${S.sunk}}
-.ass-tab{font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:999px;border:0;background:transparent;color:${T.secondary};cursor:pointer}
+.ass-tab{font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:999px;border:0;background:transparent;color:${T.primary};cursor:pointer}
 .ass-tab[aria-selected="true"]{background:${S.card};color:${T.primary};box-shadow:0 1px 2px rgba(0,0,0,.12)}
 
 .ass-work{display:grid;grid-template-columns:minmax(380px,520px) minmax(0,1fr);gap:28px;align-items:start}
@@ -585,7 +592,7 @@ const CSS = `
 .ass-see-frame{border-radius:16px;overflow:auto;max-height:calc(100vh - 190px);box-shadow:0 10px 40px -12px rgba(0,0,0,.35),0 0 0 1px rgba(0,0,0,.08)}
 
 .ass-field{display:flex;flex-direction:column;gap:6px;min-width:0}
-.ass-label{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${T.muted}}
+.ass-label{font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${T.primary}}
 .ass-input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;line-height:1.5;padding:10px 12px;border:1px solid ${L.strong};border-radius:10px;background:${S.card};color:${T.primary};resize:vertical}
 .ass-headline{font-family:${SERIF};font-size:24px;font-weight:600;padding:12px 14px}
 .ass-input:focus-visible,.ass-btn:focus-visible,.ass-go:focus-visible,.ass-pill:focus-visible,.ass-mini:focus-visible,.ass-look:focus-visible,.ass-tab:focus-visible,.ass-link-btn:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
@@ -596,11 +603,11 @@ const CSS = `
 .ass-file{font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
 .ass-drop{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:26px 18px;border:2px dashed ${L.strong};border-radius:18px;background:${S.sunk}}
 .ass-drop-h{margin:0;font-family:${SERIF};font-size:22px;font-weight:600}
-.ass-drop-small{margin:6px 0 0;font-size:13.5px;color:${T.muted};max-width:40ch}
+.ass-drop-small{margin:6px 0 0;font-size:13.5px;color:${T.primary};max-width:40ch}
 .ass-drop-small-box{padding:16px 14px}
 .ass-coverrow{display:grid;grid-template-columns:120px minmax(0,1fr);gap:14px;align-items:center}
 .ass-cover{display:block;width:120px;height:120px;object-fit:cover;border-radius:14px;background:${S.sunk};box-shadow:0 1px 3px rgba(0,0,0,.15)}
-.ass-cover-none{display:flex;align-items:center;justify-content:center;font-size:13px;color:${T.muted};box-shadow:none;border:1px dashed ${L.strong}}
+.ass-cover-none{display:flex;align-items:center;justify-content:center;font-size:13px;color:${T.primary};box-shadow:none;border:1px dashed ${L.strong}}
 .ass-up{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:${S.card};box-shadow:0 0 0 1px ${L.soft}}
 .ass-up-name{font-weight:600;font-size:14.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ass-meter{height:6px;border-radius:999px;background:${S.sunk};overflow:hidden}
@@ -619,9 +626,9 @@ const CSS = `
 
 .ass-btn{font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .ass-btn[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
-.ass-mini{font:inherit;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid ${L.soft};background:transparent;color:${T.secondary};cursor:pointer}
+.ass-mini{font:inherit;font-size:12.5px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid ${L.soft};background:transparent;color:${T.primary};cursor:pointer}
 .ass-mini:hover:not(:disabled){border-color:${L.strong};color:${T.primary}}
-.ass-pill{font:inherit;font-size:13.5px;padding:5px 12px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer}
+.ass-pill{font:inherit;font-size:13.5px;padding:5px 12px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .ass-pill[aria-pressed="true"]{background:${T.primary};color:${S.page};border-color:${T.primary}}
 .ass-btn:disabled,.ass-go:disabled,.ass-pill:disabled,.ass-mini:disabled,.ass-look:disabled{opacity:.45;cursor:default}
 .ass-go{font:inherit;font-size:16px;font-weight:700;padding:11px 22px;border-radius:999px;border:0;background:${T.primary};color:${S.page};cursor:pointer}

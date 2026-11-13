@@ -6162,24 +6162,28 @@ cases.push(["Audio research, loading", <ResearchSheet store={{ load: () => new P
     voices: JSON.stringify([{ id: "a", name: "Sam Okafor", role: "Narrator", knew: true }, { id: "b", name: "Coach Dana Ruiz", role: "Interview at 1:40", knew: true }]),
     sounds: JSON.stringify([{ id: "a", what: "Water, lane 4", kind: "mine", from: "" }, { id: "b", what: "Early Lanes", kind: "music", from: "Free Music Archive, CC BY" }]),
     look: "dark",
+    chapters: JSON.stringify([{ id: "a", at: "0:00", name: "The deck" }, { id: "b", at: "1:40", name: "Coach Ruiz" }]),
+    sources: "https://example.com/swim",
   });
   if (audioProblems(full).length) say("a complete story has problems: " + audioProblems(full).join(" | "));
   if (audioProgress(full) !== 1 || audioProgress(empty) !== 0) say("progress is not 0 for empty and 1 for full");
   if (full.look !== "dark" || full.voices.length !== 2 || full.sounds[1].kind !== "music") say("a full story does not read back");
   const unmarked = audioStoryOf({ ...full, voices: JSON.stringify([{ id: "a", name: "A swimmer", role: "", knew: null }]), audio: JSON.stringify(full.audio), cover: JSON.stringify(full.cover), sounds: "[]" });
   if (!audioProblems(unmarked).some(p => /knew they were being recorded/.test(p))) say("an unmarked voice is not a problem");
-  const long = audioStoryOf({ ...unmarked, listen: Array.from({ length: 45 }, () => "word").join(" ") });
-  if (!audioProblems(long).some(p => /^Cut 5 words/.test(p))) say("a 45-word listen line is not told to cut 5");
+  // Andrew, 2026-11-12: the summary takes 100 words, and chapters are asked for.
+  const long = audioStoryOf({ ...unmarked, listen: Array.from({ length: 105 }, () => "word").join(" ") });
+  if (!audioProblems(long).some(p => /^Cut 5 words/.test(p))) say("a 105-word summary is not told to cut 5");
+  if (!audioProblems(audioStoryOf({ ...unmarked, chapters: "[]" })).some(p => /Add your chapters/.test(p))) say("a story with no chapters is not a problem");
+  const late = audioStoryOf({ audio: JSON.stringify(full.audio), chapters: JSON.stringify([{ id: "a", at: "9:00", name: "Late" }, { id: "b", at: "soon", name: "" }]) });
+  if (!audioProblems(late).some(p => /after the end/.test(p)) || !audioProblems(late).some(p => /when it starts/.test(p))) say("a chapter past the end, or with no time, is not a problem");
   const over = audioStoryOf({ audio: JSON.stringify({ path: "p", seconds: 400, name: "x" }) });
   if (!audioProblems(over).some(p => /6:40/.test(p) && /5:00/.test(p))) say("an over-long file is not named in m:ss");
-  const found = audioStoryOf({ sounds: JSON.stringify([{ id: "a", what: "Whistle", kind: "found", from: "" }]) });
-  if (!audioProblems(found).some(p => /Whistle: found audio needs/.test(p))) say("found audio with no source is not a problem");
   if (audioWords(" a  b\nc ") !== 3) say("words are not counted");
   if (AUDIO_STEPS.length !== 8 || AUDIO_STEPS.some(([k, name, s]) => !k || !name || !s)) say("the steps are not eight, each with a name and a line");
   const { renderToStaticMarkup } = await import("react-dom/server");
   const urls = { "comm3/a@b/audio-x.m4a": "https://x.test/a.m4a", "comm3/a@b/c.jpg": "https://x.test/c.jpg" };
   const page = renderToStaticMarkup(<AudioStoryView story={full} urls={urls} by="Sam Okafor" />);
-  if (!/Nobody talks/.test(page) || !/4:12/.test(page) || !/https:\/\/x.test\/a.m4a/.test(page) || !/Coach Dana Ruiz/.test(page) || !/Free Music Archive/.test(page)) say("the story page is missing a part");
+  if (!/Nobody talks/.test(page) || !/4:12/.test(page) || !/https:\/\/x.test\/a.m4a/.test(page) || !/Coach Dana Ruiz/.test(page) || !/Free Music Archive/.test(page) || !/Coach Ruiz/.test(page) || !/example.com\/swim/.test(page)) say("the story page is missing a part");
   if (/knew|did not know|not marked/.test(page)) say("a classmate's page shows the knew mark");
   const mine = renderToStaticMarkup(<AudioStoryView story={unmarked} urls={urls} showPrivate by="" />);
   if (!/not marked/.test(mine)) say("the instructor's read does not show the knew mark");

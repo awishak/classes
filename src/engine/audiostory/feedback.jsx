@@ -21,7 +21,14 @@ export function NoteBody({ note }) {
   let list = null;
   blocks.forEach((b, i) => {
     const m = b.match(/^(\d+)\.\s+([\s\S]*)$/);
-    if (m) { if (!list) { list = []; out.push(<ol key={"l" + i} className="afb-list">{list}</ol>); } list.push(<li key={i}>{m[2]}</li>); }
+    if (m) {
+      // Andrew, 2026-11-12: "each piece of the one to 3 piece of advice that
+      // I give, you need to give it a title, like opening or interviews." A
+      // point written "1. Opening: ..." shows Opening as its title.
+      const t = m[2].match(/^([A-Z][A-Za-z, ]{2,40}):\s+([\s\S]*)$/);
+      if (!list) { list = []; out.push(<ol key={"l" + i} className="afb-list">{list}</ol>); }
+      list.push(<li key={i}>{t ? <><b className="afb-t">{t[1]}</b>{t[2]}</> : m[2]}</li>);
+    }
     else { list = null; out.push(<p key={i} className="afb-p">{b}</p>); }
   });
   return <div className="afb-body">{out}</div>;
@@ -57,5 +64,6 @@ export const FEEDBACK_CSS = `
 .afb-h{margin:0;font-size:15px;font-weight:700;letter-spacing:.02em}
 .afb-body{display:flex;flex-direction:column;gap:10px;font-size:18px;line-height:1.55}
 .afb-p{margin:0}
+.afb-t{display:block;font-size:19px;font-weight:700}
 .afb-list{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
 `;

@@ -21,7 +21,17 @@
 // limit is five minutes; the listen line takes up to forty words.
 
 export const MAX_STORY_SECONDS = 5 * 60;
-export const MAX_LISTEN_WORDS = 40;
+// Andrew, 2026-11-12: the listen line is the Summary now, "a 100 words, not
+// 40 words. way too few." The field is still `listen`.
+export const MAX_LISTEN_WORDS = 100;
+
+/** "1:20" or "80" to seconds, or null when the words are not a time. */
+export const secondsOf = (at) => {
+  const m = String(at || "").trim().match(/^(?:(\d{1,2}):)?(\d{1,3})$/);
+  if (!m) return null;
+  if (m[1] !== undefined && Number(m[2]) > 59) return null;
+  return (Number(m[1]) || 0) * 60 + Number(m[2]);
+};
 
 export const SOUND_KINDS = [["mine", "My recording"], ["music", "Music"], ["found", "Found audio"]];
 export const soundKindSay = (kind) => (SOUND_KINDS.find(k => k[0] === kind) || SOUND_KINDS[0])[1];
@@ -44,6 +54,8 @@ export function audioStoryOf(answers) {
     voices: listOf(a.voices).map(v => ({ id: String(v.id || ""), name: String(v.name || ""), role: String(v.role || ""), knew: v.knew === true ? true : v.knew === false ? false : null })),
     sounds: listOf(a.sounds).map(s => ({ id: String(s.id || ""), what: String(s.what || ""), kind: SOUND_KINDS.some(k => k[0] === s.kind) ? s.kind : "mine", from: String(s.from || "") })),
     look: a.look === "dark" ? "dark" : "light",
+    sources: String(a.sources || ""),
+    chapters: listOf(a.chapters).map(c => ({ id: String(c.id || ""), at: String(c.at || ""), name: String(c.name || "") })),
     credits: String(a.credits || ""),
   };
 }
@@ -62,18 +74,23 @@ export function problemsOf(story) {
   if (!story.cover) out.push("Add your cover picture.");
   if (!story.headline.trim()) out.push("Write a headline.");
   const w = wordsIn(story.listen);
-  if (!w) out.push("Write your listen line.");
-  if (w > MAX_LISTEN_WORDS) out.push(`Cut ${w - MAX_LISTEN_WORDS} word${w - MAX_LISTEN_WORDS === 1 ? "" : "s"} from your listen line. You have ${w}, and the line takes up to ${MAX_LISTEN_WORDS}.`);
+  if (!w) out.push("Write your summary.");
+  if (w > MAX_LISTEN_WORDS) out.push(`Cut ${w - MAX_LISTEN_WORDS} word${w - MAX_LISTEN_WORDS === 1 ? "" : "s"} from your summary. You have ${w}, and it takes up to ${MAX_LISTEN_WORDS}.`);
   if (!story.voices.length) out.push("Name at least one voice, even if the only voice is yours.");
   story.voices.forEach((v, i) => {
     const label = v.name.trim() || "Voice " + (i + 1);
     if (!v.name.trim()) out.push(label + ": write who this is.");
     if (v.knew === null) out.push(label + ": mark whether they knew they were being recorded.");
   });
-  story.sounds.forEach((s, i) => {
-    const label = s.what.trim() || "Sound " + (i + 1);
-    if (!s.what.trim()) out.push(label + ": write what the sound is.");
-    if (s.kind !== "mine" && !s.from.trim()) out.push(label + ": " + (s.kind === "music" ? "music" : "found audio") + " needs a line about where it came from.");
+  // Andrew, 2026-11-12: "I want people to do chapters." The sounds list left
+  // the sheet the same day, so nothing here asks about sounds.
+  if (!story.chapters.length) out.push("Add your chapters.");
+  story.chapters.forEach((c, i) => {
+    const label = c.name.trim() || "Chapter " + (i + 1);
+    const t = secondsOf(c.at);
+    if (!c.name.trim()) out.push(label + ": write the name of the chapter.");
+    if (t === null) out.push(label + ": write when it starts, like 1:20.");
+    else if (story.audio && t > story.audio.seconds) out.push(label + ": " + c.at.trim() + " is after the end of your story.");
   });
   return out;
 }

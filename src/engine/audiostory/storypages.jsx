@@ -175,7 +175,7 @@ const FIELD_SAY = {
   audio: "the file, JSON { path, seconds, name }",
   cover: "the cover picture, JSON { path, w, h }",
   headline: "the headline, a line",
-  listen: "the listen line, up to " + MAX_LISTEN_WORDS + " words",
+  listen: "the summary, up to " + MAX_LISTEN_WORDS + " words",
   voices: "everyone who talks, JSON [{ id, name, role, knew }], knew true, false or null",
   sounds: "the sounds, JSON [{ id, what, kind, from }], kind mine, music or found",
   look: "light or dark",
