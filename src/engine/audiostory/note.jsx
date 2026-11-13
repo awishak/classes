@@ -57,7 +57,7 @@ export const FEEDBACK_CSS = `
 .afb-tile{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:14px;min-width:0}
 .afb-tile.afb-yes{background:var(--pt-done)}
 .afb-tile.afb-could{background:var(--pt-due)}
-.afb-tile-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.afb-tile-top{display:flex;align-items:center;justify-content:space-between;gap:4px 10px;flex-wrap:wrap}
 .afb-tile .apr-pl{font-size:17px}
 .afb-tile.afb-yes .apr-pl,.afb-tile.afb-yes .apr-v{color:var(--pt-done-ink)}
 .afb-tile.afb-could .apr-pl,.afb-tile.afb-could .apr-v{color:var(--pt-due-ink)}
