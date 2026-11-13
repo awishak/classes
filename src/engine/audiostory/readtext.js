@@ -57,10 +57,10 @@ export function locate(sents, quote) {
 const ROOM = { opener: [70, 90], thesis: [45, 45], closer: [30, 130] };
 
 /** The quoted line with the words around the line: { before, mark, after, cutStart, cutEnd }, or null. */
-export function passageOf(sents, quote, part) {
+export function passageOf(sents, quote, part, room) {
   const at = locate(sents, quote);
   if (!at) return null;
-  const [back, on] = ROOM[part] || ROOM.thesis;
+  const [back, on] = room || ROOM[part] || ROOM.thesis;
   let a = at.from, b = at.to, n = 0;
   while (a > 0 && n + sents[a - 1].words.length <= back) { a--; n += sents[a].words.length; }
   n = 0;

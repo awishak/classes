@@ -52,12 +52,13 @@ export default async function handler(req, res) {
     // own clip: the three lines in their own words, the marks, the timeline,
     // and their own transcript to quote from. Nothing Claude wrote about the
     // clip goes out. Andrew, 2026-11-12: "remove ALL your shitty commentary."
-    // `rate` is his note's call on a part, which outranks the read's mark.
+    // `his` is what he said about each part, { ok, say }, one sentence of
+    // his own from his note; his call outranks the read's mark.
     const g = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${objectFor(q.class || "comm3", "audio-pre")}`, { headers: serviceHeaders() });
     const all = (g.ok ? await g.json().catch(() => null) : null) || {};
     const mine = all.students?.[me] || null;
     const part = (x) => (x ? { kind: x.kind, verdict: x.verdict, quote: x.quote, at: x.at, marks: x.marks } : null);
-    const read = mine ? { opener: part(mine.opener), thesis: part(mine.thesis), closer: part(mine.closer), interview: mine.interview ? { has: !!mine.interview.has } : null, structure: mine.structure ? { level: mine.structure.level } : null, news: mine.news ? { level: mine.news.level } : null, rate: mine.you?.rate || null, timeline: mine.timeline || null, transcript: mine.transcript || [], seconds: mine.seconds } : null;
+    const read = mine ? { opener: part(mine.opener), thesis: part(mine.thesis), closer: part(mine.closer), interview: mine.interview ? { has: !!mine.interview.has } : null, structure: mine.structure ? { level: mine.structure.level } : null, news: mine.news ? { level: mine.news.level } : null, his: mine.you?.parts || null, timeline: mine.timeline || null, transcript: mine.transcript || [], seconds: mine.seconds } : null;
     return res.status(200).json({ ok: true, note: String(file.notes?.[me]?.note || ""), read, links: read ? all.links || {} : {} });
   }
   if (!(await callerAllowed(req, { pin: body.pin || q.pin }))) {

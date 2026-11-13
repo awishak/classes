@@ -28,7 +28,7 @@ import { AUDIO_PRE_KEY } from "./pre.jsx";
 import { pairsFor } from "./all.jsx";
 import { StoryFeedback } from "./feedback.jsx";
 import { pairOf } from "./pairs.js";
-import { audioStoryOf, problemsOf, wordsIn, clock, secondsOf, MAX_STORY_SECONDS, MAX_LISTEN_WORDS, soundKindSay } from "./storymodel.js";
+import { audioStoryOf, problemsOf, wordsIn, clock, secondsOf, MAX_STORY_SECONDS, MAX_LISTEN_WORDS, soundKindSay, FONTS, FONTS_HREF, fontOf } from "./storymodel.js";
 import * as TOKENS from "../tokens.js";
 
 export const AUDIO_STORY_KEY = "audio-story";
@@ -51,12 +51,13 @@ export const STORY_COPY = {
   // Andrew, 2026-11-12: no exclamation point, the due date in a box, and "up
   // to five minutes" down by the file. New keys, so words saved under the old
   // ones do not come back.
-  title: "Let's make your audio story",
+  title2: "Your Audio Story",
   due: "Due Sunday, November 15, at 11:59 PM.",
   before: "See what you turned in previously",
   summarySay: "This is a promotion of your work in three to five sentences. Why should somebody listen to your work? Up to 100 words.",
   voicesSay: "Add each voice. This includes broadcast voices. This includes interviews.",
   sourcesSay: "Carried over from your pre-production. Add what you used and take out what you did not.",
+  fontSay: "Choose a font and see your story page change.",
   chaptersSay: "The time each part starts and the name of the part. A listener can jump to any chapter.",
   "done.h": "Thanks for submitting your story!",
   "done.p": "You can keep editing until the due date, and your story stays submitted.",
@@ -68,6 +69,13 @@ const when = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", mont
 const remember = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } return null; };
 const lower = (s) => String(s || "").trim().toLowerCase();
 
+const useStoryFonts = () => useEffect(() => {
+  if (typeof document === "undefined" || document.getElementById("audio-story-fonts")) return;
+  const link = document.createElement("link");
+  link.id = "audio-story-fonts"; link.rel = "stylesheet"; link.href = FONTS_HREF;
+  document.head.appendChild(link);
+}, []);
+
 // ─── hearing a story: the live preview now, classmates later ───
 
 // The story page. showPrivate draws the knew-they-were-recorded marks, for
@@ -75,6 +83,7 @@ const lower = (s) => String(s || "").trim().toLowerCase();
 export function AudioStoryView({ story, urls, showPrivate = false, by = "" }) {
   // Andrew, 2026-11-12: "White page versus Black page, we can remove that."
   const theme = "light";
+  useStoryFonts();
   const player = useRef(null);
   const chapters = story.chapters.filter(c => c.name.trim() && secondsOf(c.at) !== null).sort((x, y) => secondsOf(x.at) - secondsOf(y.at));
   const sources = story.sources.split("\n").map(l => l.trim()).filter(Boolean);
@@ -84,7 +93,7 @@ export function AudioStoryView({ story, urls, showPrivate = false, by = "" }) {
   const voices = story.voices.filter(v => v.name.trim());
   const sounds = story.sounds.filter(s => s.what.trim());
   return (
-    <article className={"asr asr-" + theme}>
+    <article className={"asr asr-" + theme} style={{ "--asr-font": fontOf(story.font)[2] }}>
       <div className={"asr-cover" + (cover ? "" : " asr-cover-empty")}>
         {cover ? <img className="asr-img" src={cover} alt="" /> : null}
         <div className="asr-shade" />
@@ -153,6 +162,9 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
   const [pair, setPair] = useState(null);
   const [now, setNow] = useState(Date.now());
   const [editing, setEditing] = useState(false);
+  // The instructor's ?as= preview shows that student's sources in the list
+  // without saving them to his own sheet.
+  const [borrowed, setBorrowed] = useState("");
   const [stepsOpen, setStepsOpen] = useState(() => remember("audio-story-steps") !== "hidden");
   const copy = useCopy(editor, AUDIO_STORY_COPY_ROW, STORY_COPY);
   const saver = useRef(null);
@@ -235,6 +247,10 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
   const setList = (field, list) => set(field, list.length ? JSON.stringify(list) : "");
   const voices = story.voices, chapters = story.chapters;
   const patchVoice = (id, patch) => setList("voices", voices.map(v => (v.id === id ? { ...v, ...patch } : v)));
+  // Sources are one field, a line each, shown as a list to add to and take from.
+  const shownSources = String((answers || {}).sources || "") || borrowed;
+  const sourceLines = shownSources ? shownSources.split("\n") : [];
+  const setSources = (lines) => set("sources", lines.join("\n"));
   const patchChapter = (id, patch) => setList("chapters", chapters.map(c => (c.id === id ? { ...c, ...patch } : c)));
 
   // One upload, start to finish. A failure stays on the page with Try again.
@@ -290,7 +306,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
       <style>{CSS}</style>
       <header className="ass-hello">
         <div className="ass-hello-top">
-          <Words k="title" copy={copy} editing={editing} as="h1" className="ass-hello-h" />
+          <Words k="title2" copy={copy} editing={editing} as="h1" className="ass-hello-h" />
           <span className={"ass-status" + (status === "retrying" ? " ass-status-bad" : status === "saved" ? " ass-status-ok" : "")} aria-live="polite">{STATUS[status]}</span>
         </div>
         <div className="ass-top-row">
@@ -299,7 +315,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
             <Words k="before" copy={copy} editing={editing} className="ass-door-name" />
           </a>
         </div>
-        <StoryFeedback classId={classId} viewer={viewer} />
+        <StoryFeedback classId={classId} viewer={viewer} onPre={(p) => setBorrowed(String(p.sources || ""))} />
         {editor ? (
           <div className="ass-row">
             <button type="button" className="ass-btn" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
@@ -311,8 +327,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
       </header>
 
       <div className={"ass-work ass-on-" + pane}>
-        <section className="ass-build ass-sheet" aria-labelledby="ass-h2">
-          <h2 id="ass-h2" className="ass-h2">Your audio story</h2>
+        <section className="ass-build ass-sheet" aria-label="Your audio story">
           <div className="ass-field">
             <span className="ass-label">Your story</span>
             {story.audio ? (
@@ -383,11 +398,19 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
             <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setList("voices", [...voices, { id: letterId(6), name: voices.length ? "" : (viewer?.name || ""), role: voices.length ? "" : "Narrator", knew: voices.length ? null : true }])}>Add a voice</button>
           </div>
 
-          <label className="ass-field">
+          <div className="ass-field">
             <span className="ass-label">Sources</span>
             <Words k="sourcesSay" copy={copy} editing={editing} className="ass-say" />
-            <textarea className="ass-input" rows={6} value={answers.sources || ""} maxLength={6000} readOnly={!canEdit} onChange={e => set("sources", e.target.value)} />
-          </label>
+            <ul className="ass-list">
+              {sourceLines.map((line, i) => (
+                <li key={i} className="ass-source">
+                  <input className="ass-input" value={line} maxLength={600} readOnly={!canEdit} aria-label={"Source " + (i + 1)} onChange={e => setSources(sourceLines.map((x, j) => (j === i ? e.target.value.replace(/\n/g, " ") : x)))} />
+                  <button type="button" className="ass-mini" disabled={!canEdit} onClick={() => setSources(sourceLines.filter((_, j) => j !== i))}>Remove</button>
+                </li>
+              ))}
+            </ul>
+            <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setSources([...sourceLines, ""])}>Add a source</button>
+          </div>
 
           <div className="ass-field">
             <span className="ass-label">Chapters</span>
@@ -404,6 +427,14 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
               ))}
             </ul>
             <button type="button" className="ass-btn ass-add" disabled={!canEdit} onClick={() => setList("chapters", [...chapters, { id: letterId(6), at: chapters.length ? "" : "0:00", name: "" }])}>Add a chapter</button>
+          </div>
+
+          <div className="ass-field">
+            <span className="ass-label">Font</span>
+            <Words k="fontSay" copy={copy} editing={editing} className="ass-say" />
+            <div className="ass-fonts">
+              {FONTS.map(([id, name, family]) => <button key={id} type="button" className="ass-font" style={{ fontFamily: family }} aria-pressed={story.font === id} disabled={!canEdit} onClick={() => set("font", id)}>{name}</button>)}
+            </div>
           </div>
 
           {pair ? (
@@ -549,7 +580,7 @@ const CSS = `
 .ass-chapter{display:grid;grid-template-columns:86px minmax(0,1fr) auto;gap:8px;align-items:center}
 .ass-chapter-t{font-variant-numeric:tabular-nums;text-align:center}
 .asr-chapters{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
-.asr-chapter{display:flex;align-items:baseline;gap:14px;width:100%;text-align:left;font:inherit;font-size:17px;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:transparent;color:inherit;cursor:pointer}
+.asr-chapter{font-family:var(--asr-font,inherit);display:flex;align-items:baseline;gap:14px;width:100%;text-align:left;font-size:17px;padding:10px 14px;border-radius:10px;border:1px solid rgba(0,0,0,.18);background:transparent;color:inherit;cursor:pointer}
 .asr-chapter:hover{border-color:currentColor}
 .asr-chapter-t{font-variant-numeric:tabular-nums;font-weight:700;min-width:3.2em}
 .asr-sources{margin:0;padding-left:1.2em;font-size:15px;line-height:1.5;overflow-wrap:anywhere}
@@ -654,8 +685,8 @@ const CSS = `
 .asr-head{position:relative;padding:120px 40px 26px;display:flex;flex-direction:column;gap:10px;color:#fff;width:100%;box-sizing:border-box}
 .asr-cover-empty .asr-head{color:inherit}
 .asr-kicker{font-family:${MONO};font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
-.asr-h{margin:0;font-family:${SERIF};font-size:40px;font-weight:600;line-height:1.12;letter-spacing:-.01em}
-.asr-dek{margin:0;font-family:${SERIF};font-size:18px;line-height:1.5;opacity:.92;max-width:60ch}
+.asr-h{margin:0;font-family:var(--asr-font,${SERIF});font-size:40px;font-weight:600;line-height:1.12;letter-spacing:-.01em}
+.asr-dek{margin:0;font-family:var(--asr-font,${SERIF});font-size:18px;line-height:1.5;opacity:.92;max-width:60ch}
 .asr-body{padding:26px 40px 0;display:flex;flex-direction:column;gap:22px}
 .asr-player{width:100%}
 .asr-wait{display:flex;align-items:center;justify-content:center;min-height:54px;font-size:14px;opacity:.5;background:rgba(127,127,127,.15);border-radius:12px}
@@ -687,6 +718,12 @@ const CSS = `
 .ass-sheet .ass-label{color:var(--pt-dr-ink)}
 .ass-go{background:var(--pt-hero);color:var(--pt-hero-ink)}
 .ass-drop{background:var(--pt-dr);border-color:var(--pt-dr-ink)}
+.ass-sheet{padding-top:22px}
+.ass-source{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+.ass-fonts{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}
+.ass-font{font-size:19px;line-height:1.2;padding:12px 10px;border-radius:12px;border:1.5px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.ass-font[aria-pressed="true"]{background:var(--pt-hero);border-color:var(--pt-hero);color:var(--pt-hero-ink)}
+.ass-font:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
 .ass-label{font-size:17px;font-weight:600;letter-spacing:0;text-transform:none}
 .ass-see{position:static}
 .ass-see-frame{max-height:none;box-shadow:0 0 0 1px ${L.soft}}

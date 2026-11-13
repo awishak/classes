@@ -25,6 +25,23 @@ export const MAX_STORY_SECONDS = 5 * 60;
 // 40 words. way too few." The field is still `listen`.
 export const MAX_LISTEN_WORDS = 100;
 
+// Andrew, 2026-11-12: "let them choose from 10 different fonts and see what
+// their story page looks like." [id, name, the family, Google's name for it].
+export const FONTS = [
+  ["lora", "Lora", "'Lora', Georgia, serif", "Lora:wght@500;600"],
+  ["playfair", "Playfair Display", "'Playfair Display', Georgia, serif", "Playfair+Display:wght@500;700"],
+  ["merriweather", "Merriweather", "'Merriweather', Georgia, serif", "Merriweather:wght@400;700"],
+  ["dmserif", "DM Serif Display", "'DM Serif Display', Georgia, serif", "DM+Serif+Display"],
+  ["fraunces", "Fraunces", "'Fraunces', Georgia, serif", "Fraunces:opsz,wght@9..144,400;9..144,600"],
+  ["outfit", "Outfit", "'Outfit', system-ui, sans-serif", "Outfit:wght@400;600"],
+  ["grotesk", "Space Grotesk", "'Space Grotesk', system-ui, sans-serif", "Space+Grotesk:wght@400;600"],
+  ["oswald", "Oswald", "'Oswald', 'Arial Narrow', sans-serif", "Oswald:wght@400;600"],
+  ["bebas", "Bebas Neue", "'Bebas Neue', Impact, sans-serif", "Bebas+Neue"],
+  ["elite", "Special Elite", "'Special Elite', 'Courier New', monospace", "Special+Elite"],
+];
+export const fontOf = (id) => FONTS.find(f => f[0] === id) || FONTS[0];
+export const FONTS_HREF = "https://fonts.googleapis.com/css2?" + FONTS.map(f => "family=" + f[3]).join("&") + "&display=swap";
+
 /** "1:20" or "80" to seconds, or null when the words are not a time. */
 export const secondsOf = (at) => {
   const m = String(at || "").trim().match(/^(?:(\d{1,2}):)?(\d{1,3})$/);
@@ -55,6 +72,7 @@ export function audioStoryOf(answers) {
     sounds: listOf(a.sounds).map(s => ({ id: String(s.id || ""), what: String(s.what || ""), kind: SOUND_KINDS.some(k => k[0] === s.kind) ? s.kind : "mine", from: String(s.from || "") })),
     look: a.look === "dark" ? "dark" : "light",
     sources: String(a.sources || ""),
+    font: fontOf(a.font)[0],
     chapters: listOf(a.chapters).map(c => ({ id: String(c.id || ""), at: String(c.at || ""), name: String(c.name || "") })),
     credits: String(a.credits || ""),
   };

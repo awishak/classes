@@ -62,7 +62,7 @@ const curl = (s) => String(s || "").replace(/"([^"]+)"/g, "“$1”");
 
 // A time in the card: pressing it plays the clip from there.
 const secondsOf = (at) => { const m = String(at || "").match(/^(\d+):(\d{2})$/); return m ? +m[1] * 60 + +m[2] : null; };
-function At({ at, onSeek }) {
+export function At({ at, onSeek }) {
   const t = secondsOf(at);
   if (t == null) return null;
   return onSeek ? <button type="button" className="apr-go pt-focus" onClick={() => onSeek(t)}>{at}</button> : <span className="apr-at">{at}</span>;

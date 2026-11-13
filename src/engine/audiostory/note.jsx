@@ -3,7 +3,9 @@
 
 // A note is paragraphs with blank lines between; a paragraph that opens with
 // "1. " is a numbered point.
-export function NoteBody({ note }) {
+// work: a heading above the numbered points, on the student's page. Andrew,
+// 2026-11-12: "Things to work on. Call it that above the 3 pieces of advice."
+export function NoteBody({ note, work = "" }) {
   const blocks = String(note || "").split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
   const out = [];
   let list = null;
@@ -14,7 +16,7 @@ export function NoteBody({ note }) {
       // I give, you need to give it a title, like opening or interviews." A
       // point written "1. Opening: ..." shows Opening as its title.
       const t = m[2].match(/^([A-Z][A-Za-z, ]{2,40}):\s+([\s\S]*)$/);
-      if (!list) { list = []; out.push(<ol key={"l" + i} className="afb-list">{list}</ol>); }
+      if (!list) { list = []; if (work) out.push(<h4 key={"w" + i} className="afb-work">{work}</h4>); out.push(<ol key={"l" + i} className="afb-list">{list}</ol>); }
       list.push(<li key={i}>{t ? <b className="afb-t">{t[1]}</b> : null}<span>{t ? t[2] : m[2]}</span></li>);
     }
     else { list = null; out.push(<p key={i} className="afb-p">{b}</p>); }
@@ -48,11 +50,26 @@ export const FEEDBACK_CSS = `
 .afb-from .afb-list li{grid-template-columns:38px minmax(0,1fr)}
 .afb-from .afb-t{color:var(--pt-dr-ink);font-size:18px}
 .afb-from+.apr-row{border-top:0}
-.afb-marks{display:flex;flex-wrap:wrap;gap:12px;padding:18px 0;border-top:1px solid var(--line-soft)}
-.afb-mark{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;flex:1 1 200px;justify-content:space-between}
-.afb-mark.afb-yes{background:var(--pt-done)}
-.afb-mark.afb-could{background:var(--pt-due)}
-.afb-mark .apr-v{background:transparent;padding:0;font-size:15px}
+.afb-work{margin:6px 0 0;font-size:19px;font-weight:700;color:var(--pt-dr-ink)}
+.afb-tiles{display:grid;gap:12px;padding:18px 0 0}
+.afb-three{grid-template-columns:repeat(3,minmax(0,1fr))}
+.afb-four{grid-template-columns:repeat(4,minmax(0,1fr));padding-bottom:18px}
+.afb-tile{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border-radius:14px;min-width:0}
+.afb-tile.afb-yes{background:var(--pt-done)}
+.afb-tile.afb-could{background:var(--pt-due)}
+.afb-tile-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.afb-tile .apr-pl{font-size:17px}
+.afb-tile.afb-yes .apr-pl,.afb-tile.afb-yes .apr-v{color:var(--pt-done-ink)}
+.afb-tile.afb-could .apr-pl,.afb-tile.afb-could .apr-v{color:var(--pt-due-ink)}
+.afb-tile .apr-v{background:transparent;padding:0;font-size:15px;white-space:nowrap}
+.afb-tile-kind{font-size:14px}
+.afb-tile-q{margin:0;font-family:var(--pt-serif);font-size:16px;line-height:1.5;overflow-wrap:anywhere}
+.afb-tile-q mark{background:var(--surface-card,#fff);color:inherit;font-weight:600;padding:1px 3px;border-radius:4px;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.afb-tile-say{margin:0;font-size:16px;line-height:1.45;font-weight:600}
+.afb-tile .apr-go{align-self:flex-start;background:var(--surface-card,#fff)}
+.afb-idea{font-style:italic}
+@media (max-width:860px){ .afb-three,.afb-four{grid-template-columns:1fr 1fr} }
+@media (max-width:560px){ .afb-three,.afb-four{grid-template-columns:1fr} }
 .afb-clip{display:flex;flex-direction:column;gap:10px;min-width:0}
 .afb-clip audio{width:100%;max-width:66ch}
 @media (max-width:700px){ .afb-top{padding:4px 16px} .afb-rows{padding:0 16px 12px} .afb-from{grid-template-columns:1fr;margin:0 -16px;padding:16px} .afb-rows .apr-row{grid-template-columns:1fr} }
