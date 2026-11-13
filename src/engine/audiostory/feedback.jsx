@@ -141,7 +141,7 @@ export function StoryFeedback({ classId, viewer, onPre, onLinks }) {
                 {tile("Interview", "interview", read.interview ? !!read.interview.has : null)}
                 {tile("Structure", "structure", read.structure ? read.structure.level === "clear" : null)}
                 {tile("New information", "news", read.news ? read.news.level === "reported" : null)}
-                {tile("Dynamics", "dynamics", null)}
+                {tile("Dynamism", "dynamics", null)}
               </div>
             </>
           ) : null}
