@@ -11,6 +11,8 @@ Tag each item with one area so it stays skimmable:
 
 ## Open
 
+- `[flow]` `[software]` **Next year, ask students what music they like in their opening profile. Play it when they come in.** Noted 2026-11-12. The profile is the first challenge of the term, `src/engine/profileTask.js`.
+
 - `[software]` **Colour inside style objects is still local.** `check-tokens` holds the constants at the top of each engine file. The hexes written inline in style objects are not held to anything yet. Same for font sizes against `TYPE`.
 
 - `[software]` **Click through a game on a real phone.** Steps are in [testing-a-game.md](testing-a-game.md). The rules are played through by the build and every surface renders, and neither of those is a phone answering over the realtime channel. Do that before running a game in front of a room.
