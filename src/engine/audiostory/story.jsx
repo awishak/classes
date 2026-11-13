@@ -293,8 +293,13 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
           <Words k="title" copy={copy} editing={editing} as="h1" className="ass-hello-h" />
           <span className={"ass-status" + (status === "retrying" ? " ass-status-bad" : status === "saved" ? " ass-status-ok" : "")} aria-live="polite">{STATUS[status]}</span>
         </div>
-        <Words k="due" copy={copy} editing={editing} as="p" className="ass-due" />
-        <StoryFeedback classId={classId} />
+        <div className="ass-top-row">
+          <Words k="due" copy={copy} editing={editing} as="p" className="ass-due" />
+          <a className="ass-door" href={researchHref(classId)} target="_blank" rel="noreferrer">
+            <Words k="before" copy={copy} editing={editing} className="ass-door-name" />
+          </a>
+        </div>
+        <StoryFeedback classId={classId} viewer={viewer} />
         {editor ? (
           <div className="ass-row">
             <button type="button" className="ass-btn" aria-pressed={editing} onClick={() => setEditing(e => !e)}>{editing ? "Done editing the words" : "Edit the words"}</button>
@@ -305,16 +310,9 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
         {lock && lock.until && Date.parse(lock.until) > now ? <div className="ass-note">Dr. Ishak unlocked your story until {when(lock.until)}.</div> : null}
       </header>
 
-      <div className="ass-bar">
-        <span className="ass-grow" />
-        <div className="ass-tabs" role="tablist" aria-label="Build or hear your story">
-          <button type="button" role="tab" aria-selected={pane === "build"} className="ass-tab" onClick={() => setPane("build")}>Build</button>
-          <button type="button" role="tab" aria-selected={pane === "see"} className="ass-tab" onClick={() => setPane("see")}>Hear your story</button>
-        </div>
-      </div>
-
       <div className={"ass-work ass-on-" + pane}>
-        <section className="ass-build" aria-label="Build your story">
+        <section className="ass-build ass-sheet" aria-labelledby="ass-h2">
+          <h2 id="ass-h2" className="ass-h2">Your audio story</h2>
           <div className="ass-field">
             <span className="ass-label">Your story</span>
             {story.audio ? (
@@ -418,12 +416,7 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
         </section>
 
         <section className="ass-see" aria-label="Story preview">
-          <a className="ass-door" href={researchHref(classId)} target="_blank" rel="noreferrer">
-            <Words k="before" copy={copy} editing={editing} className="ass-door-name" />
-          </a>
-          <div className="ass-see-head">
-            <span className="ass-label">Your story page</span>
-          </div>
+          <h2 className="ass-h2 ass-h2-out">Your story page</h2>
           <div className="ass-see-frame ass-frame-light">
             <AudioStoryView story={story} urls={urls} by={by} />
           </div>
@@ -674,13 +667,27 @@ const CSS = `
 .ass-frame-light{background:#fff}
 .ass-frame-dark{background:#0b0b0c}
 
+/* Andrew, 2026-11-12: "make it way prettier like you had before." The
+   mockup's page: one reading column, white cards, plain bold labels. */
+.ass{max-width:920px}
+.ass-hello{gap:16px;margin-bottom:20px}
+.ass-top-row{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}
+.ass-top-row .ass-due{display:flex;align-items:center}
+.ass-top-row .ass-door{flex:1 1 280px;justify-content:center;padding:10px 18px}
+.ass-work{grid-template-columns:1fr;gap:20px}
+.ass-sheet{background:${S.card};border-radius:16px;box-shadow:0 0 0 1px ${L.soft};padding:8px 24px 24px;gap:22px}
+.ass-h2{margin:0;font-family:${SERIF};font-weight:600;font-size:24px;line-height:1.2;padding:16px 0 0}
+.ass-h2-out{padding:8px 0 4px}
+.ass-label{font-size:17px;font-weight:600;letter-spacing:0;text-transform:none}
+.ass-see{position:static}
+.ass-see-frame{max-height:none;box-shadow:0 0 0 1px ${L.soft}}
+.ass-on-build .ass-see,.ass-on-see .ass-build{display:flex}
+
 @media (max-width:1060px){
   .ass-work{grid-template-columns:1fr}
   .ass-tabs{display:flex}
   .ass-bar{display:flex}
   .ass-see .ass-counts{display:none}
-  .ass-on-build .ass-see{display:none}
-  .ass-on-see .ass-build{display:none}
   .ass-see{position:static}
   .ass-see-frame{max-height:none}
 }

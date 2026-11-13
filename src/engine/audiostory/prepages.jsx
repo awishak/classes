@@ -10,7 +10,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
-import { NoteBody, FEEDBACK_CSS } from "./feedback.jsx";
+import { NoteBody, FEEDBACK_CSS } from "./note.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
@@ -67,14 +67,15 @@ function At({ at, onSeek }) {
   if (t == null) return null;
   return onSeek ? <button type="button" className="apr-go pt-focus" onClick={() => onSeek(t)}>{at}</button> : <span className="apr-at">{at}</span>;
 }
-const Rate = ({ ok }) => <span className={"apr-v " + (ok ? "apr-yes" : "apr-could")}>{ok ? "\u2713" : "Could be better"}</span>;
+export const Rate = ({ ok }) => <span className={"apr-v " + (ok ? "apr-yes" : "apr-could")}>{ok ? "\u2713" : "Could be better"}</span>;
 
 // Opening, thesis and closing: the type, the rating, the time, and the
 // student's own words around the line. Nothing of Claude's is said about
 // them. Andrew, 2026-11-12: "do not offer commentary on opening thesis and
 // closing, just type, rating, and time," then "you have to show them to me,
 // and with context."
-function Three({ read, sents, onSeek }) {
+// says: a sentence said to the student under each line, on their own page.
+export function Three({ read, sents, onSeek, says = null }) {
   const rows = [["Opening", "opener", read.opener, read.opener?.kind], ["Thesis", "thesis", read.thesis, MARKS.filter(([m]) => (read.thesis?.marks || []).includes(m)).map(([, say]) => say).join(", ")], ["Closing", "closer", read.closer, read.closer?.kind]];
   return rows.map(([label, id, p, type]) => {
     const v = p?.verdict in VERDICT ? p.verdict : "not";
@@ -96,6 +97,7 @@ function Three({ read, sents, onSeek }) {
                 : <>“<mark className="apr-hl">{p.quote}</mark>”</>}
             </blockquote>
           ) : null}
+          {says && says[id] ? <p className="apr-say">{says[id]}</p> : null}
         </div>
       </section>
     );
@@ -103,7 +105,7 @@ function Three({ read, sents, onSeek }) {
 }
 
 // The student's sources, named: an address shows its site and its headline.
-function Sources({ text, links }) {
+export function Sources({ text, links }) {
   const lines = linesOf(text);
   if (!lines.length) return null;
   return (
@@ -180,7 +182,8 @@ function Compare({ rows }) {
   );
 }
 
-function Timeline({ line, onSeek }) {
+// mine: the student is the reader, so "Their speech" reads "Your speech".
+export function Timeline({ line, onSeek, mine = false }) {
   const total = Math.max(1, line.seconds || Math.max(...line.parts.map(p => p[1])));
   const sum = (k) => line.parts.filter(p => p[2] === k).reduce((n, p) => n + (p[1] - p[0]), 0);
   return (
@@ -190,7 +193,7 @@ function Timeline({ line, onSeek }) {
       <table className="apr-bars apr-key">
         <tbody>
           {LINE_KINDS.filter(([k]) => sum(k) >= 1).map(([k, l]) => (
-            <tr key={k}><th scope="row"><span className={"apr-dot apr-k-" + k} />{l}</th><td className="apr-bar-n">{clock(sum(k))}</td><td className="apr-bar-cell"><span className={"apr-bar apr-k-" + k} style={{ width: (sum(k) / total) * 100 + "%" }} /></td></tr>
+            <tr key={k}><th scope="row"><span className={"apr-dot apr-k-" + k} />{mine && k === "you" ? "Your speech" : l}</th><td className="apr-bar-n">{clock(sum(k))}</td><td className="apr-bar-cell"><span className={"apr-bar apr-k-" + k} style={{ width: (sum(k) / total) * 100 + "%" }} /></td></tr>
           ))}
         </tbody>
       </table>
@@ -517,7 +520,7 @@ export function PreReview({ config, worksheetKey, roster }) {
   );
 }
 
-const REVIEW_CSS = `
+export const REVIEW_CSS = `
 .apr-doc{margin-top:12px;border-radius:14px;overflow:hidden;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
 .apr-doc .aspd{padding:26px 28px 30px}
 .apr-in{margin:16px 0 4px;max-width:560px}

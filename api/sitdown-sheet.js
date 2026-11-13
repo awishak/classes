@@ -47,8 +47,17 @@ export default async function handler(req, res) {
     if (!me) return res.status(200).json({ ok: true, note: "" });
     const f = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${objectFor(q.class || "comm3", "audio-pre-notes")}`, { headers: serviceHeaders() });
     const file = (f.ok ? await f.json().catch(() => null) : null) || {};
-    const out = teaches || file.released === true ? String(file.notes?.[me]?.note || "") : "";
-    return res.status(200).json({ ok: true, note: out });
+    if (!teaches && file.released !== true) return res.status(200).json({ ok: true, note: "" });
+    // With the note go the parts of Claude's read a student sees about their
+    // own clip: the three lines, the three ratings with a sentence said to
+    // them (`you`), the timeline, and their own transcript to quote from.
+    // The summary, the scores, the sound notes and the ChatGPT read stay his.
+    const g = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${objectFor(q.class || "comm3", "audio-pre")}`, { headers: serviceHeaders() });
+    const all = (g.ok ? await g.json().catch(() => null) : null) || {};
+    const mine = all.students?.[me] || null;
+    const part = (x) => (x ? { kind: x.kind, verdict: x.verdict, quote: x.quote, at: x.at, marks: x.marks } : null);
+    const read = mine ? { opener: part(mine.opener), thesis: part(mine.thesis), closer: part(mine.closer), interview: mine.interview ? { has: !!mine.interview.has } : null, structure: mine.structure ? { level: mine.structure.level } : null, news: mine.news ? { level: mine.news.level } : null, you: mine.you || null, timeline: mine.timeline || null, transcript: mine.transcript || [], seconds: mine.seconds } : null;
+    return res.status(200).json({ ok: true, note: String(file.notes?.[me]?.note || ""), read, links: read ? all.links || {} : {} });
   }
   if (!(await callerAllowed(req, { pin: body.pin || q.pin }))) {
     await new Promise(r => setTimeout(r, 1000));
