@@ -76,9 +76,15 @@ export function StoryDoor({ config, data, now = Date.now() }) {
   if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
   const asg = assignmentsOf(config, data).find(a => a.id === "visual");
   const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
-  if (!end || now > end) return null;
-  return <DueBar href={"/" + config.id + "/worksheets/" + VISUAL_STORY_KEY} name="Work on your visual story" say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
-    done={submittedOf(standing)} doneName="Your visual story is in" doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
+  if (!end) return null;
+  // Past the due date the door stays for a student whose story Andrew
+  // reopened. Andrew, 2026-11-13: "reopen the visual story so that people
+  // like sidi can easily turn it in."
+  const until = reopenedUntil(standing, now);
+  if (now > end && !until) return null;
+  const till = now > end ? untilWords(until) : dueWords(asg.due, asg.dueTime);
+  return <DueBar href={"/" + config.id + "/worksheets/" + VISUAL_STORY_KEY} name="Work on your visual story" say={(now > end ? "Open until " : "Due ") + till + ". Your work saves as you go."}
+    done={submittedOf(standing)} doneName="Your visual story is in" doneSay={"Submitted. You can keep editing until " + till + "."} />;
 }
 
 // The audio story's door, the same way: bright green until the student's
@@ -117,13 +123,20 @@ export function AudioPreDoor({ config, data, now = Date.now() }) {
   if (!sheet || !listedFor(sheet, config.id) || !openTo(sheet, config.id, data, now)) return null;
   const asg = assignmentsOf(config, data).find(a => a.id === "audio-pre");
   const end = asg ? deadlineOf(asg.due, asg.dueTime) : null;
-  if (!end || now > end) return null;
-  return <DueBar href={preHref(config.id)} name={"Work on your " + AUDIO_PRE_TITLE.toLowerCase()} say={"Due " + dueWords(asg.due, asg.dueTime) + ". Your work saves as you go."}
-    done={submittedOf(standing)} doneName={"Your " + AUDIO_PRE_TITLE.toLowerCase() + " is in"} doneSay={"Submitted. You can keep editing until " + dueWords(asg.due, asg.dueTime) + "."} />;
+  if (!end) return null;
+  const until = reopenedUntil(standing, now);   // reopened for this student, as on the visual story
+  if (now > end && !until) return null;
+  const till = now > end ? untilWords(until) : dueWords(asg.due, asg.dueTime);
+  return <DueBar href={preHref(config.id)} name={"Work on your " + AUDIO_PRE_TITLE.toLowerCase()} say={(now > end ? "Open until " : "Due ") + till + ". Your work saves as you go."}
+    done={submittedOf(standing)} doneName={"Your " + AUDIO_PRE_TITLE.toLowerCase() + " is in"} doneSay={"Submitted. You can keep editing until " + till + "."} />;
 }
 
 // A sheet's standing says submitted once it has a hand-in time (waiting), or
 // a review on a hand-in (approved, needs). Nothing known yet reads as not.
+// The end of a student's own unlock, while it is still ahead, or null.
+const reopenedUntil = (standing, now) => (standing && standing.until && Date.parse(standing.until) > now ? standing.until : null);
+// In dueWords' shape: "Friday Nov 20, 11:59 PM".
+const untilWords = (t) => { const d = new Date(t); return d.toLocaleString("en-US", { weekday: "long" }) + " " + d.toLocaleString("en-US", { month: "short", day: "numeric" }) + ", " + d.toLocaleString("en-US", { hour: "numeric", minute: "2-digit" }); };
 const submittedOf = (standing) => !!(standing && standing.kind !== "open");
 
 // The bar for something to complete: bright green at the top until the

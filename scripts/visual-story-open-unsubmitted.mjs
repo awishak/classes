@@ -30,7 +30,7 @@ const H = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "applic
 const argv = process.argv.slice(2);
 const write = argv.includes("--write");
 const UNTIL = argv.includes("--until") ? argv[argv.indexOf("--until") + 1] : "2026-11-02T07:59:00+00:00";
-const KEY = "visual-story", GROUP = "comm3", PLAN = "comm3-f26-v1-plan";
+const KEY = argv.includes("--key") ? argv[argv.indexOf("--key") + 1] : "visual-story", GROUP = "comm3", PLAN = "comm3-f26-v1-plan";
 const ME = "andrewishak@gmail.com";
 
 const get = async (path) => { const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: H }); if (!r.ok) throw new Error(`${path}: ${r.status}`); return r.json(); };

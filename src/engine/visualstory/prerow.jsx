@@ -33,7 +33,10 @@ export function preStandingFor(config, email, key = VISUAL_PRE_KEY) {
       const sheet = s.data && s.data[0];
       if (!sheet) return null;
       const r = await gameClient.from("worksheet_reviews").select("status,note,reviewed_at").eq("sheet_id", sheet.id);
-      return standing(sheet.submitted_at, (r.data && r.data[0]) || null);
+      // An unlock on the sheet, when Andrew reopened it for this student past
+      // the due date. The student's own row is theirs to read.
+      const u = await gameClient.from("worksheet_unlocks").select("until").eq("sheet_id", sheet.id);
+      return { ...standing(sheet.submitted_at, (r.data && r.data[0]) || null), until: (u.data && u.data[0] && u.data[0].until) || null };
     } catch { return null; }
   })());
   return asked.get(k);
