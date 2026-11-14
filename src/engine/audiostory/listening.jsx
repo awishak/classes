@@ -29,7 +29,7 @@ import { useCopy, Words } from "../visualstory/pre.jsx";
 import { READING_CSS } from "../visualstory/reading.jsx";
 import { AudioStoryView, AUDIO_STORY_CSS } from "./story.jsx";
 import { clock, secondsOf } from "./storymodel.js";   // secondsOf reads a chapter's time
-import { NEED_TOTAL, MIN_CHARS, chaptersOf, chapterSpan, rangesOf } from "./reviewmodel.js";
+import { NEED_TOTAL, MIN_CHARS, chaptersOf, chapterSpan, rangesOf, SOUNDS, soundSay, FEEL_MAX } from "./reviewmodel.js";
 import * as TOKENS from "../tokens.js";
 import TopNav, { NAV_STUDENT } from "../TopNav.jsx";
 import { useStudentTheme, useDayNight, ThemeStyle } from "../ThemeShell.jsx";
@@ -51,9 +51,11 @@ export const LISTENING_COPY = {
   "ask.chapter": "The best chapter, and why",
   "ask.shone": "One way this story shone",
   "ask.encourage": "One thing you would encourage the author to do",
+  "ask.feel": "How did this story make you feel?",
+  "ask.sound": "How was the sound quality?",
 };
 const FIELDS = ["best", "shone", "encourage"];
-const EMPTY = { chapter: "", best: "", shone: "", encourage: "" };
+const EMPTY = { chapter: "", best: "", shone: "", encourage: "", feel: "", sound: "" };
 const askKey = (f) => (f === "best" ? "ask.chapter" : "ask." + f);
 const charsSay = (n) => (n >= MIN_CHARS ? n + " characters. Long enough!" : n + " characters. Write at least " + MIN_CHARS + ".");
 const when = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
@@ -70,7 +72,7 @@ const api = async (config, body) => {
 const draftKey = (config, as, id) => "audio-comment:" + config.id + ":" + (as || "") + ":" + id;
 const readDraft = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
 const writeDraft = (k, v) => { try { if (v) localStorage.setItem(k, JSON.stringify(v)); else localStorage.removeItem(k); } catch { /* the server copy still goes */ } };
-const formOf = (c) => (c ? { chapter: c.chapter || "", best: c.best || "", shone: c.shone || "", encourage: c.encourage || "" } : null);
+const formOf = (c) => (c ? { chapter: c.chapter || "", best: c.best || "", shone: c.shone || "", encourage: c.encourage || "", feel: c.feel || "", sound: c.sound || "" } : null);
 
 export default function ClassmatesAudio({ config }) {
   const { session, instructor } = useSession();
@@ -362,7 +364,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
   const save = async () => {
     setState("saving"); setShort([]);
     try {
-      const out = { chapter: form.chapter, best: form.best, shone: form.shone, encourage: form.encourage };
+      const out = { chapter: form.chapter, best: form.best, shone: form.shone, encourage: form.encourage, feel: form.feel, sound: form.sound };
       await api(config, { action: "comment", id, as, ...out });
       writeDraft(key, null);
       setState("saved");
@@ -401,6 +403,16 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
               <span className={"vrd-chars" + (String(form[f] || "").trim().length >= MIN_CHARS ? " vrd-chars-ok" : "")}>{charsSay(String(form[f] || "").trim().length)}</span>
             </div>
           ))}
+          <div className="vrd-field">
+            <Words k="ask.feel" copy={copy} editing={editing} className="vrd-ask" />
+            <input className={"vrd-box" + (short.includes("feel") ? " vrd-box-bad" : "")} maxLength={FEEL_MAX} aria-label={copy.say("ask.feel")} value={form.feel || ""} onChange={e => change("feel", e.target.value)} />
+          </div>
+          <div className="vrd-field">
+            <Words k="ask.sound" copy={copy} editing={editing} className="vrd-ask" />
+            <div className={"ala-sounds" + (short.includes("sound") ? " ala-chapters-bad" : "")} role="radiogroup" aria-label={copy.say("ask.sound")}>
+              {SOUNDS.map(([k, say]) => <button key={k} type="button" role="radio" aria-checked={form.sound === k} className="ala-sound" onClick={() => change("sound", k)}>{say}</button>)}
+            </div>
+          </div>
           <div className="vrd-row">
             <button type="button" className="vrd-go" disabled={state === "saving"} onClick={save}>{data.myComment ? "Save my changes" : "Save my comments"}</button>
             {state === "saving" ? <span className="vrd-muted">Saving</span> : null}
@@ -433,7 +445,10 @@ function Said({ c, copy, onPlay, story }) {
       ) : null}
       {c[f]}
     </div>
-  ));
+  )).concat(
+    c.feel ? [<div key="feel" className="vrd-said"><span className="vrd-said-k">{copy.say("ask.feel")}</span>{c.feel}</div>] : [],
+    c.sound ? [<div key="sound" className="vrd-said"><span className="vrd-said-k">{copy.say("ask.sound")}</span>{soundSay(c.sound)}</div>] : [],
+  );
 }
 
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
@@ -447,5 +462,9 @@ const CSS = `
 .ala-chapter-pick{display:flex;width:100%;box-sizing:border-box;align-items:baseline;gap:12px;text-align:left;font:inherit;font-size:16px;font-weight:600;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .ala-chapter-pick[aria-checked="true"]{border-color:#16803c;box-shadow:0 0 0 3px #16803c}
 .ala-chapter-pick:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
+.ala-sounds{display:flex;flex-wrap:wrap;gap:8px}
+.ala-sound{font:inherit;font-size:16px;font-weight:600;min-height:48px;padding:10px 18px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.ala-sound[aria-checked="true"]{border-color:#16803c;box-shadow:0 0 0 3px #16803c}
+.ala-sound:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
 .ala-chapter-t{font-size:14px;font-weight:700;color:${T.muted};font-variant-numeric:tabular-nums}
 `;

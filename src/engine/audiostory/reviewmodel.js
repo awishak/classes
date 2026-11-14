@@ -14,6 +14,13 @@
 export const NEED_ASSIGNED = 3;
 export const NEED_TOTAL = 5;
 export const MIN_CHARS = 50;
+// Andrew, 2026-11-14, picked two more questions from a list: how the sound
+// quality was, as one tap, and how the story made the listener feel, in a
+// word or a short line. ("actually lets just do 1 and 3": a third, what the
+// reviewer wishes their own story had, was built and taken out.)
+export const SOUNDS = [["hard", "Hard to hear"], ["fine", "Fine"], ["clean", "Clean"], ["professional", "Professional"]];
+export const soundSay = (id) => (SOUNDS.find(x => x[0] === id) || ["", ""])[1];
+export const FEEL_MIN = 3, FEEL_MAX = 200;
 
 // Pacific standard time, eight hours behind UTC in November.
 //   opens     Tuesday, November 17, 12:00 AM

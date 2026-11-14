@@ -24,6 +24,10 @@
 //     window, so Andrew's stage buttons are the word there, and only there.
 //   - A comment is a row in story_comments, the visual story's table. The
 //     best chapter rides in best_where as chapter:<id>.
+//   - Two answers were added after the table was made: the sound quality
+//     and how the story made the listener feel. story_comments has no columns for them, so they are one
+//     app_data row a reviewer a story (audio-said-...-plan), written just
+//     before the comment's own row. A comment counts when its row exists.
 //   - A student does not comment on their own story.
 //   - What a student actually heard of a classmate's story is kept: the page
 //     sends the seconds of the file that played, and the union is saved in
@@ -41,7 +45,7 @@ import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
 import { audioStoryOf } from "../src/engine/audiostory/storymodel.js";
-import { WINDOW, windowStage, assignAll, assignOne, chapterWord, chapterOf, chaptersOf, joinRanges, heardSeconds, NEED_ASSIGNED, NEED_TOTAL, MIN_CHARS } from "../src/engine/audiostory/reviewmodel.js";
+import { WINDOW, windowStage, assignAll, assignOne, chapterWord, chapterOf, chaptersOf, joinRanges, heardSeconds, SOUNDS, FEEL_MIN, FEEL_MAX, NEED_ASSIGNED, NEED_TOTAL, MIN_CHARS } from "../src/engine/audiostory/reviewmodel.js";
 
 const KEY = "audio-story";
 const BUCKET = "visual-story";
@@ -116,6 +120,14 @@ const dueOf = async (groupKey) => (await rows(`/rest/v1/worksheet_deadlines?sele
 const listenId = (groupKey, sheetId, email) => "audio-listen-" + groupKey + "-" + sheetId + "-" + slug(email) + "-plan";
 const listensOf = async (groupKey) => ((await rows(`/rest/v1/app_data?id=like.${encodeURIComponent("audio-listen-" + groupKey + "-*")}&select=data&limit=5000`)) || []).map(r => r.data).filter(Boolean);
 
+// ─── the two later answers, beside the comment's row ───
+const moreId = (groupKey, sheetId, email) => "audio-said-" + groupKey + "-" + sheetId + "-" + slug(email) + "-plan";
+/** { "<story id> <reviewer>": { sound, feel } } for a class, or for one story. */
+async function moreOf(groupKey, sheetId = "") {
+  const list = (await rows(`/rest/v1/app_data?id=like.${encodeURIComponent("audio-said-" + groupKey + "-" + (sheetId ? sheetId + "-" : "") + "*")}&select=data&limit=5000`)) || [];
+  return new Map(list.map(r => r.data).filter(Boolean).map(d => [d.story + " " + d.reviewer, d]));
+}
+
 // ─── who reviews what, saved once a section ───
 const assignId = (groupKey, section) => "audio-review-" + groupKey + "-" + (slug(section) || "all") + "-plan";
 const readAssign = async (groupKey, section) => (await rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(assignId(groupKey, section))}&select=data`))?.[0]?.data || null;
@@ -162,7 +174,7 @@ async function tilesOf(ids) {
 // What a classmate may see of a story: everything on the story page, and no
 // mark for whether a voice knew they were being recorded.
 const forListener = (story) => ({ ...story, voices: story.voices.map(v => ({ ...v, knew: null })) });
-const said = (c) => ({ chapter: chapterOf(c.best_where), best: c.best, shone: c.shone, encourage: c.encourage });
+const said = (c, more) => { const m = (more && more.get(c.story_sheet + " " + c.author)) || {}; return { chapter: chapterOf(c.best_where), best: c.best, shone: c.shone, encourage: c.encourage, sound: m.sound || "", feel: m.feel || "" }; };
 const lateOf = (s, due) => !!(s.submitted_at && due && Date.parse(s.submitted_at) > Date.parse(due));
 
 export default async function handler(req, res) {
@@ -201,6 +213,7 @@ export default async function handler(req, res) {
       if (old.length && (await write(`/rest/v1/worksheet_sheets?id=in.(${old.map(o => o.id).join(",")})`, "DELETE")) === null) return res.status(502).json({ ok: false, error: "The old practice stories did not clear." });
       for (const s of sections) await write(`/rest/v1/app_data?id=eq.${encodeURIComponent(assignId(groupKey, s))}`, "DELETE");
       await write(`/rest/v1/app_data?id=like.${encodeURIComponent("audio-listen-" + groupKey + "-*")}`, "DELETE");
+      await write(`/rest/v1/app_data?id=like.${encodeURIComponent("audio-said-" + groupKey + "-*")}`, "DELETE");
       await write(`/rest/v1/story_stage?worksheet_key=eq.${KEY}&group_key=eq.${groupKey}`, "DELETE");
       if (action === "practice-clear") return res.status(200).json({ ok: true, cleared: old.length });
       const from = lower(body.from) || await callerEmail(req);
@@ -233,8 +246,9 @@ export default async function handler(req, res) {
       const urls = await sign([story.audio?.path, story.cover?.path]);
       const who = byEmail.get(sheet.viewer_id);
       const heardBy = new Map((await listensOf(groupKey)).filter(l => l.story === sheet.id).map(l => [l.reviewer, l]));
+      const more = await moreOf(groupKey, sheet.id);
       const comments = ((await rows(`/rest/v1/story_comments?select=*&story_sheet=eq.${sheet.id}&order=updated_at`)) || [])
-        .map(c => ({ author: byEmail.get(c.author)?.name || c.author, ...said(c), heard: heardBy.get(c.author)?.heard || 0, length: story.audio?.seconds || 0 }));
+        .map(c => ({ author: byEmail.get(c.author)?.name || c.author, ...said(c, more), heard: heardBy.get(c.author)?.heard || 0, length: story.audio?.seconds || 0 }));
       return res.status(200).json({ ok: true, story, urls, author: who.name, section: who.section, submitted_at: sheet.submitted_at, late: lateOf(sheet, due), comments });
     }
 
@@ -266,6 +280,7 @@ export default async function handler(req, res) {
     const ids = submitted.map(s => s.id);
     const comments = ids.length ? ((await rows(`/rest/v1/story_comments?select=*&story_sheet=in.(${ids.join(",")})&limit=5000`)) || []) : [];
     const ownerOf = new Map(submitted.map(s => [s.id, s.viewer_id]));
+    const more = await moreOf(groupKey);
     const listens = (await listensOf(groupKey)).filter(l => ownerOf.has(l.story) && byEmail.has(l.reviewer))
       .map(l => ({ story: l.story, reviewer: l.reviewer, heard: l.heard || 0, length: l.length || 0, updated_at: l.updated_at || null }));
     return res.status(200).json({
@@ -274,7 +289,7 @@ export default async function handler(req, res) {
       people: roster.map(r => ({ name: r.name, email: r.email, section: r.section })),
       assign,
       stories: list.map(s => ({ id: s.id, email: s.viewer_id, name: byEmail.get(s.viewer_id).name, section: byEmail.get(s.viewer_id).section, submitted_at: s.submitted_at, late: lateOf(s, due), headline: clean(tile[s.id]) })),
-      comments: comments.map(c => ({ story: c.story_sheet, owner: byEmail.get(ownerOf.get(c.story_sheet))?.name || "", ownerEmail: ownerOf.get(c.story_sheet) || "", author: byEmail.get(c.author)?.name || c.author, authorEmail: c.author, ...said(c), chapterName: chapterName(c.story_sheet, chapterOf(c.best_where)), updated_at: c.updated_at })),
+      comments: comments.map(c => ({ story: c.story_sheet, owner: byEmail.get(ownerOf.get(c.story_sheet))?.name || "", ownerEmail: ownerOf.get(c.story_sheet) || "", author: byEmail.get(c.author)?.name || c.author, authorEmail: c.author, ...said(c, more), chapterName: chapterName(c.story_sheet, chapterOf(c.best_where)), updated_at: c.updated_at })),
     });
   }
 
@@ -344,11 +359,13 @@ export default async function handler(req, res) {
     let comments = null;
     if (stage === "released" && isMine) {
       const nameOf = new Map(roster.map(s => [s.email, s.name]));
+      const more = await moreOf(groupKey, story.id);
       comments = ((await rows(`/rest/v1/story_comments?select=*&story_sheet=eq.${story.id}&order=updated_at`)) || [])
-        .filter(c => c.author !== email).map(c => ({ author: nameOf.get(c.author) || "A classmate", ...said(c) }));
+        .filter(c => c.author !== email).map(c => ({ author: nameOf.get(c.author) || "A classmate", ...said(c, more) }));
     }
     const my = myComments.find(c => c.story_sheet === story.id);
-    return res.status(200).json({ ok: true, stage, story: forListener(full), urls, mine: isMine, author: story.owner.name, myComment: my ? said(my) : null, commentsOpen: open, comments, ...counts });
+    const mineMore = my ? new Map([[story.id + " " + email, (await rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(moreId(groupKey, story.id, email))}&select=data`))?.[0]?.data || {}]]) : null;
+    return res.status(200).json({ ok: true, stage, story: forListener(full), urls, mine: isMine, author: story.owner.name, myComment: my ? said(my, mineMore) : null, commentsOpen: open, comments, ...counts });
   }
 
   // The seconds of a classmate's story that played on the listener's page.
@@ -370,15 +387,26 @@ export default async function handler(req, res) {
     if (!open) return res.status(409).json({ ok: false, error: "Comments are closed." });
     if (isMine) return res.status(409).json({ ok: false, error: "This story is yours. Comment on your classmates' stories." });
     const c = { best: clean(body.best).slice(0, 3000), shone: clean(body.shone).slice(0, 3000), encourage: clean(body.encourage).slice(0, 3000) };
+    const feel = clean(body.feel).slice(0, FEEL_MAX), sound = String(body.sound || "");
     const short = Object.entries(c).filter(([, v]) => v.length < MIN_CHARS).map(([k]) => k);
+    const taps = [];
+    if (feel.length < FEEL_MIN) { short.push("feel"); taps.push("say how the story made you feel"); }
+    if (!SOUNDS.some(x => x[0] === sound)) { short.push("sound"); taps.push("mark the sound quality"); }
     // The best chapter has to be one of the story's own. A story with no
     // chapters takes the comment with no pick.
     const chapterRows = (await rows(`/rest/v1/worksheet_answers?select=field,value,position&sheet_id=eq.${story.id}&field=eq.chapters&order=position`)) || [];
     const chapters = chaptersOf(audioStoryOf(answersOf(chapterRows)));
     const chapter = String(body.chapter || "");
     const picked = !chapters.length || chapters.some(ch => ch.id === chapter);
-    if (!picked) short.unshift("chapter");
-    if (short.length) return res.status(400).json({ ok: false, error: !picked && short.length === 1 ? "Choose the best chapter." : `Each comment needs at least ${MIN_CHARS} characters${picked ? "" : ", and choose the best chapter"}.`, short });
+    if (!picked) { short.unshift("chapter"); taps.unshift("choose the best chapter"); }
+    if (short.length) {
+      const boxes = short.some(k => ["best", "shone", "encourage"].includes(k)) ? [`write at least ${MIN_CHARS} characters in each box`] : [];
+      const todo = [...boxes, ...taps].join(", ");
+      return res.status(400).json({ ok: false, error: "Still to do: " + todo + ".", short });
+    }
+    const now = new Date().toISOString();
+    const m = await write("/rest/v1/app_data?on_conflict=id", "POST", { id: moreId(groupKey, story.id, email), data: { story: story.id, reviewer: email, sound, feel, updated_at: now }, updated_at: now }, "return=representation,resolution=merge-duplicates");
+    if (!m || !m[0]) return res.status(502).json({ ok: false, error: "The comment did not save." });
     const w = await writeOrError("/rest/v1/story_comments?on_conflict=story_sheet,author", "POST",
       { story_sheet: story.id, author: email, best_image: "", best_where: chapters.length ? chapterWord(chapter) : "", ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
     if (!w.rows || !w.rows[0]) return res.status(502).json({ ok: false, error: "The comment did not save. " + w.error });

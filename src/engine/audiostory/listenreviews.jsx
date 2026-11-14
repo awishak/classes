@@ -30,9 +30,9 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf } from "../sections.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { clock } from "./storymodel.js";
-import { tally, NEED_TOTAL, NEED_ASSIGNED, HEARD_FULL, HEARD_LITTLE } from "./reviewmodel.js";
+import { tally, NEED_TOTAL, NEED_ASSIGNED, HEARD_FULL, HEARD_LITTLE, SOUNDS, soundSay } from "./reviewmodel.js";
 
-const ASK = { best: "The best chapter, and why", shone: "One way this story shone", encourage: "One thing you would encourage the author to do" };
+const ASK = { best: "The best chapter, and why", shone: "One way this story shone", encourage: "One thing you would encourage the author to do", feel: "How did this story make you feel?", sound: "How was the sound quality?" };
 const lower = (s) => String(s || "").trim().toLowerCase();
 const when = (t) => (t ? new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
 
@@ -47,8 +47,8 @@ const api = async (config, body) => {
 };
 
 const csvCell = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-const toCsv = (comments, listenOf) => ["story_id,owner,owner_email,author,author_email,heard_seconds,story_seconds,best_chapter,best,shone,encourage,updated_at",
-  ...comments.map(c => [c.story, c.owner, c.ownerEmail, c.author, c.authorEmail, listenOf.get(lower(c.authorEmail) + " " + c.story)?.heard || 0, listenOf.get(lower(c.authorEmail) + " " + c.story)?.length || "", c.chapterName || "", c.best, c.shone, c.encourage, c.updated_at].map(csvCell).join(","))].join("\n");
+const toCsv = (comments, listenOf) => ["story_id,owner,owner_email,author,author_email,heard_seconds,story_seconds,best_chapter,best,shone,encourage,feel,sound,updated_at",
+  ...comments.map(c => [c.story, c.owner, c.ownerEmail, c.author, c.authorEmail, listenOf.get(lower(c.authorEmail) + " " + c.story)?.heard || 0, listenOf.get(lower(c.authorEmail) + " " + c.story)?.length || "", c.chapterName || "", c.best, c.shone, c.encourage, c.feel || "", soundSay(c.sound), c.updated_at].map(csvCell).join(","))].join("\n");
 const download = (name, text, type) => {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type }));
@@ -86,6 +86,20 @@ function Bars({ bars }) {
         </div>
       ))}
     </div>
+  );
+}
+
+// What the listeners said of a story's sound quality, as one bar split by answer.
+function SoundBar({ comments }) {
+  if (!comments.length) return null;
+  const counts = SOUNDS.map(([k, say]) => [k, say, comments.filter(c => c.sound === k).length]).filter(x => x[2]);
+  return (
+    <>
+      <h2>Sound quality</h2>
+      <div className="ar-sbar" role="img" aria-label={counts.map(x => x[1] + " " + x[2]).join(", ")}>
+        {counts.map(([k, say, n]) => <span key={k} className={"ar-snd-" + k} style={{ flexGrow: n }} title={say + ", " + n}>{say} {n}</span>)}
+      </div>
+    </>
   );
 }
 
@@ -236,6 +250,7 @@ export default function AudioReviews({ config }) {
                 </div>
                 <h2>Listening Data</h2>
                 <Bars bars={barsOfStory(s)} />
+                <SoundBar comments={inSection.filter(c => c.story === s.id && c.sound)} />
               </article>
             );
           })}
@@ -272,6 +287,8 @@ export default function AudioReviews({ config }) {
                 <dt>{ASK.best}</dt><dd>{c.chapterName ? <span className="ar-chip ar-chip-ok">{c.chapterName}</span> : null}{c.best}</dd>
                 <dt>{ASK.shone}</dt><dd>{c.shone}</dd>
                 <dt>{ASK.encourage}</dt><dd>{c.encourage}</dd>
+                {c.feel ? <><dt>{ASK.feel}</dt><dd>{c.feel}</dd></> : null}
+                {c.sound ? <><dt>{ASK.sound}</dt><dd><span className={"ar-chip ar-snd-" + c.sound}>{soundSay(c.sound)}</span></dd></> : null}
               </dl>
             </article>
           ))}
@@ -364,6 +381,9 @@ const CSS = `
 .ar-tick{position:absolute;right:-5px;bottom:-3px;width:14px;height:14px;border-radius:50%;background:var(--ok);color:var(--ok-ink);font-size:9px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--card)}
 .ar-label{font-size:10.5px;color:var(--mute);max-width:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+.ar-sbar{display:flex;gap:2px;height:24px;border-radius:8px;overflow:hidden;font-size:12px;font-weight:600}
+.ar-sbar span{display:grid;place-items:center;min-width:28px;padding:0 6px;white-space:nowrap;overflow:hidden}
+.ar-snd-hard{background:#fb7185;color:#3a0613}.ar-snd-fine{background:#fbbf24;color:#2a1a00}.ar-snd-clean{background:#60a5fa;color:#061a3a}.ar-snd-professional{background:#34d399;color:#052e1f}
 .ar-group{display:flex;flex-direction:column;gap:10px}
 .ar-comment{background:var(--card);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
 .ar-comment-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:15px}
