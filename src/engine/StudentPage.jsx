@@ -92,7 +92,10 @@ export function recordOf(config, data, asg, name) {
   return { st, link: linked?.link || "", card, pending, released: !!board.released, thread, status, late: !!st.late || st.state === "missed" };
 }
 
-export default function StudentPage({ config, id }) {
+// `embedded`: inside the popup (StudentPeek.jsx), which draws its own bar.
+// The challenges come first there, and a challenge's title hands its file
+// to onWork instead of opening a tab.
+export default function StudentPage({ config, id, embedded = false, onWork }) {
   const [stored] = useClassData(config.storageKey);
   const [photos] = usePhotos(config.storageKey);
   const data = useWithWorksheetSubmits(useWithPhotos(stored, photos), config);
@@ -106,7 +109,7 @@ export default function StudentPage({ config, id }) {
   const storyAsg = assignments.find(a => isStory(a, config));
   const pageAsgs = useMemo(() => assignments.filter(a => hasPage(a, config)), [assignments, config]);
 
-  useEffect(() => { document.title = config.code + " · " + (name || "Student"); }, [config, name]);
+  useEffect(() => { if (!embedded) document.title = config.code + " · " + (name || "Student"); }, [config, name, embedded]);
   useEffect(() => {
     const row = readingsRow(config.storageKey);
     const S = typeof window !== "undefined" ? window.storage : null;
@@ -149,7 +152,12 @@ export default function StudentPage({ config, id }) {
     return () => { alive2 = false; };
   }, [config, student?.email, pageAsgs]);
 
-  const shell = (children) => (
+  const shell = (children) => embedded ? (
+    <div className="sp-root sp-in" style={{ color: "var(--text-primary)", fontFamily: F, "--ca-accent": config.accent, "--ca-accent-ink": config.accent }}>
+      <style>{CSS}</style>
+      <div className="sp">{children}</div>
+    </div>
+  ) : (
     <div data-theme="clean" className="ca-root sp-root" style={{ minHeight: "100vh", background: "var(--surface-page)", color: "var(--text-primary)", fontFamily: F, "--ca-accent": config.accent, "--ca-accent-ink": config.accent }}>
       <ThemeStyle theme="clean" />
       <style>{PORTAL_CSS}{CSS}</style>
@@ -168,26 +176,33 @@ export default function StudentPage({ config, id }) {
   const myComments = myStory ? (feed.comments || []).filter(c => c.story === myStory.id && lower(c.authorEmail) !== lower(student.email)) : [];
   const back = () => { if (window.history.length > 1) window.history.back(); else window.location.assign("/grades/" + config.id + "/summary"); };
 
+  // The profile answers: in the top card on the page, a card of their own under the challenges in the popup.
+  const answered = PROFILE_FIELDS.filter(([k]) => String(p[k] || "").trim());
+  const fields = answered.length ? (
+    <dl className="sp-fields">
+      {answered.map(([k, label]) => <div key={k} className="sp-field"><dt>{label}</dt><dd>{p[k]}</dd></div>)}
+    </dl>
+  ) : null;
+
   return shell(
     <>
-      <div className="sp-nav">
-        <button type="button" className="sp-btn sp-back" onClick={back}>{"‹ Back"}</button>
-        <a className="sp-lnk" href={"/grades/" + config.id + "/summary"}>Grades</a>
-      </div>
+      {embedded ? null : (
+        <div className="sp-nav">
+          <button type="button" className="sp-btn sp-back" onClick={back}>{"‹ Back"}</button>
+          <a className="sp-lnk" href={"/grades/" + config.id + "/summary"}>Grades</a>
+        </div>
+      )}
 
       <section className="sp-card sp-hero">
-        <Avatar profile={p} name={shown} accent={config.accent} size={168} />
+        <Avatar profile={p} name={shown} accent={config.accent} size={embedded ? 96 : 168} />
         <div className="sp-who">
           <h1 className="sp-name">{shown}</h1>
           <p className="sp-meta">{[student.email || p.email, section, [p.year, p.hometown].filter(Boolean).join(", ")].filter(Boolean).join(" · ")}</p>
           {standing.pct != null ? <p className="sp-meta"><b>{letterOf(standing.pct)}</b> so far</p> : null}
         </div>
-        <dl className="sp-fields">
-          {PROFILE_FIELDS.filter(([k]) => String(p[k] || "").trim()).map(([k, label]) => (
-            <div key={k} className="sp-field"><dt>{label}</dt><dd>{p[k]}</dd></div>
-          ))}
-        </dl>
+        {embedded ? null : fields}
       </section>
+      {embedded && fields ? <section className="sp-card">{fields}</section> : null}
 
       {checkins.map(({ asg, answers }) => (
         <section key={asg.id} className="sp-card">
@@ -216,7 +231,7 @@ export default function StudentPage({ config, id }) {
           const comment = r.st.letter ? r.st.comments[0] : r.card?.comment;
           return (
             <section key={asg.id} className={"sp-card sp-asg" + (r.late ? " late" : "")}>
-              <h2 className="sp-h2">{href ? <a href={href} target="_blank" rel="noopener">{asg.title}</a> : asg.title}</h2>
+              <h2 className="sp-h2">{href && embedded && onWork ? <button type="button" onClick={() => onWork({ href, title: asg.title })}>{asg.title}</button> : href ? <a href={href} target="_blank" rel="noopener">{asg.title}</a> : asg.title}</h2>
               <p className="sp-meta">{"Due " + asg.due + (asg.dueTime ? " " + asg.dueTime : "") + (asg.weight ? " · " + asg.weight + "%" : "")}</p>
               {r.status ? <p className={"sp-status" + (r.late ? " late" : "")}>{r.status}</p> : null}
               {grade ? <p className="sp-grade"><b>{grade}</b>{r.pending ? <span className="sp-chip">not released</span> : null}</p> : null}
@@ -270,6 +285,12 @@ const CSS = `
 .sp-h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .sp-h2 a{color:var(--ca-accent-ink);text-decoration:none}
 .sp-h2 a:hover{text-decoration:underline}
+.sp-h2 button{font:inherit;letter-spacing:inherit;color:var(--ca-accent-ink);background:none;border:0;padding:0;text-align:left;cursor:pointer}
+.sp-h2 button:hover{text-decoration:underline}
+.sp-in .sp{max-width:none;padding:0}
+.sp-in .sp-hero{order:-2}
+.sp-in .sp-grid{order:-1}
+.sp-in .sp-name{font-size:28px}
 .sp-when{font-size:13px;color:var(--text-muted);font-weight:400}
 .sp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;align-items:start}
 .sp-asg.late{border-color:var(--state-late)}

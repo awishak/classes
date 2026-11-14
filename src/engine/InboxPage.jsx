@@ -12,7 +12,7 @@
 // are on To Grade instead (LateNotes below, drawn by GradingPage.jsx), and
 // any row can be moved between the two.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { currentClasses } from "../config/registry.js";
 import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
@@ -26,6 +26,9 @@ import { baseCSS } from "./themes.js";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import TopNav, { NAV_TEACH } from "./TopNav.jsx";
 import { lastClass } from "./InstructorNav.jsx";
+import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
+import { recordOf } from "./StudentPage.jsx";
+import StudentPeek from "./StudentPeek.jsx";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -76,20 +79,37 @@ function talkOf(item) {
   return [{ id: item.key, mine: false, ts: item.ts, text: item.text }];
 }
 
-function Open({ item, feed, act, where }) {
+// The challenge a message is on, with that student's grade and when it went in.
+function ChallengeLine({ item, feed }) {
+  const data = useWithWorksheetSubmits(feed.data, feed.config);
+  const asg = assignmentsOf(feed.config, data).find(a => a.id === item.aid);
+  if (!asg) return null;
+  const r = recordOf(feed.config, data, asg, item.name);
+  const grade = r.st.letter || (r.pending ? r.pending.letter : "");
+  return <p className="ib-about"><b>{asg.title}</b>{grade ? <span className="ib-grade">{grade}</span> : null}{r.status ? <span className={r.late ? "late" : ""}>{r.status}</span> : null}</p>;
+}
+
+export function Open({ item, feed, act, where, peek }) {
   const { config, data } = feed;
   const [draft, setDraft] = useState("");
   const talk = talkOf(item);
+  // The newest words are at the bottom, the way texts are, so the talk opens there.
+  const box = useRef(null);
+  useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [item.id]);
   const send = () => { if (draft.trim()) act(item, d => replyPatch(d, item, draft)); };
   const href = item.kind === "challenge" ? "/grades/" + config.id + "/flow?a=" + encodeURIComponent(item.aid)
     : item.name ? config.path + "/messages/" + encodeURIComponent(item.name) : "";
   return (
     <div className="ib-open">
-      <div className="ib-talk">
+      {item.kind === "challenge" && item.name ? <ChallengeLine item={item} feed={feed} /> : null}
+      <div className="ib-talk" ref={box}>
         {talk.map(m => (
           <div key={m.id} className={"ib-msg" + (m.mine ? " mine" : "")}>
-            <p className="ib-who">{m.mine ? "You" : nameShown(data, item.name)}<span>{fullWords(m.ts)}</span></p>
-            <p className="ib-words">{m.text}</p>
+            {!m.mine && item.name ? <button type="button" className="ib-face pt-focus" aria-label={nameShown(data, item.name)} onClick={() => peek(item)}><Face config={config} data={data} name={item.name} size={30} /></button> : null}
+            <div className="ib-bub">
+              <p className="ib-words">{m.text}</p>
+              <p className="ib-when">{fullWords(m.ts)}</p>
+            </div>
           </div>
         ))}
       </div>
@@ -117,6 +137,8 @@ function Open({ item, feed, act, where }) {
 export function MailList({ rows, feeds, where }) {
   const [openId, setOpenId] = useState("");
   const [picked, setPicked] = useState({});
+  const [peeked, setPeeked] = useState(null);   // the student whose popup is up
+  const peek = (item) => setPeeked({ classId: item.classId, name: item.name });
   const now = Date.now();
   const act = (item, patch) => { feeds[item.classId].update(patch); setOpenId(""); setPicked(p => { const { [item.id]: _, ...rest } = p; return rest; }); };
   const chosen = rows.filter(r => picked[r.id]);
@@ -138,18 +160,19 @@ export function MailList({ rows, feeds, where }) {
           <div key={item.id} className={"ib-item" + (open ? " open" : "") + (red ? " red" : "")}>
             <div className="ib-row">
               <input type="checkbox" className="ib-tick" checked={!!picked[item.id]} aria-label={"Select " + (item.name || subject)} onChange={() => setPicked(p => ({ ...p, [item.id]: !p[item.id] }))} />
+              {item.name ? <button type="button" className="ib-face ib-rowface pt-focus" aria-label={nameShown(feed.data, item.name)} onClick={() => peek(item)}><Face config={feed.config} data={feed.data} name={item.name} size={32} /></button> : <span className="ib-noface" />}
               <button type="button" className="ib-hit pt-focus" aria-expanded={open} onClick={() => setOpenId(open ? "" : item.id)}>
-                {item.name ? <Face config={feed.config} data={feed.data} name={item.name} size={32} /> : <span className="ib-noface" />}
                 <span className="ib-name">{item.name ? nameShown(feed.data, item.name) : subject}</span>
                 <span className="ib-code" style={{ color: feed.config.accent }}>{feed.config.code}</span>
                 <span className="ib-line">{subject && item.name ? <b>{subject}</b> : null}<span className="ib-snip">{item.text.replace(/\s+/g, " ")}</span></span>
                 <span className="ib-date">{where === "later" ? "Back " + dateWords(item.until, now) : dateWords(item.since, now)}</span>
               </button>
             </div>
-            {open ? <Open item={item} feed={feed} act={act} where={where} /> : null}
+            {open ? <Open item={item} feed={feed} act={act} where={where} peek={peek} /> : null}
           </div>
         );
       })}
+      {peeked && feeds[peeked.classId] ? <StudentPeek config={feeds[peeked.classId].config} data={feeds[peeked.classId].data} name={peeked.name} onClose={() => setPeeked(null)} /> : null}
     </div>
   );
 }
@@ -231,8 +254,11 @@ export const INBOX_CSS = `
 .ib-row{display:flex;align-items:center;gap:0;padding-left:16px}
 .ib-row:hover{background:var(--surface-page)}
 .ib-tick{width:18px;height:18px;flex:none;margin:0;accent-color:var(--text-primary);cursor:pointer}
-.ib-hit{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:32px minmax(120px,190px) auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:56px;padding:8px 16px 8px 14px;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
-.ib-noface{width:32px;height:32px}
+.ib-hit{flex:1 1 auto;min-width:0;display:grid;grid-template-columns:minmax(120px,190px) auto minmax(0,1fr) auto;align-items:center;gap:12px;min-height:56px;padding:8px 16px 8px 12px;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.ib-noface{width:32px;height:32px;flex:none;margin-left:14px}
+.ib-face{flex:none;display:inline-flex;padding:0;border:0;border-radius:999px;background:none;cursor:pointer}
+.ib-face:hover{box-shadow:0 0 0 2px var(--line-strong)}
+.ib-rowface{margin-left:14px}
 .ib-name{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ib-code{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
 .ib-line{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;color:var(--text-secondary)}
@@ -242,13 +268,18 @@ export const INBOX_CSS = `
 .ib-item.red .ib-date{color:var(--pt-late-ink)}
 .ib-item.red .ib-row{box-shadow:inset 3px 0 0 var(--pt-late-ink)}
 .ib-open{padding:6px 20px 20px 62px;display:flex;flex-direction:column;gap:12px}
-.ib-talk{display:flex;flex-direction:column;gap:12px;max-height:420px;overflow:auto}
-.ib-msg{max-width:72ch}
-.ib-msg.mine{padding-left:14px;border-left:2px solid var(--line-strong)}
-.ib-who{margin:0;font-size:14px;font-weight:700;display:flex;gap:10px;align-items:baseline}
-.ib-who span{font-weight:500;color:var(--text-secondary);font-size:13px}
-.ib-words{margin:2px 0 0;font-size:16px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
-.ib-box{min-height:96px;resize:vertical;font-family:inherit;max-width:72ch}
+.ib-about{margin:0;display:flex;gap:6px 12px;flex-wrap:wrap;align-items:baseline;font-size:14px;color:var(--text-secondary)}
+.ib-about b{font-size:15px;font-weight:700;color:var(--text-primary)}
+.ib-about .late{color:var(--pt-late-ink);font-weight:600}
+.ib-grade{font-weight:700;color:var(--text-primary)}
+.ib-talk{display:flex;flex-direction:column;gap:10px;max-height:460px;overflow:auto;max-width:760px;padding:4px 4px 4px 0}
+.ib-msg{display:flex;align-items:flex-end;gap:8px;max-width:86%}
+.ib-msg.mine{align-self:flex-end;justify-content:flex-end}
+.ib-bub{min-width:0;padding:10px 14px 8px;border-radius:18px 18px 18px 6px;background:var(--surface-card);box-shadow:0 0 0 1px var(--line-soft)}
+.ib-msg.mine .ib-bub{border-radius:18px 18px 6px 18px;background:var(--text-primary);color:var(--surface-card);box-shadow:none}
+.ib-words{margin:0;font-size:16px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+.ib-when{margin:4px 0 0;font-size:12px;font-weight:500;opacity:.7}
+.ib-box{min-height:96px;resize:vertical;font-family:inherit;max-width:760px}
 .ib-canned,.ib-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .ib-acts .pt-btn{background:var(--text-primary)}
 .ib-acts .pt-btn:disabled{opacity:.4}
@@ -256,9 +287,9 @@ export const INBOX_CSS = `
 .ib-late{display:flex;flex-direction:column;gap:10px}
 @media (max-width:720px){
   .ib-classes{margin-left:0}
-  .ib-hit{grid-template-columns:32px minmax(0,1fr) auto;row-gap:2px}
+  .ib-hit{grid-template-columns:minmax(0,1fr) auto;row-gap:2px}
   .ib-code{display:none}
-  .ib-line{grid-column:2 / 4}
+  .ib-line{grid-column:1 / 3}
   .ib-open{padding-left:20px}
 }
 `;

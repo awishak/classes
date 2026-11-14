@@ -67,7 +67,7 @@ const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, "
 // without the editor around it, and a Canva design takes ?embed. Anything
 // else, a canva.link short address included, gets no frame and opens in a
 // tab of its own.
-const embedOf = (url) => {
+export const embedOf = (url) => {
   if (!url) return "";
   // A worksheet on this site, Worktopia included, is a page of our own and
   // draws as itself.
