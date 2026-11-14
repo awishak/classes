@@ -373,6 +373,34 @@ const ideaFieldSay = (f) => {
 };
 const researchFieldSay = (f) => ({ picked: " the approved idea chosen, a slot (a, b, c) or pair", audio: " the 60-second audio story, JSON { path, seconds, name }", story: " the story, a line", treatment: " the paragraph treatment", includes: " what the story includes, lines", article: " articles, lines", media: " other media, lines", person: " people to interview, lines", place: " places to capture audio, lines", example: " a good audio story found, lines" })[f] || "";
 
+// One student at a time on a review page: a menu of the section with where
+// each sheet stands, and a step to the one before and the one after.
+//
+// Andrew, 2026-11-13, on the pre-production review: the page opens on the
+// summary, with "a dropdown to pick each student and go to their work."
+// `people` is [{ id, name, status }] in the order to walk them; `value` is
+// the picked id, "" for nobody. The page keeps the id in its address
+// (pickedStudent, pickStudent) so a refresh or a link lands on the same one.
+export function StudentPicker({ people, value, onPick }) {
+  const i = people.findIndex(p => p.id === value);
+  const step = (by) => { const next = people[i < 0 ? (by > 0 ? 0 : people.length - 1) : i + by]; if (next) onPick(next.id); };
+  return (
+    <div className="pt-chips aic-pick">
+      <select className="pt-chip pt-focus aic-pick-menu" value={i < 0 ? "" : value} aria-label="Student" onChange={e => onPick(e.target.value)}>
+        <option value="">Student</option>
+        {people.map(p => <option key={p.id} value={p.id}>{p.name + (p.status ? " · " + p.status : "")}</option>)}
+      </select>
+      <button type="button" className="pt-chip pt-focus" disabled={i === 0} onClick={() => step(-1)}>Previous</button>
+      <button type="button" className="pt-chip pt-focus" disabled={i === people.length - 1} onClick={() => step(1)}>Next</button>
+    </div>
+  );
+}
+// The picked student in the address, as st=<roster id>. ?s= is the instructor's read of one sheet, so it is not that.
+export const pickedStudent = () => { try { return decodeURIComponent((window.location.search.match(/[?&]st=([^&]*)/) || [])[1] || ""); } catch { return ""; } };
+export const pickStudent = (id) => {
+  try { const u = new URL(window.location.href); const q = u.search.replace(/([?&])st=[^&]*&?/, "$1").replace(/[?&]$/, ""); window.history.replaceState(null, "", u.pathname + (q || "?review") + (id ? "&st=" + encodeURIComponent(id) : "") + u.hash); } catch { /* the address is a convenience */ }
+};
+
 export function Shell({ children, config, root }) {
   const accent = config?.accent || TOKENS.TEXT.primary;
   return (
@@ -411,6 +439,9 @@ const CSS = `
 .aic-where b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:600;margin-right:4px}
 .aic-fold summary{cursor:pointer;font-size:15px;font-weight:600;color:var(--text-secondary);min-height:34px;display:flex;align-items:center;padding:0 4px}
 .aic-names{display:flex;flex-wrap:wrap;gap:6px;padding:4px 4px 8px}
+.aic-pick{align-items:center}
+.pt-root .aic-pick-menu{font:inherit;font-size:15px;font-weight:600;max-width:100%;cursor:pointer}
+.pt-root .aic-pick .pt-chip:disabled{opacity:.4;cursor:default}
 .aic .pt-row.aic-card{flex-direction:column;align-items:stretch;gap:14px;padding:16px 20px 20px;scroll-margin-top:calc(var(--aic-nav,56px) + 72px)}
 .aic-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .aic-who{display:flex;align-items:center;gap:12px;min-width:0}

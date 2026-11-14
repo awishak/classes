@@ -14,7 +14,8 @@ import { NoteBody, FEEDBACK_CSS } from "./note.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
 import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
-import { Shell, useAllSheets, useClipUrls, useInstructorRead } from "./control.jsx";
+import { Shell, StudentPicker, pickedStudent, pickStudent, useAllSheets, useClipUrls, useInstructorRead } from "./control.jsx";
+import { idOf } from "../roster.js";
 import { Face, Chip } from "../portal/bits.jsx";
 import { StudentLink } from "../StudentPage.jsx";
 import { audioOf, FORMAT_SAY, MAX_BYTES } from "./audio.js";
@@ -411,7 +412,12 @@ export function ReadSummary({ reads, notes }) {
 export function PreReview({ config, worksheetKey, roster }) {
   const [sheets, error] = useAllSheets(config, worksheetKey);
   const read = useInstructorRead(config, READ_SHEET);
-  const [order, setOrder] = useState("read");
+  // The page opens on the summary, and one student is shown at a time, picked
+  // from the menu. Andrew, 2026-11-13: "a dropdown to pick each student and
+  // go to their work." Before this every student's card was stacked under
+  // the summary, strongest first.
+  const [who, setWho] = useState(() => (typeof window !== "undefined" ? pickedStudent() : ""));
+  const pick = (id) => { setWho(id); pickStudent(id); };
   const [notes, setNotes] = useState({});
   const notesAt = "/api/sitdown-sheet?sheet=audio-pre-notes&class=" + encodeURIComponent(config.id);
   useEffect(() => {
@@ -449,12 +455,11 @@ export function PreReview({ config, worksheetKey, roster }) {
   const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).length;
   const notIn = rows.filter(r => !r.sheet?.submitted_at).map(r => r.student.name);
   const readOf = (r) => read?.students?.[lower(r.student.email)] || null;
-  const byRead = !!read && order === "read";
-  // Submitted first. Then by the read, most parts meeting the board first,
-  // when there is one and it is asked for; else the newest hand-in first.
-  const cards = rows.filter(r => r.sheet).sort((x, y) => (y.sheet.submitted_at ? 1 : 0) - (x.sheet.submitted_at ? 1 : 0)
-    || (byRead ? (readOf(y)?.score ?? -1) - (readOf(x)?.score ?? -1) : 0)
-    || (byRead ? 0 : String(y.sheet.submitted_at || "").localeCompare(String(x.sheet.submitted_at || ""))) || x.student.name.localeCompare(y.student.name));
+  // The menu, by name, everyone in the section with where their sheet stands.
+  const menu = [...rows].sort((x, y) => x.student.name.localeCompare(y.student.name))
+    .map(r => ({ id: idOf(r.student), name: r.student.name, status: r.sheet?.submitted_at ? "Submitted" : r.sheet ? "Started" : "Not opened", row: r }));
+  const chosen = menu.find(m => m.id === who) || null;
+  const cards = chosen && chosen.row.sheet ? [chosen.row] : [];
   const reads = rows.map(readOf).filter(Boolean);
   const lines = rows.map(r => ({ student: r.student, line: readOf(r)?.timeline })).filter(r => r.line?.parts?.length).sort((x, y) => x.student.name.localeCompare(y.student.name));
   return (
@@ -503,12 +508,7 @@ export function PreReview({ config, worksheetKey, roster }) {
           })}
         </div>
       ) : null}
-      {read && view === "each" ? (
-        <div className="pt-chips" role="tablist" aria-label="Order">
-          <Chip on={order === "read"} onClick={() => setOrder("read")}>Strongest first</Chip>
-          <Chip on={order === "new"} onClick={() => setOrder("new")}>Newest first</Chip>
-        </div>
-      ) : null}
+      {view === "each" ? <StudentPicker people={menu} value={chosen ? chosen.id : ""} onPick={pick} /> : null}
       <div className="pt-stack aic-cards">
         {((read && view === "lines" && lines.length) || view === "notes" ? [] : cards).map(({ student, sheet }) => {
           const clip = audioOf(sheet.answers?.audio);
@@ -678,7 +678,7 @@ export function PreControl({ config, worksheetKey, roster }) {
       <p className="aic-p">One file, {FORMAT_SAY}, up to {Math.round(MAX_STORY_SECONDS / 60)} minutes (a file that reads as {MAX_STORY_SECONDS}.9 seconds passes, for rounding) and under {Math.round(MAX_BYTES / 1024 / 1024)} MB, the audio story's limits. The browser reads the length off the file first. The file goes into the private visual-story bucket at {config.id}/(email)/audio-(id).(ext) as the student, the same place and rules as the exercise and the story; no new bucket rule was needed. The student plays it back through a signed link an hour long made with their own token; the review signs links through the server.</p>
 
       <h2 className="aic-h2">The document on the right</h2>
-      <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review shows each student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
+      <p className="aic-p">The right side of the sheet is the pre-production as a page, drawn from the same answers as they type (pre.jsx PreView). The review opens on the summary and shows one student at a time, picked from the Student menu or stepped through with Previous and Next, with the student kept in the address as st=. It shows that student's sheet as that same page, and so does the instructor's read at ?s=. A part that is empty is not drawn.</p>
 
       <h2 className="aic-h2">Claude's read on the review</h2>
       <p className="aic-p">The review shows Claude's read above each student's page when the file <code>comm3-audio-pre-read.json</code> is in the private instructor bucket; the file comes through <code>/api/sitdown-sheet?sheet=audio-pre</code> to an instructor only. Each of the opener, the thesis and the closer shows the quoted line inside the words said around the line, cut from the transcript by sentence (readtext.js passageOf), in quotation marks, with the quoted line marked. The transcript button opens the whole transcript as a page over the review, with the clip's player and the three lines marked. Sources are the student's own list from this sheet; an address is shown as its site and headline, looked up by <code>scripts/comm3-audio-pre-links.mjs</code> and kept in the read file under <code>links</code>, and an address that did not answer shows its site and the words in the address. The class counts are bars and a table, at his word of 2026-11-12. The ChatGPT writing style line is Claude's read of each transcript's sentences (sounds like ChatGPT, partly, or sounds like the student), with the lines that show the style quoted from the transcript; <code>scripts/comm3-audio-pre-ai.mjs</code> checks each quoted line is in the transcript and puts the read in the file as <code>ai</code>. The line is a read of style and not proof of who wrote a script. Music and field audio is a timeline of the clip in four colours (their speech, broadcast, interview, music and field audio), from <code>scripts/comm3-audio-pre-timeline.mjs</code>: the times are the transcriber's, a stretch of 2.5 seconds with no speech is music and field audio, and whose voice a stretch is comes from Claude's reading. Music under a voice does not show. Since later that day each card opens with the clip and its timeline (pressing the timeline or any time on the card plays the clip from there), then the student's own answer on how the work is going, then his notes for that student. The notes are private: they save through <code>/api/sitdown-sheet?sheet=audio-pre-notes</code> to the instructor bucket and no student page reads them. Opening, thesis and closing show the type, the rating, the time and the student's words around the line, with no commentary. Sound lists what the measurements found off, with the time. All timelines, at <code>?review&amp;timelines</code>, draws every clip in the section on one scale, sorted by name, by length, or by how much of one kind a clip holds.</p>
