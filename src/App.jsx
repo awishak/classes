@@ -38,6 +38,8 @@ import VisualStoryInstructions from "./engine/visualstory/instructions.jsx";
 import VisualStoryPortal from "./engine/visualstory/portal.jsx";
 import StoryReviews from "./engine/visualstory/reviews.jsx";
 import ClassmatesStories from "./engine/visualstory/reading.jsx";
+import ClassmatesAudio from "./engine/audiostory/listening.jsx";
+import AudioReviews from "./engine/audiostory/listenreviews.jsx";
 import SampleStory from "./engine/visualstory/sample.jsx";
 import GradingIdeas from "./engine/portal/GradingIdeas.jsx";
 import CheckinAnswers from "./engine/CheckinAnswers.jsx";
@@ -328,6 +330,18 @@ export default function App() {
   // Classmates' stories, for reading and comments: /comm3/stories.
   const vsr = path.match(/^\/(comm3|comm999)\/stories\/?$/);
   if (vsr && ENGINE[vsr[1]]) return <ClassmatesStories config={ENGINE[vsr[1]]} />;
+  // Classmates' audio stories, for listening and comments: /comm3/audio-stories.
+  const asr = path.match(/^\/(comm3|comm999)\/audio-stories\/?$/);
+  if (asr && ENGINE[asr[1]]) return <ClassmatesAudio config={ENGINE[asr[1]]} />;
+  // Who reviewed which audio story, for the instructor: /comm3/audio-reviews.
+  const asw = path.match(/^\/(comm3|comm999)\/audio-reviews\/?$/);
+  if (asw && ENGINE[asw[1]]) {
+    return (
+      <InstructorGate what={ENGINE[asw[1]].code + " audio story reviews"}>
+        <InstructorBar config={ENGINE[asw[1]]} always><AudioReviews config={ENGINE[asw[1]]} /></InstructorBar>
+      </InstructorGate>
+    );
+  }
 
   // The COMM 3 visual essay, planned before the portal is built.
   if (path === "/comm3/visualessayplanning" || path === "/comm3/visualessayplanning/") {

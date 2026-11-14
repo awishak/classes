@@ -34,6 +34,7 @@ import { hasNight } from "../themes.js";
 import { VISUAL_PRE_KEY, VISUAL_PRE_2_KEY } from "../visualstory/pre.jsx";
 import { PreRow, PreStanding, usePreStanding, preShort, preHref } from "../visualstory/prerow.jsx";
 import { StoriesRow, StoriesLink } from "../visualstory/door.jsx";
+import { AudioReviewRow } from "../audiostory/listendoor.jsx";
 
 // A challenge that is a worksheet on this site keeps a plain way back to the
 // sheet after it is turned in. Andrew, 2026-10-16: "students need to be
@@ -199,6 +200,7 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
         {sw}
         <PreRow config={config} />
         <StoriesRow config={config} />
+        <AudioReviewRow config={config} />
         <div className="pt-chips">
           {[["all", "All", ""], ["todo", "To do", "due"], ["done", "Done", "done"]].map(([id, say, kind]) => (
             <Chip key={id} on={chip === id} kind={kind} onClick={() => setChip(id)}>{say}</Chip>
@@ -233,7 +235,7 @@ export function MyWorkPage({ config, data, update, name, go, view, setView, onPe
         <div className="pt-chips">
           {FLOW_FILTERS.map(f => <Chip key={f.id} on={filter === f.id} kind={f.kind} onClick={() => setFilter(f.id)}>{f.label}</Chip>)}
         </div>
-        {filter === "all" || filter === "work" ? <><PreRow config={config} /><StoriesRow config={config} /></> : null}
+        {filter === "all" || filter === "work" ? <><PreRow config={config} /><StoriesRow config={config} /><AudioReviewRow config={config} /></> : null}
         {owed && (filter === "all" || filter === "work") ? (
           <div className="pt-notice" style={{ boxShadow: "inset 0 0 0 2px var(--ca-accent)", background: "var(--surface-card)" }}>
             {I.pin()}

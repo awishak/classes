@@ -23,6 +23,7 @@ import { Days } from "./MyWork.jsx";
 import { opensState, opensWords } from "./work.js";
 import { deadlineOf } from "../DueCard.jsx";
 import { waitingOnInstructor } from "../YouCard.jsx";
+import { AudioReviewBar } from "../audiostory/listendoor.jsx";
 import { Hero, StoryPhaseBar, StoryDoor, AudioExerciseDoor, AudioPreDoor, AudioStoryDoor, LockerRoomDoor, DOOR_CSS } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
 import { ToolsPanel, useSubmitCounts, sheetOfAssignment, controlHref } from "./Tools.jsx";
@@ -234,6 +235,7 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
           2026-10-23: "if it's there for the students, i want to see it too." */}
       <style>{DOOR_CSS}</style>
       <StoryPhaseBar config={config} />
+      <AudioReviewBar config={config} />
       <StoryDoor config={config} data={data} />
       <AudioExerciseDoor config={config} data={data} />
       <AudioPreDoor config={config} data={data} />

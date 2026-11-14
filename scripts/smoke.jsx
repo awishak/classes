@@ -49,6 +49,8 @@ import { suggest as suggestPairs, join as joinPairs, split as splitPairs, storyF
 import VisualStoryPortal, { PortalBar, partOf, PARTS as PORTAL_PARTS } from "../src/engine/visualstory/portal.jsx";
 import { tally as reviewTally } from "../src/engine/visualstory/reviews.jsx";
 import { stageAt as storyStageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
+import { windowStage as audioWindowStage, assignAll as audioAssignAll, assignOne as audioAssignOne, clipProblem, clipOf, clipWord, tally as audioTally, NEED_ASSIGNED as AUDIO_NEED } from "../src/engine/audiostory/reviewmodel.js";
+import { doorWords as audioDoorWords } from "../src/engine/audiostory/listendoor.jsx";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
 import { Group as AnswersGroup } from "../src/engine/WorktopiaAnswersPage.jsx";
@@ -1318,7 +1320,7 @@ cases.push(["Instructor links", <InstructorLinks />]);
   const { readFileSync: readSrc } = await import("node:fs");
   const app = readSrc(new URL("../src/App.jsx", import.meta.url), "utf8");
   // Pages that draw TopNav themselves.
-  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GradesPortal: "engine/GradesPortal.jsx", InboxPage: "engine/InboxPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", ControlPage: "engine/ControlPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", Sitdown2Page: "engine/sitdown2/page.jsx", AssignPage: "engine/sitdown2/assign.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", VisualStoryPortal: "engine/visualstory/portal.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", SampleStory: "engine/visualstory/sample.jsx" };
+  const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GradesPortal: "engine/GradesPortal.jsx", InboxPage: "engine/InboxPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", ControlPage: "engine/ControlPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", Sitdown2Page: "engine/sitdown2/page.jsx", AssignPage: "engine/sitdown2/assign.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", VisualStoryPortal: "engine/visualstory/portal.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", ClassmatesAudio: "engine/audiostory/listening.jsx", SampleStory: "engine/visualstory/sample.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
   const EXEMPT = new Set(["Redirect", "ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
@@ -6414,6 +6416,73 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (!ben || ben.total !== 0 || ben.complete) say("Ben's numbers are wrong");
   if (t.perStory.find(s => s.id === "s1").reviews !== 1) say("Ann's own comment counted as a review of her story");
   if (t.commentCount !== 3) say("comments by others are " + t.commentCount);
+}
+// The audio story review: the window, who reviews what, the picked section.
+{
+  const at = (iso) => Date.parse(iso);
+  // Pacific standard time is UTC-8. Monday night is still building; Tuesday
+  // 12:00 AM is open; Wednesday 11:59 PM is open; Thursday 12:00 AM is closed;
+  // Thursday 12:05 AM the comments are out.
+  if (audioWindowStage("comm3", at("2026-11-17T07:59:59Z")) !== "building") say("audio review: open before Tuesday");
+  if (audioWindowStage("comm3", at("2026-11-17T08:00:00Z")) !== "reading") say("audio review: not open Tuesday at midnight");
+  if (audioWindowStage("comm3", at("2026-11-19T07:59:30Z")) !== "reading") say("audio review: closed before Wednesday 11:59 PM ran out");
+  if (audioWindowStage("comm3", at("2026-11-19T08:00:00Z")) !== "closed") say("audio review: still open Thursday");
+  if (audioWindowStage("comm3", at("2026-11-19T08:05:00Z")) !== "released") say("audio review: comments not out Thursday 12:05 AM");
+  if (audioWindowStage("comm999", at("2026-11-18T08:00:00Z")) !== "building") say("audio review: a class with no window is open");
+
+  // 25 on a roster, 20 with a story in: everyone gets three, none their own,
+  // none twice, and every story is assigned at least three times and evenly.
+  const people = Array.from({ length: 25 }, (_, i) => "p" + i + "@x");
+  const owners = people.slice(0, 20);
+  const a = audioAssignAll(people, owners);
+  const times = new Map(owners.map(o => [o, 0]));
+  people.forEach(p => {
+    const mine = a[p] || [];
+    if (mine.length !== AUDIO_NEED) say("audio review: " + p + " was assigned " + mine.length);
+    if (mine.includes(p)) say("audio review: " + p + " was assigned their own story");
+    if (new Set(mine).size !== mine.length) say("audio review: " + p + " was assigned a story twice");
+    mine.forEach(o => { if (!times.has(o)) say("audio review: assigned a story that is not in"); else times.set(o, times.get(o) + 1); });
+  });
+  const lo = Math.min(...times.values()), hi = Math.max(...times.values());
+  if (lo < AUDIO_NEED || hi - lo > 1) say("audio review: stories assigned unevenly, " + lo + " to " + hi);
+  if (JSON.stringify(audioAssignAll(people.slice().reverse(), owners.slice().reverse())) !== JSON.stringify(a)) say("audio review: the assignment depends on the order asked");
+  // Two stories in: each owner gets the other's, and nobody gets more than there are.
+  const two = audioAssignAll(["a@x", "b@x", "c@x"], ["a@x", "b@x"]);
+  if (two["a@x"].join() !== "b@x" || two["b@x"].join() !== "a@x" || two["c@x"].length !== 2) say("audio review: two stories assigned wrong: " + JSON.stringify(two));
+  if (Object.keys(audioAssignAll(people, [])).length) say("audio review: assigned with no stories in");
+  // A late arrival takes the least-assigned stories, never their own.
+  const late = audioAssignOne("p3@x", a, owners);
+  if (late.length !== AUDIO_NEED || late.includes("p3@x")) say("audio review: the late reviewer's three are wrong");
+
+  if (clipProblem(65, 87, 240) !== "") say("audio review: a 22 second section was refused");
+  if (!clipProblem(65, 70, 240)) say("audio review: a 5 second section passed");
+  if (!clipProblem(65, 100, 240)) say("audio review: a 35 second section passed");
+  if (!clipProblem(230, 255, 240)) say("audio review: a section past the end passed");
+  if (!clipProblem(NaN, 20, 240) || !clipProblem(10.5, 30, 240)) say("audio review: a section with no whole seconds passed");
+  if (clipProblem(0, 10, 240) || clipProblem(0, 30, 240)) say("audio review: the 10 and 30 second edges were refused");
+  const c = clipOf(clipWord(65, 87));
+  if (!c || c.from !== 65 || c.to !== 87 || clipOf("image:abc") || clipOf("")) say("audio review: the section does not read back");
+
+  const feed = {
+    people: [{ name: "Ann", email: "ann@x", section: "8:00" }, { name: "Ben", email: "ben@x", section: "8:00" }, { name: "Cy", email: "cy@x", section: "8:00" }, { name: "Dee", email: "dee@x", section: "10:30" }],
+    stories: [{ id: "s1", email: "ann@x", name: "Ann", section: "8:00", submitted_at: "x", headline: "One" }, { id: "s2", email: "ben@x", name: "Ben", section: "8:00", submitted_at: "x", headline: "Two" }, { id: "s3", email: "cy@x", name: "Cy", section: "8:00", submitted_at: null, headline: "Three" }],
+    assign: { "ann@x": ["ben@x"], "ben@x": ["ann@x"], "cy@x": ["ann@x", "ben@x"] },
+    comments: [{ story: "s2", authorEmail: "ann@x", author: "Ann" }, { story: "s1", authorEmail: "cy@x", author: "Cy" }, { story: "s1", authorEmail: "ann@x", author: "Ann" }],
+  };
+  const t = audioTally(feed, "8:00");
+  const ann = t.rows.find(r => r.name === "Ann"), cy = t.rows.find(r => r.name === "Cy");
+  if (!ann || ann.requiredDone !== 1 || ann.requiredNeed !== 1 || ann.total !== 1 || ann.complete) say("audio review: Ann's numbers are wrong: " + JSON.stringify(ann));
+  if (!cy || cy.requiredDone !== 1 || cy.requiredNeed !== 2 || cy.submitted) say("audio review: Cy's numbers are wrong: " + JSON.stringify(cy));
+  if (t.perStory.length !== 2 || t.perStory.find(s => s.id === "s1").reviews !== 1 || t.commentCount !== 2) say("audio review: the story counts are wrong");
+  if (t.perStory.find(s => s.id === "s1").assigned.join() !== "Ben,Cy") say("audio review: who a story was assigned to is wrong");
+
+  const cfg = { id: "comm3" };
+  if (audioDoorWords(cfg, { stage: "building" }) || audioDoorWords(cfg, null)) say("audio review: a door before the window opens");
+  const d = audioDoorWords(cfg, { stage: "reading", required: 3, requiredDone: 1, total: 2 });
+  if (!d || d.tint !== "due" || !d.line.includes("2 of 5") || !d.line.includes("3 to go")) say("audio review: the door's count is wrong: " + JSON.stringify(d));
+  if (audioDoorWords(cfg, { stage: "reading", required: 3, requiredDone: 3, total: 6 }).tint !== "done") say("audio review: six reviews do not read as done");
+  if (audioDoorWords(cfg, { stage: "reading", required: 3, requiredDone: 2, total: 5 }).tint !== "due") say("audio review: five with a red story left reads as done");
+  if (audioDoorWords(cfg, { stage: "released", mine: "abc" }).href !== "/comm3/audio-stories?s=abc") say("audio review: the released door does not open the student's story");
 }
 cases.push(["Visual story portal", <VisualStoryPortal config={{ id: "comm3", code: "COMM 3", name: "Digital Storytelling", path: "/comm3", students: [] }} />, "Visual story portal"]);
 

@@ -237,11 +237,11 @@ function Stat({ n, what, tone = "" }) {
   return <div className={"vrw-stat " + tone}><span className="vrw-stat-n">{n}</span><span className="vrw-stat-w">{what}</span></div>;
 }
 function Shell({ children }) {
-  return <div className="vrw"><style>{CSS}</style><div className="vrw-in">{children}</div></div>;
+  return <div className="vrw"><style>{REVIEWS_CSS}</style><div className="vrw-in">{children}</div></div>;
 }
 
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
-const CSS = `
+export const REVIEWS_CSS = `
 .vrw{min-height:100vh;background:${S.page};color:${T.primary};font-family:${TOKENS.FONT.body};padding:24px 16px 90px}
 .vrw-in{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .vrw-head{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}

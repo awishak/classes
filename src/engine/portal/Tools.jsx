@@ -27,6 +27,7 @@ import { hasReadout } from "../ReadoutPage.jsx";
 import { WORKTOPIA_KEY } from "../worktopia/terminal.js";
 import { SITDOWN_CLASSES } from "../worktopia/sitdown.js";
 import { STORIES_CLASSES, storiesHref } from "../visualstory/door.jsx";
+import { AUDIO_REVIEW_CLASSES, audioStoriesHref } from "../audiostory/listendoor.jsx";
 import { VISUAL_STORY_KEY } from "../visualstory/story.jsx";
 import { rosterOf } from "../roster.js";
 import { INSTRUCTOR_EMAILS } from "../../instructors.js";
@@ -90,6 +91,7 @@ export function assignmentTools(config, asg) {
   const links = sheetLinks(config, sheet);
   links[0] = { say: "Home", href: controlHref(config, asg.id), main: true };
   if (sheet.key === VISUAL_STORY_KEY && STORIES_CLASSES.includes(config.id)) links.push({ say: "Classmates' stories", href: storiesHref(config) });
+  if (sheet.key === "audio-story" && AUDIO_REVIEW_CLASSES.includes(config.id)) links.push({ say: "Classmates' audio stories", href: audioStoriesHref(config) }, { say: "Who reviewed what", href: config.path + "/audio-reviews" });
   if (sheet.key === VISUAL_PRE_KEY) links.push({ say: "Second topic review", href: config.path + "/worksheets/" + VISUAL_PRE_2_KEY + "?review" });
   return links;
 }

@@ -39,6 +39,8 @@ migration, run with the service key after the code is live.
 | `/<class>/game` | students | where the room plays |
 | `/<class>/games` | me | the games, written and run |
 | `/<class>/grade` | me | the class as cards, sorted into columns |
+| `/comm3/audio-stories` | students | classmates' audio stories: 3 assigned, 5 in all, three comments each, open Nov 17 and 18 only (`src/engine/audiostory/reviewmodel.js`, `api/audio-review.js`) |
+| `/comm3/audio-reviews` | me | who reviewed which audio story, and every comment |
 | `/<class>/rungame` | me | the spring game system, kept reachable |
 | `/repo`, `/repo/ideas` | me | everything across every class, and its backlog |
 | `/plan` | me | The Brief, the changelog |

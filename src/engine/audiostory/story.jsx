@@ -80,11 +80,14 @@ const useStoryFonts = () => useEffect(() => {
 
 // The story page. showPrivate draws the knew-they-were-recorded marks, for
 // the instructor's read; a classmate never sees them.
-export function AudioStoryView({ story, urls, showPrivate = false, by = "" }) {
+// playerRef hands the player to the page around the story, so the review
+// page can read where a listener is and play a picked section.
+export function AudioStoryView({ story, urls, showPrivate = false, by = "", playerRef = null }) {
   // Andrew, 2026-11-12: "White page versus Black page, we can remove that."
   const theme = "light";
   useStoryFonts();
-  const player = useRef(null);
+  const ownPlayer = useRef(null);
+  const player = playerRef || ownPlayer;
   const chapters = story.chapters.filter(c => c.name.trim() && secondsOf(c.at) !== null).sort((x, y) => secondsOf(x.at) - secondsOf(y.at));
   const sources = story.sources.filter(x => x.title.trim() || x.link.trim());
   const jump = (t) => { const a = player.current; if (!a) return; a.currentTime = t; a.play().catch(() => {}); };

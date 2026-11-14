@@ -96,7 +96,7 @@ export default function ClassmatesStories({ config }) {
     <div className="vrd" data-theme={theme} data-mode={mode}>
       <ThemeStyle theme={theme} />
       <style>{STORY_CSS}</style>
-      <style>{CSS}</style>
+      <style>{READING_CSS}</style>
       <div style={{ position: "sticky", top: 0, zIndex: 30 }}>
         <TopNav config={config} tabs={NAV_STUDENT} active="assignments" />
       </div>
@@ -366,7 +366,7 @@ function Said({ c, copy, images, urls }) {
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
 const SERIF = "'Lora', 'Iowan Old Style', Charter, Georgia, serif";
 const RED = "#d92d20", GREEN = "#16803c";
-const CSS = `
+export const READING_CSS = `
 .vrd{min-height:100vh;background:${S.page};color:${T.primary};font-family:${TOKENS.FONT.body}}
 .vrd-in{max-width:1240px;margin:0 auto;padding:24px 18px 90px;display:flex;flex-direction:column;gap:16px}
 .vrd-stack{display:flex;flex-direction:column;gap:16px}

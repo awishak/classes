@@ -24,6 +24,7 @@ import { AUDIO_STORY_KEY } from "../audiostory/story.jsx";
 import { AUDIO_RESEARCH_KEY, AUDIO_RESEARCH_TITLE, researchHref } from "../audiostory/research.jsx";
 import { AUDIO_PRE_KEY, AUDIO_PRE_TITLE, preHref } from "../audiostory/pre.jsx";
 import { barUp } from "../visualstory/model.js";
+import { AudioReviewBar, AudioReviewRow } from "../audiostory/listendoor.jsx";
 import { StoriesRow, useStoriesStage, storiesHref, STORIES_CLASSES } from "../visualstory/door.jsx";
 import { portalHref } from "../visualstory/portal.jsx";
 import { PreRow, usePreStanding } from "../visualstory/prerow.jsx";
@@ -382,6 +383,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
       <style>{DOOR_CSS}</style>
       {/* Things to complete first, bright green; then the pin and the quieter doors. */}
       <StoryPhaseBar config={config} />
+      <AudioReviewBar config={config} />
       <StoryDoor config={config} data={data} />
       <AudioExerciseDoor config={config} data={data} />
       <AudioPreDoor config={config} data={data} />
@@ -399,6 +401,7 @@ export function StudentHome({ config, data, update, blockOf, section, name, mark
         <div className="pt-stack">
           <PreRow config={config} />
           <StoriesRow config={config} />
+          <AudioReviewRow config={config} />
           {owed ? <WorkRow asg={owed.asg} st={owed.st} ring config={config} onOpen={() => go("assignments/" + owed.asg.id)} />
             : <p className="pt-quiet">Nothing is waiting on you.</p>}
           {/* Andrew, 2026-10-19: "make it easy for them to get to their assignments." The heading was the only way in, and it did not look like one. */}
