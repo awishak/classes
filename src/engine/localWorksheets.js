@@ -117,7 +117,7 @@ export const LOCAL_WORKSHEETS = [
   // The final project, both classes, built 2026-11-13. Step one is the
   // preferences sheet, due Wednesday, November 18: topics, sites, strengths,
   // a work preference and the people they would work with. review is the
-  // ring of faces where he pairs students and approves topics (add &demo for
+  // board of faces where he pairs students and approves topics (add &demo for
   // made-up answers), control is how every rule works. COMM 999 only until
   // he opens the sheet. Steps three and four are closed stubs.
   { key: FINAL_PREFS_KEY, title: FINAL_PREFS_TITLE, mount: mountFinalPrefs, review: FinalReview, control: FinalControl, open: ["comm999"], classes: ["comm3", "comm118", "comm999"] },

@@ -51,13 +51,13 @@ export default function FinalControl({ config, worksheetKey }) {
           </section>
         ))}
         <section>
-          <h2>The lines on the ring</h2>
+          <h2>The lines from an open student</h2>
           <table>
             <tbody>
               <tr><td><i className="fpc-line fpc-t3" /></td><td>Each other's top choice</td></tr>
               <tr><td><i className="fpc-line fpc-t2" /></td><td>One top choice, picked back</td></tr>
               <tr><td><i className="fpc-line fpc-t1" /></td><td>On each other's lists</td></tr>
-              <tr><td><i className="fpc-line fpc-dash" /></td><td>A one-way pick, shown when a student is open</td></tr>
+              <tr><td><i className="fpc-line fpc-dash" /></td><td>A one-way pick</td></tr>
             </tbody>
           </table>
         </section>

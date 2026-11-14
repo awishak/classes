@@ -6,14 +6,13 @@
 // text." And then: "I want student faces ... when I match students to ideas
 // or to pairs, I want them to go, wow, this is really beautiful."
 //
-// So the class is a ring of faces. Each face is ringed in the colour of the
-// student's work preference, and a line runs between any two people who
-// picked each other, brighter the stronger the tie. Pressing a face opens
-// that student beside the ring: their topics to approve (two at most), their
-// strengths, the sites they like, and who they picked. Dragging one face
-// onto another pairs the two, and paired faces move to sit side by side.
-// The panel beside the ring, with nobody picked, is the pairs suggested by
-// model.js, each with its sentence of why.
+// So the class is a board of faces, standing in groups (see Board below).
+// Each face is ringed in the colour of the student's work preference.
+// Pressing a face opens that student beside the board: their topics to
+// approve (two at most), their strengths, the sites they like, and who they
+// picked. Dragging one face onto another pairs the two. The panel beside the
+// board, with nobody picked, is the pairs suggested by model.js, each with
+// its sentence of why.
 //
 // Nothing here reaches a student until Release. The decisions are one private
 // file through /api/final-project; a student's page asks that route for
@@ -138,78 +137,72 @@ function Disc({ p, size }) {
 }
 const workClass = (p) => (p.state === "in" && p.work ? " fp-w-" + p.work : " fp-w-none");
 
-// ─── the ring ───
-
-// Pairs first, each two side by side; then the suggested pairs, each two
-// side by side as well, so a tie is a short line and not a chord across the
-// class (Andrew, 2026-11-13: "the ring should be organized by your suggested
-// pairs"); then the people not placed yet; then the people working alone. A change of place is a change of order, and the
-// faces slide to it.
-function orderOf(people, file, suggested) {
+// ─── the board ───
+//
+// It was a ring of faces with a line for every tie, and with a full section
+// the lines crossed until none could be followed. Andrew, 2026-11-13: "ring
+// is hard to read through, so why do a ring and why not do things spaced
+// out." So the faces stand in groups with room between them: the pairs he
+// made, the pairs suggested (each two side by side in one outline, coloured
+// by how strong the tie is), the people still to place, the people working
+// alone, and the people who have not submitted. Standing together is what
+// says two people picked each other. Lines are drawn only for the one
+// student he has open: to the people they picked, and from the people who
+// picked them.
+function groupsOf(people, file, suggested) {
   const byId = new Map(people.map(p => [p.id, p]));
   const name = (x, y) => x.shown.localeCompare(y.shown);
   const pairs = file.pairs.filter(([a, b]) => byId.has(a) && byId.has(b)).map(([a, b]) => [byId.get(a), byId.get(b)].sort(name)).sort((x, y) => name(x[0], y[0]));
-  const inPair = new Set(pairs.flat().map(p => p.id));
-  const solo = people.filter(p => !inPair.has(p.id) && file.solo.includes(p.id)).sort(name);
-  const sug = suggested.filter(s => byId.has(s.a) && byId.has(s.b) && !inPair.has(s.a) && !inPair.has(s.b)).map(s => [byId.get(s.a), byId.get(s.b)]);
-  const inSug = new Set(sug.flat().map(p => p.id));
-  const open = people.filter(p => !inPair.has(p.id) && !inSug.has(p.id) && !file.solo.includes(p.id)).sort(name);
-  return { order: [...pairs.flat(), ...sug.flat(), ...open, ...solo.filter(p => !inSug.has(p.id))], inPair };
+  const used = new Set(pairs.flat().map(p => p.id));
+  const sug = suggested.filter(s => byId.has(s.a) && byId.has(s.b) && !used.has(s.a) && !used.has(s.b)).map(s => ({ tie: s.tie, two: [byId.get(s.a), byId.get(s.b)] }));
+  sug.forEach(s => s.two.forEach(p => used.add(p.id)));
+  const solo = people.filter(p => !used.has(p.id) && file.solo.includes(p.id)).sort(name);
+  solo.forEach(p => used.add(p.id));
+  const open = people.filter(p => !used.has(p.id) && p.state === "in").sort(name);
+  const out = people.filter(p => !used.has(p.id) && p.state !== "in").sort(name);
+  return { pairs, sug, open, solo, out };
 }
 
-function Ring({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
+function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
   const box = useRef(null);
-  const [size, setSize] = useState(720);
+  const els = useRef(new Map());
+  const [pos, setPos] = useState(new Map());
   const [drag, setDrag] = useState(null);
   const dragRef = useRef(null);
-  useEffect(() => {
-    const fit = () => { if (box.current) setSize(Math.max(420, Math.min(box.current.clientWidth, window.innerHeight - 190))); };
-    fit();
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
-    if (ro && box.current) ro.observe(box.current);
-    window.addEventListener("resize", fit);
-    return () => { if (ro) ro.disconnect(); window.removeEventListener("resize", fit); };
-  }, []);
-
-  const { order, inPair } = useMemo(() => orderOf(people, file, suggested), [people, file, suggested]);
-  const n = Math.max(order.length, 1);
-  const c = size / 2;
-  const gutter = 62;
-  const face = Math.round(Math.max(34, Math.min(88, ((2 * Math.PI * (c - gutter - 30)) / n) * 0.68)));
-  const R = c - gutter - face / 2;
-  const step = (2 * Math.PI) / n;
-  const pos = new Map();
-  order.forEach((p, i) => {
-    let t = -Math.PI / 2 + i * step;
-    if (inPair.has(p.id)) { const firstOfPair = file.pairs.some(pr => pr.includes(p.id)) && order[i + 1] && M.partnerOf(file, p.id) === order[i + 1].id; t += (firstOfPair ? 1 : -1) * step * 0.16; }
-    pos.set(p.id, { x: c + R * Math.cos(t), y: c + R * Math.sin(t), t });
-  });
+  const g = useMemo(() => groupsOf(people, file, suggested), [people, file, suggested]);
   const byId = new Map(people.map(p => [p.id, p]));
+  const face = people.length > 36 ? 58 : 70;
 
-  // The lines. With nobody picked: every tie, the suggested ones bright, the
-  // made pairs brightest. With a student picked: that student's picks and the
-  // picks of them, and nothing else.
-  const lines = [];
-  const add = (a, b, cls, arrow) => {
-    const p = pos.get(a), q = pos.get(b);
-    if (!p || !q) return;
-    // Two faces side by side are joined straight across, under the faces.
-    if (!arrow && Math.hypot(p.x - q.x, p.y - q.y) < face * 2.4) {
-      const nx = (p.x + q.x) / 2, ny = (p.y + q.y) / 2, dn = Math.hypot(c - nx, c - ny) || 1;
-      const bow = cls.includes("fp-l-pair") ? 0 : face * 1.25;
-      lines.push({ key: a + ">" + b + cls + Math.round(p.x) + Math.round(q.x), d: `M${p.x.toFixed(1)},${p.y.toFixed(1)} Q${(nx + ((c - nx) / dn) * bow).toFixed(1)},${(ny + ((c - ny) / dn) * bow).toFixed(1)} ${q.x.toFixed(1)},${q.y.toFixed(1)}`, cls: cls + " fp-l-near" });
-      return;
-    }
-    const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
-    const cx = c + (mx - c) * 0.32, cy = c + (my - c) * 0.32;
-    const trim = (from, pad) => { const dx = cx - from.x, dy = cy - from.y, d = Math.hypot(dx, dy) || 1; return { x: from.x + (dx / d) * pad, y: from.y + (dy / d) * pad }; };
-    const s = trim(p, face / 2 + 4), e = trim(q, face / 2 + (arrow ? 9 : 4));
-    lines.push({ key: a + ">" + b + cls + Math.round(p.x) + Math.round(q.x), d: `M${s.x.toFixed(1)},${s.y.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${e.x.toFixed(1)},${e.y.toFixed(1)}`, cls, arrow });
-  };
-  const sugKeys = new Set(suggested.map(s => M.pairKey(s.a, s.b)));
+  // Where each face stands, measured off the page, for the lines and the drag.
+  const sig = [g.pairs.flat(), g.sug.flatMap(s => s.two), g.open, g.solo, g.out].map(l => l.map(p => p.id).join(",")).join("|") + face;
+  useEffect(() => {
+    const measure = () => {
+      if (!box.current) return;
+      const r = box.current.getBoundingClientRect();
+      const next = new Map();
+      els.current.forEach((el, id) => { if (el) { const b = el.getBoundingClientRect(); next.set(id, { x: b.left - r.left + b.width / 2, y: b.top - r.top + b.height / 2 }); } });
+      setPos(next);
+    };
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (ro && box.current) ro.observe(box.current);
+    return () => { if (ro) ro.disconnect(); };
+  }, [sig]);
+
   const focus = who && byId.get(who);
   const linked = new Set();
-  if (focus) {
+  const lines = [];
+  if (focus && pos.get(focus.id)) {
+    const add = (a, b, cls, arrow) => {
+      const p = pos.get(a), q = pos.get(b);
+      if (!p || !q) return;
+      const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
+      const cx = (p.x + q.x) / 2 - (dy / d) * d * 0.14, cy = (p.y + q.y) / 2 + (dx / d) * d * 0.14;
+      const trim = (from, pad) => { const ux = cx - from.x, uy = cy - from.y, u = Math.hypot(ux, uy) || 1; return { x: from.x + (ux / u) * pad, y: from.y + (uy / u) * pad }; };
+      if (d < face * 1.6) return;
+      const s = trim(p, face / 2 + 5), e = trim(q, face / 2 + (arrow ? 10 : 5));
+      lines.push({ key: a + ">" + b + cls, d: `M${s.x.toFixed(1)},${s.y.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${e.x.toFixed(1)},${e.y.toFixed(1)}`, cls, arrow });
+    };
     people.forEach(q => {
       if (q.id === focus.id) return;
       const out = M.pickOf(focus, q), back = M.pickOf(q, focus);
@@ -220,17 +213,7 @@ function Ring({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
       else add(q.id, focus.id, "fp-l-in", true);
     });
     const partner = M.partnerOf(file, focus.id);
-    if (partner) { linked.add(partner); add(focus.id, partner, "fp-l-pair"); }
-  } else {
-    for (let i = 0; i < people.length; i++) for (let j = i + 1; j < people.length; j++) {
-      const a = people[i], b = people[j];
-      const key = M.pairKey(a.id, b.id);
-      if (M.partnerOf(file, a.id) === b.id) { add(a.id, b.id, "fp-l-pair"); continue; }
-      const tie = M.tieOf(a, b);
-      if (!tie || a.section !== b.section) continue;
-      const placed = M.placeOf(file, a.id) || M.placeOf(file, b.id);
-      add(a.id, b.id, "fp-l-t" + tie + (lit === key ? " fp-l-strong fp-l-lit" : sugKeys.has(key) && !placed ? " fp-l-sug" : " fp-l-faint") + (lit && lit !== key ? " fp-l-hush" : ""));
-    }
+    if (partner) linked.add(partner);
   }
   const litIds = lit ? lit.split("+") : [];
 
@@ -238,12 +221,12 @@ function Ring({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
     if (e.button) return;
     const sx = e.clientX, sy = e.clientY;
     let moved = false;
-    const rect = box.current.querySelector(".fp-stage").getBoundingClientRect();
     const move = (ev) => {
       if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 8) return;
       moved = true;
+      const rect = box.current.getBoundingClientRect();
       const x = ev.clientX - rect.left, y = ev.clientY - rect.top;
-      let over = "", best = face * 0.8;
+      let over = "", best = face * 0.75;
       pos.forEach((pt, pid) => { if (pid === id) return; const d = Math.hypot(pt.x - x, pt.y - y); if (d < best) { best = d; over = pid; } });
       dragRef.current = { id, x, y, over };
       setDrag(dragRef.current);
@@ -264,37 +247,44 @@ function Ring({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
   const over = drag && drag.over && byId.get(drag.over);
   const clean = dragging && over ? !M.blockOf(dragging, over) : false;
 
-  return (
-    <div className="fp-ringbox" ref={box}>
-      <div className={"fp-stage" + (focus ? " fp-focused" : "") + (drag ? " fp-dragging" : "")} style={{ width: size, height: size }}>
-        <svg className="fp-lines" width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
-          <defs>
-            <marker id="fp-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke" /></marker>
-          </defs>
-          <circle cx={c} cy={c} r={R} className="fp-orbit" />
-          {lines.map(l => <path key={l.key} d={l.d} className={"fp-l " + l.cls} markerEnd={l.arrow ? "url(#fp-arrow)" : undefined} />)}
-          {dragging ? <line x1={pos.get(drag.id).x} y1={pos.get(drag.id).y} x2={over ? pos.get(over.id).x : drag.x} y2={over ? pos.get(over.id).y : drag.y} className={"fp-l fp-l-drag" + (over ? (clean ? " fp-l-clean" : " fp-l-warn") : "")} /> : null}
-        </svg>
-        {order.map(p => {
-          const pt = pos.get(p.id);
-          const dim = (focus && p.id !== focus.id && !linked.has(p.id)) || (litIds.length && !litIds.includes(p.id));
-          const lx = pt.x + Math.cos(pt.t) * (face / 2 + 14 + 20 * Math.abs(Math.cos(pt.t))), ly = pt.y + Math.sin(pt.t) * (face / 2 + 14 + 2 * Math.abs(Math.cos(pt.t)));
-          const placed = M.placeOf(file, p.id);
-          return (
-            <div key={p.id}>
-              <button type="button" className={"fp-face" + workClass(p) + (p.id === who ? " fp-sel" : "") + (dim ? " fp-dim" : "") + (placed ? " fp-" + placed : "") + (burst.includes(p.id) ? " fp-burst" : "") + (drag && drag.over === p.id ? (clean ? " fp-target" : " fp-target fp-warn") : "") + (drag && drag.id === p.id ? " fp-lift" : "")}
-                style={{ left: pt.x - face / 2, top: pt.y - face / 2, width: face, height: face }}
-                aria-label={p.shown} aria-pressed={p.id === who}
-                onPointerDown={e => start(e, p.id)} onClick={e => { if (e.detail === 0) onPick(p.id === who ? "" : p.id); }}>
-                <Disc p={p} size={face - 8} />
-                {M.approvedOf(file, p.id).length ? <span className="fp-tick" aria-hidden="true">{M.approvedOf(file, p.id).length}</span> : null}
-              </button>
-              <span className={"fp-label" + (dim ? " fp-dim" : "") + (p.id === who ? " fp-sel" : "")} style={{ left: lx, top: ly }}>{p.first}</span>
-            </div>
-          );
-        })}
-        {dragging ? <span className="fp-ghost" style={{ left: drag.x, top: drag.y }}><Disc p={dragging} size={face} /></span> : null}
+  const cell = (p) => {
+    const dim = (focus && p.id !== focus.id && !linked.has(p.id)) || (litIds.length && !litIds.includes(p.id));
+    const n = M.approvedOf(file, p.id).length;
+    return (
+      <div key={p.id} className={"fp-cell" + (dim ? " fp-dim" : "") + (p.id === who ? " fp-sel" : "")}>
+        <button type="button" ref={el => { if (el) els.current.set(p.id, el); else els.current.delete(p.id); }}
+          className={"fp-face" + workClass(p) + (p.id === who ? " fp-sel" : "") + (burst.includes(p.id) ? " fp-burst" : "") + (drag && drag.over === p.id ? (clean ? " fp-target" : " fp-target fp-warn") : "") + (drag && drag.id === p.id ? " fp-lift" : "")}
+          style={{ width: face, height: face }} aria-label={p.shown} aria-pressed={p.id === who}
+          onPointerDown={e => start(e, p.id)} onClick={e => { if (e.detail === 0) onPick(p.id === who ? "" : p.id); }}>
+          <Disc p={p} size={face - 8} />
+          {n ? <span className="fp-tick" aria-hidden="true">{n}</span> : null}
+        </button>
+        <span className="fp-cname">{p.first}</span>
       </div>
+    );
+  };
+  const zone = (head, n, body, cls = "") => (n ? (
+    <section className={"fp-zone " + cls}>
+      <h2>{head}<b>{n}</b></h2>
+      <div className="fp-zbody">{body}</div>
+    </section>
+  ) : null);
+
+  return (
+    <div className={"fp-board" + (drag ? " fp-dragging" : "")} ref={box}>
+      {zone("Pairs", g.pairs.length, g.pairs.map(two => <div key={two[0].id} className="fp-two fp-two-made">{two.map(cell)}</div>))}
+      {zone("Suggested pairs", g.sug.length, g.sug.map(s => <div key={s.two[0].id} className={"fp-two fp-tie" + s.tie + (lit === M.pairKey(s.two[0].id, s.two[1].id) ? " fp-two-lit" : "")}>{s.two.map(cell)}</div>))}
+      {zone("To place", g.open.length, g.open.map(cell), "fp-loose")}
+      {zone("Individual", g.solo.length, g.solo.map(cell), "fp-loose")}
+      {zone("Not submitted", g.out.length, g.out.map(cell), "fp-loose")}
+      <svg className="fp-lines" aria-hidden="true">
+        <defs>
+          <marker id="fp-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke" /></marker>
+        </defs>
+        {lines.map(l => <path key={l.key} d={l.d} className={"fp-l " + l.cls} markerEnd={l.arrow ? "url(#fp-arrow)" : undefined} />)}
+        {dragging && pos.get(drag.id) ? <line x1={pos.get(drag.id).x} y1={pos.get(drag.id).y} x2={over ? pos.get(over.id).x : drag.x} y2={over ? pos.get(over.id).y : drag.y} className={"fp-l fp-l-drag" + (over ? (clean ? " fp-l-clean" : " fp-l-warn") : "")} /> : null}
+      </svg>
+      {dragging ? <span className="fp-ghost" style={{ left: drag.x, top: drag.y }}><Disc p={dragging} size={face} /></span> : null}
     </div>
   );
 }
@@ -612,7 +602,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
 
       <div className="fp-main">
         <div className="fp-left">
-          <Ring people={people} file={file} who={chosen ? chosen.id : ""} lit={lit} burst={burst} suggested={sug.pairs} onPick={pick} onDrop={drop} />
+          <Board people={people} file={file} who={chosen ? chosen.id : ""} lit={lit} burst={burst} suggested={sug.pairs} onPick={pick} onDrop={drop} />
           {ask ? (
             <div className="fp-ask" role="alertdialog" aria-label="Pair anyway">
               <Duo a={byId.get(ask.a)} b={byId.get(ask.b)} size={36} />
@@ -625,7 +615,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
             <li><i className="fp-line fp-l-t3" />Each other's top choice</li>
             <li><i className="fp-line fp-l-t2" />One top choice, picked back</li>
             <li><i className="fp-line fp-l-t1" />On each other's lists</li>
-            <li><i className="fp-line fp-l-pair" />Paired</li>
+            <li><i className="fp-line fp-l-oneway" />One-way pick</li>
           </ul>
         </div>
         <aside className="fp-panel">
@@ -696,13 +686,26 @@ const CSS = `
 .fp-w-pair2{--w:var(--pair2)}.fp-w-pair1{--w:var(--pair1)}.fp-w-solo1{--w:var(--solo1)}.fp-w-solo2{--w:var(--solo2)}.fp-w-none{--w:var(--none)}
 .fp-key{justify-content:center;padding-top:2px}
 .fp-line{width:26px;height:0;border-top:3px solid var(--c);border-radius:2px;flex:none}
-.fp-line.fp-l-t3{--c:var(--t3)}.fp-line.fp-l-t2{--c:var(--t2)}.fp-line.fp-l-t1{--c:var(--t1)}.fp-line.fp-l-pair{--c:var(--made);border-top-width:5px}
+.fp-line.fp-l-t3{--c:var(--t3)}.fp-line.fp-l-t2{--c:var(--t2)}.fp-line.fp-l-t1{--c:var(--t1)}.fp-line.fp-l-oneway{--c:var(--dim);border-top-style:dashed;border-top-width:2px}
 
 .fp-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);gap:22px;align-items:start}
-.fp-left{display:flex;flex-direction:column;gap:8px;position:sticky;top:70px}
+.fp-left{display:flex;flex-direction:column;gap:14px;position:relative;min-width:0}
 .fp-ringbox{display:flex;justify-content:center;min-width:0}
 .fp-stage{position:relative;flex:none;user-select:none;-webkit-user-select:none}
-.fp-lines{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.fp-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2}
+.fp-board{position:relative;display:flex;flex-direction:column;gap:26px;user-select:none;-webkit-user-select:none;padding:6px 4px 10px}
+.fp-zone{display:flex;flex-direction:column;gap:12px}
+.fp-zone h2{display:flex;align-items:center;gap:8px}
+.fp-zone h2 b{font-weight:600;color:var(--dim);letter-spacing:0}
+.fp-zbody{display:flex;flex-wrap:wrap;gap:18px 20px}
+.fp-loose .fp-zbody{gap:20px 26px}
+.fp-two{display:flex;gap:12px;padding:12px 16px 10px;border-radius:26px;border:2px dashed var(--c);background:color-mix(in srgb,var(--c) 9%,transparent);transition:background .2s,box-shadow .2s}
+.fp-two-made{--c:var(--go);border-style:solid;background:color-mix(in srgb,var(--go) 14%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--go) 30%,transparent)}
+.fp-two-lit{background:color-mix(in srgb,var(--c) 26%,transparent);box-shadow:0 0 30px color-mix(in srgb,var(--c) 55%,transparent)}
+.fp-cell{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:76px;transition:opacity .3s}
+.fp-cell.fp-dim{opacity:.22}
+.fp-cname{font-size:14px;font-weight:500;color:var(--dim);white-space:nowrap}
+.fp-cell.fp-sel .fp-cname{color:var(--ink);font-weight:600}
 .fp-orbit{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:2 7;opacity:.7}
 .fp-l{fill:none;stroke:var(--c);stroke-linecap:round;animation:fp-draw .7s ease both}
 .fp-l-t3{--c:var(--t3);stroke-width:3}.fp-l-t2{--c:var(--t2);stroke-width:2.2}.fp-l-t1{--c:var(--t1);stroke-width:1.6}
@@ -720,8 +723,8 @@ const CSS = `
 .fp-l-clean{--c:var(--go);stroke-dasharray:none;filter:drop-shadow(0 0 8px var(--go))}
 .fp-l-warn{--c:var(--warn)}
 @keyframes fp-draw{from{opacity:0}}
-.fp-face{position:absolute;border-radius:50%;padding:0;border:0;background:var(--w);cursor:grab;display:grid;place-items:center;touch-action:none;
-  box-shadow:0 0 0 0 transparent,0 6px 18px rgba(0,0,0,.45);transition:left .75s cubic-bezier(.2,.85,.2,1),top .75s cubic-bezier(.2,.85,.2,1),transform .18s,opacity .3s,box-shadow .25s}
+.fp-face{position:relative;border-radius:50%;padding:0;border:0;background:var(--w);cursor:grab;display:grid;place-items:center;touch-action:none;
+  box-shadow:0 0 0 0 transparent,0 6px 18px rgba(0,0,0,.45);transition:transform .18s,opacity .3s,box-shadow .25s}
 .fp-face:hover{transform:scale(1.1);z-index:3}
 .fp-face.fp-w-none{background:transparent;box-shadow:inset 0 0 0 2px var(--none)}
 .fp-face.fp-w-none .fp-disc{filter:grayscale(1) brightness(.6)}
@@ -739,8 +742,8 @@ const CSS = `
 .fp-tick{position:absolute;right:-3px;bottom:-3px;min-width:20px;height:20px;border-radius:999px;background:var(--go);color:var(--go-ink);font-size:12px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}
 .fp-label{position:absolute;transform:translate(-50%,-50%);font-size:12.5px;font-weight:500;color:var(--dim);white-space:nowrap;pointer-events:none;transition:left .75s cubic-bezier(.2,.85,.2,1),top .75s cubic-bezier(.2,.85,.2,1),opacity .3s}
 .fp-label.fp-sel{color:var(--ink);font-weight:600}
-.fp-ghost{position:absolute;transform:translate(-50%,-50%) scale(1.1);pointer-events:none;z-index:9;border-radius:50%;box-shadow:0 16px 40px rgba(0,0,0,.6);opacity:.95}
-.fp-ask{position:absolute;left:0;right:0;bottom:44px;margin:0 auto;width:fit-content;max-width:92%;z-index:8;box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--warn);border-radius:16px;padding:10px 14px;animation:fp-rise .25s ease both}
+.fp-ghost{position:absolute;display:block;transform:translate(-50%,-50%) scale(1.1);pointer-events:none;z-index:9;border-radius:50%;box-shadow:0 16px 40px rgba(0,0,0,.6);opacity:.95}
+.fp-ask{position:sticky;bottom:24px;align-self:center;width:fit-content;max-width:92%;z-index:8;box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;align-items:center;gap:12px;background:var(--card2);border:1px solid var(--warn);border-radius:16px;padding:10px 14px;animation:fp-rise .25s ease both}
 .fp-ask p{margin:0;font-size:15px}
 @keyframes fp-rise{from{opacity:0;transform:translateY(8px)}}
 
