@@ -113,6 +113,12 @@ const SONGS = {
     lead: "G5 - - - - - D5 - G5 - - D5 G5 - - A5 | B5 - - - - - - . G5 - - - - - - . | C6 - - - - - C6 - G5 - - - A5 - - - | B5 - - - - - - - - - - - - - - . | G5 - - - - - D5 - G5 - - D5 G5 - - A5 | B5 - - - - - - . G5 - - - B5 - - B5 | B5 - - - A5 - - - A5 - - - B5 - - - | A5 - - - - - - - - - - - - - - . | A5 - - - - - A5 - G#5 - - A5 B5 - - A5 | G5 - - - - - - . D5 - - - - - - . | C6 - - - C6 - - C6 G5 - - G5 A5 - - A5 | B5 - - - - - - - - - - - - - - . | E5 - - - - - F#5 - G5 - - F#5 G5 - - E5 | D5 - - - - - - . G5 - - - - - - . | B5 - - - C6 - - - B5 - - - A5 - - - | G5 - - - - - - - - - - - - - - .",
     bass: "G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - D3 - - - | C3 - - - G3 - - - C3 - - - - - - . | G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - - - - . | E3 - - - - - - . A2 - - - - - - . | D3 - - - E3 - - - F#3 - - - D3 - - - | D2 - - - A2 - - - D3 - - - - - - . | G2 - - - D3 - - - G3 - - - D3 - - - | C3 - - - F#3 - - - G3 - - - - - - . | B2 - - - F#3 - - - B3 - - - A3 - - - | C3 - - - G3 - - - C#3 - - - - - - . | D3 - - - G3 - - - E3 - - - D#3 - - - | D3 - - - - - - . D2 - - - - - - . | G2 - - - D3 - - - G3 - - - - - - .",
     drum: "k . . . s . s . k . . . s . s s" },
+  // "Texas Fight" as a guess. Andrew, 2026-11-14: "guess at the notes." No clean copy of the 1923 score was found,
+  // so this is not a transcription. The song began as "Texas Taps," Taps played fast, and this is Taps set to its march rhythm.
+  fight: { dt: 0.13, voice: "brass",
+    lead: "G4 - G4 - C5 - - - | G4 - C5 - E5 - - - | G4 - C5 - E5 - G4 - | C5 - E5 - G5 - - - | C5 - E5 - G5 - - - | E5 - C5 - G4 - - - | G4 - G4 - C5 - E5 - | D5 - - - - - . . | G4 - G4 - C5 - - - | G4 - C5 - E5 - - - | A4 - C5 - F5 - A4 - | C5 - F5 - A5 - - - | G5 - E5 - C5 - - - | E5 - D5 - C5 - D5 - | C5 - - - - - - - | C5 - . . C5 - . .",
+    bass: "C3 - G3 - C3 - G3 - | C3 - G3 - C3 - G3 - | C3 - G3 - C3 - G3 - | C3 - G3 - E3 - G3 - | C3 - G3 - C3 - G3 - | C3 - G3 - C3 - G3 - | C3 - G3 - A2 - A3 - | G2 - D3 - G2 - B2 - | C3 - G3 - C3 - G3 - | C3 - G3 - C3 - G3 - | F3 - C3 - F3 - C3 - | F3 - C3 - F3 - C3 - | C3 - G3 - C3 - G3 - | G2 - D3 - G2 - B2 - | C3 - G3 - C3 - G3 - | C3 - . . C3 - . .",
+    drum: "k . s . k . s s" },
 };
 const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 /** A note name to its pitch in hertz: "F#3", "C5". Anything else is silence. */
@@ -424,7 +430,8 @@ async function touchdown(where, text = "TOUCHDOWN!") {
     if (where === "park") A.leaves(c, t, 80);
   };
   fx = { kind: "td", start }; say(text, "flash big"); sfx.td(); showHud();
-  await wait(4200); fx = null; say("");
+  if (where === "texas") music.start("fight");
+  await wait(where === "texas" ? 6200 : 4200); fx = null; say(""); if (where === "texas") music.stop();
 }
 /** The other team has the ball, and the player watches what they do with it. */
 async function theirDrive(where, scores, how) {
@@ -461,7 +468,7 @@ async function plays() {
   });
   G.calls.push(call); G.busy = true; showBack();
   const good = look.beat === call, which = (n + (G.seed.charCodeAt(0) % 3)) % 3;
-  ui.textContent = ""; sfx.snap(); music.start("play"); say(PLAYS[call][which].name);
+  ui.textContent = ""; sfx.snap(); music.start(where === "texas" ? "fight" : "play"); say(PLAYS[call][which].name);
   await playOut(call, good, where, look.k, which);
   music.stop(); G.busy = false; showBack();
   let word;
