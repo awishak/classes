@@ -49,6 +49,10 @@ const comm118 = {
   // No weight. The challenge itself lives in engine/profileTask.js.
   profileTask: { due: "Sep 22" },
 
+  // Fall 2026: the week 9 check-in is dropped. Andrew, 2026-11-14: "i don't
+  // think it's necessary for this quarter." Take this line out next term.
+  checkinWeeks: [4],
+
   // "current" | "archived" — what the front page does with it.
   status: "current",
 };

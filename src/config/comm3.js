@@ -75,6 +75,10 @@ const comm3 = {
     "Alejandro Lopez jimenez": "Lopez jimenez",
   },
 
+  // Fall 2026: the week 9 check-in is dropped. Andrew, 2026-11-14: "i don't
+  // think it's necessary for this quarter." Take this line out next term.
+  checkinWeeks: [4],
+
   testStudent: "Pepe LeFritz",
   students: [
     { id: "pepe-lefritz", name: "Pepe LeFritz", email: "pepe@example.test", section: "10:30", from: "", goals: "" },

@@ -62,11 +62,17 @@ export function weekSpan(weeks, n) {
 
 const weeksOf = (config, data) => (data?.schedule?.length ? data.schedule : config?.scheduleWeeks) || [];
 
+// A class can name its own check-in weeks. Andrew, 2026-11-14, on the week 9
+// check-in for Fall 2026: "let's drop the check in. i don't think it's
+// necessary for this quarter." So both Fall 2026 classes carry
+// `checkinWeeks: [4]`, and a class that says nothing gets both weeks.
+const weeksFor = (config) => (Array.isArray(config?.checkinWeeks) ? config.checkinWeeks : CHECKIN_WEEKS);
+
 // The check-in challenges this class has, from its term. A class with no
 // fourth week yet has no week 4 check-in yet.
 export function checkinTasksOf(config, data) {
   const weeks = weeksOf(config, data);
-  return CHECKIN_WEEKS.map(n => {
+  return weeksFor(config).map(n => {
     const span = weekSpan(weeks, n);
     if (!span) return null;
     const { mon } = span;

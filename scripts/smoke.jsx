@@ -5826,6 +5826,10 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   if (!w9 || w9.opensAt !== "2026-11-16T00:00" || w9.due !== "Nov 22") say("week 9 does not run Nov 16 to Nov 22");
   if (ci.checkinTasksOf({ scheduleWeeks: weeks.slice(0, 8) }, {}).length !== 1) say("a term with eight weeks has a week 9 check-in");
   if (ci.checkinTasksOf({ scheduleWeeks: weeks.slice(0, 3) }, {}).length) say("a term with three weeks has a check-in");
+  const only4 = ci.checkinTasksOf({ ...c, checkinWeeks: [4] }, {});
+  if (only4.length !== 1 || only4[0].id !== "checkin-4") say("a class that names week 4 alone still has a week 9 check-in");
+  if (ci.checkinDue({ ...c, checkinWeeks: [4] }, {}, "Ada Lovelace", Date.parse("2026-11-18T12:00"), { "final-prefs": true })) say("a class with no week 9 check-in still asks for it");
+  for (const id of ["comm3", "comm118"]) { const cfg = (await import("../src/config/" + id + ".js")).default; if (ci.checkinTasksOf(cfg, {}).some(t => t.id === "checkin-9")) say(id + " still has a week 9 check-in this term"); }
   if (!assignmentsOf(c, {}).some(a => a.id === "checkin-4")) say("the check-in is not among the class's challenges");
   const N = "Ada Lovelace";
   const mid = Date.parse("2026-10-14T12:00");
