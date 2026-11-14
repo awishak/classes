@@ -59,8 +59,10 @@ export const interestsOf = (data, name) => {
 // variety of topics", "group them by area", "include my examples from spring",
 // and "if it was a particular students example from last quarter, include
 // their name". His own are from that day's dictation, the sit-downs and his
-// Spring 2026 assignment sheet; `by` names the Spring 2026 student whose
-// project it was. Two under Teams are Claude's, kept by him ("these are good").
+// Spring 2026 assignment sheet; `by` would name a
+// former student whose project it was; he had the four named Spring 2026
+// examples taken off the same day ("remove the 4 student examples"), which
+// left Media and Athletes and fans with one topic each, so they are one area. Two under Teams are Claude's, kept by him ("these are good").
 export const EXAMPLES_118 = [
   { area: "Identity and nation", topics: [
     { say: "The explosion of transnational athletes in the Olympics" },
@@ -72,20 +74,14 @@ export const EXAMPLES_118 = [
     { say: "Female coaches in the NBA" },
     { say: "Female referees in male dominated sports" },
     { say: "Competing women's volleyball leagues" },
-    { say: "Communication gaps in ACL education for female athletes", by: "Isabelle De Buyl" },
   ] },
   { area: "Politics and power", topics: [
     { say: "WNBA versus NBA political acts" },
     { say: "Sports metaphors in political campaigns" },
     { say: "NIL and the balance of power" },
   ] },
-  { area: "Athletes and fans", topics: [
+  { area: "Media and fans", topics: [
     { say: "Athletes who talk directly with fans through Instagram" },
-    { say: "SJ Earthquakes' themed games and fan engagement", by: "Amaris Franco" },
-    { say: "Crowd noise, heckling and chants as communication", by: "Russ Filter" },
-  ] },
-  { area: "Media", topics: [
-    { say: "The post-game press conference as an institutional performance", by: "Sam Canales" },
     { say: "Formula 1 framing and socioeconomic status" },
   ] },
   { area: "Teams", topics: [
