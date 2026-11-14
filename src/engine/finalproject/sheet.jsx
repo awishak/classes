@@ -84,6 +84,7 @@ const BY_CLASS = {
     topicAsk: "Your question",
     topicHint: "Your topic will be a question at the intersection of communication and sport.",
     examplesHead: "Example topics",
+    interestsSay: "Here are three or four topics you seemed to be interested in this year. You are welcome to continue with one of these topics, but you're not required to.", // voice-ok, his words
     conceptsHint: "Within your multimedia project, you will explicate at least three concepts or theories for your audience through a definition, real-life examples and hypothetical examples.",
   },
 };
@@ -239,6 +240,12 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
         <section className="part">
           <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
           <Words k="topicHint" copy={copy} editing={editing} as="p" className="hint" />
+          {!justice && M.interestsOf(data, me?.name).length ? (
+            <div className="fpp-mine">
+              <Words k="interestsSay" copy={copy} editing={editing} as="p" className="fpp-minesay" />
+              <ul>{M.interestsOf(data, me?.name).map(t => <li key={t}>{t}</li>)}</ul>
+            </div>
+          ) : null}
           {!justice ? (
             <div className="fpp-eg">
               <Words k="examplesHead" copy={copy} editing={editing} as="p" className="fpp-egh" />
@@ -372,6 +379,11 @@ const EXTRA = `
 .fpp .fpp-place .fpp-pic{width:44px;height:44px}
 .fpp .box .mark{justify-self:start}
 .fpp .fpp-eg{display:grid;gap:10px;margin:4px 0 6px}
+.fpp .fpp-mine{background:var(--accent-light);border:2px solid var(--accent);border-radius:16px;padding:16px 18px;display:grid;gap:12px;margin:4px 0 8px}
+.fpp .fpp-minesay{margin:0;font-size:18px;font-weight:500;line-height:1.35;color:var(--ink);max-width:62ch}
+.fpp .fpp-mine ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.fpp .fpp-mine li{background:var(--card);border:2px solid var(--line-soft);border-radius:999px;padding:8px 16px;font-size:17px;font-weight:500;line-height:1.25;color:var(--ink);overflow-wrap:anywhere}
+@media (max-width:560px){.fpp .fpp-mine li{border-radius:14px;width:100%}}
 .fpp .fpp-egh{margin:0;font-size:14px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
 .fpp .fpp-egs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 .fpp .fpp-egg{background:var(--sunk);border:2px solid var(--line-soft);border-top:6px solid var(--w);border-radius:14px;padding:12px 14px 14px;min-width:0}

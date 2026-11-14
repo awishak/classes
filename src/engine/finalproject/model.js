@@ -42,6 +42,19 @@ export const SLOTS = ["a", "b", "c"];
 // for now", each with a definition and where the definition comes from.
 export const SPORT_PARTS = ["worth", "audience", "concepts"];
 
+// The topics a student seemed interested in this term, on the plan row as
+// finalInterests: { [roster name]: [topic, ...] }. Andrew, 2026-11-14: "let
+// students know: here are three or four topics you seemed to be interested in
+// this year. you are welcome to continue with one of these topics, but you're
+// not required to." Claude drafts each list from the student's own work and
+// he approves it; only approved lists are written to the row, so a student
+// with nothing there sees nothing.
+export const INTERESTS_KEY = "finalInterests";
+export const interestsOf = (data, name) => {
+  const list = name ? (data || {})[INTERESTS_KEY]?.[name] : null;
+  return Array.isArray(list) ? list.map(t => String(t || "").trim()).filter(Boolean) : [];
+};
+
 // Example topics for COMM 118, by area. Andrew, 2026-11-14: "i want a
 // variety of topics", "group them by area", "include my examples from spring",
 // and "if it was a particular students example from last quarter, include

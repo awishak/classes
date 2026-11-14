@@ -6513,6 +6513,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const bare118 = { ...full118 }; FP.SLOTS.forEach(s => FP.SPORT_PARTS.forEach(part => { delete bare118[part + ":" + s]; }));
   if (!["worth:a", "audience:b", "concepts:c"].every(f => FP.missingOf(bare118, "comm118").includes(f))) say("COMM 118 does not ask why a topic is worthwhile, what the audience gets, and the two concepts");
   if (FP.readAnswers(full118).topics[0].concepts !== "x") say("the review does not read a topic's concepts");
+  if (FP.interestsOf({ finalInterests: { "Ada Lovelace": ["One", " ", "Two"] } }, "Ada Lovelace").join() !== "One,Two" || FP.interestsOf({}, "Ada Lovelace").length || FP.interestsOf({ finalInterests: { "Ada Lovelace": ["One"] } }, "Someone Else").length) say("a student's interest list is not their own approved topics");
   if (FP.EXAMPLES_118.length !== 6 || FP.EXAMPLES_118.some(g => !g.area || g.topics.length < 2)) say("COMM 118's example topics are not six areas with topics in each");
   const need3 = FP.missingOf(full118, "comm3");
   if (!["define", "defineSource", "why:a", "angle:b", "justice:c"].every(f => need3.includes(f)) || need3.includes("ask:a")) say("COMM 3 does not ask for the definition and the three explanations: " + need3);
