@@ -98,7 +98,6 @@ const sfx = {
 // football's being played," and "I want you to use great marching band
 // music." Brass is a sawtooth through a low-pass filter, three voices a note;
 // the drums are shaped noise and a falling sine.
-const NOTE = { G2: 98, A2: 110, B2: 123.47, C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196, A3: 220, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392, A4: 440, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880, B5: 987.77, C6: 1046.5 };
 const SONGS = {
   title: { dt: 0.2, voice: "square",
     lead: "C5 . E5 G5 C6 . G5 E5 | A5 . G5 E5 G5 . . . | F5 . A5 C6 A5 . F5 D5 | G5 . B5 D5 G5 . . . | C5 . E5 G5 C6 . G5 E5 | A5 . C6 A5 G5 . E5 . | F5 E5 D5 F5 E5 D5 B4 D5 | C5 . G4 . C5 . . .",
@@ -108,11 +107,16 @@ const SONGS = {
     lead: "E5 . E5 . G5 . E5 . | D5 . D5 . F5 . D5 . | C5 . E5 . G5 . C6 . | B4 . D5 . G5 . . .",
     bass: "C3 C3 . C3 G2 . C3 . | D3 D3 . D3 A2 . D3 . | C3 C3 . C3 G2 . C3 . | G2 G2 . G2 B2 . D3 .",
     drum: "k h s h k k s h | k h s h k s s s" },
-  band: { dt: 0.17, voice: "brass",
-    lead: "G4 . C5 . C5 . E5 . | G5 . . E5 C5 . . . | A4 . D5 . D5 . F5 . | A5 . . F5 D5 . . . | G4 . C5 . E5 . G5 . | C6 . B5 . A5 . G5 . | F5 . E5 . D5 . B4 . | C5 . . . C5 . . .",
-    bass: "C3 . G3 . C3 . G3 . | C3 . G3 . E3 . G3 . | D3 . A3 . D3 . A3 . | D3 . A3 . F3 . A3 . | C3 . G3 . C3 . G3 . | A2 . E3 . F3 . C3 . | D3 . G3 . G2 . B2 . | C3 . G2 . C3 . . .",
-    drum: "k . s s k . s . | k . s s k s s s" },
+  // "The Eyes of Texas" is sung to "I've Been Working on the Railroad" (1894). These are that tune's first
+  // sixteen bars, melody and bass, read note for note from a MIDI of the traditional song. A "-" holds the note before it.
+  band: { dt: 0.125, voice: "brass",
+    lead: "G5 - - - - - D5 - G5 - - D5 G5 - - A5 | B5 - - - - - - . G5 - - - - - - . | C6 - - - - - C6 - G5 - - - A5 - - - | B5 - - - - - - - - - - - - - - . | G5 - - - - - D5 - G5 - - D5 G5 - - A5 | B5 - - - - - - . G5 - - - B5 - - B5 | B5 - - - A5 - - - A5 - - - B5 - - - | A5 - - - - - - - - - - - - - - . | A5 - - - - - A5 - G#5 - - A5 B5 - - A5 | G5 - - - - - - . D5 - - - - - - . | C6 - - - C6 - - C6 G5 - - G5 A5 - - A5 | B5 - - - - - - - - - - - - - - . | E5 - - - - - F#5 - G5 - - F#5 G5 - - E5 | D5 - - - - - - . G5 - - - - - - . | B5 - - - C6 - - - B5 - - - A5 - - - | G5 - - - - - - - - - - - - - - .",
+    bass: "G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - D3 - - - | C3 - - - G3 - - - C3 - - - - - - . | G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - - - - . | E3 - - - - - - . A2 - - - - - - . | D3 - - - E3 - - - F#3 - - - D3 - - - | D2 - - - A2 - - - D3 - - - - - - . | G2 - - - D3 - - - G3 - - - D3 - - - | C3 - - - F#3 - - - G3 - - - - - - . | B2 - - - F#3 - - - B3 - - - A3 - - - | C3 - - - G3 - - - C#3 - - - - - - . | D3 - - - G3 - - - E3 - - - D#3 - - - | D3 - - - - - - . D2 - - - - - - . | G2 - - - D3 - - - G3 - - - - - - .",
+    drum: "k . . . s . s . k . . . s . s s" },
 };
+const SEMI = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+/** A note name to its pitch in hertz: "F#3", "C5". Anything else is silence. */
+const pitch = (n) => { const m = /^([A-G])(#?)(\d)$/.exec(n || ""); return m ? 440 * Math.pow(2, (SEMI[m[1]] + (m[2] ? 1 : 0) + (Number(m[3]) + 1) * 12 - 69) / 12) : 0; };
 const music = { timer: null, at: 0, step: 0, name: "",
   start(name) {
     const a = ac(); if (!a) return; if (this.name === name && this.timer) return; this.stop(); this.name = name;
@@ -129,9 +133,9 @@ const music = { timer: null, at: 0, step: 0, name: "",
       while (this.at < a.currentTime + 0.3) {
         const i = this.step;
         if (!muted) {
-          const L = NOTE[lead[i % lead.length]], Bn = NOTE[bass[i % bass.length]], D = drum[i % drum.length];
-          if (L) { if (song.voice === "brass") { brass(L, this.at, dt * 1.9); brass(L / 2, this.at, dt * 1.9); } else { osc(L, this.at, dt * 1.7, "square", 0.045); osc(L * 2, this.at, dt * 0.9, "square", 0.012); } }
-          if (Bn) osc(Bn, this.at, dt * 1.6, song.voice === "brass" ? "sawtooth" : "triangle", song.voice === "brass" ? 0.05 : 0.09);
+          const L = pitch(lead[i % lead.length]), Bn = pitch(bass[i % bass.length]), D = drum[i % drum.length], held = (q) => { let n = 0; while (n < 16 && q[(i + 1 + n) % q.length] === "-") n++; return n; }, ll = held(lead) * dt, bl = held(bass) * dt;
+          if (L) { if (song.voice === "brass") { brass(L, this.at, dt * 1.9 + ll); brass(L / 2, this.at, dt * 1.9 + ll); } else { osc(L, this.at, dt * 1.7, "square", 0.045); osc(L * 2, this.at, dt * 0.9, "square", 0.012); } }
+          if (Bn) osc(Bn, this.at, dt * 1.6 + bl, song.voice === "brass" ? "sawtooth" : "triangle", song.voice === "brass" ? 0.05 : 0.09);
           if (D && D !== ".") hit(D, this.at);
         }
         this.at += dt; this.step++;
