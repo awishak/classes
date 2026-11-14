@@ -260,7 +260,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
             </div>
           ) : null}
           {!justice && copy.say("conceptsHint") ? <Words k="conceptsHint" copy={copy} editing={editing} as="p" className="hint" /> : null}
-          <div className="ideas">
+          <div className={"ideas" + (justice ? "" : " fpp-wide")}>
             {M.SLOTS.map((s, i) => (
               <div key={s} className="box">
                 {approved.has(s) ? <span className="mark ok">{copy.say("approvedSay")}</span> : null}
@@ -378,6 +378,12 @@ const EXTRA = `
 .fpp .fpp-place{margin:0;font-size:22px;font-weight:500;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fpp .fpp-place .fpp-pic{width:44px;height:44px}
 .fpp .box .mark{justify-self:start}
+/* COMM 118 asks five things a topic, so each topic takes the full width and its four explanations sit two by two. */
+.fpp .ideas.fpp-wide{grid-template-columns:1fr;gap:14px}
+.fpp .ideas.fpp-wide .box{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;align-items:start}
+.fpp .ideas.fpp-wide .box>*{grid-column:1/-1}
+.fpp .ideas.fpp-wide .box>div.field{grid-column:auto}
+@media (max-width:860px){.fpp .ideas.fpp-wide .box{grid-template-columns:1fr}}
 .fpp .fpp-eg{display:grid;gap:10px;margin:4px 0 6px}
 .fpp .fpp-mine{background:var(--accent-light);border:2px solid var(--accent);border-radius:16px;padding:16px 18px;display:grid;gap:12px;margin:4px 0 8px}
 .fpp .fpp-minesay{margin:0;font-size:18px;font-weight:500;line-height:1.35;color:var(--ink);max-width:62ch}
