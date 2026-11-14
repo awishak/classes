@@ -72,6 +72,8 @@ const BY_CLASS = {
     defineHint: "Use an academic definition, not something from a random site.",
     defineAsk: "The definition",
     sourceAsk: "The academic source the definition comes from",
+    // Andrew, 2026-11-13, his words.
+    pastSay: "These are things you've done previously. You're not going to work on any of these topics. Think about something you like as much as these topics.", // voice-ok, his words
     topicHead: "What do you want to work on in this class?",
     topicHint: "Examples: housing, food access, immigration, disability access, environmental justice, education, health care, voting rights.",
     whyAsk: "Why do you think this idea is interesting?",
@@ -134,6 +136,42 @@ function useMine(classId, viewerId, readOnly) {
   return mine;
 }
 
+// What the student made earlier this term, read from their own sheets: the
+// visual story, the audio story exercise and the audio story. Andrew,
+// 2026-11-13: "These are things you've done previously." A student's browser
+// reads only its own rows, and a sheet with no topic line is left out.
+const PAST = [
+  ["Visual story", ["visual-story", "visual-pre"], "headline"],
+  ["Audio story exercise", ["audio-research"], "story"],
+  ["Audio story", ["audio-story"], "headline"],
+];
+async function pastLine({ classId, viewerId, keys, field }) {
+  for (const key of keys) {
+    const s = await gameClient.from("worksheet_sheets").select("id").eq("worksheet_key", key).eq("group_key", classId).eq("viewer_id", viewerId);
+    const id = s.data && s.data[0] && s.data[0].id;
+    if (!id) continue;
+    const r = await gameClient.from("worksheet_answers").select("value,position").eq("sheet_id", id).eq("field", field).order("position");
+    const say = (r.data || []).map(x => x.value).join("").trim();
+    if (say) return say;
+  }
+  return "";
+}
+function usePast(classId, viewerId, on) {
+  const [past, setPast] = useState([]);
+  useEffect(() => {
+    if (!on || !classId || !viewerId) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        const got = await Promise.all(PAST.map(([, keys, field]) => pastLine({ classId, viewerId, keys, field })));
+        if (alive) setPast(PAST.map(([what], i) => ({ what, say: got[i] })).filter(x => x.say));
+      } catch { /* nothing earlier to show */ }
+    })();
+    return () => { alive = false; };
+  }, [classId, viewerId, on]);
+  return past;
+}
+
 // The due date, which the database enforces: worksheet_locked() refuses every
 // save and submit once now() is past the worksheet_deadlines row, unless a
 // worksheet_unlocks row lets the student through. Andrew, 2026-11-14: "lock on
@@ -175,6 +213,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const { answers, set, submitted, setSubmitted, status, saver } = useSheet({ store, draftKey, readOnly: given, storage });
   const mine = useMine(classId, viewer?.id, given);
   const locked = useLocked(classId, viewer?.id, given);
+  const past = usePast(classId, viewer?.id, M.isJustice(classId));
   const readOnly = given || locked;
 
   const root = { className: "as fpp" + (M.isJustice(classId) ? "" : " fps") + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
@@ -392,6 +431,12 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
         {topics118 || (<section className="part">
           <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
           <Words k="topicHint" copy={copy} editing={editing} as="p" className="hint" />
+          {past.length || editing ? (
+            <div className="fpp-past">
+              <Words k="pastSay" copy={copy} editing={editing} as="p" className="fpp-pastsay" />
+              {past.length ? <ul>{past.map(x => <li key={x.what}><span>{x.what}</span>{x.say}</li>)}</ul> : null}
+            </div>
+          ) : null}
           <div className="ideas">
             {M.SLOTS.map((s, i) => (
               <div key={s} className="box">
@@ -497,6 +542,12 @@ const EXTRA = `
 .fpp .fpp-face.on .fpp-pic{box-shadow:0 0 0 3px var(--accent)}
 .fpp .fpp-name{font-size:14px;font-weight:500;line-height:1.2;text-align:center;overflow-wrap:anywhere}
 .fpp .fpp-result{background:var(--accent-light)}
+.fpp .fpp-past{background:var(--accent-light);border-radius:18px 18px 18px 6px;padding:18px 20px;display:grid;gap:12px;max-width:820px}
+.fpp .fpp-pastsay{margin:0;font-size:17px;font-weight:500;line-height:1.45;color:var(--ink);max-width:60ch}
+.fpp .fpp-past ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.fpp .fpp-past li{display:grid;grid-template-columns:190px 1fr;gap:12px;font-size:17px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+.fpp .fpp-past li span{font-size:14px;font-weight:600;color:var(--secondary);padding-top:2px}
+@media (max-width:560px){.fpp .fpp-past li{grid-template-columns:1fr;gap:2px}}
 .fpp .fpp-place{margin:0;font-size:22px;font-weight:500;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fpp .fpp-place .fpp-pic{width:44px;height:44px}
 .fpp .box .mark{justify-self:start}

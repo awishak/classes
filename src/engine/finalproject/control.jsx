@@ -21,6 +21,7 @@ const RULES = [
   ["COMM 3's sheet", [
     "COMM 3 answers two things COMM 118 does not. First, a definition of social justice with the academic source the definition comes from; both boxes have to be filled before the sheet can be handed in. The page cannot tell an academic source from any other, so the source line is there for the review.",
     "Second, each of the three ideas carries three explanations in place of the questions the topic raises: why the idea is interesting, the angle for a unique and engaging story, and how the idea qualifies as a social justice topic. All nine are required.",
+    "Above the three ideas a student sees what they made earlier this term: the headline of their visual story, the story line of their audio story exercise and the headline of their audio story, each read from the student's own sheet. A sheet with no line is left out, and a student with none sees no block. The visual language exercise, the audio language exercise and the practice project were not worksheets, so they are not listed.",
     "The review shows the definition and its source above the student's topics, and the three explanations under each topic.",
     "Under each student's definition the review prints the Frey, Pearce, Pollock, Artz and Murphy (1996) definition, to read theirs against. Students never see it; the sheet does not carry it.",
   ]],
