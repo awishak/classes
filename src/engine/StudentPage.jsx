@@ -23,6 +23,8 @@
 import { readingsRow, readingsFor } from "./takeover/engine.js";
 import { mergedView } from "./store.js";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import StudentPeek from "./StudentPeek.jsx";
 import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
 import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
@@ -32,7 +34,6 @@ import { computeGrade } from "./AssignmentsCard.jsx";
 import { rosterOf, findStudent, nameShown, idOf } from "./roster.js";
 import { sectionOf } from "./sections.js";
 import { boardOf, bucketOf, bucketsFor, signOf, alive, htmlToText, letterOf, placeCard, writeCard, releasePatch, releaseStateOf } from "./grades.js";
-import { schedulingLinkOf } from "../instructors.js";
 import { Reopen, canReopen } from "./Reopen.jsx";
 import { Linked } from "./linkText.jsx";
 import { isCheckin, checkinTasksOf, CHECKIN_QUESTIONS, answersOf } from "./checkins.js";
@@ -40,8 +41,9 @@ import { hasPage, sheetKeyOf } from "./submissionPages.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
 import { PORTAL_CSS } from "./portal/style.js";
-import { authHeaders } from "./session.js";
-import { savedPin } from "../InstructorGate.jsx";
+import { authHeaders, getSession } from "./session.js";
+import { savedPin, useInstructor } from "../InstructorGate.jsx";
+import { schedulingLinkOf, isInstructorEmail } from "../instructors.js";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
@@ -70,8 +72,42 @@ export const studentHref = (config, student) => config.path + "/student/" + enco
  */
 export function StudentLink({ config, student, children, className, style }) {
   // The name they go by, off their profile, the way every surface that shows people reads it (roster.js shownName).
-  const who = nameShown(mergedView(config.storageKey), typeof student === "string" ? student : student?.name || "");
-  return <a href={studentHref(config, student)} className={className} style={{ color: "inherit", textDecoration: "none", ...(style || {}) }} onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }} onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}>{children ?? who}</a>;
+  const data = mergedView(config.storageKey);
+  const name = typeof student === "string" ? student : student?.name || "";
+  const who = nameShown(data, name);
+  // A press opens the student in the popup over the page he is on (StudentPeek.jsx);
+  // the address is still their page, for a new tab. Andrew, 2026-11-13, asked
+  // whether names on Grades and the roster should open the popup too: "yes."
+  // The popup is drawn on the body, and what happens in it stays in it, so a
+  // press inside never reaches the row or card the name sits in.
+  //
+  // Only for him. A student sees these names too (Classmates), and for a
+  // student the press must stay what it was, a link to a page behind the
+  // instructor gate. So the popup opens only in a browser that carries an
+  // instructor session or the PIN, and PeekGate checks that for real, the
+  // way the gate does, before anything is drawn.
+  const [peek, setPeek] = useState(false);
+  const stop = (e) => e.stopPropagation();
+  const maybeHis = () => { try { return isInstructorEmail(getSession()?.user?.email) || !!savedPin(); } catch { return false; } };
+  return (
+    <>
+      <a href={studentHref(config, student)} className={className} style={{ color: "inherit", textDecoration: "none", ...(style || {}) }}
+        onClick={e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1 || !maybeHis()) return; e.preventDefault(); e.stopPropagation(); setPeek(true); }}
+        onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }} onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}>{children ?? who}</a>
+      {peek && typeof document !== "undefined" ? createPortal(
+        <div onClick={stop} onMouseDown={stop} onMouseUp={stop} onKeyDown={stop} onKeyUp={stop} onPointerDown={stop} onDragStart={stop}>
+          <PeekGate href={studentHref(config, student)} onClose={() => setPeek(false)}><StudentPeek config={config} data={data} name={name} onClose={() => setPeek(false)} /></PeekGate>
+        </div>, document.body) : null}
+    </>
+  );
+}
+
+// The popup, once the browser is known to be the instructor's. Anyone else is
+// sent to the student's page, where the gate asks who they are.
+function PeekGate({ href, onClose, children }) {
+  const ok = useInstructor();
+  useEffect(() => { if (ok === false) { onClose(); window.location.assign(href); } }, [ok]);   // eslint-disable-line react-hooks/exhaustive-deps
+  return ok === true ? children : null;
 }
 
 // The story assignment points at /<class>/visual-story, not at a worksheet.

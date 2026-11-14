@@ -16,6 +16,8 @@ import { useEffect, useState } from "react";
 import StudentPage, { studentHref } from "./StudentPage.jsx";
 import { embedOf } from "./GradeView.jsx";
 import { nameShown } from "./roster.js";
+import { ThemeStyle } from "./ThemeShell.jsx";
+import * as TOKENS from "./tokens.js";
 
 export default function StudentPeek({ config, data, name, onClose, startWork = null }) {
   // { href, title, embed } while a file is up. `startWork` opens straight on
@@ -42,7 +44,9 @@ export default function StudentPeek({ config, data, name, onClose, startWork = n
   };
 
   return (
-    <div className="pk-scrim" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div data-theme="clean" data-mode="day" className="ca-root pk-scrim" style={{ fontFamily: TOKENS.FONT.body }} onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      {/* Its own theme, so it reads the same over any page a name is on. */}
+      <ThemeStyle theme="clean" />
       <style>{CSS}</style>
       <div className={"pk" + (work ? " wide" : "")} role="dialog" aria-modal="true" aria-label={shown}>
         <div className="pk-bar">
@@ -62,7 +66,7 @@ export default function StudentPeek({ config, data, name, onClose, startWork = n
 
 const CSS = `
 .pk-scrim{position:fixed;inset:0;z-index:40;background:rgba(28,25,23,.42);display:flex;align-items:center;justify-content:center;padding:24px}
-.pk{width:100%;max-width:860px;max-height:100%;display:flex;flex-direction:column;background:var(--surface-page);border-radius:20px;box-shadow:0 24px 64px rgba(28,25,23,.28);overflow:hidden;text-align:left}
+.pk{width:100%;max-width:860px;max-height:100%;display:flex;flex-direction:column;background:var(--surface-page);border-radius:20px;box-shadow:0 24px 64px rgba(28,25,23,.28);overflow:hidden;text-align:left;font-size:16px;font-weight:400;line-height:normal;letter-spacing:normal;text-transform:none;white-space:normal;color:var(--text-primary);cursor:auto}
 .pk.wide{max-width:1180px;height:100%}
 .pk-bar{flex:none;display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 14px 8px 18px;background:var(--surface-card);border-bottom:1px solid var(--line-soft)}
 .pk-title{font-size:16px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

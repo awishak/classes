@@ -143,6 +143,7 @@ export function Open({ item, feed, act, where, peek }) {
   const openLink = item.name ? (href) => { if (!embedOf(href)) return false; peek(item, { href, title: href.replace(/^https?:\/\/(www\.)?/, "").split(/[/?#]/)[0] }); return true; } : undefined;
   const href = item.kind === "challenge" ? "/grades/" + config.id + "/flow?a=" + encodeURIComponent(item.aid)
     : item.name ? config.path + "/messages/" + encodeURIComponent(item.name) : "";
+  const canMove = item.kind !== "request" && item.kind !== "report";
   return (
     <div className="ib-open">
       {item.kind === "challenge" && item.name ? <ChallengeLine item={item} feed={feed} /> : null}
@@ -174,12 +175,21 @@ export function Open({ item, feed, act, where, peek }) {
       <div className="ib-acts">
         {item.name ? <button type="button" className="pt-btn pt-focus" disabled={!draft.trim()} onClick={send}>Send</button> : null}
         <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => donePatch(d, item))}>Done</button>
-        {where !== "later" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => laterPatch(d, item, morning(1)))}>Later: tomorrow</button> : null}
-        {where !== "later" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => laterPatch(d, item, morning(7)))}>Later: next week</button> : null}
+        {where !== "later" ? (
+          <select className="pt-chip pt-focus ib-pick" value="" aria-label="Later" onChange={e => { const days = Number(e.target.value); if (days) act(item, d => laterPatch(d, item, morning(days))); }}>
+            <option value="">Later</option><option value="1">Tomorrow</option><option value="7">Next week</option>
+          </select>
+        ) : null}
         {where === "later" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => laterPatch(d, item, 0))}>Back to inbox</button> : null}
         {asg && student ? <Reopen config={config} asg={asg} student={student} onDone={(till) => setDraft(d => d.trim() ? d : "I reopened it for you until " + till + ".")} /> : null}
-        {item.kind !== "request" && item.kind !== "report" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => routePatch(d, item, item.route === "late" ? "msg" : "late"))}>{item.route === "late" ? "Move to inbox" : "Move to To Grade"}</button> : null}
-        {href ? <a className="ib-link pt-focus" href={href}>{item.kind === "challenge" ? "Grade Flow" : "Thread"}</a> : null}
+        {/* The two things he reaches for least, under one menu, so the row stays short. */}
+        {canMove || href ? (
+          <select className="pt-chip pt-focus ib-pick" value="" aria-label="More" onChange={e => { if (e.target.value === "move") act(item, d => routePatch(d, item, item.route === "late" ? "msg" : "late")); else if (e.target.value === "go") window.location.assign(href); }}>
+            <option value="">More</option>
+            {canMove ? <option value="move">{item.route === "late" ? "Move to inbox" : "Move to To Grade"}</option> : null}
+            {href ? <option value="go">{item.kind === "challenge" ? "Grade Flow" : "Thread"}</option> : null}
+          </select>
+        ) : null}
       </div>
     </div>
   );
@@ -372,7 +382,6 @@ export const INBOX_CSS = `
 .ib-pick{font:inherit;font-size:15px;font-weight:500;max-width:120px;cursor:pointer}
 .ib-acts .pt-btn{background:var(--text-primary)}
 .ib-acts .pt-btn:disabled{opacity:.4}
-.ib-link{font-size:15px;font-weight:600;color:var(--text-primary);padding:0 6px}
 .ib-late{display:flex;flex-direction:column;gap:10px}
 @media (max-width:720px){
   .ib-classes{margin-left:0}
