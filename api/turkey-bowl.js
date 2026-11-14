@@ -24,7 +24,7 @@
 // The game opens Tuesday, November 17, 2026, at 12:00 AM Pacific. Before
 // then only the instructor can play or post.
 //
-// POST { action: "me" }                              -> { ok, open, name, tag, instructor }
+// POST { action: "me" }                              -> { ok, open, name, tag, instructor, photo }
 // POST { action: "board", visitor? }                 -> { ok, rows: [{ name, tag, score, level, me }] }
 // POST { action: "post", visitor?, name?, log }      -> { ok, result, best, rows }
 // POST { action: "admin" } (PIN or instructor)       -> { ok, rows } with emails, for the credit
@@ -54,7 +54,7 @@ const upsert = async (id, data) => {
   return r.ok;
 };
 
-/** The student behind an email, or null: { name (as they go by), email }. */
+/** The student behind an email, or null: { name (as they go by), email, roster (the roster's name) }. */
 async function studentOf(email) {
   if (!email) return null;
   const [plan, cls] = await Promise.all([
@@ -63,8 +63,14 @@ async function studentOf(email) {
   ]);
   const s = (plan?.[0]?.data?.students || []).find(x => x && lower(x.email) === email);
   if (!s) return null;
-  return { email, name: shownName((cls?.[0]?.data?.profiles || {})[s.name], s.name) };
+  return { email, roster: s.name, name: shownName((cls?.[0]?.data?.profiles || {})[s.name], s.name) };
 }
+// The photographs students gave the class in week one, a map of roster name
+// to picture. A student is handed their own, to wear as their coach's face;
+// the instructor can see all of them as the game will draw them. Nobody else
+// is ever sent a photograph, and none is on the leaderboard.
+const photosOf = async () => (await rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(CLASS.storage + "-photos")}&select=data`))?.[0]?.data || {};
+const picture = (v) => (typeof v === "string" && v.startsWith("data:image/") ? v : "");
 
 const cleanName = (n) => shortName(String(n || "").replace(/[^\p{L}\p{M}' .-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 40)).slice(0, 24);
 
@@ -89,14 +95,19 @@ export default async function handler(req, res) {
   if (action === "admin") {
     if (!instructor) return res.status(401).json({ ok: false, error: "Only the instructor can see that." });
     const list = await allRows();
-    return res.status(200).json({ ok: true, opens: OPENS, rows: list.sort((a, b) => b.best - a.best).map(d => ({ name: d.name, tag: d.tag || "", email: d.email || "", score: d.best, level: d.level || 1, runs: d.runs || 0, at: d.at || "" })) });
+    const [photos, cls] = await Promise.all([photosOf(), rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(CLASS.storage)}&select=data`)]);
+    const avatars = Object.keys(photos).filter(n => picture(photos[n])).sort().map(n => ({ name: shortName(shownName((cls?.[0]?.data?.profiles || {})[n], n)), photo: photos[n] }));
+    return res.status(200).json({ ok: true, opens: OPENS, avatars, rows: list.sort((a, b) => b.best - a.best).map(d => ({ name: d.name, tag: d.tag || "", email: d.email || "", score: d.best, level: d.level || 1, runs: d.runs || 0, at: d.at || "" })) });
   }
 
   const student = instructor ? null : await studentOf(email);
   const visitor = VISITOR.test(String(body.visitor || "")) ? String(body.visitor) : "";
   const key = student ? "s-" + slug(student.email) : instructor && email ? "i-" + slug(email) : visitor ? "v-" + visitor : "";
 
-  if (action === "me") return res.status(200).json({ ok: true, open: open || instructor, opens: OPENS, name: student ? shortName(student.name) : "", tag: student ? CLASS.tag : "", instructor });
+  if (action === "me") {
+    const photo = student ? picture((await photosOf())[student.roster]) : "";
+    return res.status(200).json({ ok: true, open: open || instructor, opens: OPENS, name: student ? shortName(student.name) : "", tag: student ? CLASS.tag : "", instructor, photo });
+  }
   if (action === "board") return res.status(200).json({ ok: true, rows: board(await allRows(), key) });
 
   if (action === "post") {

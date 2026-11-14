@@ -46,7 +46,7 @@ export const POWER = [
 const d = (id, level, points, who, scene, opts, after, extra = {}) => ({ id, level, points, who, scene, opts: opts.map(([k, text, then]) => ({ k, text, then })), after, ...extra });
 
 export const DECISIONS = [
-  d("breakfast", 1, 350, "", "It's 4 AM. Kickoff at the park is at 8. What do you eat?", [
+  d("breakfast", 1, 350, "", "It's 6:30 AM. Kickoff at the park is at 8. What do you eat?", [
     ["best", "Mashed potatoes and mac and cheese", "Energy all morning."],
     ["good", "Turkey, lots of it", "You are stronger, and slow by the second quarter."],
     ["bad", "Cranberry sauce, straight from the can", "Sugar high. Fast for three plays, then you crash."],
@@ -166,26 +166,47 @@ export const DECISIONS = [
 // in there randomly." Each run drops the three after three different sets of
 // plays, picked by the run's seed. The stacking answer is the class's own,
 // from the weekly game's question "What is stacking?"
+// Each is asked by somebody in the family, and in Dallas the same question
+// comes as a text on the coach's phone. Andrew, 2026-11-14, on the first
+// wording ("A voice from the sideline"): "your niece who goes to San Jose
+// State asks about the statue of Tommie Smith and John Carlos on her campus.
+// What do you say about them?" And: "two answers that look almost identical.
+// You gotta change that."
 export const POPS = [
-  d("pop-stacking", 0, 300, "crowd", "A voice from the sideline: \"Hey coach, quick one. What is stacking?\"", [
-    ["best", "When athletes of a certain race are disproportionately represented in specific sports or funneled into specific positions within a sport", "Right, word for word."],
-    ["good", "When coaches put players at certain positions because of stereotypes about their race", "That is the positions half. Stacking is also about whole sports."],
-    ["bad", "When media coverage reinforces racial stereotypes by only showing athletes in certain contexts", "That is about coverage. Stacking is about who gets put where."],
-    ["silly", "When three linebackers stand on each other's shoulders", "Illegal formation."],
+  d("pop-stacking", 0, 300, "cousin", "Your cousin, home from her first sociology of sport class: \"We learned about stacking today. Quick, coach. What is stacking?\"", [
+    ["best", "Athletes of one race end up over-represented in certain sports, or get funneled into certain positions within a sport", "Right. Both halves: whole sports, and positions inside a sport."],
+    ["good", "Coaches deciding who plays quarterback based on stereotypes about race", "That is one example of the positions half. Stacking is the wider pattern, across positions and whole sports."],
+    ["bad", "TV only showing athletes of color in highlight clips", "That is about media coverage. Stacking is about who gets put where."],
+    ["silly", "Three linebackers standing on each other's shoulders", "Illegal formation."],
   ], "Stacking: athletes of a certain race are disproportionately represented in specific sports or funneled into specific positions within a sport."),
-  d("pop-titleix", 0, 300, "crowd", "A voice from the sideline: \"Hey coach, what is Title IX?\"", [
-    ["best", "The 1972 federal law that bars sex discrimination in any education program that takes federal money, sports included", "Right."],
-    ["good", "The law that got girls and women their school sports teams", "That is what the law did for sports. The law covers all of education."],
-    ["bad", "A rule that men's and women's teams must get exactly the same budget", "Common mistake. The law is about equal opportunity, not identical spending."],
-    ["silly", "The ninth Super Bowl", "That was Super Bowl IX."],
+  d("pop-titleix", 0, 300, "niece", "Your niece: \"My high school has a boys' flag football team and no girls' team. Isn't there a law about that?\"", [
+    ["best", "\"Title IX. Since 1972, a school that takes federal money cannot discriminate by sex in any program, sports included. Go ask for a team.\"", "She is already writing the email."],
+    ["good", "\"There's a law that says schools have to have girls' sports.\"", "Close. The law never mentions sports. It bars sex discrimination in all of education, and sports fall under that."],
+    ["bad", "\"Title IX. Schools must spend exactly the same on boys' and girls' teams.\"", "Common mistake. The law is about equal opportunity, not identical budgets."],
+    ["silly", "\"That would be Super Bowl IX. Steelers, 16 to 6.\"", "She walks away."],
   ], "Title IX (1972): no person shall, on the basis of sex, be excluded from or discriminated against in any education program or activity receiving federal financial assistance."),
-  d("pop-1968", 0, 300, "crowd", "A voice from the sideline: \"Coach, who are Tommie Smith and John Carlos?\"", [
-    ["best", "The American sprinters who raised black-gloved fists on the medal stand at the 1968 Olympics in Mexico City, during the anthem, to protest racism", "Right. Peter Norman of Australia, the silver medalist, stood with them."],
-    ["good", "Two American runners who protested at the Olympics", "Right, and thin. It was 1968, Mexico City, the 200 meters, fists raised during the anthem."],
-    ["bad", "The NFL players who first knelt during the anthem in 2016", "That was Colin Kaepernick. Smith and Carlos came almost fifty years earlier."],
-    ["silly", "The Cowboys' starting backfield in 1968", "Jerry did not own the team in 1968."],
+  d("pop-1968", 0, 300, "niece", "Your niece goes to San Jose State. \"There's a statue on campus of Tommie Smith and John Carlos. What should I know about them?\"", [
+    ["best", "\"San Jose State sprinters. On the medal stand at the 1968 Olympics in Mexico City they raised black-gloved fists during the anthem to protest racism, and they were sent home for it.\"", "Right. The statue leaves the silver medal step empty so you can stand where Peter Norman stood."],
+    ["good", "\"Two of the fastest men in the world in 1968. They won Olympic gold and bronze in the 200 meters.\"", "True, and it skips why there is a statue. They raised their fists on the medal stand to protest racism."],
+    ["bad", "\"They were the first NFL players to kneel during the anthem.\"", "That was Colin Kaepernick in 2016. Smith and Carlos were sprinters, almost fifty years earlier."],
+    ["silly", "\"The founders of the campus parking department.\"", "She checks the plaque. No."],
   ], "Mexico City, 1968: Tommie Smith and John Carlos raised their fists on the 200 meter medal stand. The class reading is \"The White Man in That Photo,\" on Peter Norman."),
 ];
+/** How a pop question opens in Dallas, where the family is not on the sideline. */
+export const popScene = (dec, dallas) => (dallas ? "Your phone buzzes on the sideline. A text from home. " + dec.scene : dec.scene);
+
+// Somewhere to read more, opened in a new tab. Andrew, 2026-11-14: "always
+// include a link, if you can, where somebody can click and open up a new tab
+// and go somewhere else." The review is his 2017 article, open to anyone at
+// Santa Clara's Scholar Commons; the statute is Cornell's copy of 20 U.S.C.
+// 1681; the Peter Norman piece is on the class reading list.
+const REVIEW = { say: "Read the review this comes from", url: "https://scholarcommons.scu.edu/crt/vol36/iss4/1" };
+export const LINKS = {
+  stars: REVIEW, blowup: REVIEW, dissent: REVIEW, late: REVIEW, push: REVIEW, kickoff: REVIEW, culture: REVIEW, change: REVIEW, power: REVIEW,
+  receiver: REVIEW, speech: REVIEW, kicker: REVIEW, backup: REVIEW, twominute: REVIEW,
+  "pop-titleix": { say: "Read the law", url: "https://www.law.cornell.edu/uscode/text/20/1681" },
+  "pop-1968": { say: "Read \"The White Man in That Photo\"", url: "https://www.filmsforaction.org/articles/the-white-man-in-that-photo/" },
+};
 export const decisionOf = (id) => DECISIONS.find(x => x.id === id) || POPS.find(x => x.id === id) || null;
 
 // The order of the game. "d" is a decision, "p" is that many play calls,
