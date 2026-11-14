@@ -109,7 +109,7 @@ const SONGS = {
     drum: "k h s h k k s h | k h s h k s s s" },
   // "The Eyes of Texas" is sung to "I've Been Working on the Railroad" (1894). These are that tune's first
   // sixteen bars, melody and bass, read note for note from a MIDI of the traditional song. A "-" holds the note before it.
-  band: { dt: 0.125, voice: "brass",
+  band: { dt: 0.085, voice: "brass",
     lead: "G5 - - - - - D5 - G5 - - D5 G5 - - A5 | B5 - - - - - - . G5 - - - - - - . | C6 - - - - - C6 - G5 - - - A5 - - - | B5 - - - - - - - - - - - - - - . | G5 - - - - - D5 - G5 - - D5 G5 - - A5 | B5 - - - - - - . G5 - - - B5 - - B5 | B5 - - - A5 - - - A5 - - - B5 - - - | A5 - - - - - - - - - - - - - - . | A5 - - - - - A5 - G#5 - - A5 B5 - - A5 | G5 - - - - - - . D5 - - - - - - . | C6 - - - C6 - - C6 G5 - - G5 A5 - - A5 | B5 - - - - - - - - - - - - - - . | E5 - - - - - F#5 - G5 - - F#5 G5 - - E5 | D5 - - - - - - . G5 - - - - - - . | B5 - - - C6 - - - B5 - - - A5 - - - | G5 - - - - - - - - - - - - - - .",
     bass: "G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - D3 - - - | C3 - - - G3 - - - C3 - - - - - - . | G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - D3 - - - | G2 - - - D3 - - - G3 - - - - - - . | E3 - - - - - - . A2 - - - - - - . | D3 - - - E3 - - - F#3 - - - D3 - - - | D2 - - - A2 - - - D3 - - - - - - . | G2 - - - D3 - - - G3 - - - D3 - - - | C3 - - - F#3 - - - G3 - - - - - - . | B2 - - - F#3 - - - B3 - - - A3 - - - | C3 - - - G3 - - - C#3 - - - - - - . | D3 - - - G3 - - - E3 - - - D#3 - - - | D3 - - - - - - . D2 - - - - - - . | G2 - - - D3 - - - G3 - - - - - - .",
     drum: "k . . . s . s . k . . . s . s s" },
