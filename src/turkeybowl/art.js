@@ -84,24 +84,37 @@ export function kitchen(c, t) {
   B(c, 40, 168, 300, 16, "#a0703f", "#c08a52", "#7a5230"); B(c, 60, 184, 14, 176, "#7a5230"); B(c, 306, 184, 14, 176, "#7a5230");
   [["potato", 80], ["turkey", 150], ["cranberry", 220], ["pie", 290]].forEach(([k, x], i) => { ell(c, x + 2, 168, 30, 6, "rgba(0,0,0,.25)"); ell(c, x, 165, 29, 6, "#eef2f8"); c.save(); c.translate(x - 26, 112 + Math.sin(t * 2 + i) * 2); c.scale(1.6, 1.6); food(c, k); c.restore(); if (Math.floor(t * 3 + i) % 3 === 0) R(c, x - 4 + i * 2, 104 - ((t * 20 + i * 9) % 22), 3, 8, "rgba(255,255,255,.35)"); });
 }
-function crowd(c, t, y0, rows, tint) {
+// A stadium in a team's colours. Dallas is blue and silver in the afternoon;
+// Texas is burnt orange at night, with camera flashes in the stands. Words
+// and colours only: no team's logo is drawn anywhere.
+const HOUSE = {
+  dallas: { name: "DALLAS", a: "#1d3c8f", b: "#c9d3e6", seats: ["#1d3c8f", "#c9d3e6", "#2a56c6", "#8793bd", "#e8ecf5", "#16224f"], sky: [[0, "#060b22"], [1, "#16224f"]], turf: ["#35a85a", "#1f7a3c"], night: false },
+  texas: { name: "TEXAS", a: "#bf5700", b: "#ffffff", seats: ["#bf5700", "#e87a1e", "#ffffff", "#8a3f00", "#f4b27a", "#d96a10"], sky: [[0, "#02030a"], [1, "#0c1030"]], turf: ["#2f9a52", "#17602e"], night: true },
+};
+function crowd(c, t, y0, rows, house) {
   for (let row = 0; row < rows; row++) for (let i = 0; i < 81; i++) {
     const k = row * 81 + i, bob = Math.sin(t * 6 + k) > 0.6 ? -2 : 0, x = i * 8 + (row % 2) * 4, y = y0 + row * 13 + bob;
-    const col = ["#1d3c8f", "#c9d3e6", "#2a56c6", "#8793bd", "#e8ecf5", "#16224f"][Math.floor(rnd(k + 1) * 6)];
-    R(c, x, y + 5, 7, 8, tint ? darken(col, 0.2) : col); disc(c, x + 3.5, y + 3, 3, ["#e8b98a", "#c98a5a", "#8a5a3a", "#f0c8a0"][Math.floor(rnd(k + 7) * 4)]);
+    R(c, x, y + 5, 7, 8, house.seats[Math.floor(rnd(k + 1) * 6)]); disc(c, x + 3.5, y + 3, 3, ["#e8b98a", "#c98a5a", "#8a5a3a", "#f0c8a0"][Math.floor(rnd(k + 7) * 4)]);
   }
+  if (house.night) for (let i = 0; i < 5; i++) { const f = Math.floor(t * 9 + i * 3.7), x = rnd(f + i * 11) * W, y = y0 + rnd(f * 3 + i) * rows * 13; if ((t * 9 + i * 3.7) % 1 < 0.35) { disc(c, x, y, 7, "rgba(255,255,255,.55)"); disc(c, x, y, 3, "#fff"); } }
 }
-export function stadium(c, t, { midfield = false, scroll = 0, endzone = false } = {}) {
-  c.fillStyle = grad(c, 0, 130, [[0, "#060b22"], [1, "#16224f"]]); c.fillRect(0, 0, W, 130);
-  crowd(c, t, 22, 8, false);
-  B(c, 214, 4, 212, 66, "#05070f"); c.fillStyle = grad(c, 8, 66, [[0, "#1d3c8f"], [1, "#0f1e55"]]); c.fillRect(218, 8, 204, 58); star(c, 262, 37, 20, "#c9d3e6", "#0a1030"); c.fillStyle = "#e8ecf5"; c.font = "14px 'Press Start 2P', monospace"; c.fillText("DALLAS", 296, 44);
-  for (const x of [26, 614]) { R(c, x - 3, 0, 6, 126, "#39406b"); B(c, x - 20, 2, 40, 16, "#fff8d0"); const g = c.createRadialGradient(x, 10, 4, x, 10, 150); g.addColorStop(0, "rgba(255,248,208,.34)"); g.addColorStop(1, "rgba(255,248,208,0)"); c.fillStyle = g; c.fillRect(x - 150, 0, 300, 190); }
-  B(c, 0, 126, W, 14, "#c9d3e6", "#eef2f8", "#8793bd"); R(c, 0, 131, W, 4, "#1d3c8f");
-  c.fillStyle = grad(c, 140, H, [[0, "#35a85a"], [1, "#1f7a3c"]]); c.fillRect(0, 140, W, H - 140);
-  for (let k = -1; k < 9; k++) { const x = k * 80 - ((scroll % 80) + 80) % 80 + 80; if (Math.floor((x + scroll) / 80) % 2) R(c, x, 140, 80, 220, "rgba(0,0,0,.07)"); c.fillStyle = "rgba(255,255,255,.85)"; c.fillRect(Math.round(x), 148, 2, 200); for (let h = 0; h < 4; h++) R(c, x + 20 * h, 244, 2, 8, "rgba(255,255,255,.6)"); }
+export function stadium(c, t, { midfield = false, scroll = 0, endzone = false, team = "dallas" } = {}) {
+  const h = HOUSE[team] || HOUSE.dallas;
+  c.fillStyle = grad(c, 0, 130, h.sky); c.fillRect(0, 0, W, 130);
+  if (h.night) for (let i = 0; i < 30; i++) R(c, rnd(i + 900) * W, rnd(i + 950) * 20, 1, 1, "#fff");
+  crowd(c, t, 22, 8, h);
+  B(c, 214, 4, 212, 66, "#05070f"); c.fillStyle = grad(c, 8, 66, [[0, h.a], [1, darken(h.a, 0.5)]]); c.fillRect(218, 8, 204, 58);
+  if (team === "dallas") star(c, 262, 37, 20, "#c9d3e6", "#0a1030");
+  c.fillStyle = h.b; c.font = (team === "dallas" ? 14 : 22) + "px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText(h.name, team === "dallas" ? 348 : 320, team === "dallas" ? 44 : 48); c.textAlign = "left";
+  for (const x of [26, 614]) { R(c, x - 3, 0, 6, 126, "#39406b"); B(c, x - 20, 2, 40, 16, "#fff8d0"); const g = c.createRadialGradient(x, 10, 4, x, 10, h.night ? 210 : 150); g.addColorStop(0, h.night ? "rgba(255,248,208,.5)" : "rgba(255,248,208,.34)"); g.addColorStop(1, "rgba(255,248,208,0)"); c.fillStyle = g; c.fillRect(x - 210, 0, 420, 230); }
+  B(c, 0, 126, W, 14, h.b === "#ffffff" ? "#f4f1e6" : h.b, "#ffffff", "#8793bd"); R(c, 0, 131, W, 4, h.a);
+  c.fillStyle = grad(c, 140, H, [[0, h.turf[0]], [1, h.turf[1]]]); c.fillRect(0, 140, W, H - 140);
+  for (let k = -1; k < 9; k++) { const x = k * 80 - ((scroll % 80) + 80) % 80 + 80; if (Math.floor((x + scroll) / 80) % 2) R(c, x, 140, 80, 220, "rgba(0,0,0,.07)"); c.fillStyle = "rgba(255,255,255,.85)"; c.fillRect(Math.round(x), 148, 2, 200); for (let n = 0; n < 4; n++) R(c, x + 20 * n, 244, 2, 8, "rgba(255,255,255,.6)"); }
   R(c, 0, 148, W, 3, "rgba(255,255,255,.85)"); R(c, 0, 346, W, 3, "rgba(255,255,255,.85)");
-  if (endzone) { R(c, 560, 150, 80, 196, "#1d3c8f"); R(c, 556, 148, 4, 200, "#fff"); c.save(); c.translate(604, 250); c.rotate(Math.PI / 2); c.fillStyle = "#c9d3e6"; c.font = "18px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText("DALLAS", 0, 6); c.restore(); c.textAlign = "left"; }
-  if (midfield) { ell(c, 320, 248, 70, 40, INK); ell(c, 320, 248, 67, 38, "#c9d3e6"); c.save(); c.translate(320, 248); c.scale(1, 0.58); star(c, 0, 0, 52, "#1d3c8f", "#0a1030"); c.restore(); }
+  if (endzone) { R(c, 560, 150, 80, 196, h.a); R(c, 556, 148, 4, 200, "#fff"); c.save(); c.translate(604, 250); c.rotate(Math.PI / 2); c.fillStyle = h.b; c.font = "18px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText(h.name, 0, 6); c.restore(); c.textAlign = "left"; }
+  if (midfield && team === "dallas") { ell(c, 320, 248, 70, 40, INK); ell(c, 320, 248, 67, 38, "#c9d3e6"); c.save(); c.translate(320, 248); c.scale(1, 0.58); star(c, 0, 0, 52, "#1d3c8f", "#0a1030"); c.restore(); }
+  if (midfield && team === "texas") { c.save(); c.translate(320, 262); c.scale(1, 0.6); c.fillStyle = "rgba(0,0,0,.25)"; c.font = "64px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText("TEXAS", 3, 3); c.fillStyle = h.a; c.fillText("TEXAS", 0, 0); c.restore(); c.textAlign = "left"; }
+  if (h.night) { const v = c.createRadialGradient(320, 200, 160, 320, 200, 420); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,20,.45)"); c.fillStyle = v; c.fillRect(0, 0, W, H); }
 }
 export function locker(c, t) {
   c.fillStyle = grad(c, 0, H, [[0, "#232a4a"], [1, "#161a30"]]); c.fillRect(0, 0, W, H);
@@ -153,7 +166,7 @@ export function player(c, x, y, o = {}, frame = 0) {
   else { disc(c, 0, -38 + hy, 8.5, INK); disc(c, 0, -38 + hy, 7.5, skin); c.fillStyle = hair; c.beginPath(); c.arc(0, -39 + hy, 7.6, Math.PI, 0); c.fill(); if (o.long) { R(c, -8, -40 + hy, 3, 14, hair); R(c, 5, -40 + hy, 3, 10, hair); } R(c, 2, -38 + hy, 2, 2, INK); R(c, -3, -38 + hy, 2, 2, INK); }
   c.restore();
 }
-export function ball(c, x, y, spin = 0) { c.save(); c.translate(x, y); c.rotate(spin); ell(c, 0, 0, 8, 5, INK); ell(c, 0, 0, 7, 4, "#8a4b1e"); ell(c, -2, -1.5, 3, 1.2, "#b06a34"); R(c, -3, -0.5, 6, 1, "#fff"); c.restore(); }
+export function ball(c, x, y, tilt = 0) { c.save(); c.translate(x, y); c.rotate(tilt); ell(c, 0, 0, 8, 5, INK); ell(c, 0, 0, 7, 4, "#8a4b1e"); ell(c, -2, -1.5, 3, 1.2, "#b06a34"); R(c, -3, -0.5, 6, 1, "#fff"); c.restore(); }
 /** A turkey on the loose, for whenever things need to get stupid. */
 export function turkey(c, x, y, t, dir = 1) {
   c.save(); c.translate(x, y); c.scale(dir, 1); const bob = Math.sin(t * 14) * 2;
@@ -164,6 +177,47 @@ export function turkey(c, x, y, t, dir = 1) {
   c.fillStyle = "#f6c945"; c.beginPath(); c.moveTo(18, -34 + bob); c.lineTo(25, -32 + bob); c.lineTo(18, -30 + bob); c.fill(); R(c, 17, -30 + bob, 3, 7, "#c9402a");
   const leg = Math.sin(t * 14) * 4; R(c, -4 + leg, -4, 2, 5, "#f6a528"); R(c, 3 - leg, -4, 2, 5, "#f6a528");
   c.restore();
+}
+/** A big turkey that dances. Andrew, 2026-11-14: "The turkey should do things
+ * like the Macarena or the Dougie." The Macarena is the eight arm moves on
+ * the beat with a hip sway and a quarter turn; the Dougie is the lean and the
+ * hand across the head. kind is "macarena" or "dougie". */
+export function turkeyDance(c, x, y, t, kind = "macarena", s = 2) {
+  const beat = t * 2.2, step = Math.floor(beat) % 16, sway = Math.sin(beat * Math.PI) * (kind === "dougie" ? 9 : 4);
+  const face = kind === "macarena" && Math.floor(beat / 16) % 2 ? -1 : 1;
+  c.save(); c.translate(x + (kind === "dougie" ? sway : 0), y); c.scale(s * face, s);
+  ell(c, 0, 1, 16, 3, "rgba(0,0,0,.3)");
+  for (let i = -3; i <= 3; i++) { c.save(); c.translate(0, -18); c.rotate(i * 0.3 + sway * 0.01); B(c, -3, -30, 6, 24, LEAF[(i + 6) % 6]); c.restore(); }
+  c.save(); c.rotate(kind === "dougie" ? sway * 0.02 : 0);
+  ell(c, sway * 0.3, -15, 15, 13, INK); ell(c, sway * 0.3, -15, 14, 12, "#7a4a22"); ell(c, -3 + sway * 0.3, -18, 7, 5, "#96602e");
+  // wings as arms: [left, right] angles for each of the eight Macarena moves, each held two beats
+  const M = [[1.5, 0.2], [1.5, 1.5], [1.2, 1.5], [1.2, 1.2], [-2.4, 1.2], [-2.4, -2.4], [-0.5, -2.4], [-0.5, -0.5]];
+  const pose = kind === "macarena" ? M[Math.floor(step / 2) % 8] : [(Math.sin(beat * Math.PI) > 0 ? -2.6 : 0.4), (Math.sin(beat * Math.PI) > 0 ? 0.4 : -2.6)];
+  [[-12, pose[0], -1], [12, pose[1], 1]].forEach(([wx, ang, side]) => { c.save(); c.translate(wx + sway * 0.3, -20); c.rotate(side * (Math.PI / 2 - ang) * 0.7 + (side < 0 ? Math.PI : 0)); B(c, 0, -3, 14, 6, "#5a3418", "#96602e"); c.restore(); });
+  B(c, -3, -36, 6, 12, "#7a4a22"); disc(c, 0, -40, 7, INK); disc(c, 0, -40, 6, "#96602e"); R(c, -3, -42, 2, 2, "#fff"); R(c, 2, -42, 2, 2, "#fff"); R(c, -3, -42, 1, 1, INK); R(c, 2, -42, 1, 1, INK);
+  c.fillStyle = "#f6c945"; c.beginPath(); c.moveTo(-2, -39); c.lineTo(2, -39); c.lineTo(0, -34); c.fill(); R(c, 1, -36, 2, 6, "#c9402a");
+  c.restore();
+  const leg = Math.sin(beat * Math.PI) * 3; R(c, -5 + leg, -4, 3, 5, "#f6a528"); R(c, 3 - leg, -4, 3, 5, "#f6a528"); R(c, -7 + leg, 0, 6, 2, "#f6a528"); R(c, 2 - leg, 0, 6, 2, "#f6a528");
+  c.restore();
+}
+/** One member of the marching band: white and burnt orange, a tall hat with a plume, a horn or a drum, stepping on the beat. */
+function marcher(c, x, y, t, i) {
+  const up = Math.sin(t * 6.9 + (i % 2) * Math.PI) > 0, kind = i % 4;
+  ell(c, x, y + 1, 7, 2, "rgba(0,0,0,.3)");
+  B(c, x - 4, y - 10 + (up ? -2 : 0), 3, 10 - (up ? -2 : 0), "#f4f1e6"); B(c, x + 1, y - 10 + (up ? 0 : -2), 3, 10 - (up ? 0 : -2), "#f4f1e6");
+  B(c, x - 5, y - 22, 10, 13, "#bf5700", "#e87a1e", "#8a3f00"); R(c, x - 5, y - 17, 10, 2, "#fff");
+  disc(c, x, y - 26, 4.5, INK); disc(c, x, y - 26, 3.5, ["#e8b98a", "#c98a5a", "#8a5a3a", "#f0c8a0"][i % 4]);
+  B(c, x - 4, y - 36, 8, 8, "#f4f1e6", "#fff"); R(c, x - 1, y - 43, 2, 7, "#bf5700"); R(c, x - 5, y - 29, 10, 2, "#16121f");
+  if (kind === 3) { B(c, x + 3, y - 20, 9, 8, "#f4f1e6", "#fff", "#c9d3e6"); R(c, x + 3, y - 20, 9, 2, "#bf5700"); R(c, x + 5, y - 24 - (up ? 3 : 0), 2, 5, "#5a3a1e"); }
+  else { B(c, x + 3, y - 24, 9, 3, "#f6c945", "#ffe58a"); disc(c, x + 13, y - 23, kind === 0 ? 6 : 4, INK); disc(c, x + 13, y - 23, kind === 0 ? 5 : 3, "#f6c945"); disc(c, x + 13, y - 23, kind === 0 ? 2.5 : 1.5, "#a8820f"); }
+}
+/** The band on the field. It marches in as rows, then closes into the letters of a word. */
+export function band(c, t, e, word = "TEXAS") {
+  const GLYPH = { T: ["111", "010", "010", "010", "010"], E: ["111", "100", "110", "100", "111"], X: ["101", "101", "010", "101", "101"], A: ["010", "101", "111", "101", "101"], S: ["111", "100", "111", "001", "111"] };
+  const spots = []; word.split("").forEach((ch, n) => (GLYPH[ch] || []).forEach((row, ry) => row.split("").forEach((on, rx) => { if (on === "1") spots.push([92 + n * 96 + rx * 26, 196 + ry * 30]); })));
+  const p = Math.max(0, Math.min(1, (e - 2.5) / 3)), ease = p * p * (3 - 2 * p);
+  spots.map((sp, i) => { const sx = -40 + ((e * 70 + i * 14) % 720), sy = 200 + (i % 6) * 26; return [sx + (sp[0] - sx) * ease, sy + (sp[1] - sy) * ease, i]; })
+    .sort((a, b) => a[1] - b[1]).forEach(([x, y, i]) => marcher(c, x, y, t, i));
 }
 export function fireworks(c, t, n = 5) {
   for (let i = 0; i < n; i++) { const life = (t * 0.9 + i * 0.37) % 1, x = 60 + rnd(i + Math.floor(t * 0.9 + i * 0.37)) * 520, y = 40 + rnd(i * 3 + Math.floor(t * 0.9 + i * 0.37)) * 120; for (let k = 0; k < 14; k++) { const a = k * Math.PI / 7, r = life * 46; R(c, x + Math.cos(a) * r, y + Math.sin(a) * r + life * life * 18, 3, 3, ["#ffd75e", "#ff7b72", "#7fd3ff", "#6ee7a0", "#fff"][(i + k) % 5]); } }
@@ -229,6 +283,7 @@ export const CAST = {
   reporter: { skin: "#f0c8a0", hair: "#7a3b2a", shirt: "#b01e3a", long: true, mic: true, armUp: false },
   kicker: { skin: "#e8b98a", shirt: "#1b2a6b", pants: "#c9d3e6", helmet: "#c9d3e6", dot: "#1d3c8f", number: "3" },
   backup: { skin: "#c98a5a", shirt: "#1b2a6b", pants: "#c9d3e6", helmet: "#c9d3e6", dot: "#1d3c8f", number: "14" },
+  returner: { skin: "#8a5a3a", shirt: "#bf5700", pants: "#f4f1e6", helmet: "#f4f1e6", number: "5" },
   you: { skin: "#e8b98a", hair: "#3a2a1e", shirt: "#e2622a", number: "1" },
 };
 export function cast(c, who, x, y, s = 1, extra = {}) { if (who === "jerry") jerry(c, x, y, s, extra); else if (CAST[who]) person(c, x, y, who === "nephew" ? s * 0.7 : s, { ...CAST[who], ...extra }); }
@@ -236,9 +291,9 @@ export function cast(c, who, x, y, s = 1, extra = {}) { if (who === "jerry") jer
 // The sideline up close, for the halftime questions: the team on the bench,
 // the cooler, the field behind them.
 export function sideline(c, t, where, face) {
-  if (where === "dallas") { stadium(c, t); B(c, 20, 206, 460, 10, "#c9d3e6", "#eef2f8", "#8793bd"); for (let i = 0; i < 5; i++) person(c, 70 + i * 96, 216, 0.6, { ...CAST.kicker, number: String(11 + i * 13), skin: ["#e8b98a", "#8a5a3a", "#c98a5a"][i % 3] }); B(c, 30, 150, 40, 34, "#e2622a", "#f08a4b", "#a8551c"); B(c, 26, 143, 48, 9, "#fff"); }
-  else { park(c, t, { field: false }); B(c, 20, 206, 440, 10, "#a0703f", "#c08a52", "#7a5230"); ["uncle", "sister", "cousin", "brother", "nephew"].forEach((k, i) => cast(c, k, 70 + i * 88, 216, 0.6, { armUp: false, angry: false })); B(c, 20, 150, 46, 36, "#2f6fc4", "#5fa8e6", "#1d3c8f"); B(c, 15, 142, 56, 10, "#fff"); leaves(c, t, 40); }
-  person(c, 560, 226, 0.9, { ...CAST.you, face, shirt: where === "dallas" ? "#1b2440" : "#e2622a", number: where === "dallas" ? "" : "1", armUp: true, wave: t });
+  if (where === "park") { park(c, t, { field: false }); B(c, 20, 206, 440, 10, "#a0703f", "#c08a52", "#7a5230"); ["uncle", "sister", "cousin", "brother", "nephew"].forEach((k, i) => cast(c, k, 70 + i * 88, 216, 0.6, { armUp: false, angry: false })); B(c, 20, 150, 46, 36, "#2f6fc4", "#5fa8e6", "#1d3c8f"); B(c, 15, 142, 56, 10, "#fff"); leaves(c, t, 40); }
+  else { const tx = where === "texas"; stadium(c, t, { team: tx ? "texas" : "dallas" }); B(c, 20, 206, 460, 10, "#c9d3e6", "#eef2f8", "#8793bd"); for (let i = 0; i < 5; i++) person(c, 70 + i * 96, 216, 0.6, { ...CAST.kicker, ...(tx ? { shirt: "#bf5700", pants: "#f4f1e6", helmet: "#f4f1e6", dot: "" } : {}), number: String(11 + i * 13), skin: ["#e8b98a", "#8a5a3a", "#c98a5a"][i % 3] }); B(c, 30, 150, 40, 34, "#e2622a", "#f08a4b", "#a8551c"); B(c, 26, 143, 48, 9, "#fff"); }
+  person(c, 560, 226, 0.9, { ...CAST.you, face, shirt: where === "dallas" ? "#1b2440" : where === "texas" ? "#bf5700" : "#e2622a", number: where === "park" ? "1" : "", armUp: true, wave: t });
 }
 export function chute(c, x, y, t, face) {
   c.fillStyle = INK; c.beginPath(); c.arc(x, y - 70, 58, Math.PI, 0); c.fill();

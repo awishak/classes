@@ -43,11 +43,11 @@
       /* A question: what it is about and the situation on the left, the answers listed one to four on the right. */
       .card.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 1.6cqw; align-items: start; }
       .ask { display: flex; flex-direction: column; gap: 1cqw; }
-      .who { font-family: 'Press Start 2P', monospace; font-size: 1.15cqw; line-height: 1.6; color: #ffd75e; letter-spacing: .04em; }
-      .scene { margin: 0; font-size: 2.1cqw; font-weight: 600; line-height: 1.3; }
-      .say { margin: 0; font-size: 1.85cqw; line-height: 1.35; color: #dfe6ff; }
+      .who { font-family: 'Press Start 2P', monospace; font-size: 1.3cqw; line-height: 1.6; color: #ffd75e; letter-spacing: .04em; }
+      .scene { margin: 0; font-size: 2.3cqw; font-weight: 600; line-height: 1.3; letter-spacing: .02em; }
+      .say { margin: 0; font-size: 2.05cqw; font-weight: 500; letter-spacing: .02em; line-height: 1.35; color: #dfe6ff; }
       .opts { display: grid; grid-template-columns: 1fr; gap: 0.7cqw; }
-      .opt { font: 500 1.72cqw/1.22 'Pixelify Sans', 'Press Start 2P', monospace; text-align: left; color: #f4f1e6; background: #223380; border: 0.22cqw solid #5a74e0; border-radius: 1cqw; padding: 0.9cqw 1.2cqw; cursor: pointer; display: flex; align-items: center; gap: 1cqw; transition: transform .1s, background .12s, border-color .12s; }
+      .opt { letter-spacing: .02em; font: 600 1.9cqw/1.25 'Pixelify Sans', 'Press Start 2P', monospace; text-align: left; color: #f4f1e6; background: #223380; border: 0.22cqw solid #5a74e0; border-radius: 1cqw; padding: 0.9cqw 1.2cqw; cursor: pointer; display: flex; align-items: center; gap: 1cqw; transition: transform .1s, background .12s, border-color .12s; }
       .opt:hover, .opt:focus-visible { background: #2f46a8; border-color: #ffd75e; transform: translateY(-0.15cqw); outline: none; }
       .opt[aria-pressed="true"] { background: #1f7a3c; border-color: #ffd75e; }
       .opt canvas { width: 4.6cqw; height: 4.6cqw; image-rendering: pixelated; flex: none; }
@@ -64,7 +64,7 @@
       .rank { font-family: 'Press Start 2P', monospace; font-size: 1.7cqw; }
       .r-best { color: #6ee7a0; } .r-good { color: #8ecbff; } .r-bad { color: #ffb347; } .r-silly { color: #e0b0ff; } .r-over { color: #ff8a80; }
       .pts { font-family: 'Press Start 2P', monospace; font-size: 1.3cqw; color: #ffd75e; }
-      .why { margin: 0; font-size: 1.55cqw; line-height: 1.4; padding: 0.8cqw 1.2cqw; border-left: 0.4cqw solid #ffd75e; background: #0a1238; border-radius: 0 0.8cqw 0.8cqw 0; color: #e8eeff; }
+      .why { margin: 0; font-size: 1.75cqw; letter-spacing: .02em; line-height: 1.4; padding: 0.8cqw 1.2cqw; border-left: 0.4cqw solid #ffd75e; background: #0a1238; border-radius: 0 0.8cqw 0.8cqw 0; color: #e8eeff; }
       .more { font-size: 1.5cqw; font-weight: 600; color: #ffd75e; }
       .row { display: flex; gap: 1.2cqw; align-items: center; flex-wrap: wrap; }
       input[type=text] { font: 500 1.9cqw 'Pixelify Sans', 'Press Start 2P', monospace; padding: 1cqw 1.2cqw; border-radius: 0.9cqw; border: 0.22cqw solid #5a74e0; background: #070c24; color: #f4f1e6; width: 34cqw; }

@@ -27,7 +27,7 @@
 // student's photograph is cut down to a small pixel face and worn by their
 // coach.
 
-import { flowFor, decisionOf, judge, scoreRun, lookFor, orderFor, popScene, POWER, RANK_SAY, VERDICT, LINKS, MAX_SCORE, HIRED, shortName } from "./script.js";
+import { flowFor, decisionOf, judge, scoreRun, lookFor, orderFor, popScene, POWER, RANK_SAY, VERDICT, LINKS, MAX_SCORE, shortName } from "./script.js";
 import * as A from "./art.js";
 import { accessToken } from "../engine/session.js";
 
@@ -92,29 +92,53 @@ const sfx = {
   boo: () => tone(160, 0, 0.9, "sawtooth", 0.05, 110),
   jet: () => noise(0, 2.2, 0.04),
 };
-// The opening song: a square-wave tune over a triangle bass, written for this
-// game. Andrew, 2026-11-14: "you gotta have a better opening thing with a
-// better opening song." Eight bars that loop until the game starts.
-const NOTE = { C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196, A3: 220, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392, A4: 440, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880, B5: 987.77, C6: 1046.5 };
-const SONG = {
-  lead: "C5 . E5 G5 C6 . G5 E5 | A5 . G5 E5 G5 . . . | F5 . A5 C6 A5 . F5 D5 | G5 . B5 D5 G5 . . . | C5 . E5 G5 C6 . G5 E5 | A5 . C6 A5 G5 . E5 . | F5 E5 D5 F5 E5 D5 B4 D5 | C5 . G4 . C5 . . .",
-  bass: "C3 . G3 . C3 . G3 . | A3 . E3 . A3 . E3 . | F3 . C4 . F3 . C4 . | G3 . D3 . G3 . B3 . | C3 . G3 . C3 . G3 . | A3 . E3 . A3 . E3 . | F3 . F3 . G3 . G3 . | C3 . G3 . C3 . . .",
+// The music, all of it written for this game: the opening song, the drumline
+// under every play, and the marching band's tune in Austin. Andrew,
+// 2026-11-14: "a better opening song," "there needs to be music when the
+// football's being played," and "I want you to use great marching band
+// music." Brass is a sawtooth through a low-pass filter, three voices a note;
+// the drums are shaped noise and a falling sine.
+const NOTE = { G2: 98, A2: 110, B2: 123.47, C3: 130.81, D3: 146.83, E3: 164.81, F3: 174.61, G3: 196, A3: 220, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392, A4: 440, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880, B5: 987.77, C6: 1046.5 };
+const SONGS = {
+  title: { dt: 0.2, voice: "square",
+    lead: "C5 . E5 G5 C6 . G5 E5 | A5 . G5 E5 G5 . . . | F5 . A5 C6 A5 . F5 D5 | G5 . B5 D5 G5 . . . | C5 . E5 G5 C6 . G5 E5 | A5 . C6 A5 G5 . E5 . | F5 E5 D5 F5 E5 D5 B4 D5 | C5 . G4 . C5 . . .",
+    bass: "C3 . G3 . C3 . G3 . | A3 . E3 . A3 . E3 . | F3 . C4 . F3 . C4 . | G3 . D3 . G3 . B3 . | C3 . G3 . C3 . G3 . | A3 . E3 . A3 . E3 . | F3 . F3 . G3 . G3 . | C3 . G3 . C3 . . .",
+    drum: "k . h . s . h . | k . h . s . h h" },
+  play: { dt: 0.125, voice: "square",
+    lead: "E5 . E5 . G5 . E5 . | D5 . D5 . F5 . D5 . | C5 . E5 . G5 . C6 . | B4 . D5 . G5 . . .",
+    bass: "C3 C3 . C3 G2 . C3 . | D3 D3 . D3 A2 . D3 . | C3 C3 . C3 G2 . C3 . | G2 G2 . G2 B2 . D3 .",
+    drum: "k h s h k k s h | k h s h k s s s" },
+  band: { dt: 0.17, voice: "brass",
+    lead: "G4 . C5 . C5 . E5 . | G5 . . E5 C5 . . . | A4 . D5 . D5 . F5 . | A5 . . F5 D5 . . . | G4 . C5 . E5 . G5 . | C6 . B5 . A5 . G5 . | F5 . E5 . D5 . B4 . | C5 . . . C5 . . .",
+    bass: "C3 . G3 . C3 . G3 . | C3 . G3 . E3 . G3 . | D3 . A3 . D3 . A3 . | D3 . A3 . F3 . A3 . | C3 . G3 . C3 . G3 . | A2 . E3 . F3 . C3 . | D3 . G3 . G2 . B2 . | C3 . G2 . C3 . . .",
+    drum: "k . s s k . s . | k . s s k s s s" },
 };
-const music = { timer: null, at: 0, step: 0,
-  start() {
-    const a = ac(); if (!a || this.timer) return;
-    const lead = SONG.lead.replace(/\|/g, "").split(/\s+/).filter(Boolean), bass = SONG.bass.replace(/\|/g, "").split(/\s+/).filter(Boolean), dt = 0.2;
-    this.at = a.currentTime + 0.1; this.step = 0;
-    const play = (f, t, d, type, vol) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + 0.02); };
+const music = { timer: null, at: 0, step: 0, name: "",
+  start(name) {
+    const a = ac(); if (!a) return; if (this.name === name && this.timer) return; this.stop(); this.name = name;
+    const song = SONGS[name], seq = (x) => x.replace(/\|/g, "").split(/\s+/).filter(Boolean), lead = seq(song.lead), bass = seq(song.bass), drum = seq(song.drum), dt = song.dt;
+    this.at = a.currentTime + 0.08; this.step = 0;
+    const osc = (f, t, d, type, vol) => { const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.value = f; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + d); o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + 0.02); };
+    const brass = (f, t, d) => { const flt = a.createBiquadFilter(), g = a.createGain(); flt.type = "lowpass"; flt.frequency.setValueAtTime(700, t); flt.frequency.linearRampToValueAtTime(2600, t + 0.05); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.085, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + d); [-7, 0, 7].forEach(cents => { const o = a.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.detune.value = cents; o.connect(flt); o.start(t); o.stop(t + d + 0.02); }); flt.connect(g).connect(a.destination); };
+    const hit = (kind, t) => {
+      if (kind === "k") { const o = a.createOscillator(), g = a.createGain(); o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12); g.gain.setValueAtTime(0.22, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.14); o.connect(g).connect(a.destination); o.start(t); o.stop(t + 0.16); return; }
+      const len = kind === "s" ? 0.09 : 0.03, n = Math.floor(a.sampleRate * len), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0); for (let k = 0; k < n; k++) d[k] = (Math.random() * 2 - 1) * (1 - k / n);
+      const src = a.createBufferSource(), g = a.createGain(), f = a.createBiquadFilter(); f.type = "highpass"; f.frequency.value = kind === "s" ? 1400 : 6000; src.buffer = buf; g.gain.value = kind === "s" ? 0.11 : 0.035; src.connect(f).connect(g).connect(a.destination); src.start(t);
+    };
     this.timer = setInterval(() => {
-      while (this.at < a.currentTime + 0.35) {
-        const i = this.step % lead.length;
-        if (!muted) { if (NOTE[lead[i]]) { play(NOTE[lead[i]], this.at, dt * 1.7, "square", 0.05); play(NOTE[lead[i]] * 2, this.at, dt * 0.9, "square", 0.012); } if (NOTE[bass[i]]) play(NOTE[bass[i]], this.at, dt * 1.6, "triangle", 0.09); if (i % 2 === 1) { const n = Math.floor(a.sampleRate * 0.03), buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0); for (let k = 0; k < n; k++) d[k] = (Math.random() * 2 - 1) * (1 - k / n); const sN = a.createBufferSource(), g = a.createGain(); sN.buffer = buf; g.gain.value = 0.03; sN.connect(g).connect(a.destination); sN.start(this.at); } }
+      while (this.at < a.currentTime + 0.3) {
+        const i = this.step;
+        if (!muted) {
+          const L = NOTE[lead[i % lead.length]], Bn = NOTE[bass[i % bass.length]], D = drum[i % drum.length];
+          if (L) { if (song.voice === "brass") { brass(L, this.at, dt * 1.9); brass(L / 2, this.at, dt * 1.9); } else { osc(L, this.at, dt * 1.7, "square", 0.045); osc(L * 2, this.at, dt * 0.9, "square", 0.012); } }
+          if (Bn) osc(Bn, this.at, dt * 1.6, song.voice === "brass" ? "sawtooth" : "triangle", song.voice === "brass" ? 0.05 : 0.09);
+          if (D && D !== ".") hit(D, this.at);
+        }
         this.at += dt; this.step++;
       }
-    }, 80);
+    }, 70);
   },
-  stop() { clearInterval(this.timer); this.timer = null; },
+  stop() { clearInterval(this.timer); this.timer = null; this.name = ""; },
 };
 const muteBtn = $("mute");
 const showMute = () => { muteBtn.textContent = muted ? "Sound off" : "Sound on"; muteBtn.setAttribute("aria-pressed", String(muted)); };
@@ -180,8 +204,8 @@ const tally = () => scoreRun({ seed: G.seed, picks: G.picks, calls: G.calls });
 function showHud() {
   hud.textContent = "";
   if (!G) return;
-  const r = tally(), dallas = G.where === "dallas";
-  const left = el("div", "box"); left.append(document.createTextNode((dallas ? "DAL " : "YOU ") + G.us + "  " + (dallas ? "VIS " : "THEM ") + G.them), el("br"), document.createTextNode(G.q));
+  const r = tally(), names = { park: ["YOU", "RICK"], dallas: ["DAL", "VIS"], texas: ["TEX", "A&M"] }[G.where];
+  const left = el("div", "box"); left.append(document.createTextNode(names[0] + " " + G.us + "  " + names[1] + " " + G.them), el("br"), document.createTextNode(G.q));
   const right = el("div", "box");
   if (FACE) { const f = el("canvas"); f.width = 21; f.height = 24; f.getContext("2d").drawImage(FACE, 0, 0); right.append(f); }
   right.append(document.createTextNode("LEVEL " + r.level + "  "), el("b", "", r.score.toLocaleString("en-US")));
@@ -229,25 +253,27 @@ function drawReview() {
 backBtn.onclick = () => { if (!G || !G.log.length || G.busy) return; sfx.click(); review = review === null ? G.log.length - 1 : null; drawReview(); };
 
 // ─── where a question happens ───
+const TX = { shirt: "#bf5700", pants: "#f4f1e6", helmet: "#f4f1e6", dot: "" };
 function backdrop(id) {
-  const dallas = G.where === "dallas";
+  const where = G.where;
   if (id === "breakfast") return (t) => A.kitchen(c, t);
   if (id === "jet") return (t) => { A.sky(c, t); A.plane(c, 200 + Math.sin(t) * 10, 110 + Math.sin(t * 1.7) * 6); };
   if (id === "speech") return (t) => { A.locker(c, t); for (let i = 0; i < 4; i++) A.cast(c, "kicker", 360 + i * 70, 214, 0.62, { number: String(52 + i * 11) }); A.person(c, 200, 222, 0.95, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "", armUp: true, wave: t }); };
-  if (id === "push" || id === "commercial") return (t) => { A.sideline(c, t, dallas ? "dallas" : "park", FACE); if (id === "commercial") A.jerry(c, 150, 220, 0.9, { armUp: true, wave: t }); };
+  if (id === "push" || id === "commercial") return (t) => { A.sideline(c, t, where, FACE); if (id === "commercial") A.jerry(c, 150, 220, 0.9, { armUp: true, wave: t }); };
+  if (id === "twominute") return (t) => A.sideline(c, t, "texas", FACE);
   if (G.jerry) return (t) => { A.park(c, t, { time: "gold", field: false }); A.passerby(c, 120, 214, 0.6, "on"); A.leaves(c, t); };
-  if (dallas) return (t) => A.stadium(c, t, { midfield: true });
+  if (where !== "park") return (t) => A.stadium(c, t, { midfield: true, team: where });
   return (t) => { A.park(c, t); A.leaves(c, t); };
 }
 
 async function decide(id) {
-  const dec = decisionOf(id), pop = !dec.level, dallas = G.where === "dallas", base = backdrop(id);
+  const dec = decisionOf(id), pop = !dec.level, dallas = G.where !== "park", base = backdrop(id);
   const who = ["commercial", "push", "speech", "breakfast", "jet"].includes(id) ? "" : dec.level === 2 ? "jerry" : dec.who;
   const phone = pop && dallas;
   const start = now();
   paint = (t) => {
     base(t);
-    if (who && !phone) A.cast(c, who, 530, 218, 0.95, { wave: t - start });
+    if (who && !phone) A.cast(c, who, 530, 218, 0.95, { wave: t - start, ...(dec.level === 4 ? TX : {}) });
     if (phone) { c.save(); c.translate(500, 30 + (t - start < 1 ? Math.sin(t * 60) * 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 84, 150); c.fillStyle = "#dff3ff"; c.fillRect(6, 14, 72, 118); c.fillStyle = "#2f6fc4"; c.fillRect(12, 24, 56, 16); c.fillRect(12, 46, 44, 12); c.fillRect(12, 64, 50, 12); c.restore(); }
   };
   say("");
@@ -299,22 +325,24 @@ async function decide(id) {
   return got;
 }
 
-// ─── football: one choice a play ───
-// Andrew, 2026-11-14, after trying the dodging and the throwing meter: "the
-// football gameplay is not good ... it's way too quick ... there's way too
-// much football gameplay, and it needs to be something a lot simpler." So a
-// play is one choice. The screen shows how the other team is lined up, the
-// player picks run or pass, and the play runs slowly enough to watch. The
-// right choice scores, or moves the ball; the wrong one ends the drive.
+// ─── football: one play a game ───
+// Andrew, 2026-11-14: "The football stuff is really bad. I think we need to
+// cut the football stuff ... maybe a third," "plays need to be different. It
+// can't be the same play every time," and "there needs to be music when the
+// football's being played." So each of the three games has one play, the last
+// drive. The player sees how the other team is lined up and picks run or
+// pass; the right call is a touchdown and the wrong call is a punt. Which run
+// or which pass gets drawn changes from game to game, and a drumline plays
+// under every one.
 const TEAM = {
   park: { us: { jersey: "#e2622a", pants: "#3a4a66" }, them: { jersey: "#6a4bb0", pants: "#2a2a3a" } },
   dallas: { us: { jersey: "#1b2a6b", pants: "#c9d3e6", helmet: "#c9d3e6", dot: "#1d3c8f" }, them: { jersey: "#b01e3a", pants: "#f1e3c6", helmet: "#f6c945" } },
+  texas: { us: { jersey: "#bf5700", pants: "#f4f1e6", helmet: "#f4f1e6" }, them: { jersey: "#500000", pants: "#d9d2c4", helmet: "#500000" } },
 };
-const THEM = { park: "UNCLE RICK'S TEAM", dallas: "THE VISITORS" };
+const THEM = { park: "UNCLE RICK'S TEAM", dallas: "THE VISITORS", texas: "TEXAS A&M" };
 const HAIRS = ["#5a3a1e", "#1e1410", "#f3d67a", "#a8551c", "#e3e6ea"], SKINS = ["#e8b98a", "#c98a5a", "#8a5a3a", "#f0c8a0"];
 const kin = (where, side, i) => ({ ...TEAM[where][side], hair: HAIRS[(i + (side === "us" ? 0 : 2)) % 5], skin: SKINS[(i + (side === "us" ? 0 : 1)) % 4], long: where === "park" && i % 3 === 1, dir: side === "us" ? 1 : -1 });
-const field = (t, where, scroll, endzone) => { if (where === "park") A.park(c, t, { scroll }); else A.stadium(c, t, { scroll, endzone }); };
-const rng = (s) => { let x = 7; for (const ch of String(s)) x = (x * 31 + ch.charCodeAt(0)) >>> 0; return () => { x = (Math.imul(x, 1664525) + 1013904223) >>> 0; return x / 4294967296; }; };
+const field = (t, where, scroll, endzone) => { if (where === "park") A.park(c, t, { scroll }); else A.stadium(c, t, { scroll, endzone, team: where }); };
 const ease = (p) => p * p * (3 - 2 * p);
 /** Where the other team stands for a look: [x, y] for each of five. */
 const setOf = (look) => [0, 1, 2, 3, 4].map(i => look === "deep" ? [470 + (i % 2) * 50, 222 + i * 26] : look === "stack" ? [236 + (i % 2) * 10, 232 + i * 22] : look === "blitz" ? [250, 226 + i * 26] : [280 + (i % 2) * 40, 204 + i * 34]);
@@ -327,32 +355,48 @@ const lineup = (where, look) => (t) => {
   A.ball(c, 214, 344);   // on the ground at the line, where a football sits before the snap
   if (where === "park") A.leaves(c, t, 30);
 };
-/** One play, slowly. score: it ends in the end zone. Resolves when the play is over. */
-function playOut(call, good, where, look, score) {
+// Six plays, so no two games look alike: three ways to run and three ways to throw.
+const PLAYS = {
+  run: [
+    { name: "SWEEP RIGHT", path: (g) => [168 + 432 * g, 262 + Math.sin(g * Math.PI) * 70] },
+    { name: "UP THE MIDDLE", path: (g) => [168 + 432 * g, 276 + Math.sin(g * 14) * 5] },
+    { name: "REVERSE", path: (g) => (g < 0.25 ? [168 - g * 4 * 70, 262 - g * 4 * 40] : [98 + (g - 0.25) / 0.75 * 502, 222 + Math.sin((g - 0.25) / 0.75 * Math.PI) * 90]) },
+  ],
+  pass: [
+    { name: "DEEP BALL", depth: 330, arc: 120, after: 60 },
+    { name: "QUICK SLANT", depth: 150, arc: 40, after: 240 },
+    { name: "SCREEN PASS", depth: 40, arc: 70, after: 350 },
+  ],
+};
+/** One play, slowly. good: the right call, which ends in the end zone. Resolves when the play is over. */
+function playOut(call, good, where, look, which) {
   return new Promise(res => {
-    const start = now(), dur = 3.6, them = setOf(look);
+    const start = now(), dur = 4.4, them = setOf(look), v = PLAYS[call][which % 3];
     let done = false;
     paint = (t) => {
-      const p = clamp((t - start) / dur, 0, 1), go = ease(clamp((p - 0.12) / 0.8, 0, 1)), fr = p > 0.1 && p < 0.95 ? Math.floor(t * 8) : 0;
-      field(t, where, 0, score && good);
-      const end = good ? (score ? 600 : 470) : 196;
+      const p = clamp((t - start) / dur, 0, 1), go = ease(clamp((p - 0.1) / 0.82, 0, 1)), fr = p > 0.08 && p < 0.96 ? Math.floor(t * 8) : 0;
+      field(t, where, 0, good);
       for (let i = 0; i < 5; i++) A.player(c, 200 + go * 14, 226 + i * 26, kin(where, "us", i), fr + i);
+      const qb = { ...kin(where, "us", 6), face: where === "park" ? FACE : null };
       if (call === "run") {
-        A.player(c, 150, 290, { ...kin(where, "us", 6), face: where === "park" ? FACE : null }, 0);
-        const x = 168 + (end - 168) * go, y = 262 + Math.sin(go * 5) * (good ? 22 : 4);
-        them.forEach(([hx, hy], i) => { const tx = good ? x - 40 - i * 16 : x + 14, ty = good ? hy : y + (i - 2) * 9; A.player(c, hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
-        A.player(c, x, y, { ...kin(where, "us", 3), arms: good && score && p > 0.9 ? 1 : 0, down: !good && p > 0.8 }, fr);
+        A.player(c, 150, 290, qb, 0);
+        const g = good ? go : go * 0.07, [x, y] = v.path(g);
+        them.forEach(([hx, hy], i) => { const tx = good ? x - 46 - i * 18 : x + 16, ty = good ? hy + (y - hy) * 0.5 : y + (i - 2) * 9; A.player(c, hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
+        A.player(c, x, y, { ...kin(where, "us", 3), arms: good && p > 0.93 ? 1 : 0, down: !good && p > 0.7 }, fr);
         A.ball(c, x + 8, y - 24);
+        if (good && fr) for (let k = 0; k < 4; k++) { c.fillStyle = "rgba(255,255,255," + (0.3 - k * 0.07) + ")"; c.fillRect(x - 14 - k * 9, y - 6 + k, 6, 3); }   // dust at the runner's heels
       } else {
-        const qx = 150 - go * 16; A.player(c, qx, 290, { ...kin(where, "us", 6), face: where === "park" ? FACE : null, arms: p > 0.4 && p < 0.6 ? 1 : 0 }, 0);
-        const rx = 230 + (Math.min(end, 560) - 230) * ease(clamp(p / 0.62, 0, 1)), ry = 214, th = clamp((p - 0.42) / 0.3, 0, 1), caught = p >= 0.72;
-        const after = good && caught ? ease(clamp((p - 0.72) / 0.28, 0, 1)) * (score ? 60 : 20) : 0;
-        them.forEach(([hx, hy], i) => { const tx = good ? rx - 50 - i * 14 : (i === 0 ? rx - 6 : qx + 40 + i * 12), ty = good ? hy : (i === 0 ? ry + 4 : 290); A.player(c, hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
-        A.player(c, (good ? rx : Math.min(rx, 330)) + after, ry, { ...kin(where, "us", 3), arms: good && caught ? 1 : 0 }, fr);
-        if (p < 0.42) A.ball(c, qx + 10, 264);
-        else if (!caught) { const bx = qx + ((good ? rx : 330) - qx) * th; A.ball(c, bx, 264 + (ry - 30 - 264) * th - Math.sin(th * Math.PI) * 80, th * 6); }
-        else if (good) A.ball(c, rx + after + 8, ry - 26);
-        else A.ball(c, 352, Math.min(344, 240 + (p - 0.72) * 400));   // it falls, and it stays a football
+        const qx = 150 - go * 16, th0 = 0.34, th1 = 0.6;
+        A.player(c, qx, 290, { ...qb, arms: p > th0 && p < th1 ? 1 : 0 }, 0);
+        const rx0 = 230 + v.depth * ease(clamp(p / th1, 0, 1)), ry = 214, th = clamp((p - th0) / (th1 - th0), 0, 1), caught = p >= th1;
+        const run = good && caught ? ease(clamp((p - th1) / (1 - th1), 0, 1)) * v.after : 0, rx = rx0 + run;
+        them.forEach(([hx, hy], i) => { const tx = good ? rx - 56 - i * 16 : (i === 0 ? rx0 - 4 : qx + 40 + i * 12), ty = good ? hy + (ry - hy) * 0.5 : (i === 0 ? ry + 4 : 290); A.player(c, hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
+        A.player(c, good ? rx : Math.min(rx0, 330), ry, { ...kin(where, "us", 3), arms: good && caught && p < th1 + 0.08 ? 1 : 0 }, fr);
+        const aimX = good ? rx0 : Math.min(rx0, 330) + 26;
+        if (p < th0) A.ball(c, qx + 10, 264);
+        else if (!caught) A.ball(c, qx + (aimX - qx) * th, 264 + (ry - 30 - 264) * th - Math.sin(th * Math.PI) * v.arc, -0.5 + th);
+        else if (good) A.ball(c, rx + 8, ry - 24);
+        else A.ball(c, aimX + 10, Math.min(344, 240 + (p - th1) * 380));   // it falls, and it stays a football
       }
       if (where === "park") A.leaves(c, t, 30);
       if (p >= 1 && !done) { done = true; res(); }
@@ -365,16 +409,18 @@ const idle = (where) => (t) => {
   for (let i = 0; i < 5; i++) { A.player(c, 150 + (i % 2) * 30, 226 + i * 26, kin(where, "us", i), 0); A.player(c, 470 + (i % 2) * 30, 226 + i * 26, kin(where, "them", i), 0); }
   if (where === "park") A.leaves(c, t, 30);
 };
-/** Everybody celebrates, badly. */
+/** Everybody celebrates, and the turkey dances. */
 async function touchdown(where, text = "TOUCHDOWN!") {
   const start = now();
   paint = (t) => {
     const e = t - start; field(t, where, 1800, true);
-    for (let i = 0; i < 6; i++) A.player(c, 150 + i * 70, 300 - Math.abs(Math.sin(e * 5 + i)) * 40, { ...kin(where, "us", i), face: i === 2 && where === "park" ? FACE : null, arms: 1 }, 0);
+    for (let i = 0; i < 6; i++) A.player(c, 90 + i * 60, 318 - Math.abs(Math.sin(e * 5 + i)) * 30, { ...kin(where, "us", i), face: i === 2 && where === "park" ? FACE : null, arms: 1 }, 0);
+    A.turkeyDance(c, 500, 330, t, where === "dallas" ? "dougie" : "macarena", 2.4);
+    if (where === "texas") A.turkeyDance(c, 590, 336, t, "dougie", 1.6);
     if (where === "park") A.leaves(c, t, 80);
   };
   fx = { kind: "td", start }; say(text, "flash big"); sfx.td(); showHud();
-  await wait(2800); fx = null; say("");
+  await wait(4200); fx = null; say("");
 }
 /** The other team has the ball, and the player watches what they do with it. */
 async function theirDrive(where, scores, how) {
@@ -385,7 +431,7 @@ async function theirDrive(where, scores, how) {
     // Their runner goes right to left. Nobody is knocked flat: your side chases, and either catches the runner or does not.
     const e = t - start, x = scores ? Math.max(60, 560 - e * 130) : 470 - Math.min(e, 1.6) * 90, in_ = scores && x <= 60;
     field(t, where, 0, false);
-    if (scores) { const top = where === "park" ? 200 : 150, h = where === "park" ? 148 : 196; c.fillStyle = where === "park" ? "rgba(106,75,176,.6)" : "rgba(176,30,58,.75)"; c.fillRect(0, top, 96, h); c.fillStyle = "#fff"; c.fillRect(96, top - 2, 3, h + 4); }
+    if (scores) { const top = where === "park" ? 200 : 150, h = where === "park" ? 148 : 196; c.fillStyle = TEAM[where].them.jersey + "bb"; c.fillRect(0, top, 96, h); c.fillStyle = "#fff"; c.fillRect(96, top - 2, 3, h + 4); }
     for (let i = 0; i < 4; i++) A.player(c, scores ? x + 70 + i * 40 : Math.max(x - 26, 330 - i * 30 + Math.min(e, 1.6) * 20), 236 + i * 28, kin(where, "us", i), e < 4 ? Math.floor(t * 8) + i : 0);
     A.player(c, x, in_ ? 284 - Math.abs(Math.sin(e * 6)) * 24 : 284, { ...who, arms: in_ ? 1 : 0 }, in_ || (!scores && e > 1.6) ? 0 : Math.floor(t * 8));
     A.ball(c, x - 10, (in_ ? 258 - Math.abs(Math.sin(e * 6)) * 24 : 258));
@@ -395,15 +441,14 @@ async function theirDrive(where, scores, how) {
   if (scores) { say("TOUCHDOWN FOR " + THEM[where]); sfx.boo(); await wait(1700); }
   say(""); paint = idle(where);
 }
-const THEIR_TD = { park: ["Uncle Rick runs it in from twenty yards out.", "Aunt Linda catches a long pass in the end zone.", "Uncle Rick's team marches down the field and scores."], dallas: ["The visitors throw a long pass for a touchdown.", "The visitors run it in from the five.", "The visitors march down the field and score."] };
-const THEIR_STOP = { park: ["Your team stops them. They punt.", "Your nephew makes the tackle. They punt."], dallas: ["Your defense holds. They punt.", "Your defense stops them on third down."] };
 
-async function snap() {
-  const n = G.calls.length, look = lookFor(G.seed, n), where = G.where === "dallas" ? "dallas" : "park";
-  paint = lineup(where, look.k); say("");
+/** The one play of a game: the last drive. */
+async function plays() {
+  const n = G.calls.length, look = lookFor(G.seed, n), where = G.where;
+  if (!n) await lines("HOW THE FOOTBALL WORKS", ["Each game comes down to one drive, and you call the play.", "First you see how the other team is lined up. Then you choose RUN or PASS.", "If they are crowded close or rushing, pass over them. If they are far back or spread wide, run at them."], "Got it");
+  paint = lineup(where, look.k); say("THE LAST DRIVE");
   const k = card("YOUR BALL. CALL THE PLAY.", true);
   k.append(el("p", "scene", look.say));
-  k.append(el("p", "small", "Crowded close or rushing: pass over them. Far back or spread wide: run at them."));
   const calls = el("div", "calls"); k.append(calls);
   const call = await new Promise(res => {
     const mk = (v) => { const b = el("button", "call " + v, v.toUpperCase()); b.type = "button"; b.onclick = () => { onKey = null; res(v); }; calls.append(b); };
@@ -411,28 +456,15 @@ async function snap() {
     onKey = (e) => { if (e.key === "r" || e.key === "1") { onKey = null; res("run"); } else if (e.key === "p" || e.key === "2") { onKey = null; res("pass"); } };
   });
   G.calls.push(call); G.busy = true; showBack();
-  const good = look.beat === call;
-  ui.textContent = ""; sfx.snap();
-  // The right call is a touchdown. The wrong call is a punt. Nothing in between.
-  await playOut(call, good, where, look.k, good);
-  G.busy = false; showBack();
+  const good = look.beat === call, which = (n + (G.seed.charCodeAt(0) % 3)) % 3;
+  ui.textContent = ""; sfx.snap(); music.start("play"); say(PLAYS[call][which].name);
+  await playOut(call, good, where, look.k, which);
+  music.stop(); G.busy = false; showBack();
   let word;
   if (good) { G.us += 7; word = "Touchdown."; await touchdown(where); }
-  else { word = call === "run" ? "Stopped at the line. You punt." : "Incomplete. You punt."; say(call === "run" ? "STOPPED AT THE LINE" : "INCOMPLETE"); sfx.bad(); await wait(1600); say("YOU PUNT."); await wait(1500); }
-  say(""); showHud();
-  G.log.push({ who: "A PLAY", lines: ["The other team: " + look.say, "You called a " + call + ". " + word] }); showBack();
-}
-async function plays() {
-  G.window++;
-  const where = G.where === "dallas" ? "dallas" : "park";
-  await snap();
-  // What the other team does with the ball. The story needs 21 to 14 at the park's half and down ten at Dallas's.
-  // Plays 1 and 2 are the park's first half, 3 its second; 4 is Dallas before halftime and 5 after.
-  const theirs = { 1: 7, 2: 14, 4: 7, 5: 20 }[G.window];
-  const r = rng(G.seed + "their" + G.window);
-  const last = G.window === 3;
-  if (theirs && theirs > G.them) { await theirDrive(where, true, THEIR_TD[where][Math.floor(r() * 3)]); G.them = theirs; showHud(); await wait(400); }
-  else if (!last) await theirDrive(where, false, THEIR_STOP[where][Math.floor(r() * 2)]);
+  else { word = call === "run" ? "Stopped at the line. You punt." : "Incomplete. You punt."; say(call === "run" ? "STOPPED AT THE LINE" : "INCOMPLETE"); sfx.bad(); await wait(1700); say("YOU PUNT."); await wait(1500); }
+  say(""); showHud(); paint = idle(where);
+  G.log.push({ who: "THE LAST DRIVE", lines: ["The other team: " + look.say, "You called a " + call + ", " + PLAYS[call][which].name.toLowerCase() + ". " + word] }); showBack();
 }
 
 // ─── cut scenes ───
@@ -442,20 +474,17 @@ async function scene(name) {
     paint = (t) => {
       const p = Math.min(1, (t - start) / 2.6); A.park(c, t);
       for (let i = 0; i < 5; i++) { A.player(c, 80 + p * 60, 226 + i * 26, kin("park", "them", i), Math.floor(t * 9)); A.player(c, 560 - p * 40, 226 + i * 26, { ...kin("park", "us", i), dir: -1, face: i === 2 ? FACE : null }, Math.floor(t * 9)); }
-      A.ball(c, 140 + p * 380, 240 - Math.sin(p * Math.PI) * 150, t * 14); A.leaves(c, t, 70);
+      A.ball(c, 140 + p * 380, 240 - Math.sin(p * Math.PI) * 150, -0.6 + p); A.leaves(c, t, 70);
     };
     say("KICKOFF", "big"); sfx.whistle(); showHud();
-    await lines("THE GAME STARTS", ["It's 8 AM. The leaves are coming down, and Uncle Rick's team kicks off to yours."], "Continue");
-    await lines("HOW THE FOOTBALL WORKS", ["When your team has the ball, you call the play.", "First you see how the other team is lined up. Then you choose RUN or PASS.", "If they are crowded close or rushing, pass over them. If they are far back or spread wide, run at them."], "Got it");
+    await lines("THE GAME STARTS", ["It's 8 AM. The leaves are coming down, and Uncle Rick's team kicks off to yours."]);
     say("");
   } else if (name === "half1") {
-    G.q = "HALF";
-    const short = G.us < 14;
-    G.half = 2; G.us = 14; G.them = Math.max(G.them, 21);
+    G.q = "HALF"; G.half = 2; G.us = 14; G.them = 21;
     paint = (t) => A.sideline(c, t, "park", FACE);
     say("HALFTIME  14 - 21"); sfx.whistle(); showHud();
-    await lines("HALFTIME", [short ? "Your nephew returns a kick for a touchdown, and your team gets to 14 points by halftime. Then Uncle Rick's team scores on the last play of the half." : "Uncle Rick's team scores on the last play of the half.", "You are losing 21 to 14. Your team sits on the bench and looks at you."]);
-    say(""); G.q = "Q3";
+    await lines("HALFTIME", ["Both teams have scored twice. Then Uncle Rick's team scores on the last play of the half.", "You are losing 21 to 14. Your team sits on the bench and looks at you."]);
+    say(""); G.q = "Q4";
   } else if (name === "jerry") {
     G.jerry = true; G.q = "FINAL"; showHud(); const start = now();
     paint = (t) => { const e = t - start; A.park(c, t, { time: "gold", field: false }); A.passerby(c, Math.max(500, 700 - e * 46), 216, 0.72, e > 5.4 ? "down" : "on"); A.jerry(c, Math.min(180, -80 + e * 60), 226, 0.95, { wave: e > 5 ? e : 0, armUp: e > 5 }); A.leaves(c, t, 90); };
@@ -473,12 +502,34 @@ async function scene(name) {
     await lines("JERRY'S JET", ["Jerry: \"You're hired. For today. Wheels up.\""]);
     say("");
   } else if (name === "dallas") {
-    G.where = "dallas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1; G.jerry = false; G.yard = 25;
+    G.where = "dallas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1; G.jerry = false;
     paint = (t) => { A.stadium(c, t, { midfield: true }); A.fireworks(c, t, 4); };
     say("DALLAS", "big"); sfx.cheer(); showHud();
     post();   // reaching Level 3 is the credit, so the server hears about the landing
-    await lines("THANKSGIVING DAY", ["The stadium, the big screen, a blue star on silver at midfield, a full crowd, cameras everywhere.", "Same football, bigger."]);
+    await lines("THANKSGIVING AFTERNOON", ["The stadium, the big screen, a blue star on silver at midfield, a full crowd, cameras everywhere.", "You are the head coach of the Dallas Cowboys."]);
     say("");
+  } else if (name === "texas") {
+    // The third game. "You get the real best head coaching job, which is the Texas Longhorns against Texas A&M. And that's a night game."
+    const start = now();
+    paint = (t) => { A.stadium(c, t, { midfield: true }); A.jerry(c, 150, 226, 0.9, { armUp: true, wave: t }); A.person(c, 470, 226, 0.9, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "" }); c.save(); c.translate(520, 40 + Math.sin(t * 60) * (t - start < 2 ? 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 60, 106); c.fillStyle = "#bf5700"; c.fillRect(5, 10, 50, 84); c.fillStyle = "#fff"; c.font = "8px 'Press Start 2P', monospace"; c.fillText("TEXAS", 9, 56); c.restore(); };
+    say("YOUR PHONE RINGS"); sfx.good();
+    await lines("ONE MORE CALL", ["It's the University of Texas. Their head coach quit an hour ago, and they play Texas A&M tonight.", "They watched you win in Dallas. They want you in Austin by kickoff."], "Go to Austin");
+    G.where = "texas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1;
+    const s2 = now(); music.start("band");
+    paint = (t) => { A.stadium(c, t, { team: "texas" }); A.band(c, t, t - s2); A.fireworks(c, t, 3); };
+    ui.textContent = ""; say("TEXAS vs TEXAS A&M"); sfx.cheer(); showHud();
+    await wait(7000);   // the band has the field to itself before any words come up
+    await lines("THANKSGIVING NIGHT", ["A night game in Austin. A hundred thousand people in burnt orange, and the band is on the field.", "Win this one and you are the champion of the whole day."]);
+    music.stop(); say("");
+  } else if (name === "band") {
+    // Halftime in Austin: the band, and the turkey with the band.
+    G.q = "HALF"; G.half = 2; G.us = 10; G.them = 14; showHud();
+    const start = now(); music.start("band");
+    paint = (t) => { const e = t - start; A.stadium(c, t, { team: "texas" }); A.band(c, t, e); if (e > 5) { A.turkeyDance(c, 320, 346, t, "macarena", 2.6); A.turkeyDance(c, 90, 346, t, "dougie", 1.8); A.turkeyDance(c, 550, 346, t, "dougie", 1.8); } };
+    ui.textContent = ""; say("HALFTIME  10 - 14"); sfx.whistle();
+    await wait(5200); say("THE TURKEY JOINS THE BAND", "line"); sfx.gobble(0, 3); await wait(6000);
+    await lines("HALFTIME IN AUSTIN", ["The band spells TEXAS across the field. Then a turkey walks out and does the Macarena, and a hundred thousand people do it too.", "You are losing to Texas A&M, 14 to 10."]);
+    music.stop(); say(""); G.q = "Q4";
   }
 }
 
@@ -491,7 +542,7 @@ function boardCard(k, rows) {
   ["#", "COACH", "SCORE", "LEVEL"].forEach(h => head.append(el("th", "", h))); tb.append(head);
   const mine = rows.findIndex(r => r.me);
   rows.forEach((r, i) => {
-    if (i >= 8 && i !== mine) return;
+    if (i >= 6 && i !== mine) return;
     const tr = el("tr", r.me ? "me" : ""); tr.append(el("td", "", String(i + 1)));
     const name = el("td", "", r.name); if (r.tag) name.append(el("span", "tag", r.tag)); tr.append(name, el("td", "", r.score.toLocaleString("en-US")), el("td", "", String(r.level)));
     tb.append(tr);
@@ -507,31 +558,47 @@ async function checkpoint(who, textLines, label) {
   await next(k, label);
 }
 
+// A game is won or lost on how the player coached, which is the level's points.
+// The scoreboard is then made to say so, in words, whichever way the last drive went.
+async function finish(where, won) {
+  const name = THEM[where], scored = G.us > (where === "park" ? 14 : where === "dallas" ? 7 : 10);
+  if (won) {
+    if (!scored) { say("YOUR DEFENSE GETS THE BALL BACK"); await wait(1700); G.us += 7; await touchdown(where, "TOUCHDOWN ANYWAY!"); }
+    if (G.us <= G.them) { say("ONE MORE STOP, ONE MORE SCORE"); await wait(1700); while (G.us <= G.them) G.us += 7; await touchdown(where); }
+  } else if (G.us >= G.them || scored) {
+    await theirDrive(where, true, name.charAt(0) + name.slice(1).toLowerCase().replace("a&m", "A&M").replace("rick", "Rick") + " scores in the last minute.");
+    G.them = Math.max(G.them, G.us) + 7;
+  }
+  G.q = "FINAL"; showHud();
+}
 async function gate(n) {
   const r = tally(), passed = r.lost !== n;
   if (n === 1) {
-    if (passed) {
-      if (G.us <= G.them) { say("LAST PLAY OF THE GAME"); await wait(1200); while (G.us <= G.them) { G.us += 7; await touchdown("park"); } }
-      G.q = "FINAL"; showHud(); paint = (t) => A.sideline(c, t, "park", FACE); fx = { kind: "td", start: now() }; say("YOU WIN  " + G.us + " - " + G.them, "big");
-      await checkpoint("LEVEL 1 COMPLETE", ["Your family wins the Turkey Bowl."], "Go home?"); fx = null;
-    } else {
-      if (G.us >= G.them) { await theirDrive("park", true, "Uncle Rick's team scores late, and then scores again."); G.them = G.us + 7; }
-      G.q = "FINAL"; paint = (t) => A.sideline(c, t, "park", FACE); say("FINAL  " + G.us + " - " + G.them); sfx.over(); showHud();
-      await checkpoint("YOU LOSE THE TURKEY BOWL", ["The team stopped listening somewhere in the second quarter. Your uncle will bring this up at dinner."], "Play again");
-    }
+    await finish("park", passed);
+    paint = (t) => { A.sideline(c, t, "park", FACE); if (passed) A.turkeyDance(c, 300, 346, t, "macarena", 2.2); };
+    if (passed) { fx = { kind: "td", start: now() }; say("YOU WIN  " + G.us + " - " + G.them, "big"); await checkpoint("LEVEL 1 COMPLETE", ["Your family wins the Turkey Bowl."], "Go home?"); fx = null; }
+    else { say("FINAL  " + G.us + " - " + G.them); sfx.over(); await checkpoint("YOU LOSE THE TURKEY BOWL", ["The team stopped listening to you somewhere in the second quarter. Your uncle will bring this up at dinner."], "Play again"); }
   } else if (n === 2) {
     paint = (t) => { A.park(c, t, { time: "gold", field: false }); A.jerry(c, 320, 226, 0.95, { armUp: passed, wave: t }); A.leaves(c, t); };
     if (passed) { sfx.good(); fx = { kind: "best", start: now() }; await checkpoint("LEVEL 2 COMPLETE", ["Jerry: \"I like you. You're coaching my team today.\""], "To the jet"); fx = null; }
     else { sfx.over(); await checkpoint("NO JOB", ["Jerry: \"I'll keep looking. Happy Thanksgiving.\""], "Play again"); }
+  } else if (n === 3) {
+    await finish("dallas", passed);
+    paint = (t) => { A.stadium(c, t, { midfield: true }); A.jerry(c, 150, 226, 0.9, passed ? { armUp: true, wave: t } : {}); A.person(c, 480, 226, 0.88, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "", armUp: passed, sad: !passed, wave: t + 1 }); };
+    if (passed) { fx = { kind: "td", start: now() }; say("DALLAS WINS  " + G.us + " - " + G.them, "big"); await checkpoint("LEVEL 3 COMPLETE", ["Jerry walks onto the field: \"You're my coach for the rest of the season.\""], "Continue"); fx = null; }
+    else { say("FINAL  " + G.us + " - " + G.them); sfx.over(); await checkpoint("THANKS FOR COMING", ["Jerry shakes your hand: \"Thanks for coming.\""], "Play again"); }
   } else {
-    const both = (extra) => (t) => { A.stadium(c, t, { midfield: true }); A.jerry(c, 150, 226, 0.9, extra ? { armUp: true, wave: t } : {}); A.person(c, 480, 226, 0.88, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "", armUp: extra, sad: !extra, wave: t + 1 }); };
+    await finish("texas", passed);
+    const start = now();
     if (passed) {
-      say("LAST PLAY"); await wait(1100); G.us += 7; await touchdown("dallas"); G.q = "FINAL"; showHud();
-      paint = both(true); fx = { kind: "td", start: now() }; say(r.hired ? "HIRED!" : "DALLAS WINS", "flash big");
-      await checkpoint(r.hired ? "YOU GOT THE JOB" : "A WIN IN DALLAS", [r.hired ? "Jerry walks onto the field: \"You're my coach for the rest of the season.\"" : "Jerry shakes your hand: \"Good win. I'm going another direction next week.\" Score " + HIRED.toLocaleString("en-US") + " or more and he keeps you."], "Play again"); fx = null;
+      music.start("band");
+      paint = (t) => { A.stadium(c, t, { team: "texas" }); A.band(c, t, 10 + (t - start)); A.turkeyDance(c, 320, 350, t, "macarena", 2.8); A.person(c, 560, 226, 0.85, { ...A.CAST.you, face: FACE, shirt: "#bf5700", number: "", armUp: true, wave: t }); A.fireworks(c, t, 8); };
+      fx = { kind: "td", start }; say("CHAMPION!", "flash big"); sfx.cheer(); ui.textContent = "";
+      await wait(6500);   // the band and the turkey get the whole screen before the score card comes up
+      await checkpoint("YOU ARE THE CHAMPION", ["Texas beats Texas A&M, " + G.us + " to " + G.them + ". The band plays, the turkey dances, and you won all three games in one day."], "Play again"); fx = null; music.stop();
     } else {
-      G.q = "FINAL"; paint = both(false); say("FINAL  " + G.us + " - " + G.them); sfx.over(); showHud();
-      await checkpoint("THANKS FOR COMING", ["Jerry shakes your hand: \"Thanks for coming.\""], "Play again");
+      paint = (t) => { A.sideline(c, t, "texas", FACE); }; say("FINAL  " + G.us + " - " + G.them); sfx.over();
+      await checkpoint("SO CLOSE", ["Texas A&M wins in Austin. You still won two games today, which is two more than most people."], "Play again");
     }
   }
   return passed;
@@ -543,7 +610,7 @@ async function ending(id) {
     paint = (t) => {
       const e = t - start;
       if (e < 3.4) { A.sky(c, t); A.plane(c, 60, 290); A.jerry(c, 430, 226, 0.95, { angry: true, grin: false }); A.person(c, 250, 226, 0.95, { ...A.CAST.you, face: FACE, hat: "#e8dcc0", armUp: true, wave: t }); }
-      else { const y = Math.min(190, -40 + (e - 3.4) * 46), x = 320 + Math.sin(e * 1.4) * 60; A.stadium(c, t, { midfield: true }); A.chute(c, x, y, t, FACE); A.turkey(c, x + 80, y - 20, t); }
+      else { const y = Math.min(190, -40 + (e - 3.4) * 46), x = 320 + Math.sin(e * 1.4) * 60; A.stadium(c, t, { midfield: true }); A.chute(c, x, y, t, FACE); A.turkeyDance(c, 540, 340, t, "dougie", 2); }
     };
     say("FIRED", "big"); await wait(3400); fx = null; say("YOU PARACHUTE IN ANYWAY"); sfx.silly(); await wait(5600);
   } else {
@@ -557,27 +624,28 @@ async function run() {
   showHud(); showBack();
   const flow = flowFor(G.seed);
   const due = []; let owed = 0; flow.forEach((f, i) => { owed += f.p || 0; due[i] = owed; });
-  // A reload lands at the start of the step that was under way, so calls made inside that step are taken back.
+  // A reload lands at the start of the step that was under way, so a call made inside that step is taken back.
   G.calls.length = Math.min(G.calls.length, G.step > 0 ? due[G.step - 1] : 0);
   for (let i = G.step; i < flow.length; i++) {
     const step = flow[i];
     if (step.s === "title") { G.step = i + 1; continue; }
     if (step.s) await scene(step.s);
     else if (step.d) {
-      if (step.d === "twominute") { G.q = "Q4"; G.noTd = true; const want = Math.max(G.them, G.us + 4); if (want !== G.them || G.us !== want - 4) { say("LATE IN THE FOURTH QUARTER"); await wait(1500); say(""); } G.them = want; G.us = want - 4; showHud(); }
-      if (step.d === "commercial") { G.q = "HALF"; if (G.us < 7) { say("DALLAS SCORES BEFORE THE HALF"); G.us = 7; showHud(); await wait(1800); } G.half = 2; G.us = 7; if (G.them < 17) { say("THE VISITORS SCORE TEN MORE BEFORE THE HALF"); await wait(2000); } G.them = Math.max(G.them, 17); say("HALFTIME  7 - 17"); sfx.whistle(); showHud(); await wait(1500); say(""); }
-      if (step.d === "kicker") G.q = "Q3";
-      if (step.d === "backup") G.q = "Q4";
+      // The story's scores, said out loud before the question that depends on them.
+      if (step.d === "commercial") { G.q = "HALF"; G.half = 2; G.us = 7; G.them = 17; say("HALFTIME IN DALLAS  7 - 17"); sfx.whistle(); showHud(); await wait(1900); say(""); }
+      if (step.d === "speech") G.q = "Q4";
+      if (step.d === "kicker") { G.q = "Q2"; G.us = 7; G.them = 7; showHud(); }
+      if (step.d === "twominute") { G.q = "Q4"; G.them = 21; G.us = 17; say("TWO MINUTES LEFT  17 - 21"); showHud(); await wait(1900); say(""); }
       const got = await decide(step.d);
+      ui.textContent = "";   // the answered card comes down before anything else is drawn
       if (got.over) { await ending(step.d); store.set(SAVE, null); return; }
-      if (step.d === "kicker" && (got.rank === "best" || got.rank === "good")) { G.us += 3; paint = idle("dallas"); say("YOUR KICKER MAKES THE NEXT ONE FROM 47"); sfx.good(); showHud(); await wait(2200); say(""); }
+      if (step.d === "kicker" && (got.rank === "best" || got.rank === "good")) { G.us += 3; paint = idle("texas"); say("YOUR KICKER MAKES THE NEXT ONE FROM 47"); sfx.good(); showHud(); await wait(2200); say(""); }
     } else if (step.p) await plays();
-    else if (step.gate) { const ok = await gate(step.gate); if (!ok || step.gate === 3) { store.set(SAVE, null); return; } }
+    else if (step.gate) { const ok = await gate(step.gate); if (!ok || step.gate === 4) { store.set(SAVE, null); return; } }
     G.step = i + 1; save();
   }
   store.set(SAVE, null);
 }
-
 // ─── the opening ───
 async function titleSequence() {
   const start = now(); let skip = false, thuds = 0, gobbled = false, strut = false;
@@ -597,14 +665,9 @@ async function titleSequence() {
       c.fillStyle = "#1c1626"; c.fillText(ch, x + 4, y + 4); c.fillStyle = i < 6 ? "#ffd75e" : "#ff9d2e"; c.fillText(ch, x, y);
     });
     c.textAlign = "left";
-    const te = e - 4.6;   // a turkey crosses, a football finds the turkey
+    const te = e - 4.6;   // a turkey walks on and dances
     if (te > 0 && !strut && !skip) { strut = true; sfx.gobble(0, 3); }
-    if (te > 0 && te < 4.2) {
-      const hit = te > 2.2, tx = hit ? 390 + (te - 2.2) * 420 : 60 + te * 150, ty = 330 - (hit ? Math.sin((te - 2.2) * 2.2) * 150 : 0);
-      c.save(); if (hit) { c.translate(tx, ty - 20); c.rotate((te - 2.2) * 12); c.translate(-tx, -ty + 20); } A.turkey(c, tx, ty, t); c.restore();
-      if (!hit) A.ball(c, 700 - te * 150, 300, t * 16);
-      if (hit && !gobbled && !skip) { gobbled = true; sfx.thud(); sfx.gobble(0.05, 4); }
-    }
+    if (te > 0) { const tx = Math.min(320, 60 + te * 150); if (tx < 320) A.turkey(c, tx, 334, t); else A.turkeyDance(c, 320, 338, t, "macarena", 2.4); }
     A.leaves(c, t, 90);
     if (e > 5 && Math.floor(t * 2) % 2) { c.textAlign = "center"; c.font = "14px 'Press Start 2P', monospace"; c.fillStyle = "#1c1626"; c.fillText("THANKSGIVING MORNING", 322, 214); c.fillStyle = "#fff"; c.fillText("THANKSGIVING MORNING", 320, 212); c.textAlign = "left"; }
   };
@@ -623,7 +686,7 @@ async function title() {
     await new Promise(res => { b0.onclick = res; onKey = (e) => { if (e.key === "Enter" || e.key === " ") res(); }; });
     onKey = null; started = true; ui.textContent = ""; const a = ac(); if (a && a.state === "suspended") a.resume().catch(() => {});   // not awaited: a browser that will not start the sound must not stop the game
   }
-  music.start();
+  music.start("title");
   await titleSequence();
   const k = card("TURKEY BOWL");
   k.append(el("p", "scene", "It's Thanksgiving morning. Your family is playing their annual football game at 8 AM at the park, and you are the coach."));

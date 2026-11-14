@@ -6,36 +6,41 @@
 // football. And they help coach their team to victory ... Jerry Jones sees
 // them playing ... and decides to have them coach the Dallas Cowboys ...
 // students are going to be playing for a high score. The highest score would
-// be 10,000 points." Three levels: the family's Turkey Bowl at the park, the
-// interview with Jerry Jones and the jet, and the Cowboys on Thanksgiving.
+// be 10,000 points." And later the same day: "the first game you have to
+// coach is this turkey bowl game with your team, and then you coach the
+// Dallas Cowboys, but then you get the real best head coaching job, which is
+// the Texas Longhorns against Texas A&M. And that's a night game ... if you
+// win that, then you're the real champion of the whole thing. So take some
+// of the questions and move them into that third game."
 //
-// Every decision has four options, ranked best, good, bad, silly, shown in a
-// shuffled order ("of course, you're gonna mix them up"). Two options end
-// the run ("over"). Each answer is followed by one line that says why, with
-// its source: "always cite the sources ... just use my articles." The line
-// cites the study his article cites, not the article: "don't cite Ishak 2017
+// Four levels: (1) the family's Turkey Bowl at the park, (2) the interview
+// with Jerry Jones and the jet, (3) the Cowboys on Thanksgiving afternoon,
+// (4) Texas against Texas A&M that night. Credit in COMM 118 is still
+// reaching Level 3, which is landing in Dallas.
+//
+// Every question has four options, ranked best, good, bad, silly, shown in a
+// shuffled order. Two options end the run ("over"). He found the first set
+// too easy to read: "obviously, a longer answer is more likely to be
+// correct ... make the answers a little bit more challenging." So the four
+// options of a question are written to about the same length, and the wrong
+// ones are things a reasonable coach might do. He also said "there are
+// probably too many questions overall": fourteen and three pop questions
+// here, down from eighteen and three.
+//
+// After an answer the game gives one line that says why, citing the study
+// his articles cite, never the articles themselves ("don't cite Ishak 2017
 // or Ishak 2021 if there is an internal citation in those articles that you
-// can cite." The
-// decisions, the rankings and the proof were approved by him on a review
-// page the same day; the right answers come from Ishak (2021),
-// "Communicating in Sports Teams," and Ishak (2017), "Communication in
-// Sports Teams: A Review."
+// can cite"). The right answers come from Ishak (2021), "Communicating in
+// Sports Teams," and Ishak (2017), "Communication in Sports Teams: A Review."
 //
-// Between decisions the player calls run or pass ("let people call run or
-// pass plays ... show how it works"). Each play shows how the defense is
-// lined up; the right call against the look gains yards and points. The
-// looks come from the run's seed, so the server can check every call.
+// Football is three plays, one a game. "The football stuff is really bad. I
+// think we need to cut the football stuff ... maybe a third." A play is one
+// choice, run or pass, against how the other team is lined up. The right
+// call is a touchdown and the wrong call is a punt.
 
 export const MAX_SCORE = 10000;
-// Five plays in a game. Andrew, 2026-11-14: "there's way too much football
-// gameplay, and it needs to be something a lot simpler," and then, "Way less
-// football gameplay, please." A play is one choice, run or pass, against how
-// the other team is lined up. The right call is a touchdown and the wrong
-// call is a punt, and nothing in between: "How can I throw a 38 yard pass and
-// then I'm punting?" Two plays before halftime at the park is exactly the 14
-// points the halftime score needs, and one before halftime in Dallas is the 7.
-export const PLAY_POINTS = 220;
-/** Share of a decision's points for each rank. */
+export const PLAY_POINTS = 300;
+/** Share of a question's points for each rank. */
 export const SHARE = { best: 1, good: 0.6, bad: 0.2, silly: 0, over: 0 };
 export const RANK_SAY = { best: "Best call", good: "Good call", bad: "Not good", silly: "Ludicrous", over: "Game over" };
 // Andrew, 2026-11-14: "You need to say like, well, you chose something that
@@ -48,176 +53,153 @@ export const VERDICT = {
   silly: "That would not work at all. You could have chosen something else.",
   over: "That ends your day. You could have chosen something else.",
 };
+export const LEVEL_SAY = { 1: "The Turkey Bowl", 2: "The interview", 3: "Dallas", 4: "Texas" };
 
 // The five ways to get players to do what you ask (French and Raven), for
 // Jerry's pick-two question. Legitimate and expert score highest on gaining
 // compliance (Rylander, 2015); reward and referent next; coercive last.
 export const POWER = [
   { k: "expert", text: "\"I'll show them I know what I'm talking about.\"", w: 1 },
-  { k: "legit", text: "\"I'm the head coach. That's the job.\"", w: 1 },
-  { k: "reward", text: "\"I'll praise and reward what I want more of.\"", w: 0.6 },
+  { k: "legit", text: "\"I'm the head coach, and I'll act like the head coach.\"", w: 1 },
+  { k: "reward", text: "\"I'll praise and reward what I want to see more of.\"", w: 0.6 },
   { k: "referent", text: "\"I'll build relationships, so they want to play for me.\"", w: 0.6 },
-  { k: "coercive", text: "\"Fines and the bench.\"", w: 0 },
+  { k: "coercive", text: "\"I'll fine them and bench them until they listen.\"", w: 0 },
 ];
 
-// What each question is about, said before the question. Andrew, 2026-11-14:
-// "saying like, hey, here's a question about motivational climate, and then
-// presenting the question first, and then presenting each of the answers."
+// What each question is about, said before the question. "Here's a question
+// about motivational climate, and then presenting the question first, and
+// then presenting each of the answers."
 export const TOPICS = {
-  breakfast: "eating before you play", stars: "motivational climate", blowup: "emotion", late: "motivational climate",
-  push: "negative messaging", kickoff: "goal setting", culture: "culture", change: "culture", power: "power", producer: "sport as spectacle", jet: "hydration",
-  receiver: "conflict", reporter: "the media", commercial: "sport as spectacle", speech: "halftime speeches", kicker: "emotion", backup: "clarity of roles", twominute: "time-outs",
+  breakfast: "eating before you play", stars: "motivational climate", blowup: "emotion", push: "negative messaging",
+  culture: "culture", power: "power", jet: "hydration",
+  receiver: "conflict", commercial: "sport as spectacle", speech: "halftime speeches",
+  returner: "goal setting", kicker: "emotion", backup: "clarity of roles", twominute: "time-outs",
   "pop-stacking": "race and sport", "pop-titleix": "gender and sport", "pop-1968": "politics and sport",
 };
 const d = (id, level, points, who, scene, opts, after, extra = {}) => ({ id, level, points, who, topic: TOPICS[id] || "", scene, opts: opts.map(([k, text, then]) => ({ k, text, then })), after, ...extra });
 
 export const DECISIONS = [
-  d("breakfast", 1, 400, "", "It's 6:30 on Thanksgiving morning. Your family's annual football game kicks off at the park at 8. You need breakfast first. What do you eat?", [
+  // ─── Level 1: the park ───
+  d("breakfast", 1, 500, "", "It's 6:30 on Thanksgiving morning. Your family's annual football game kicks off at the park at 8. You need breakfast first. What do you eat?", [
     ["best", "Mashed potatoes and mac and cheese", "Energy all morning."],
-    ["good", "Turkey, lots of it", "You are stronger, and slow by the second quarter."],
-    ["bad", "Cranberry sauce, straight from the can", "Sugar high. Fast for three plays, then you crash."],
-    ["silly", "Pumpkin pie and gravy", "You play badly the whole first half."],
+    ["good", "A big plate of turkey", "You are stronger, and slow by the second quarter."],
+    ["bad", "Cranberry sauce, straight from the can", "A sugar high. Fast for three plays, then you crash."],
+    ["silly", "Pumpkin pie with gravy on top", "You play badly the whole first half."],
   ], "You've got to choose the right food. Don't be silly and choose something that's not good for you. Always eat a good breakfast.", { food: true }),
-  d("stars", 1, 400, "uncle", "You're at the park, warming up with your family before the game. Your uncle walks over and says the team should only practice throwing to its two best players. Everyone else can watch. What do you do?", [
-    ["best", "\"Everybody gets reps, and here's why: today is about all of us getting better.\"", "Everyone is warm, and everyone knows why."],
-    ["good", "Quietly give everyone a few reps, without saying why", "Everybody practices, but nobody knows what the team is about."],
-    ["bad", "\"Stars first. Everyone else if there's time.\"", "There is no time. Half your team starts the game cold."],
-    ["silly", "Trade Grandma to the other team for a player to be named later", "Grandma scores on you. Twice."],
+  d("stars", 1, 500, "uncle", "You're at the park, warming up with your family before the game. Your uncle walks over and says the team should only practice throwing to its two best players. Everyone else can watch. What do you do?", [
+    ["best", "Give everyone a turn, and say today is about getting better.", "Everyone is warm, and everyone knows why."],
+    ["good", "Give everyone a turn, and keep your reasons to yourself.", "Everybody practices. Nobody knows what the team is about."],
+    ["bad", "Start with the two best, and work the others in if there's time left.", "There is no time. Half your team starts the game cold."],
+    ["silly", "Trade Grandma to Uncle Rick's team for a player to be named later.", "Grandma scores on you. Twice."],
   ], "A mastery climate values every player and defines success as getting better. A performance climate ignores less-skilled players to focus on stars (Horn et al., 2012)."),
-  d("blowup", 1, 400, "brother", "The game has started. Your brother drops an easy pass, throws the ball into the leaves and starts yelling. Everyone is looking at you. What do you do?", [
-    ["best", "Let him get it out, ask him what he's feeling, then walk him through resetting for the next play", "He catches the next one."],
-    ["good", "Crack a joke to break the tension, then call the next play", "He laughs. It works this time."],
-    ["bad", "\"Calm down.\"", "Nobody in history has calmed down."],
-    ["silly", "\"Emotions are not allowed on this team.\" He sits out until New Year's.", "You are down a receiver and a brother."],
+  d("blowup", 1, 500, "brother", "The game has started. Your brother drops an easy pass, throws the ball into the leaves and starts yelling. Everyone is looking at you. What do you do?", [
+    ["best", "Let him vent, ask what he's feeling, and reset him.", "He catches the next one."],
+    ["good", "Make a joke to break the tension, and then call the next play.", "He laughs. It works this time."],
+    ["bad", "Tell him firmly to calm down and get back in the huddle now.", "Nobody in history has calmed down."],
+    ["silly", "Announce that emotions are banned on this team until New Year's.", "You are down a receiver and a brother."],
   ], "Coaches help players regulate emotion with feedback, humor, and by asking about the emotion (Tamminen & Crocker, 2013)."),
-  // A question about a sister who complains about every call was here, with
-  // "call time-out and ask her what she would run" as its best answer. Andrew,
-  // 2026-11-14: "I asked them what they should do in the middle of the game.
-  // That's not a good strategy ... we have to cut that question."
-  d("late", 1, 400, "cousin", "Your cousin shows up late and joins your team. She tells you not to throw her the ball. She hasn't practiced, and she doesn't want to look bad in front of everyone. What do you say?", [
-    ["best", "\"Nobody here is worried about looking bad. It's okay to fail, as long as we get it right in the end.\" Then call her number.", "She drops the first, catches the second, and the whole team cheers."],
-    ["good", "\"You've got this. I've seen you run.\"", "She feels better and still hides on every play."],
-    ["bad", "\"Okay. Just block.\"", "She blocks. She also learns that looking bad is the thing to avoid."],
-    ["silly", "Hand her a slice of pumpkin pie", "She eats the pie on the field. Flag."],
-  ], "In a mastery climate, mistakes are opportunities for learning, and learning together is useful (Horn et al., 2012)."),
-  d("push", 1, 400, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You want to push them to play harder. What do you say?", [
-    ["best", "\"Play this half the way we practiced and you'll be telling this story at dinner.\"", "They come out flying."],
-    ["good", "\"You will always regret it if you don't play harder in this half.\"", "They play harder, and a little tight."],
-    ["bad", "\"You guys stink. There's no way you win this.\"", "Heads drop. Your uncle agrees with you, which is worse."],
-    ["silly", "Read them last year's final score, slowly, twice", "Your cousin starts crying."],
+  d("push", 1, 500, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You want to push them to play harder. What do you say?", [
+    ["best", "\"Play like we practiced, and you'll tell this story at dinner.\"", "They come out flying."],
+    ["good", "\"If you don't play harder this half, you will regret it all year long.\"", "They play harder, and a little tight."],
+    ["bad", "\"You are playing terribly, and at this rate you cannot win.\"", "Heads drop. Your uncle agrees with you, which is worse."],
+    ["silly", "\"Listen to last year's final score. I'll read it slowly, twice.\"", "Your cousin starts crying."],
   ], "Regret messages come in an upward form (\"if you do this, you'll be successful\") and a downward form (\"if you don't, you won't\"). That is regret messaging (Turman, 2005). Verbal aggression lowers motivation (Mazer et al., 2013)."),
-  d("kickoff", 1, 400, "nephew", "The second half is about to start. Your nine-year-old nephew is waiting to catch the kickoff, and he looks back at you for instructions. What do you tell him?", [
-    ["best", "\"Catch it, tuck it, follow your blockers.\"", "He does all three. Thirty yards."],
-    ["good", "\"Get us to midfield.\"", "He knows where to go, not how. Fifteen yards."],
-    ["bad", "\"Whatever you do, don't fumble.\"", "He thinks about fumbling the whole way. Guess what happens."],
-    ["silly", "\"Score, or you're walking home.\"", "He scores. He also never speaks to you again."],
-  ], "Process goals beat outcome goals (Burton & Weiss, 2008), and goals about what to do beat goals about what to avoid (Van Mierlo & Van Hooft, 2020)."),
 
-  d("culture", 2, 400, "jerry", "Jerry Jones starts the interview. His first question is simple: \"What is culture?\" What do you say?", [
-    ["best", "\"The shared beliefs, values, customs, behaviors and artifacts that a group of people learn, share and pass down through generations.\"", "Jerry nods slowly."],
-    ["good", "\"The way things are done.\"", "Jerry: \"Fine. Short. I like short.\""],
-    ["bad", "\"The rules and policies a group writes down so everyone knows what is expected.\"", "Jerry: \"That's a handbook, son.\""],
-    ["silly", "\"Whatever's on the hat.\"", "Jerry touches his hat, confused."],
-  ], "Culture in sports teams is broadly defined as the way things are done (Wagstaff & Burton-Wylie, 2018)."),
-  d("change", 2, 400, "jerry", "Jerry says his team already has slogans, a handbook, and a star on everything. He asks what has the biggest effect on a team's culture. What do you say?", [
-    ["best", "\"What the coaches and players say and do every day.\"", "Jerry writes something on a napkin."],
-    ["good", "\"The expectations the head coach says out loud.\"", "Jerry: \"And then?\""],
-    ["bad", "\"The slogans on the walls and the mission statement.\"", "Jerry has eleven slogans already."],
-    ["silly", "\"The carpet.\"", "Jerry loves that carpet."],
-  ], "Saying what you expect matters, but what coaches and players say and do every day is what creates a team's culture (Donoso-Morales et al., 2017)."),
-  d("power", 2, 400, "jerry", "Jerry points out that his players are grown men who make more money than you do. He asks how you will get them to do what you ask. Pick two.", [],
+  // ─── Level 2: Jerry Jones ───
+  d("culture", 2, 500, "jerry", "Jerry Jones starts the interview. His first question is simple: \"What is culture?\" What do you say?", [
+    ["best", "\"The beliefs, values and customs a group shares and passes on.\"", "Jerry nods slowly."],
+    ["good", "\"It's the way things get done around here, every single day.\"", "Jerry: \"Fine. Short. I like short.\""],
+    ["bad", "\"The rules and policies a team writes down for everyone to follow.\"", "Jerry: \"That's a handbook, son.\""],
+    ["silly", "\"Whatever is printed on the hats in the team store.\"", "Jerry touches his hat, confused."],
+  ], "Culture in sports teams is broadly defined as the way things are done (Wagstaff & Burton-Wylie, 2018). The class definition is the shared beliefs, values, customs, behaviors and artifacts a group learns, shares and passes down."),
+  d("power", 2, 500, "jerry", "Jerry points out that his players are grown men who make more money than you do. He asks how you will get them to do what you ask. Pick two.", [],
     "Legitimate and expert power were most effective at gaining compliance (Rylander, 2015). Athletes are more satisfied under reward, referent and expert power, and coercive power makes them more sensitive to feedback (Cranmer & Goodboy, 2015).", { pick: 2 }),
-  d("producer", 2, 400, "jerry", "Jerry says his TV producer wants his injured star on the field for the Thanksgiving audience. His trainer says the player is hurt. Jerry asks who should win that argument. What do you say?", [
-    ["best", "\"The trainer. And I give your producer the star another way: a sideline interview.\"", "Jerry: \"Now that's television.\""],
-    ["good", "\"The trainer. End of story.\"", "Jerry sulks a little."],
-    ["bad", "\"One series, for the cameras.\"", "He limps off on play two."],
-    ["silly", "\"Put him in a turkey costume at midfield.\"", "Jerry considers it for a long time."],
-  ], "The show wants the star on screen. The people who look after the athlete want him healthy. That is sports as spectacle against athlete care."),
-  d("jet", 2, 400, "", "You got the job, and now you are on Jerry's jet to Dallas. The flight attendant comes by with drinks. What do you take?", [
-    ["best", "Water", "Hydrated. You land sharp."],
-    ["good", "Sparkling water with a lime", "Same thing, fancier."],
-    ["bad", "Three coffees", "Jittery at kickoff. Your first play call comes out too fast."],
-    ["over", "Champagne", "You tell Jerry he reminds you of your grandma, put on his hat, and ask if he wants to parachute into the stadium. He fires you for being weird."],
+  d("jet", 2, 500, "", "You got the job, and now you are on Jerry's jet to Dallas. The flight attendant comes by with drinks. What do you take?", [
+    ["best", "A tall glass of water", "Hydrated. You land sharp."],
+    ["good", "Sparkling water with lime", "Same thing, fancier."],
+    ["bad", "Three cups of black coffee", "Jittery at kickoff. Your first play call comes out too fast."],
+    ["over", "One glass of champagne", "You tell Jerry he reminds you of your grandma, put on his hat, and ask if he wants to parachute into the stadium. He fires you for being weird."],
   ], "Drink water to hydrate.", { drink: true }),
 
-  d("receiver", 3, 500, "receiver", "You are coaching the Cowboys. It's the first quarter, and your best receiver has no catches. He is on the sideline screaming at your quarterback, and every camera in the stadium is on them. What do you do?", [
-    ["best", "Pull him aside, away from the cameras, and talk to him alone", "He comes back and blocks on the next play. Then he gets his catch."],
-    ["good", "Send a veteran captain to talk to him privately", "It works, slower. One more outburst first."],
-    ["bad", "Let it go. He's the star.", "The quarterback stops throwing his way entirely. The huddle goes quiet."],
-    ["over", "Rip into him right there, in front of the team and the cameras", "You lose the team's trust and everything falls apart."],
+  // ─── Level 3: Dallas ───
+  d("receiver", 3, 800, "receiver", "You are coaching the Cowboys. It's the first quarter, and your best receiver has no catches. He is on the sideline screaming at your quarterback, and every camera in the stadium is on them. What do you do?", [
+    ["best", "Pull him aside, off camera, and talk with him alone.", "He comes back and blocks on the next play. Then he gets his catch."],
+    ["good", "Send a veteran captain to talk with him in private.", "It works, slower. One more outburst first."],
+    ["bad", "Say nothing for now. He's your star, and it may pass.", "The quarterback stops throwing his way. The huddle goes quiet."],
+    ["over", "Correct him right there, so the whole team sees where you stand.", "You lose the team's trust and everything falls apart."],
   ], "Talented but disruptive players are a named source of conflict in teams (Leggat et al., 2018). Take them aside."),
-  d("reporter", 3, 500, "reporter", "It's the second quarter. A sideline reporter puts a microphone in front of you for a live interview while the game is going on. What do you do?", [
-    ["best", "Fifteen seconds, and you credit the players", "You are back before the snap."],
-    ["good", "Do it in three one-word answers", "No fine. The broadcast calls you \"prickly.\""],
-    ["bad", "Refuse. You are coaching.", "The NFL fines you for skipping your media duties."],
-    ["silly", "Use the interview to announce your own podcast", "Jerry wants a cut."],
-  ], "Talking to the media is part of the job. Skip it and the league fines you."),
-  d("commercial", 3, 500, "jerry", "It's halftime. Jerry wants you to film a two-minute truck commercial right now. Your players are waiting for you in the locker room. What do you do?", [
-    ["best", "\"After the final whistle, Jerry. I'll do two.\"", "You make your halftime adjustments. Jerry gets his money later and likes you more for it."],
-    ["good", "\"No.\"", "The team gets its halftime. Jerry sulks in the owner's box."],
-    ["bad", "Do the commercial", "Nobody made adjustments, and your first drive of the half goes nowhere."],
-    ["silly", "Do the commercial and bring the whole offense into it", "The commercial is great. You have no offense."],
+  d("commercial", 3, 800, "jerry", "It's halftime in Dallas. Jerry wants you to film a two-minute truck commercial right now. Your players are waiting for you in the locker room. What do you do?", [
+    ["best", "Tell Jerry you'll film two after the final whistle.", "You make your halftime adjustments. Jerry gets his money later."],
+    ["good", "Tell Jerry no, and walk straight to the locker room.", "The team gets its halftime. Jerry sulks in the owner's box."],
+    ["bad", "Film it fast, and give the team whatever time is left over.", "Nobody made adjustments. Your first drive of the half goes nowhere."],
+    ["silly", "Film it, and bring the whole offense to be in it.", "The commercial is great. You have no offense."],
   ], "When you choose the commercial, you are not calling plays and you are not paying attention to your team."),
-  d("speech", 3, 500, "", "You are in the locker room at halftime, losing by ten. Fifty-three players are waiting for you to say something. What kind of speech do you give?", [
-    ["best", "Short, real emotion, and back to what this team values", "They come out of the tunnel loud."],
-    ["good", "Short and all tactics", "They know the plan. Nobody is fired up."],
-    ["bad", "A long speech that ends with a brand new game plan", "Half of them were lost by minute four."],
-    ["silly", "Play them the truck commercial", "Silence. Then the kicker asks for a truck."],
+  d("speech", 3, 800, "", "You are in the locker room at halftime, losing by ten. Fifty-three players are waiting for you to say something. What kind of speech do you give?", [
+    ["best", "Short and heartfelt, about what this team stands for.", "They come out of the tunnel loud."],
+    ["good", "Short and practical, covering only the tactics.", "They know the plan. Nobody is fired up."],
+    ["bad", "Long and rousing, and ending with a brand new game plan.", "Half of them were lost by minute four."],
+    ["silly", "No speech. You play them the truck commercial.", "Silence. Then the kicker asks for a truck."],
   ], "Players respond to genuine emotion, conciseness and references to team values. They respond badly to poorly timed speeches and surprising information (Breakey et al., 2009)."),
-  d("kicker", 3, 500, "kicker", "It's the third quarter. Your kicker misses a field goal and walks to the bench staring at the ground. What do you do?", [
-    ["best", "Go to him, hand on his shoulder, and give him one technical note", "He makes the next one from 47."],
-    ["good", "Ask him how he's doing", "He says \"fine.\" He is a little better."],
-    ["bad", "Leave him alone to think about it", "He thinks about it. All quarter."],
-    ["silly", "Hold open tryouts for kicker in the stands", "A dentist from Plano is now your kicker."],
+
+  // ─── Level 4: Texas against Texas A&M, at night ───
+  d("returner", 4, 575, "returner", "You are coaching Texas against Texas A&M, at night, in front of a hundred thousand people. Your freshman kick returner looks over at you before the opening kickoff. What do you tell him?", [
+    ["best", "\"Catch it, tuck it, and follow your blockers.\"", "He does all three. Forty yards."],
+    ["good", "\"Get us out past the thirty-yard line.\"", "He knows where to go, not how. He gets to the twenty."],
+    ["bad", "\"Whatever happens out there, do not fumble this.\"", "He thinks about fumbling the whole way. Guess what happens."],
+    ["silly", "\"Score a touchdown, or walk back to the dorm.\"", "He scores. He also transfers in December."],
+  ], "Process goals beat outcome goals (Burton & Weiss, 2008), and goals about what to do beat goals about what to avoid (Van Mierlo & Van Hooft, 2020)."),
+  d("kicker", 4, 575, "kicker", "It's the second quarter in Austin. Your kicker misses a field goal and walks to the bench staring at the ground. What do you do?", [
+    ["best", "Go to him, hand on his shoulder, and give one tip.", "He makes the next one from 47."],
+    ["good", "Walk over and ask how he's feeling about the miss.", "He says \"fine.\" He is a little better."],
+    ["bad", "Give him space to work through it on his own.", "He thinks about it. All quarter."],
+    ["silly", "Hold open tryouts for kicker in the student section.", "A sophomore in overalls is now your kicker."],
   ], "Feedback and asking about the emotion help a teammate regulate emotion (Tamminen & Crocker, 2013), and so does touch (Kraus et al., 2010)."),
-  d("backup", 3, 500, "backup", "It's the fourth quarter. Your quarterback is hurt. The backup has not played all season, and he is putting on his helmet. What do you tell him?", [
-    ["best", "Tell him exactly what his job is on this drive, then ask him what he's comfortable running", "He knows the job and he chose two of the plays. First down."],
-    ["good", "Tell him exactly what his job is on this drive", "He knows the job. He runs a play he hates, and it shows."],
-    ["bad", "\"Just go make plays.\"", "He tries to make all of them at once. Sack."],
-    ["silly", "Alternate him and the punter every snap and let the crowd pick", "The crowd picks the punter."],
+  d("backup", 4, 575, "backup", "It's the fourth quarter. Your quarterback is hurt. The backup has not played all season, and he is putting on his helmet. What do you tell him?", [
+    ["best", "Tell him his job, then ask which plays he likes.", "He knows the job and he chose two of the plays. First down."],
+    ["good", "Tell him exactly what his job is on this drive.", "He knows the job. He runs a play he hates, and it shows."],
+    ["bad", "Tell him to relax, trust his talent, and go make plays.", "He tries to make all of them at once. Sack."],
+    ["silly", "Alternate him with the punter and let the crowd vote.", "The crowd votes for the punter."],
   ], "The coach names the role and the expectations, and the player accepts or negotiates (Eys et al., 2005). Poor communication leads to role ambiguity and tension (Kang & Seibold, 2017)."),
-  d("twominute", 3, 600, "", "You are losing by four points. There are two minutes left, and you have one time-out. What do you do?", [
-    ["best", "Call the time-out and point everyone back at the two-minute situation you rehearsed all week", "Everyone already knows where to be."],
-    ["good", "Let the quarterback call what the team knows", "It works. You look like a spectator."],
-    ["bad", "Call the time-out and install something clever and brand new", "Four players run four different plays."],
-    ["silly", "Ask Jerry what he would call", "Jerry calls a flea flicker. From the owner's box. By phone."],
+  d("twominute", 4, 575, "", "You are losing to Texas A&M by four points. There are two minutes left, and you have one time-out. What do you do?", [
+    ["best", "Call time-out and point everyone back to the practiced plan.", "Everyone already knows where to be."],
+    ["good", "Save the time-out and let your quarterback call what he knows.", "It works. You look like a spectator."],
+    ["bad", "Call time-out and draw up a clever new play for this moment.", "Four players run four different plays."],
+    ["silly", "Call time-out and ask the marching band what to run.", "The tubas want a reverse."],
   ], "Teams talk through scenarios ahead of time because there is no time in the moment. A time-out works best when it points the team back at a path they already know (Ishak & Ballard, 2012)."),
 ];
+
 // Three questions that are not part of the story. Andrew, 2026-11-14: "i want
 // you to have to explain some thing about sports and gender and sports and
 // politics in different places. can you have a question about 'stacking' in
 // sports as well as 'title IX' and tommie smith and john carlos ... put them
-// in there randomly." Each run drops the three after three different sets of
-// plays, picked by the run's seed. The stacking answer is the class's own,
-// from the weekly game's question "What is stacking?"
-// Each is asked by somebody in the family, and in Dallas the same question
-// comes as a text on the coach's phone. Andrew, 2026-11-14, on the first
-// wording ("A voice from the sideline"): "your niece who goes to San Jose
-// State asks about the statue of Tommie Smith and John Carlos on her campus.
-// What do you say about them?" And: "two answers that look almost identical.
-// You gotta change that."
+// in there randomly." Each run drops the three after three different spots,
+// picked by the run's seed. Each is asked by somebody in the family, and
+// away from the park the same question comes as a text on the coach's phone:
+// "your niece who goes to San Jose State asks about the statue of Tommie
+// Smith and John Carlos on her campus. What do you say about them?" The
+// stacking answer is the class's own, from the weekly game.
 export const POPS = [
   d("pop-stacking", 0, 300, "cousin", "Your cousin is taking a sociology of sport class. She asks you what \"stacking\" means in sports. What do you tell her?", [
-    ["best", "Athletes of one race end up over-represented in certain sports, or get funneled into certain positions within a sport", "Right. Both halves: whole sports, and positions inside a sport."],
-    ["good", "Coaches deciding who plays quarterback based on stereotypes about race", "That is one example of the positions half. Stacking is the wider pattern, across positions and whole sports."],
-    ["bad", "TV only showing athletes of color in highlight clips", "That is about media coverage. Stacking is about who gets put where."],
-    ["silly", "Three linebackers standing on each other's shoulders", "Illegal formation."],
+    ["best", "One race being steered into certain sports or positions.", "Right. Both halves: whole sports, and positions inside a sport."],
+    ["good", "Coaches choosing their quarterbacks by stereotypes about race.", "That is one example. Stacking is the wider pattern, across positions and whole sports."],
+    ["bad", "Television showing athletes of color mostly in highlight clips.", "That is about media coverage. Stacking is about who gets put where."],
+    ["silly", "Three linebackers standing on each other's shoulders at the snap.", "Illegal formation."],
   ], "Stacking: athletes of a certain race are disproportionately represented in specific sports or funneled into specific positions within a sport."),
   d("pop-titleix", 0, 300, "niece", "Your niece plays three sports in high school. She asks you what Title IX actually says. What do you tell her?", [
-    ["best", "\"No one can be shut out of, or treated worse in, any school program that takes federal money because of their sex. Sports are one of those programs.\"", "That is the law, and it never uses the word sports."],
-    ["good", "\"Schools have to give girls and boys an equal chance to play sports.\"", "That is what it means for sports. The law itself covers every part of a school, not only teams."],
-    ["bad", "\"Every boys' team has to have a matching girls' team.\"", "Common mistake. The law is about equal opportunity overall, not a matching team for every team."],
-    ["silly", "\"It was Super Bowl IX. Steelers 16, Vikings 6.\"", "She walks away."],
+    ["best", "\"No school program taking federal money can discriminate by sex.\"", "That is the law, and it never uses the word sports."],
+    ["good", "\"Schools must give girls and boys an equal chance to play sports.\"", "That is what it means for sports. The law covers every part of a school, not only teams."],
+    ["bad", "\"Every boys' team at a school must have a matching girls' team.\"", "Common mistake. The law is about equal opportunity overall, not a matching team for every team."],
+    ["silly", "\"It was Super Bowl nine. Pittsburgh won, sixteen to six.\"", "She walks away."],
   ], "Title IX (1972): no person shall, on the basis of sex, be excluded from or discriminated against in any education program or activity receiving federal financial assistance."),
   d("pop-1968", 0, 300, "niece", "Your niece goes to San Jose State. She says there is a statue on campus of Tommie Smith and John Carlos, and she asks what she should know about them. What do you tell her?", [
-    ["best", "\"San Jose State sprinters. On the medal stand at the 1968 Olympics in Mexico City they raised black-gloved fists during the anthem to protest racism, and they were sent home for it.\"", "Right. The statue leaves the silver medal step empty so you can stand where Peter Norman stood."],
-    ["good", "\"Two of the fastest men in the world in 1968. They won Olympic gold and bronze in the 200 meters.\"", "True, and it skips why there is a statue. They raised their fists on the medal stand to protest racism."],
-    ["bad", "\"They were the first NFL players to kneel during the anthem.\"", "That was Colin Kaepernick in 2016. Smith and Carlos were sprinters, almost fifty years earlier."],
-    ["silly", "\"The founders of the campus parking department.\"", "She checks the plaque. No."],
+    ["best", "\"Sprinters who raised their fists on the medal stand to protest racism.\"", "Right. Mexico City, 1968. The statue leaves the silver medal step empty, where Peter Norman stood."],
+    ["good", "\"Two of the fastest men alive, who both won Olympic medals back in 1968.\"", "True, and it skips why there is a statue. They raised their fists on the medal stand to protest racism."],
+    ["bad", "\"The first football players to kneel during the national anthem.\"", "That was Colin Kaepernick in 2016. Smith and Carlos were sprinters, almost fifty years earlier."],
+    ["silly", "\"The two men who founded the campus parking department.\"", "She checks the plaque. No."],
   ], "Mexico City, 1968: Tommie Smith and John Carlos raised their fists on the 200 meter medal stand. The class reading is \"The White Man in That Photo,\" on Peter Norman."),
 ];
-/** How a pop question opens in Dallas, where the family is not on the sideline. */
-export const popScene = (dec, dallas) => (dallas ? "Your phone buzzes on the sideline in Dallas. It's a text from home. " + dec.scene : dec.scene);
+/** How a pop question opens away from the park, where the family is not on the sideline. */
+export const popScene = (dec, away) => (away ? "Your phone buzzes on the sideline. It's a text from home. " + dec.scene : dec.scene);
 
 // Somewhere to read more, opened in a new tab. Andrew, 2026-11-14: "always
 // include a link, if you can, where somebody can click and open up a new tab
@@ -226,37 +208,38 @@ export const popScene = (dec, dallas) => (dallas ? "Your phone buzzes on the sid
 // 1681; the Peter Norman piece is on the class reading list.
 const REVIEW = { say: "Read the review this comes from", url: "https://scholarcommons.scu.edu/crt/vol36/iss4/1" };
 export const LINKS = {
-  stars: REVIEW, blowup: REVIEW, late: REVIEW, push: REVIEW, kickoff: REVIEW, culture: REVIEW, change: REVIEW, power: REVIEW,
-  receiver: REVIEW, speech: REVIEW, kicker: REVIEW, backup: REVIEW, twominute: REVIEW,
+  stars: REVIEW, blowup: REVIEW, push: REVIEW, culture: REVIEW, power: REVIEW, receiver: REVIEW, speech: REVIEW,
+  returner: REVIEW, kicker: REVIEW, backup: REVIEW, twominute: REVIEW,
   "pop-titleix": { say: "Read the law", url: "https://www.law.cornell.edu/uscode/text/20/1681" },
   "pop-1968": { say: "Read \"The White Man in That Photo\"", url: "https://www.filmsforaction.org/articles/the-white-man-in-that-photo/" },
 };
 export const decisionOf = (id) => DECISIONS.find(x => x.id === id) || POPS.find(x => x.id === id) || null;
 
-// The order of the game. "d" is a decision, "p" is that many play calls,
-// "s" is a cut scene the page draws, "gate" is where a level is won or lost.
+// The order of the game. "d" is a question, "p" is one play call, "s" is a
+// cut scene the page draws, "gate" is where a level is won or lost.
 export const FLOW = [
   { s: "title" },
   { d: "breakfast" }, { d: "stars" },
-  { s: "kickoff" }, { p: 1 }, { d: "blowup" }, { d: "late" }, { p: 1 },
-  { s: "half1" }, { d: "push" }, { d: "kickoff" }, { p: 1 },
+  { s: "kickoff" }, { d: "blowup" },
+  { s: "half1" }, { d: "push" }, { p: 1 },
   { gate: 1 },
-  { s: "jerry" }, { d: "culture" }, { d: "change" }, { d: "power" }, { d: "producer" },
+  { s: "jerry" }, { d: "culture" }, { d: "power" },
   { gate: 2 },
   { s: "jet" }, { d: "jet" },
-  { s: "dallas" }, { p: 1 }, { d: "receiver" }, { d: "reporter" },
-  { d: "commercial" }, { d: "speech" }, { p: 1 }, { d: "kicker" }, { d: "backup" }, { d: "twominute" },
+  { s: "dallas" }, { d: "receiver" }, { d: "commercial" }, { d: "speech" }, { p: 1 },
   { gate: 3 },
+  { s: "texas" }, { d: "returner" }, { d: "kicker" }, { s: "band" }, { d: "backup" }, { d: "twominute" }, { p: 1 },
+  { gate: 4 },
 ];
 export const PLAY_COUNT = FLOW.reduce((n, f) => n + (f.p || 0), 0);
+/** The scene that starts each level past the first two. */
+const ARRIVES = { dallas: 3, texas: 4 };
 
-// What it takes to get through each gate. Level 1 and 3 count their own
-// decisions and plays; Level 2 is the four interview questions.
-export const GATES = { 1: 1700, 2: 900, 3: 2300 };
-/** Hired for the rest of the season: win in Dallas with this many points in all. */
-export const HIRED = 7500;
+// What it takes to get through each gate: a level's own questions and play.
+export const GATES = { 1: 1200, 2: 500, 3: 1400, 4: 1400 };
+export const LAST_GATE = 4;
 
-// The defense's look before each play, and the call that beats the look.
+// How the other team lines up before a play, and the call that beats it.
 export const LOOKS = [
   { k: "stack", say: "The other team is crowded up close to the ball.", beat: "pass" },
   { k: "deep", say: "The other team is standing far back.", beat: "run" },
@@ -266,7 +249,7 @@ export const LOOKS = [
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 /** The look on play number n of a run. */
 export const lookFor = (seed, n) => LOOKS[hash(String(seed) + ":" + n) % LOOKS.length];
-/** The order a decision's options show in, for a run. */
+/** The order a question's options show in, for a run. */
 export function orderFor(seed, id, count) {
   const idx = Array.from({ length: count }, (_, i) => i);
   let h = hash(String(seed) + "|" + id);
@@ -275,9 +258,10 @@ export function orderFor(seed, id, count) {
 }
 
 /** The game in order for one run: the flow, with the three pop questions
- * each dropped in after a different set of plays, picked by the seed. */
+ * each dropped in after a different question, picked by the seed. A pop
+ * question never comes first, or straight after a choice that can end a run. */
 export function flowFor(seed) {
-  const spots = FLOW.map((f, i) => (f.p ? i : -1)).filter(i => i >= 0);
+  const spots = FLOW.map((f, i) => (f.d && i > 2 && f.d !== "jet" && f.d !== "receiver" && f.d !== "power" ? i : -1)).filter(i => i >= 0);
   const order = orderFor(seed, "pops", spots.length).slice(0, POPS.length).map(i => spots[i]);
   const which = orderFor(seed, "pop-order", POPS.length);
   const after = new Map(order.map((spot, n) => [spot, POPS[which[n]].id]));
@@ -304,36 +288,35 @@ export function judge(decision, pick) {
 /** A run, scored. log is { seed, picks: { id: key | [key, key] }, calls: ["run" | "pass", ...] }.
  * Walks the flow in order and stops where the log stops, where a choice ends
  * the run, or where a gate is not passed. Returns { score, level, done,
- * over, lost, hired, parts: { 1, 2, 3 } }; level is the highest level reached. */
+ * over, lost, hired, parts }; level is the highest level reached, done is
+ * winning in Texas, hired is winning in Dallas. */
 export function scoreRun(log) {
   const picks = (log && log.picks) || {}, calls = (log && Array.isArray(log.calls) ? log.calls : []);
   const seed = log && log.seed;
-  const parts = { 1: 0, 2: 0, 3: 0 };
-  let level = 1, play = 0, over = "", lost = 0, done = false, at = 0;
-  outer: for (const step of flowFor(seed)) {
+  const parts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  let level = 1, play = 0, over = "", lost = 0, done = false, hired = false, at = 0;
+  for (const step of flowFor(seed)) {
     if (step.d) {
       const dec = decisionOf(step.d), got = Object.prototype.hasOwnProperty.call(picks, step.d) ? judge(dec, picks[step.d]) : null;
       if (!got) break;
       // A pop question counts for the level the player is in when the question comes up.
       parts[dec.level || level] += got.points;
-      level = Math.max(level, dec.level || level);
       if (got.over) { over = step.d; at++; break; }
     } else if (step.p) {
-      for (let i = 0; i < step.p; i++) {
-        const call = calls[play];
-        if (call !== "run" && call !== "pass") break outer;
-        if (lookFor(seed, play).beat === call) parts[level] += PLAY_POINTS;
-        play++;
-      }
+      const call = calls[play];
+      if (call !== "run" && call !== "pass") break;
+      if (lookFor(seed, play).beat === call) parts[level] += PLAY_POINTS;
+      play++;
     } else if (step.gate) {
       if (parts[step.gate] < GATES[step.gate]) { lost = step.gate; at++; break; }
-      // Level 3 starts when the player lands in Dallas, not when Jerry says yes: champagne on the jet ends a run in Level 2.
-      if (step.gate === 3) done = true; else if (step.gate === 1) level = 2;
-    } else if (step.s === "dallas") level = 3;
+      if (step.gate === 1) level = 2;
+      if (step.gate === 3) hired = true;
+      if (step.gate === LAST_GATE) done = true;
+    } else if (ARRIVES[step.s]) level = ARRIVES[step.s];   // a level starts on landing: champagne on the jet ends a run in Level 2
     at++;
   }
-  const score = Math.min(MAX_SCORE, parts[1] + parts[2] + parts[3]);
-  return { score, level, done, over, lost, hired: done && score >= HIRED, parts, steps: at, plays: play };
+  const score = Math.min(MAX_SCORE, parts[1] + parts[2] + parts[3] + parts[4]);
+  return { score, level, done, over, lost, hired, parts, steps: at, plays: play };
 }
 
 /** "Sophia T." from a full name. */

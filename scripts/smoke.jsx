@@ -6532,7 +6532,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const perfect = (seed) => ({ seed, picks: Object.fromEntries(every.map(d => [d.id, d.pick ? ["expert", "legit"] : "best"])), calls: Array.from({ length: T.PLAY_COUNT }, (_, i) => T.lookFor(seed, i).beat) });
   ["aaaaaa", "k3j9x0q2", "zzzzzzzzzzzz"].forEach(seed => {
     const r = T.scoreRun(perfect(seed));
-    if (r.score !== T.MAX_SCORE || !r.done || !r.hired || r.level !== 3) say("a perfect run on " + seed + " is " + JSON.stringify(r));
+    if (r.score !== T.MAX_SCORE || !r.done || !r.hired || r.level !== 4) say("a perfect run on " + seed + " is " + JSON.stringify(r));
     const pops = T.flowFor(seed).filter(f => f.pop).map(f => f.d);
     if (new Set(pops).size !== T.POPS.length) say("the three pop questions are not all in the run on " + seed);
   });
