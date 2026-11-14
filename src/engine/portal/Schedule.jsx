@@ -72,6 +72,10 @@ function DayRow({ config, data, blockOf, day, title, ring, note, instructor, myI
             Andrew, 2026-09-30: "you're double listing dates." A day with no
             title of its own is its rows and nothing else. */}
         {title ? <p className="pt-title">{title}</p> : !day.classDay ? <p className="pt-title" style={{ color: "var(--text-muted)" }}>No class</p> : null}
+        {/* A second, quieter line under the heading, from the day plan's
+            `sub`. Andrew, 2026-11-14: "Dr. Ishak at NCA is still fine for wed
+            and fri as subheading." */}
+        {String((data?.dayPlans || {})[day.date]?.sub || "").trim() ? <p className="pt-meta">{String(data.dayPlans[day.date].sub).trim()}</p> : null}
         {ring ? <p className="pt-meta"><span style={{ color: "var(--ca-accent-ink)", fontWeight: 600 }}>Next class</span></p> : null}
         {note ? <p className="pt-text" style={{ borderLeft: "3px solid var(--line-strong)", paddingLeft: 10 }}>{note}</p> : null}
         {readings.length ? (
@@ -83,7 +87,7 @@ function DayRow({ config, data, blockOf, day, title, ring, note, instructor, myI
         {other.map(it => <p key={it.id} className="pt-meta" style={{ color: "var(--text-primary)" }}>{it.title}</p>)}
         {due.map(it => (
           <div key={it.id} className="pt-acts">
-            <Io kind="go" onClick={() => it.asgId && go && go("assignments/" + it.asgId)}>{it.title.replace(/\s+due$/i, "")}</Io>
+            <Io kind="go" href={!it.asgId && it.url ? it.url : undefined} onClick={it.asgId ? () => go && go("assignments/" + it.asgId) : undefined}>{it.title.replace(/\s+due$/i, "")}</Io>
             <span className="pt-when due" style={{ fontSize: 14 }}>Due</span>
           </div>
         ))}
