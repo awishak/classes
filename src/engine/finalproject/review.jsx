@@ -495,7 +495,7 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
               {on ? <span className="fp-stamp">Approved</span> : null}
               <p className="fp-ttl">{t.topic || "Nothing written"}</p>
               {t.asks.length ? <ul className="fp-asks">{t.asks.map((q, i) => <li key={i}>{q}</li>)}</ul> : null}
-              {[["Why", t.why], ["Angle", t.angle], ["Social justice", t.justice]].filter(x => x[1]).map(([k, v]) => <p key={k} className="fp-part"><span className="fp-k">{k}</span>{v}</p>)}
+              {[["Worthwhile", t.worth], ["Audience", t.audience], ["Concepts", t.concepts], ["Why", t.why], ["Angle", t.angle], ["Social justice", t.justice]].filter(x => x[1]).map(([k, v]) => <p key={k} className="fp-part"><span className="fp-k">{k}</span>{v}</p>)}
               {says.length && open !== t.slot ? <p className="fp-said">{says.join(" · ")}</p> : null}
               <div className="fp-acts">
                 <button type="button" className={"fp-btn" + (on ? "" : " fp-go")} disabled={!t.topic} onClick={() => press(t.slot)}>{on ? "Take back" : "Approve"}</button>

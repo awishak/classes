@@ -33,7 +33,55 @@ export const picksPartner = (id) => id !== "solo2";
 export const STRENGTHS = ["Audio", "Video", "Images", "Research", "Writing", "Interviewing", "Design and layout", "Data and charts", "Interactive ideas", "Editing"];
 
 export const SLOTS = ["a", "b", "c"];
-export const TOPIC_FIELDS = SLOTS.flatMap(s => ["topic:" + s, "ask:" + s]);
+// What a topic carries besides its name on the sheet that is not about social
+// justice. Andrew, 2026-11-14: "when they submit their 3 topics, we have to,
+// like, explain something about the topics. Why do they think this topic is
+// worthwhile for them to research? What about it is going to be unique or
+// interesting to their audience?" and, since every project will explicate at
+// least three concepts or theories, "they should identify 2 per topic proposal
+// for now", each with a definition and where the definition comes from.
+export const SPORT_PARTS = ["worth", "audience", "concepts"];
+
+// Example topics for COMM 118, by area. Andrew, 2026-11-14: "i want a
+// variety of topics", "group them by area", "include my examples from spring",
+// and "if it was a particular students example from last quarter, include
+// their name". His own are from that day's dictation, the sit-downs and his
+// Spring 2026 assignment sheet; `by` names the Spring 2026 student whose
+// project it was. Two under Teams are Claude's, kept by him ("these are good").
+export const EXAMPLES_118 = [
+  { area: "Identity and nation", topics: [
+    { say: "The explosion of transnational athletes in the Olympics" },
+    { say: "Buying a passport to become an Olympian" },
+    { say: "Leo Manzano carrying the Mexican and American flags after his 2012 silver medal" },
+    { say: "Islamophobia in European soccer" },
+  ] },
+  { area: "Gender", topics: [
+    { say: "Female coaches in the NBA" },
+    { say: "Female referees in male dominated sports" },
+    { say: "Competing women's volleyball leagues" },
+    { say: "Communication gaps in ACL education for female athletes", by: "Isabelle De Buyl" },
+  ] },
+  { area: "Politics and power", topics: [
+    { say: "WNBA versus NBA political acts" },
+    { say: "Sports metaphors in political campaigns" },
+    { say: "NIL and the balance of power" },
+  ] },
+  { area: "Athletes and fans", topics: [
+    { say: "Athletes who talk directly with fans through Instagram" },
+    { say: "SJ Earthquakes' themed games and fan engagement", by: "Amaris Franco" },
+    { say: "Crowd noise, heckling and chants as communication", by: "Russ Filter" },
+  ] },
+  { area: "Media", topics: [
+    { say: "The post-game press conference as an institutional performance", by: "Sam Canales" },
+    { say: "Formula 1 framing and socioeconomic status" },
+  ] },
+  { area: "Teams", topics: [
+    { say: "The mythology of killer instinct" },
+    { say: "How a team rebuilds its culture after its coach leaves" },
+    { say: "How role players come to accept their roles" },
+  ] },
+];
+export const TOPIC_FIELDS = SLOTS.flatMap(s => ["topic:" + s, ...SPORT_PARTS.map(part => part + ":" + s), "ask:" + s]);
 export const SITE_FIELDS = SLOTS.flatMap(s => ["site:" + s, "like:" + s, "build:" + s]);
 export const FIELDS = ["work", "top", "also", "strengths", ...TOPIC_FIELDS, ...SITE_FIELDS];
 
@@ -74,7 +122,7 @@ export function readAnswers(answers) {
     strengths: lines(a.strengths),
     define: String(a.define || "").trim(),
     defineSource: String(a.defineSource || "").trim(),
-    topics: SLOTS.map(s => ({ slot: s, topic: String(a["topic:" + s] || "").trim(), asks: lines(a["ask:" + s]), why: String(a["why:" + s] || "").trim(), angle: String(a["angle:" + s] || "").trim(), justice: String(a["justice:" + s] || "").trim() })),
+    topics: SLOTS.map(s => ({ slot: s, topic: String(a["topic:" + s] || "").trim(), asks: lines(a["ask:" + s]), worth: String(a["worth:" + s] || "").trim(), audience: String(a["audience:" + s] || "").trim(), concepts: String(a["concepts:" + s] || "").trim(), why: String(a["why:" + s] || "").trim(), angle: String(a["angle:" + s] || "").trim(), justice: String(a["justice:" + s] || "").trim() })),
     sites: SLOTS.map(s => ({ slot: s, site: String(a["site:" + s] || "").trim(), like: String(a["like:" + s] || "").trim(), build: String(a["build:" + s] || "").trim() })),
   };
 }
@@ -319,6 +367,9 @@ export function demoSheets(people, classId) {
       const tb = Math.floor(r() * topics.length), sb = Math.floor(r() * DEMO_SITES.length);
       SLOTS.forEach((s, k) => {
         a["topic:" + s] = topics[(tb + k * 5) % topics.length];
+        a["worth:" + s] = "A made-up reason this topic is worth researching.";
+        a["audience:" + s] = "A made-up reason the audience would find it interesting.";
+        a["concepts:" + s] = "Cohesion: a made-up definition (made-up source).\nMotivational climate: a made-up definition (made-up source).";
         a["ask:" + s] = [DEMO_ASKS[Math.floor(r() * DEMO_ASKS.length)], DEMO_ASKS[Math.floor(r() * DEMO_ASKS.length)]].filter((x, n, l) => l.indexOf(x) === n).join("\n");
         const site = DEMO_SITES[(sb + k * 2) % DEMO_SITES.length];
         a["site:" + s] = site[0]; a["like:" + s] = site[1]; a["build:" + s] = site[2];

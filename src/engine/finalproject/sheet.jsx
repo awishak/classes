@@ -35,6 +35,10 @@ export const copyRow = (classId) => "worksheet-final-prefs-" + (classId || "clas
 const SHARED = {
   title: M.FINAL_PREFS_TITLE,
   topicAsk: "Topic",
+  // Andrew, 2026-11-14, his questions with the joins written in.
+  worthAsk: "Why do you think this topic is worthwhile for you to research?",
+  audienceAsk: "What about it is going to be unique or interesting to your audience?",
+  conceptsAsk: "What are two theories or concepts you would explicate for your audience? Give a definition of each, and say where the definition comes from.",
   askAsk: "What are the kind of questions you would ask about this topic that are interesting to dive into?",
   sitesHead: "Besides social media, what are sites that you like?",
   sitesIntro: "We're looking to build something that is interesting to the audience. Think about the sites you like to go to. For example, I like Wikipedia. Why? Because it has a lot of links, and I learn a lot.",
@@ -77,7 +81,10 @@ const BY_CLASS = {
     credit: "COMM 118. Due Thursday, November 19, at 11:59 PM.",
     intro: "Your final project is an exploration of a topic in communication and sport.",
     topicHead: "What do you want to work on in this class?",
-    topicHint: "A topic would be like transnational athletes in the Olympics, or female referees in male dominated sports.",
+    topicAsk: "Your question",
+    topicHint: "Your topic will be a question at the intersection of communication and sport.",
+    examplesHead: "Example topics",
+    conceptsHint: "Within your multimedia project, you will explicate at least three concepts or theories for your audience through a definition, real-life examples and hypothetical examples.",
   },
 };
 export const defaultCopy = (classId) => ({ ...SHARED, ...(BY_CLASS[classId] || BY_CLASS.comm118) });
@@ -180,7 +187,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const justice = M.isJustice(classId);
   const left = M.missingOf(answers, classId);
   const need = M.requiredCount(answers, classId);
-  const ideaDone = (s) => (justice ? ["topic", ...M.IDEA_PARTS] : ["topic", "ask"]).every(f => !blank(answers, f + ":" + s));
+  const ideaDone = (s) => (justice ? ["topic", ...M.IDEA_PARTS] : ["topic", ...M.SPORT_PARTS, "ask"]).every(f => !blank(answers, f + ":" + s));
   const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>.</> : <><b>{need - left.length} of {need}</b> answered</>);
   const approved = new Set((mine?.topics || []).map(t => t.slot));
 
@@ -232,6 +239,20 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
         <section className="part">
           <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
           <Words k="topicHint" copy={copy} editing={editing} as="p" className="hint" />
+          {!justice ? (
+            <div className="fpp-eg">
+              <Words k="examplesHead" copy={copy} editing={editing} as="p" className="fpp-egh" />
+              <div className="fpp-egs">
+                {M.EXAMPLES_118.map((g, n) => (
+                  <div key={g.area} className={"fpp-egg fpp-eg" + n}>
+                    <p className="fpp-ega">{g.area}</p>
+                    <ul>{g.topics.map(t => <li key={t.say}>{t.say}{t.by ? <span className="fpp-egby">{t.by}, Spring 2026</span> : null}</li>)}</ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {!justice && copy.say("conceptsHint") ? <Words k="conceptsHint" copy={copy} editing={editing} as="p" className="hint" /> : null}
           <div className="ideas">
             {M.SLOTS.map((s, i) => (
               <div key={s} className="box">
@@ -246,12 +267,18 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
                     <Words k={part + "Ask"} copy={copy} editing={editing} className="ask" />
                     <Para id={"fp-" + part + "-" + s} label={copy.say(part + "Ask") + " Topic " + (i + 1)} value={answers[part + ":" + s]} readOnly={readOnly} onChange={v => set(part + ":" + s, v)} rows={3} max={2000} />
                   </div>
-                )) : (
+                )) : (<>
+                  {M.SPORT_PARTS.map(part => (
+                    <div className="field" key={part}>
+                      <Words k={part + "Ask"} copy={copy} editing={editing} className="ask" />
+                      <Para id={"fp-" + part + "-" + s} label={copy.say(part + "Ask") + " Topic " + (i + 1)} value={answers[part + ":" + s]} readOnly={readOnly} onChange={v => set(part + ":" + s, v)} rows={part === "concepts" ? 4 : 3} max={2000} />
+                    </div>
+                  ))}
                   <div className="field">
                     <Words k="askAsk" copy={copy} editing={editing} className="ask" />
                     <Lines id={"fp-ask-" + s} label={copy.say("askAsk") + " Topic " + (i + 1)} value={answers["ask:" + s] || ""} readOnly={readOnly} onChange={v => set("ask:" + s, v)} />
                   </div>
-                )}
+                </>)}
               </div>
             ))}
           </div>
@@ -344,6 +371,17 @@ const EXTRA = `
 .fpp .fpp-place{margin:0;font-size:22px;font-weight:500;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fpp .fpp-place .fpp-pic{width:44px;height:44px}
 .fpp .box .mark{justify-self:start}
+.fpp .fpp-eg{display:grid;gap:10px;margin:4px 0 6px}
+.fpp .fpp-egh{margin:0;font-size:14px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.fpp .fpp-egs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.fpp .fpp-egg{background:var(--sunk);border:2px solid var(--line-soft);border-top:6px solid var(--w);border-radius:14px;padding:12px 14px 14px;min-width:0}
+.fpp .fpp-ega{margin:0 0 8px;font-size:17px;font-weight:600;line-height:1.2;color:var(--ink)}
+.fpp .fpp-egg ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.fpp .fpp-egg li{font-size:16px;line-height:1.3;color:var(--ink);overflow-wrap:anywhere}
+.fpp .fpp-egby{display:block;font-size:14px;font-weight:500;color:var(--ink);opacity:.8}
+.fpp .fpp-eg0{--w:#2563eb}.fpp .fpp-eg1{--w:#e11d48}.fpp .fpp-eg2{--w:#7c3aed}.fpp .fpp-eg3{--w:#d97706}.fpp .fpp-eg4{--w:#0891b2}.fpp .fpp-eg5{--w:#059669}
+@media (max-width:860px){.fpp .fpp-egs{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.fpp .fpp-egs{grid-template-columns:1fr}}
 @media (max-width:860px){.fpp .fpp-work{grid-template-columns:1fr 1fr}}
 `;
 

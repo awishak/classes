@@ -6508,14 +6508,18 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const FP = await import("../src/engine/finalproject/model.js");
   const say = (m) => { console.error("  FAIL  final prefs: " + m); failedEarly++; };
   const full118 = { work: "solo2", strengths: "Audio" };
-  FP.SLOTS.forEach(s => { full118["topic:" + s] = "t"; full118["ask:" + s] = "q"; full118["site:" + s] = "s"; full118["like:" + s] = "l"; full118["build:" + s] = "b"; });
+  FP.SLOTS.forEach(s => { full118["topic:" + s] = "t"; full118["ask:" + s] = "q"; FP.SPORT_PARTS.forEach(part => { full118[part + ":" + s] = "x"; }); full118["site:" + s] = "s"; full118["like:" + s] = "l"; full118["build:" + s] = "b"; });
   if (FP.missingOf(full118, "comm118").length) say("a full COMM 118 sheet still needs " + FP.missingOf(full118, "comm118"));
+  const bare118 = { ...full118 }; FP.SLOTS.forEach(s => FP.SPORT_PARTS.forEach(part => { delete bare118[part + ":" + s]; }));
+  if (!["worth:a", "audience:b", "concepts:c"].every(f => FP.missingOf(bare118, "comm118").includes(f))) say("COMM 118 does not ask why a topic is worthwhile, what the audience gets, and the two concepts");
+  if (FP.readAnswers(full118).topics[0].concepts !== "x") say("the review does not read a topic's concepts");
+  if (FP.EXAMPLES_118.length !== 6 || FP.EXAMPLES_118.some(g => !g.area || g.topics.length < 2)) say("COMM 118's example topics are not six areas with topics in each");
   const need3 = FP.missingOf(full118, "comm3");
   if (!["define", "defineSource", "why:a", "angle:b", "justice:c"].every(f => need3.includes(f)) || need3.includes("ask:a")) say("COMM 3 does not ask for the definition and the three explanations: " + need3);
   const full3 = { ...full118, define: "d", defineSource: "s" };
   FP.SLOTS.forEach(s => FP.IDEA_PARTS.forEach(part => { full3[part + ":" + s] = "x"; }));
   if (FP.missingOf(full3, "comm3").length) say("a full COMM 3 sheet still needs " + FP.missingOf(full3, "comm3"));
-  if (FP.requiredCount(full3, "comm3") !== FP.requiredCount(full118, "comm118") + 2 + 6) say("COMM 3's count of answers is wrong");
+  if (FP.requiredCount(full3, "comm3") !== FP.requiredCount(full118, "comm118") + 2 - 3) say("COMM 3's count of answers is wrong");
   const read = FP.readAnswers(full3);
   if (read.define !== "d" || read.topics[0].why !== "x" || read.topics[2].justice !== "x") say("the review does not read the new answers");
 }
