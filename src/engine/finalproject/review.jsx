@@ -193,7 +193,7 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
   const linked = new Set();
   const lines = [];
   if (focus && pos.get(focus.id)) {
-    const add = (a, b, cls, arrow) => {
+    const add = (a, b, cls, arrow, say) => {
       const p = pos.get(a), q = pos.get(b);
       if (!p || !q) return;
       const dx = q.x - p.x, dy = q.y - p.y, d = Math.hypot(dx, dy) || 1;
@@ -201,16 +201,21 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
       const trim = (from, pad) => { const ux = cx - from.x, uy = cy - from.y, u = Math.hypot(ux, uy) || 1; return { x: from.x + (ux / u) * pad, y: from.y + (uy / u) * pad }; };
       if (d < face * 1.6) return;
       const s = trim(p, face / 2 + 5), e = trim(q, face / 2 + (arrow ? 10 : 5));
-      lines.push({ key: a + ">" + b + cls, d: `M${s.x.toFixed(1)},${s.y.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${e.x.toFixed(1)},${e.y.toFixed(1)}`, cls, arrow });
+      lines.push({ key: a + ">" + b + cls, d: `M${s.x.toFixed(1)},${s.y.toFixed(1)} Q${cx.toFixed(1)},${cy.toFixed(1)} ${e.x.toFixed(1)},${e.y.toFixed(1)}`, cls, arrow, say, tx: 0.25 * s.x + 0.5 * cx + 0.25 * e.x, ty: 0.25 * s.y + 0.5 * cy + 0.25 * e.y });
     };
     people.forEach(q => {
       if (q.id === focus.id) return;
       const out = M.pickOf(focus, q), back = M.pickOf(q, focus);
       if (!out && !back) return;
       linked.add(q.id);
-      if (out && back) add(focus.id, q.id, "fp-l-t" + M.tieOf(focus, q) + " fp-l-strong");
-      else if (out) add(focus.id, q.id, "fp-l-out" + (out === "top" ? " fp-l-outtop" : ""), true);
-      else add(q.id, focus.id, "fp-l-in", true);
+      // Every line says what the line is. Andrew, 2026-11-13: "i don't get
+      // why avery and yoshira have a yellow line between them." Gold is only
+      // ever two people who are each other's top choice; a one-way pick is
+      // grey and dashed whichever list the pick came from.
+      const tie = M.tieOf(focus, q);
+      if (out && back) add(focus.id, q.id, "fp-l-t" + tie + " fp-l-strong", false, tie === 3 ? "Each other's top choice" : tie === 2 ? (out === "top" ? q.first + " is " + focus.first + "'s top choice, and picked back" : focus.first + " is " + q.first + "'s top choice, and picked back") : "Picked each other");
+      else if (out) add(focus.id, q.id, "fp-l-out", true, (out === "top" ? focus.first + "'s top choice" : focus.first + " picked " + q.first) + ", not picked back");
+      else add(q.id, focus.id, "fp-l-in", true, q.first + " picked " + focus.first);
     });
     const partner = M.partnerOf(file, focus.id);
     if (partner) linked.add(partner);
@@ -282,6 +287,7 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
           <marker id="fp-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke" /></marker>
         </defs>
         {lines.map(l => <path key={l.key} d={l.d} className={"fp-l " + l.cls} markerEnd={l.arrow ? "url(#fp-arrow)" : undefined} />)}
+        {lines.map(l => (l.say ? <text key={"t" + l.key} x={l.tx} y={l.ty} className={"fp-ltext " + l.cls}>{l.say}</text> : null))}
         {dragging && pos.get(drag.id) ? <line x1={pos.get(drag.id).x} y1={pos.get(drag.id).y} x2={over ? pos.get(over.id).x : drag.x} y2={over ? pos.get(over.id).y : drag.y} className={"fp-l fp-l-drag" + (over ? (clean ? " fp-l-clean" : " fp-l-warn") : "")} /> : null}
       </svg>
       {dragging ? <span className="fp-ghost" style={{ left: drag.x, top: drag.y }}><Disc p={dragging} size={face} /></span> : null}
@@ -717,7 +723,7 @@ const CSS = `
 .fp-l-pair{--c:var(--made);stroke-width:5;filter:drop-shadow(0 0 8px var(--go))}
 .fp-l-pair.fp-l-near{stroke-width:14;opacity:.9}
 .fp-l-out{--c:var(--dim);stroke-width:1.8;stroke-dasharray:5 6}
-.fp-l-outtop{--c:var(--t3)}
+.fp text.fp-ltext{font-size:12.5px;font-weight:600;text-anchor:middle;dominant-baseline:middle;fill:var(--c);stroke:var(--bg);stroke-width:5px;paint-order:stroke;stroke-linejoin:round;filter:none;stroke-dasharray:none;opacity:1;animation:fp-draw .7s ease both}
 .fp-l-in{--c:var(--mute);stroke-width:1.4;stroke-dasharray:2 6}
 .fp-l-drag{--c:var(--dim);stroke-width:3;stroke-dasharray:6 7;animation:none}
 .fp-l-clean{--c:var(--go);stroke-dasharray:none;filter:drop-shadow(0 0 8px var(--go))}
