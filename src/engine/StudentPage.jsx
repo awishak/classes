@@ -106,7 +106,7 @@ export function StudentLink({ config, student, children, className, style, plain
 // The popup, once the browser is known to be the instructor's. Anyone else is
 // sent to the student's page, where the gate asks who they are.
 function PeekGate({ href, onClose, children }) {
-  const ok = useInstructor();
+  const { ok } = useInstructor();
   useEffect(() => { if (ok === false) { onClose(); window.location.assign(href); } }, [ok]);   // eslint-disable-line react-hooks/exhaustive-deps
   return ok === true ? children : null;
 }
