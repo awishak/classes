@@ -40,7 +40,8 @@ import { unseenGrades, markSeen } from "./grades.js";
 import DueDeck, { dueSoon, dismissDue } from "./DueCard.jsx";
 import Sitdown2Card, { sitdownToday, dismissSitdown } from "./sitdown2/card.jsx";
 import CheckinCard from "./CheckinCard.jsx";
-import { checkinDue } from "./checkins.js";
+import { checkinDue, CHECKIN_AFTER } from "./checkins.js";
+import { usePreStanding } from "./visualstory/prerow.jsx";
 import { NextClassHero, PinnedLinks, ClassSummary, YourCardSummary, GamesSummary, RequestForm, RequestInbox, InstructorProfile,
   openRequests, tileTitle, owedStyle } from "./HomeCards.jsx";
 import { nextOwed } from "./AssignmentsCard.jsx";
@@ -591,6 +592,8 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // back the next time they open the class. Andrew, 2026-10-06: "get it again
   // on next visit."
   const [checkinDone, setCheckinDone] = useState(false);
+  // The week 9 check-in waits for this student's final project preferences.
+  const prefsStanding = usePreStanding(config, CHECKIN_AFTER[9]);
   // What the page draws as. The person is still the instructor; the page is
   // drawn the way the chosen student would get the page drawn.
   // Who this is, from the session and the roster. The remembered name is what
@@ -1249,7 +1252,7 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   }
 
   // The check-in, all of its week, until it is in. See checkins.js.
-  const checkin = data !== null && view !== "instructor" && !checkinDone ? checkinDue(config, data, seenAs) : null;
+  const checkin = data !== null && view !== "instructor" && !checkinDone ? checkinDue(config, data, seenAs, Date.now(), { [CHECKIN_AFTER[9]]: !!(prefsStanding && prefsStanding.kind !== "open") }) : null;
   if (checkin) {
     return (
       <div data-theme={theme} data-mode={mode} style={{ minHeight: "100vh", background: BG, fontFamily: "var(--font-body)", color: TEXT_PRIMARY, "--ca-accent": a, "--ca-accent-ink": a }} className="ca-root">

@@ -27,6 +27,12 @@
 import { parseDay } from "./days.js";
 
 export const CHECKIN_WEEKS = [4, 9];
+// A check-in that waits for a sheet. Andrew, 2026-11-14: "have the week 9
+// check in happen AFTER they turn in their preferences for the final
+// project." Per student: it comes up once that student's Final project
+// preferences are handed in, and it still closes on the week's Sunday. A
+// student who never hands the preferences in is never asked.
+export const CHECKIN_AFTER = { 9: "final-prefs" };
 export const checkinId = (week) => "checkin-" + week;
 export const isCheckin = (asg) => asg?.completes === "checkin";
 
@@ -73,6 +79,7 @@ export function checkinTasksOf(config, data) {
       scale: "complete",
       completes: "checkin",
       week: n,
+      after: CHECKIN_AFTER[n] || "",
       opens: "date",
       opensAt: mon.getFullYear() + "-" + pad(mon.getMonth() + 1) + "-" + pad(mon.getDate()) + "T00:00",
       description: "",
@@ -96,9 +103,11 @@ export const answersOf = (data, id, name) => data?.checkins?.[id]?.[name] || nul
 
 // The check-in this student still owes right now, if any: the card in front
 // of the site.
-export function checkinDue(config, data, name, now = Date.now()) {
+// `handedIn` is { [worksheet key]: true } for the sheets this student has
+// handed in; a check-in that waits for a sheet stays back without it.
+export function checkinDue(config, data, name, now = Date.now(), handedIn = null) {
   if (!name) return null;
-  return checkinTasksOf(config, data).find(asg => checkinOpen(asg, now) && !answersOf(data, asg.id, name)) || null;
+  return checkinTasksOf(config, data).find(asg => checkinOpen(asg, now) && !answersOf(data, asg.id, name) && (!asg.after || !!(handedIn && handedIn[asg.after]))) || null;
 }
 
 // Saving: the answers, the goal on the profile when the student had none,

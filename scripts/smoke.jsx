@@ -5835,6 +5835,13 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   const ans = { going: "ok", differently: "read", support: "examples", challenge: "time" };
   const d1 = ci.saveCheckin({}, w4, N, ans, "Learn to write", mid);
   if (ci.checkinDue(c, d1, N, mid)) say("the check-in comes back after it is in");
+  const wk9 = Date.parse("2026-11-18T12:00");
+  if (w9.after !== "final-prefs" || w4.after) say("only the week 9 check-in waits for the final project preferences");
+  if (ci.checkinDue(c, {}, N, wk9)) say("the week 9 check-in shows before the preferences are handed in");
+  if (ci.checkinDue(c, {}, N, wk9, { "final-prefs": false })) say("the week 9 check-in shows with the preferences not handed in");
+  if (ci.checkinDue(c, {}, N, wk9, { "final-prefs": true })?.id !== "checkin-9") say("the week 9 check-in does not show once the preferences are in");
+  if (ci.checkinDue(c, ci.saveCheckin({}, w9, N, ans, "", wk9), N, wk9, { "final-prefs": true })) say("the week 9 check-in comes back after it is in");
+  if (ci.checkinDue(c, {}, N, Date.parse("2026-11-23T12:00"), { "final-prefs": true })) say("the week 9 check-in shows after its Sunday");
   if (d1.profiles?.[N]?.goals !== "Learn to write") say("a goal written in the check-in is not on the profile");
   if ((d1.assignmentLog["checkin-4"][N] || []).filter(e => e.type === "submission").length !== 1) say("the first submit is not a submission");
   const d2 = ci.saveCheckin(d1, w4, N, { ...ans, going: "better" }, "", mid + 1000);
