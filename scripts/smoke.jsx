@@ -6513,6 +6513,9 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const bare118 = { ...full118 }; FP.SLOTS.forEach(s => FP.SPORT_PARTS.forEach(part => { delete bare118[part + ":" + s]; }));
   if (!["worth:a", "audience:b", "concepts:c"].every(f => FP.missingOf(bare118, "comm118").includes(f))) say("COMM 118 does not ask why a topic is worthwhile, what the audience gets, and the two concepts");
   if (FP.readAnswers(full118).topics[0].concepts !== "x") say("the review does not read a topic's concepts");
+  const liked118 = { ...full118, liked: "Female coaches in the NBA\nNIL and the balance of power" };
+  if (FP.missingOf(liked118, "comm118").length || FP.missingOf(full118, "comm118").includes("liked") || FP.requiredCount(liked118, "comm118") !== FP.requiredCount(full118, "comm118")) say("liking an example topic changes what a sheet needs");
+  if (FP.readAnswers(liked118).liked.join("|") !== "Female coaches in the NBA|NIL and the balance of power" || FP.readAnswers(full118).liked.length || !FP.FIELDS.includes("liked")) say("the liked example topics are not read back");
   if (FP.interestsOf({ finalInterests: { "Ada Lovelace": ["One", " ", "Two"] } }, "Ada Lovelace").join() !== "One,Two" || FP.interestsOf({}, "Ada Lovelace").length || FP.interestsOf({ finalInterests: { "Ada Lovelace": ["One"] } }, "Someone Else").length) say("a student's interest list is not their own approved topics");
   if (FP.EXAMPLES_118.length !== 5 || FP.EXAMPLES_118.some(g => !g.area || g.topics.length < 2 || g.topics.some(t => t.by))) say("COMM 118's example topics are not five areas with topics in each and no student named");
   const need3 = FP.missingOf(full118, "comm3");

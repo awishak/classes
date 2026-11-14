@@ -93,7 +93,12 @@ export const EXAMPLES_118 = [
 ];
 export const TOPIC_FIELDS = SLOTS.flatMap(s => ["topic:" + s, ...SPORT_PARTS.map(part => part + ":" + s), "ask:" + s]);
 export const SITE_FIELDS = SLOTS.flatMap(s => ["site:" + s, "like:" + s, "build:" + s]);
-export const FIELDS = ["work", "top", "also", "strengths", ...TOPIC_FIELDS, ...SITE_FIELDS];
+// The example topics a student marked, saved as the field `liked`, a line an
+// example, in the wall's order. Andrew, 2026-11-14: "maybe they should be
+// allowed to say 'i like these example topics'". Nobody has to mark one, so
+// it is a saved field and never a needed one.
+export const LIKED_SAY = "I like these example topics";
+export const FIELDS = ["work", "top", "also", "strengths", "liked", ...TOPIC_FIELDS, ...SITE_FIELDS];
 
 // COMM 3's sheet asks more. Andrew, 2026-11-14: "i want them to define social
 // justice using an academic definition, not something from a random site. and
@@ -137,6 +142,7 @@ export function readAnswers(answers) {
     top: String(a.top || "").trim(),
     also: lines(a.also),
     strengths: lines(a.strengths),
+    liked: lines(a.liked),
     define: String(a.define || "").trim(),
     defineSource: String(a.defineSource || "").trim(),
     topics: SLOTS.map(s => ({ slot: s, topic: String(a["topic:" + s] || "").trim(), asks: lines(a["ask:" + s]), worth: String(a["worth:" + s] || "").trim(), audience: String(a["audience:" + s] || "").trim(), concepts: String(a["concepts:" + s] || "").trim(), why: String(a["why:" + s] || "").trim(), angle: String(a["angle:" + s] || "").trim(), justice: String(a["justice:" + s] || "").trim() })),

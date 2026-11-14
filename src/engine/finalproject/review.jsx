@@ -516,6 +516,13 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
         ) : null}
       </div>
 
+      {(p.liked || []).length ? (
+        <div className="fp-block">
+          <div className="fp-bhead"><h2>{M.LIKED_SAY}</h2></div>
+          <div className="fp-chips">{p.liked.map(s => <span key={s} className="fp-strength" style={{ "--h": 340 }}>{s}</span>)}</div>
+        </div>
+      ) : null}
+
       {p.strengths.length ? (
         <div className="fp-block">
           <div className="fp-bhead"><h2>Strengths</h2></div>
