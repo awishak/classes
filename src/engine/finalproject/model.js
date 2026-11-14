@@ -106,6 +106,13 @@ export const FIELDS = ["work", "top", "also", "strengths", ...TOPIC_FIELDS, ...S
 export const JUSTICE_CLASSES = ["comm3"];
 export const isJustice = (classId) => JUSTICE_CLASSES.includes(classId);
 export const DEFINE_FIELDS = ["define", "defineSource"];
+// The communication field's standing definition, shown on the review beside a
+// student's own. Andrew approved it 2026-11-14. Quote seen in search excerpts
+// of the article, not in the article itself.
+export const JUSTICE_REF = {
+  say: "\u201cthe engagement with and advocacy for those in our society who are economically, socially, politically, and/or culturally underresourced\u201d",
+  cite: "Frey, Pearce, Pollock, Artz and Murphy (1996), Communication Studies, 47, 110-127",
+};
 export const IDEA_PARTS = ["why", "angle", "justice"];
 export const topicFieldsFor = (classId) => (isJustice(classId) ? SLOTS.flatMap(s => ["topic:" + s, ...IDEA_PARTS.map(part => part + ":" + s)]) : TOPIC_FIELDS);
 const neededFor = (classId) => [...(isJustice(classId) ? DEFINE_FIELDS : []), "work", "strengths", ...topicFieldsFor(classId), ...SITE_FIELDS];

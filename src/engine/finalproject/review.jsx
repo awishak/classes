@@ -482,6 +482,9 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
           <div className="fp-topic">
             <p className="fp-part">{p.define}</p>
             {p.defineSource ? <p className="fp-part"><span className="fp-k">Source</span>{p.defineSource}</p> : null}
+            {/* The field's standing definition, for him to read theirs against.
+                Review only; the sheet makes each student find their own. */}
+            <p className="fp-part"><span className="fp-k">{M.JUSTICE_REF.cite}</span>{M.JUSTICE_REF.say}</p>
           </div>
         </div>
       ) : null}
