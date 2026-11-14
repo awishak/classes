@@ -38,6 +38,8 @@ const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls)
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const store = { get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }, set(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } } };
 const classRoute = /^\/comm118\/turkey-bowl/.test(location.pathname);
+// Andrew's sentence, 2026-11-14, in place of "Credit is reaching Level 3."
+const CREDIT = "If you're playing this game as part of COMM 118, you have to make it to Level 3 to get credit.";
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ─── sound ───
@@ -66,10 +68,26 @@ const sfx = {
   good: () => [523, 659, 784].forEach((f, i) => tone(f, i * 0.08, 0.12)),
   meh: () => [392, 440].forEach((f, i) => tone(f, i * 0.1, 0.12)),
   bad: () => [220, 185].forEach((f, i) => tone(f, i * 0.14, 0.2, "sawtooth", 0.05)),
-  gobble: (at = 0) => { for (let i = 0; i < 7; i++) tone(500 + (i % 2) * 260, at + i * 0.06, 0.05, "sawtooth", 0.05); },
-  silly: () => { [660, 520, 700, 300, 880, 240].forEach((f, i) => tone(f, i * 0.07, 0.07, "triangle", 0.08)); sfx.gobble(0.3); },
+  // A turkey: a throaty note that warbles fast and falls, three times over. Andrew, 2026-11-14: "we need turkey gobbling noises."
+  gobble: (at = 0, times = 3) => {
+    const a = ac(); if (!a || muted) return;
+    for (let n = 0; n < times; n++) {
+      const t = a.currentTime + at + n * 0.42, dur = 0.36;
+      const o = a.createOscillator(), o2 = a.createOscillator(), g = a.createGain(), lfo = a.createOscillator(), depth = a.createGain(), trem = a.createGain(), f = a.createBiquadFilter();
+      o.type = "sawtooth"; o2.type = "square";
+      o.frequency.setValueAtTime(760 - n * 40, t); o.frequency.exponentialRampToValueAtTime(330, t + dur);
+      o2.frequency.setValueAtTime(385 - n * 20, t); o2.frequency.exponentialRampToValueAtTime(170, t + dur);
+      lfo.type = "square"; lfo.frequency.setValueAtTime(19, t); lfo.frequency.linearRampToValueAtTime(11, t + dur);
+      depth.gain.value = 0.5; trem.gain.value = 0.5; lfo.connect(depth).connect(trem.gain);
+      f.type = "bandpass"; f.frequency.value = 900; f.Q.value = 1.4;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(trem); o2.connect(trem); trem.connect(f).connect(g).connect(a.destination);
+      [o, o2, lfo].forEach(x => { x.start(t); x.stop(t + dur + 0.05); });
+    }
+  },
+  silly: () => { [660, 520, 700, 300].forEach((f, i) => tone(f, i * 0.07, 0.07, "triangle", 0.08)); sfx.gobble(0.25, 4); },
   over: () => [392, 370, 349, 330, 196].forEach((f, i) => tone(f, i * 0.22, 0.3, "sawtooth", 0.06)),
-  td: () => { [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.14)); noise(0, 1.8, 0.07); },
+  td: () => { [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.14)); noise(0, 1.8, 0.07); sfx.gobble(1.0, 3); },
   cheer: () => noise(0, 1.1, 0.05),
   boo: () => tone(160, 0, 0.9, "sawtooth", 0.05, 110),
   jet: () => noise(0, 2.2, 0.04),
@@ -415,6 +433,7 @@ async function snap(nth, of) {
   G.yard = Math.min(100, G.yard + yards); G.busy = false; showBack();
   if (G.yard < 100) paint = idle(where);
   if (G.yard >= 100) { G.us += 7; G.yard = 25; G.scored = true; G.log.push({ who: "PLAY", lines: [call.toUpperCase() + " against: " + look.say + " Touchdown."] }); await touchdown(where); return "td"; }
+  if (call === "pass" && !yards && !turnover) sfx.gobble(0, 2);
   const word = turnover ? "INTERCEPTED!" : call === "run" ? (yards >= 12 ? "+" + yards + " YARDS!" : yards > 0 ? "+" + yards + " YARDS" : "STUFFED") : (yards ? "CAUGHT! +" + yards : "INCOMPLETE. A TURKEY TOOK IT.");
   say(word + (good ? "   +50" : "")); (good ? sfx.good : sfx.bad)(); showHud();
   G.log.push({ who: "PLAY", lines: [call.toUpperCase() + " against: " + look.say + " " + word] });
@@ -588,7 +607,7 @@ async function run() {
 
 // ─── the opening ───
 async function titleSequence() {
-  const start = now(); let skip = false, thuds = 0, gobbled = false;
+  const start = now(); let skip = false, thuds = 0, gobbled = false, strut = false;
   const letters = "TURKEY BOWL".split("");
   const stop = () => { skip = true; };
   canvas.addEventListener("pointerdown", stop, { once: true }); onKey = stop;
@@ -606,11 +625,12 @@ async function titleSequence() {
     });
     c.textAlign = "left";
     const te = e - 4.6;   // a turkey crosses, a football finds the turkey
+    if (te > 0 && !strut && !skip) { strut = true; sfx.gobble(0, 3); }
     if (te > 0 && te < 4.2) {
       const hit = te > 2.2, tx = hit ? 390 + (te - 2.2) * 420 : 60 + te * 150, ty = 330 - (hit ? Math.sin((te - 2.2) * 2.2) * 150 : 0);
       c.save(); if (hit) { c.translate(tx, ty - 20); c.rotate((te - 2.2) * 12); c.translate(-tx, -ty + 20); } A.turkey(c, tx, ty, t); c.restore();
       if (!hit) A.ball(c, 700 - te * 150, 300, t * 16);
-      if (hit && !gobbled && !skip) { gobbled = true; sfx.gobble(); }
+      if (hit && !gobbled && !skip) { gobbled = true; sfx.thud(); sfx.gobble(0.05, 4); }
     }
     A.leaves(c, t, 90);
     if (e > 5 && Math.floor(t * 2) % 2) { c.textAlign = "center"; c.font = "14px 'Press Start 2P', monospace"; c.fillStyle = "#1c1626"; c.fillText("THANKSGIVING MORNING", 322, 214); c.fillStyle = "#fff"; c.fillText("THANKSGIVING MORNING", 320, 212); c.textAlign = "left"; }
@@ -627,6 +647,7 @@ async function title() {
   await titleSequence();
   const k = card("TURKEY BOWL");
   k.append(el("p", "scene", "It's Thanksgiving morning. The morning starts with the family football game. And if you're lucky, it'll end with you coaching the Dallas Cowboys to victory."));
+  k.append(el("p", "say", CREDIT));
   if (!me.open) { k.append(el("p", "say", "Turkey Bowl opens Tuesday, November 17.")); return false; }
   if (classRoute && !me.tag && !me.instructor) { const p = el("p", "say", "Sign in to play for COMM 118. "); const a = el("a", "", "Sign in"); a.href = "/login?next=" + encodeURIComponent(location.pathname); p.append(a); k.append(p); }
   let input = null;
@@ -648,7 +669,7 @@ async function title() {
   return true;
 }
 async function admin() {
-  const k = card("WEEKLY CHALLENGE 4"); k.append(el("p", "say", "Credit is reaching Level 3."));
+  const k = card("WEEKLY CHALLENGE 4"); k.append(el("p", "say", CREDIT));
   try {
     const out = await api({ action: "admin" }); const tb = el("table"), head = el("tr"); ["COACH", "EMAIL", "LEVEL", "BEST", "RUNS"].forEach(h => head.append(el("th", "", h))); tb.append(head);
     (out.rows || []).forEach(r => { const tr = el("tr", r.level >= 3 ? "me" : ""); const n = el("td", "", r.name); if (r.tag) n.append(el("span", "tag", r.tag)); tr.append(n, el("td", "", r.email), el("td", "", String(r.level)), el("td", "", String(r.score)), el("td", "", String(r.runs))); tb.append(tr); });
