@@ -3,7 +3,8 @@
 // / Make a meeting, and ask a question. Instructor view: an inbox of every
 // student thread. Threads persist via the shared store (Supabase + realtime).
 
-import { threadWaiting } from "./owed.js";
+import { threadWaiting, threadItem, donePatch } from "./owed.js";
+import { Linked } from "./linkText.jsx";
 import { useState, useEffect } from "react";
 import { genId } from "../utils.jsx";
 import { schedulingLinkOf } from "../instructors.js";
@@ -158,7 +159,7 @@ function Bubble({ m, accent, config, data, name, instructor }) {
         <div style={{ padding: "10px 14px", borderRadius: 16, fontSize: 15, lineHeight: 1.45,
           background: his ? accent + "12" : "#f3f4f6",
           color: TEXT_PRIMARY, border: isQuestion ? "1px solid #f59e0b55" : "none" }}>
-          {m.text}
+          <Linked text={m.text} />
           {/* A picture in a message. Andrew, 2026-10-19: a photo he picked
               for each student goes to them with a note, so a message can
               carry one, as `image`, a URL in the class's media bucket. */}
@@ -538,6 +539,8 @@ export function StudentThread({ config, data, update, name }) {
       <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}><Field value={note} onChange={setNote} placeholder={"Post a note to " + String(name).split(" ")[0] + "..."} /></div>
         <SendBtn accent={a} onClick={send} disabled={!note.trim()}>Post</SendBtn>
+        {/* Done with nothing sent, the inbox's Done (owed.js), so a thread read here stops waiting here. */}
+        {waitingOnInstructor(data, name) ? <GhostBtn accent={a} label="Done" onClick={() => update(prev => { const it = threadItem(prev, name); return it ? donePatch(prev, it) : prev; })}>Done</GhostBtn> : null}
       </div>
     </div>
   );

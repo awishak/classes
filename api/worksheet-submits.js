@@ -90,9 +90,12 @@ export default async function handler(req, res) {
   // Problem reports students filed from a worksheet, newest first.
   // { groupKey, key, reports: true } -> { ok, reports: [{ viewer_id, message, details, created_at }] }
   if (body.reports) {
+    // Without a key: every worksheet's reports for the class, which is what
+    // the inbox reads. `since` (ISO) keeps it to the reports after a moment.
     const key = String(body.key || "");
-    if (!SLUG.test(groupKey) || !SLUG.test(key)) return res.status(400).json({ ok: false, error: "A class and a worksheet are needed." });
-    const r = await fetch(SUPABASE_URL + `/rest/v1/worksheet_reports?select=id,viewer_id,message,details,created_at&worksheet_key=eq.${key}&group_key=eq.${groupKey}&order=created_at.desc&limit=200`, { headers: serviceHeaders() });
+    if (!SLUG.test(groupKey) || (key && !SLUG.test(key))) return res.status(400).json({ ok: false, error: "A class and a worksheet are needed." });
+    const since = body.since && !Number.isNaN(Date.parse(body.since)) ? "&created_at=gte." + encodeURIComponent(new Date(body.since).toISOString()) : "";
+    const r = await fetch(SUPABASE_URL + `/rest/v1/worksheet_reports?select=id,viewer_id,worksheet_key,message,details,created_at${key ? "&worksheet_key=eq." + key : ""}&group_key=eq.${groupKey}${since}&order=created_at.desc&limit=200`, { headers: serviceHeaders() });
     if (!r.ok) return res.status(502).json({ ok: false, error: "Could not read the reports." });
     return res.status(200).json({ ok: true, reports: await r.json() });
   }

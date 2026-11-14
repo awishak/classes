@@ -18,6 +18,9 @@
 //   challenge  a message on a challenge; the rule AssignmentsCard already
 //              keeps (unanswered), minus regrade asks, which are grading
 //   request    a request or a bug from the More page, until marked done
+//   report     a problem report filed from a worksheet (worksheet_reports),
+//              read by the inbox page and handed in as `extra`; done is
+//              inboxDone, and a reply goes to the student's thread
 //
 // Each item is routed to "msg" (the inbox) or "late" (To Grade). A note
 // about turning something in late is "late"; LATE below guesses, and he can
@@ -90,7 +93,7 @@ const requestItems = (data) => (data?.requests || []).filter(r => !r.done && !r.
 const routeOf = (data, item) => {
   const set = data?.inboxRoute?.[item.key];
   if (set && set.ts === item.ts) return set.to;
-  return item.kind !== "request" && aboutLateness(item.text) ? "late" : "msg";
+  return item.kind !== "request" && item.kind !== "report" && aboutLateness(item.text) ? "late" : "msg";
 };
 
 /**
@@ -98,11 +101,11 @@ const routeOf = (data, item) => {
  * `names` limits it to the roster's real students, so a test student's
  * thread is nobody's inbox.
  */
-export function owedOf(data, assignments, names, now = Date.now()) {
+export function owedOf(data, assignments, names, now = Date.now(), extra = []) {
   if (!data) return { msg: [], late: [], later: [] };
   const known = names ? new Set(names) : null;
   const threads = Object.keys(data.threads || {}).filter(n => !known || known.has(n)).map(n => threadItem(data, n)).filter(Boolean);
-  const all = [...threads, ...challengeItems(data, assignments).filter(i => !known || known.has(i.name)), ...requestItems(data)];
+  const all = [...threads, ...challengeItems(data, assignments).filter(i => !known || known.has(i.name)), ...requestItems(data), ...extra];
   const out = { msg: [], late: [], later: [] };
   all.forEach(item => {
     const hold = data.inboxLater?.[item.key];
@@ -112,6 +115,19 @@ export function owedOf(data, assignments, names, now = Date.now()) {
   });
   Object.values(out).forEach(list => list.sort((x, y) => x.since - y.since));
   return out;
+}
+
+/**
+ * The worksheet problem reports as items. `reports` are the server's rows
+ * ({ id, viewer_id, worksheet_key, message, created_at }); `roster` names
+ * the student behind each email. One marked done is gone.
+ */
+export function reportItems(data, roster, reports) {
+  const byEmail = new Map((roster || []).filter(s => s.email).map(s => [String(s.email).trim().toLowerCase(), s.name]));
+  return (reports || []).map(r => {
+    const ts = Date.parse(r.created_at) || 0, key = "w:" + r.id;
+    return { key, kind: "report", name: byEmail.get(String(r.viewer_id || "").trim().toLowerCase()) || "", sheet: r.worksheet_key || "", ts, since: ts, text: r.message || "" };
+  }).filter(i => i.text && (data?.inboxDone?.[i.key] || 0) < i.ts);
 }
 
 // ─── what he can do to an item ───
@@ -138,7 +154,7 @@ export const replyPatch = (data, item, text, now = Date.now()) => {
   const threads = { ...(data.threads || {}) };
   threads[item.name] = [...(threads[item.name] || []), { id: genId(), ts: now, from: "instructor", kind: "note", text: words }];
   const next = { ...data, threads };
-  return item.kind === "request" ? donePatch(next, item) : next;
+  return item.kind === "request" || item.kind === "report" ? donePatch(next, item) : next;
 };
 
 export const laterPatch = (data, item, until) => mark(data, "inboxLater", item.key, { ts: item.ts, until });

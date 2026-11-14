@@ -18,8 +18,14 @@ import { useClassData } from "./store.js";
 import { usePhotos, useWithPhotos } from "./photos.js";
 import { assignmentsOf } from "./profileTask.js";
 import { realStudents } from "./sections.js";
-import { rosterOf, nameShown } from "./roster.js";
-import { owedOf, isOverdue, donePatch, replyPatch, laterPatch, routePatch, plain } from "./owed.js";
+import { rosterOf, nameShown, findStudent } from "./roster.js";
+import { owedOf, reportItems, isOverdue, donePatch, replyPatch, laterPatch, routePatch, plain } from "./owed.js";
+import { Linked } from "./linkText.jsx";
+import { Reopen } from "./Reopen.jsx";
+import { embedOf } from "./GradeView.jsx";
+import { NAV_CLASS } from "./TopNav.jsx";
+import { authHeaders } from "./session.js";
+import { savedPin } from "../InstructorGate.jsx";
 import { PORTAL_CSS } from "./portal/style.js";
 import { Face } from "./portal/bits.jsx";
 import { baseCSS } from "./themes.js";
@@ -29,12 +35,14 @@ import { lastClass } from "./InstructorNav.jsx";
 import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { recordOf } from "./StudentPage.jsx";
 import StudentPeek from "./StudentPeek.jsx";
+import CardWriter from "./CardWriter.jsx";
 import * as TOKENS from "./tokens.js";
 
 const F = TOKENS.FONT.body;
 // His canned answers, the same three the class's Messages page offers (YouCard.jsx).
 const CANNED = ["Hope you're feeling better!", "Thanks for letting me know.", "Okay, take care."];
 const DAY = 86400000;
+const REPORT_DAYS = 21;
 
 const dateWords = (ts, now = Date.now()) => {
   const d = new Date(ts), n = new Date(now);
@@ -46,21 +54,41 @@ const fullWords = (ts) => new Date(ts).toLocaleString("en-US", { weekday: "short
 const morning = (days) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(8, 0, 0, 0); return d.getTime(); };
 
 /** One class, loaded once and reported up: its config, data, writer and what is owed. */
-function ClassFeed({ config, onFeed }) {
+function ClassFeed({ config, onFeed, reports = false }) {
   const [stored, update] = useClassData(config.storageKey);
   const [photos] = usePhotos(config.storageKey);
   const data = useWithPhotos(stored, photos);
-  const owed = useMemo(() => data ? owedOf(data, assignmentsOf(config, data), realStudents(config, rosterOf(config, data)).map(s => s.name)) : null, [config, data]);
+  // The problem reports students filed from a worksheet, the last three
+  // weeks of them. Read on the inbox page only, not for the count in the bar.
+  const [filed, setFiled] = useState(null);
+  useEffect(() => {
+    if (!reports) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch("/api/worksheet-submits", { method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+          body: JSON.stringify({ pin: savedPin(), groupKey: config.id, reports: true, since: new Date(Date.now() - REPORT_DAYS * DAY).toISOString() }) });
+        const out = await r.json().catch(() => null);
+        if (alive && out && out.ok) setFiled(out.reports || []);
+      } catch { /* the inbox without the reports */ }
+    })();
+    return () => { alive = false; };
+  }, [config.id, reports]);
+  const owed = useMemo(() => {
+    if (!data) return null;
+    const roster = realStudents(config, rosterOf(config, data));
+    return owedOf(data, assignmentsOf(config, data), roster.map(s => s.name), Date.now(), reportItems(data, roster, filed));
+  }, [config, data, filed]);
   useEffect(() => { if (owed) onFeed(config.id, { config, data, update, owed }); }, [config, data, update, owed, onFeed]);
   return null;
 }
 
 /** Every running class's feed, by class id, and whether all of them are in. */
-export function useFeeds() {
+export function useFeeds({ reports = false } = {}) {
   const classes = useMemo(() => currentClasses().filter(c => !c.demo), []);
   const [feeds, setFeeds] = useState({});
   const onFeed = useMemo(() => (id, feed) => setFeeds(prev => ({ ...prev, [id]: feed })), []);
-  const nodes = classes.map(c => <ClassFeed key={c.id} config={c} onFeed={onFeed} />);
+  const nodes = classes.map(c => <ClassFeed key={c.id} config={c} onFeed={onFeed} reports={reports} />);
   return { classes, feeds, nodes, loaded: classes.every(c => feeds[c.id]) };
 }
 
@@ -68,7 +96,17 @@ const rowsOf = (classes, feeds, slot) => classes.flatMap(c => (feeds[c.id]?.owed
   .sort((x, y) => x.since - y.since);
 
 // What the row is about, where a subject line would be.
-const subjectOf = (item) => item.kind === "challenge" ? item.title : item.kind === "request" ? (item.bug ? "Bug" : "Request") : "";
+const subjectOf = (item) => item.kind === "challenge" ? item.title : item.kind === "request" ? (item.bug ? "Bug" : "Request") : item.kind === "report" ? "Problem report" : "";
+
+// What a reply can point at: the class's challenges and its pages, each as
+// the words and the full address, so the link works wherever it is read.
+const linksOf = (config, data) => {
+  const at = (typeof window !== "undefined" ? window.location.origin : "") + config.path;
+  return {
+    challenges: assignmentsOf(config, data).map(a => ({ words: a.title, href: at + "/challenges/" + encodeURIComponent(a.id) })),
+    pages: NAV_CLASS.map(n => ({ words: n.label, href: at + (n.card ? "/" + n.card : "") })),
+  };
+};
 
 // The conversation an open row shows: the thread, or the words on the challenge.
 function talkOf(item) {
@@ -97,6 +135,12 @@ export function Open({ item, feed, act, where, peek }) {
   const box = useRef(null);
   useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [item.id]);
   const send = () => { if (draft.trim()) act(item, d => replyPatch(d, item, draft)); };
+  const add = (words) => setDraft(d => (d.trim() ? d.trim() + " " : "") + words);
+  const links = item.name ? linksOf(config, data) : null;
+  const asg = item.kind === "challenge" ? assignmentsOf(config, data).find(a => a.id === item.aid) : null;
+  const student = item.name ? findStudent(rosterOf(config, data), item.name) : null;
+  // A link in a bubble opens in the popup when its file can sit in a frame.
+  const openLink = item.name ? (href) => { if (!embedOf(href)) return false; peek(item, { href, title: href.replace(/^https?:\/\/(www\.)?/, "").split(/[/?#]/)[0] }); return true; } : undefined;
   const href = item.kind === "challenge" ? "/grades/" + config.id + "/flow?a=" + encodeURIComponent(item.aid)
     : item.name ? config.path + "/messages/" + encodeURIComponent(item.name) : "";
   return (
@@ -107,7 +151,7 @@ export function Open({ item, feed, act, where, peek }) {
           <div key={m.id} className={"ib-msg" + (m.mine ? " mine" : "")}>
             {!m.mine && item.name ? <button type="button" className="ib-face pt-focus" aria-label={nameShown(data, item.name)} onClick={() => peek(item)}><Face config={config} data={data} name={item.name} size={30} /></button> : null}
             <div className="ib-bub">
-              <p className="ib-words">{m.text}</p>
+              <p className="ib-words"><Linked text={m.text} onOpen={openLink} /></p>
               <p className="ib-when">{fullWords(m.ts)}</p>
             </div>
           </div>
@@ -117,7 +161,14 @@ export function Open({ item, feed, act, where, peek }) {
         <>
           <textarea className="pt-field pt-focus ib-box" value={draft} onChange={e => setDraft(e.target.value)} aria-label={"Reply to " + nameShown(data, item.name)}
             onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") send(); }} />
-          <div className="ib-canned">{CANNED.map(c => <button key={c} type="button" className="pt-chip pt-focus" onClick={() => setDraft(d => (d.trim() ? d.trim() + " " : "") + c)}>{c}</button>)}</div>
+          <div className="ib-canned">
+            {CANNED.map(c => <button key={c} type="button" className="pt-chip pt-focus" onClick={() => add(c)}>{c}</button>)}
+            <select className="pt-chip pt-focus ib-pick" value="" aria-label="Link to a challenge or a page" onChange={e => { if (e.target.value) add(e.target.value); }}>
+              <option value="">Link</option>
+              <optgroup label="Challenges">{links.challenges.map(l => <option key={l.href} value={l.words + ": " + l.href}>{l.words}</option>)}</optgroup>
+              <optgroup label="Pages">{links.pages.map(l => <option key={l.href} value={l.words + ": " + l.href}>{l.words}</option>)}</optgroup>
+            </select>
+          </div>
         </>
       ) : null}
       <div className="ib-acts">
@@ -126,7 +177,8 @@ export function Open({ item, feed, act, where, peek }) {
         {where !== "later" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => laterPatch(d, item, morning(1)))}>Later: tomorrow</button> : null}
         {where !== "later" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => laterPatch(d, item, morning(7)))}>Later: next week</button> : null}
         {where === "later" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => laterPatch(d, item, 0))}>Back to inbox</button> : null}
-        {item.kind !== "request" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => routePatch(d, item, item.route === "late" ? "msg" : "late"))}>{item.route === "late" ? "Move to inbox" : "Move to To Grade"}</button> : null}
+        {asg && student ? <Reopen config={config} asg={asg} student={student} onDone={(till) => setDraft(d => d.trim() ? d : "I reopened it for you until " + till + ".")} /> : null}
+        {item.kind !== "request" && item.kind !== "report" ? <button type="button" className="pt-chip pt-focus" onClick={() => act(item, d => routePatch(d, item, item.route === "late" ? "msg" : "late"))}>{item.route === "late" ? "Move to inbox" : "Move to To Grade"}</button> : null}
         {href ? <a className="ib-link pt-focus" href={href}>{item.kind === "challenge" ? "Grade Flow" : "Thread"}</a> : null}
       </div>
     </div>
@@ -134,13 +186,43 @@ export function Open({ item, feed, act, where, peek }) {
 }
 
 /** The list, mail's way: a tick box, the face and name, the subject and first words, the date. */
-export function MailList({ rows, feeds, where }) {
+export function MailList({ rows, feeds, where, keys = false, onCard }) {
   const [openId, setOpenId] = useState("");
   const [picked, setPicked] = useState({});
   const [peeked, setPeeked] = useState(null);   // the student whose popup is up
-  const peek = (item) => setPeeked({ classId: item.classId, name: item.name });
+  const peek = (item, work = null) => setPeeked({ classId: item.classId, name: item.name, work });
   const now = Date.now();
-  const act = (item, patch) => { feeds[item.classId].update(patch); setOpenId(""); setPicked(p => { const { [item.id]: _, ...rest } = p; return rest; }); };
+  // Handling a row opens the one after it, so the list is cleared in one run.
+  const act = (item, patch, onward = true) => {
+    const i = rows.findIndex(r => r.id === item.id);
+    const next = onward && i >= 0 ? rows[i + 1] || rows[i - 1] : null;
+    feeds[item.classId].update(patch);
+    setOpenId(next ? next.id : "");
+    setPicked(p => { const { [item.id]: _, ...rest } = p; return rest; });
+  };
+  // Mail's keys, on the inbox page: j and k walk the rows, r is the reply
+  // box, e is Done, p is the student, Escape closes. Never while typing.
+  useEffect(() => {
+    if (!keys) return undefined;
+    const onKey = (e) => {
+      if (peeked || e.metaKey || e.ctrlKey || e.altKey) return;
+      const t = e.target;
+      if (t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.tagName === "SELECT" || t.isContentEditable)) { if (e.key === "Escape") t.blur(); return; }
+      const i = rows.findIndex(r => r.id === openId);
+      if (e.key === "j" || e.key === "k") {
+        e.preventDefault();
+        const n = i < 0 ? (e.key === "j" ? 0 : rows.length - 1) : Math.min(rows.length - 1, Math.max(0, i + (e.key === "j" ? 1 : -1)));
+        if (rows[n]) setOpenId(rows[n].id);
+      } else if (e.key === "Escape") setOpenId("");
+      else if (i < 0) return;
+      else if (e.key === "e") { e.preventDefault(); act(rows[i], d => donePatch(d, rows[i])); }
+      else if (e.key === "r") { e.preventDefault(); const box = document.querySelector(".ib-item.open .ib-box"); if (box) box.focus(); }
+      else if (e.key === "p" && rows[i].name) { e.preventDefault(); peek(rows[i]); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+  useEffect(() => { const el = openId && typeof document !== "undefined" ? document.querySelector(".ib-item.open") : null; if (el && el.scrollIntoView) el.scrollIntoView({ block: "nearest" }); }, [openId]);
   const chosen = rows.filter(r => picked[r.id]);
   const all = rows.length > 0 && chosen.length === rows.length;
   return (
@@ -148,7 +230,8 @@ export function MailList({ rows, feeds, where }) {
       {rows.length ? (
         <div className="ib-bar">
           <input type="checkbox" className="ib-tick" checked={all} aria-label="Select all" onChange={() => setPicked(all ? {} : Object.fromEntries(rows.map(r => [r.id, true])))} />
-          {chosen.length ? <button type="button" className="pt-chip pt-focus" onClick={() => chosen.forEach(r => act(r, d => donePatch(d, r)))}>{"Done with " + chosen.length}</button> : null}
+          {chosen.length ? <button type="button" className="pt-chip pt-focus" onClick={() => chosen.forEach(r => act(r, d => donePatch(d, r), false))}>{"Done with " + chosen.length}</button> : null}
+          {onCard && chosen.some(r => r.name) ? <button type="button" className="pt-chip pt-focus" onClick={() => onCard(chosen)}>Write a card</button> : null}
         </div>
       ) : null}
       {rows.map(item => {
@@ -172,7 +255,7 @@ export function MailList({ rows, feeds, where }) {
           </div>
         );
       })}
-      {peeked && feeds[peeked.classId] ? <StudentPeek config={feeds[peeked.classId].config} data={feeds[peeked.classId].data} name={peeked.name} onClose={() => setPeeked(null)} /> : null}
+      {peeked && feeds[peeked.classId] ? <StudentPeek config={feeds[peeked.classId].config} data={feeds[peeked.classId].data} name={peeked.name} startWork={peeked.work} onClose={() => setPeeked(null)} /> : null}
     </div>
   );
 }
@@ -197,16 +280,19 @@ export function LateNotes({ filter = "" }) {
 
 /** How many wait in the inbox, every class together, or null until known. */
 export function InboxCount() {
-  const { classes, feeds, nodes, loaded } = useFeeds();
+  const { classes, feeds, nodes, loaded } = useFeeds({ reports: true });
   const n = loaded ? rowsOf(classes, feeds, "msg").length : 0;
   // Drawn in the top bar of every page, so its look is its own, not this page's sheet.
   return <>{nodes}{n ? <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 20, height: 20, padding: "0 6px", marginLeft: 6, borderRadius: 999, background: TOKENS.TEXT.primary, color: "#fff", fontSize: 12, fontWeight: 700 }}>{n}</span> : null}</>;
 }
 
 export default function InboxPage() {
-  const { classes, feeds, nodes, loaded } = useFeeds();
+  const { classes, feeds, nodes, loaded } = useFeeds({ reports: true });
   const [tab, setTab] = useState("msg");
   const [filter, setFilter] = useState("");
+  const [card, setCard] = useState(null);   // { [classId]: [names] } while a card is being written
+  // The ticked rows' students, by class, as the card's first picks.
+  const cardFor = (chosen) => { const start = {}; chosen.filter(r => r.name).forEach(r => { start[r.classId] = [...new Set([...(start[r.classId] || []), r.name])]; }); setCard(start); };
   useEffect(() => { document.title = "Inbox"; }, []);
   const of = (slot) => loaded ? rowsOf(classes, feeds, slot).filter(r => !filter || r.classId === filter) : [];
   const msg = of("msg"), later = of("later"), late = of("late");
@@ -225,12 +311,14 @@ export default function InboxPage() {
             <button type="button" className={"ib-tab pt-focus" + (tab === "later" ? " on" : "")} onClick={() => setTab("later")}>Later{loaded ? <span className="ib-n">{later.length}</span> : null}</button>
             <a className="ib-tab pt-focus" href="/grades">Late notes{loaded ? <span className="ib-n">{late.length}</span> : null}</a>
           </nav>
+          {loaded ? <button type="button" className="pt-chip pt-focus" onClick={() => setCard({})}>Write a card</button> : null}
           <div className="pt-chips ib-classes">
             <button type="button" className={"pt-chip pt-focus" + (!filter ? " on" : "")} onClick={() => setFilter("")}>All</button>
             {classes.map(c => <button key={c.id} type="button" className={"pt-chip pt-focus" + (filter === c.id ? " on" : "")} onClick={() => setFilter(c.id)}>{c.code}</button>)}
           </div>
         </div>
-        {loaded ? <MailList key={tab} rows={rows} feeds={feeds} where={tab} /> : null}
+        {loaded ? <MailList key={tab} rows={rows} feeds={feeds} where={tab} keys={!card} onCard={cardFor} /> : null}
+        {card ? <CardWriter classes={filter ? classes.filter(c => c.id === filter) : classes} feeds={feeds} start={card} onClose={() => setCard(null)} /> : null}
       </div>
     </div>
   );
@@ -281,6 +369,7 @@ export const INBOX_CSS = `
 .ib-when{margin:4px 0 0;font-size:12px;font-weight:500;opacity:.7}
 .ib-box{min-height:96px;resize:vertical;font-family:inherit;max-width:760px}
 .ib-canned,.ib-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ib-pick{font:inherit;font-size:15px;font-weight:500;max-width:120px;cursor:pointer}
 .ib-acts .pt-btn{background:var(--text-primary)}
 .ib-acts .pt-btn:disabled{opacity:.4}
 .ib-link{font-size:15px;font-weight:600;color:var(--text-primary);padding:0 6px}

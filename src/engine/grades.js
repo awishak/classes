@@ -190,7 +190,7 @@ const sentTo = (board, log, name) => {
 // differs from what the student was last sent, "same" when the letter and the
 // comment are what the student already has, "withdrawn" when the card was
 // taken out of every column, and null when there is nothing to send.
-const releaseStateOf = (board, log, name) => {
+export const releaseStateOf = (board, log, name) => {
   const card = board.cards?.[name] || {};
   const b = bucketOf(card.bucket);
   const sent = sentTo(board, log, name);

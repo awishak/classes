@@ -31,7 +31,10 @@ import { inDueOrder, statusOf } from "./AssignmentCards.jsx";
 import { computeGrade } from "./AssignmentsCard.jsx";
 import { rosterOf, findStudent, nameShown, idOf } from "./roster.js";
 import { sectionOf } from "./sections.js";
-import { boardOf, bucketOf, alive, htmlToText, letterOf } from "./grades.js";
+import { boardOf, bucketOf, bucketsFor, signOf, alive, htmlToText, letterOf, placeCard, writeCard, releasePatch, releaseStateOf } from "./grades.js";
+import { schedulingLinkOf } from "../instructors.js";
+import { Reopen, canReopen } from "./Reopen.jsx";
+import { Linked } from "./linkText.jsx";
 import { isCheckin, checkinTasksOf, CHECKIN_QUESTIONS, answersOf } from "./checkins.js";
 import { hasPage, sheetKeyOf } from "./submissionPages.js";
 import { Avatar, profileOf } from "./Face.jsx";
@@ -92,13 +95,63 @@ export function recordOf(config, data, asg, name) {
   return { st, link: linked?.link || "", card, pending, released: !!board.released, thread, status, late: !!st.late || st.state === "missed" };
 }
 
+// The grade on one challenge, changed from the popup: the column, the sign
+// and the comment, the same three things a card holds in Grade Flow, written
+// the same way (placeCard, writeCard). Save sorts the card and sends nothing.
+// Save and release is offered only on a board that is already released and
+// where nobody else has a change waiting, because a release sends every
+// waiting card on the board, and from here that must be this student's alone.
+function GradeEdit({ config, data, asg, name, update, onClose }) {
+  const board = boardOf(data, asg.id);
+  const card = board.cards?.[name] || {};
+  const [bucket, setBucket] = useState(card.bucket || "");
+  const [sign, setSign] = useState(signOf(card));
+  const [comment, setComment] = useState(card.comment || "");
+  const b = bucketOf(bucket);
+  const signed = !!b && /^[A-D]$/.test(b.letter);
+  const logs = data?.assignmentLog?.[asg.id] || {};
+  const others = [...new Set([...Object.keys(board.cards || {}), ...Object.keys(logs)])].filter(n => n !== name)
+    .some(n => { const s = releaseStateOf(board, logs[n], n); return s === "new" || s === "changed" || s === "withdrawn"; });
+  const save = (send) => {
+    update(prev => {
+      const next = placeCard(writeCard(prev, asg.id, name, { comment, sign: signed ? sign : "" }), asg.id, name, bucket || null);
+      return send ? releasePatch(next, asg.id, Date.now(), { meetingLink: schedulingLinkOf(config) }) : next;
+    });
+    onClose();
+  };
+  return (
+    <div className="sp-edit">
+      <div className="sp-acts">
+        <select className="sp-btn" value={bucket} aria-label={"Grade, " + asg.title} onChange={e => setBucket(e.target.value)}>
+          <option value="">No grade</option>
+          {bucketsFor(asg).map(x => <option key={x.id} value={x.id}>{x.label}</option>)}
+        </select>
+        {signed ? (
+          <select className="sp-btn" value={sign} aria-label="Plus or minus" onChange={e => setSign(e.target.value)}>
+            <option value="">{b.letter}</option><option value="+">{b.letter + "+"}</option><option value="-">{b.letter + "-"}</option>
+          </select>
+        ) : null}
+      </div>
+      <textarea className="sp-box" value={comment} aria-label={"Comment, " + asg.title} onChange={e => setComment(e.target.value)} />
+      <div className="sp-acts">
+        <button type="button" className="sp-btn" onClick={() => save(false)}>Save</button>
+        {board.released && !others ? <button type="button" className="sp-btn sp-go" onClick={() => save(true)}>Save and release</button> : null}
+        {board.released && others ? <a className="sp-lnk" href={"/grades/" + config.id + "/flow?a=" + encodeURIComponent(asg.id)}>Grade Flow</a> : null}
+        <button type="button" className="sp-btn" onClick={onClose}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
 // `embedded`: inside the popup (StudentPeek.jsx), which draws its own bar.
 // The challenges come first there, and a challenge's title hands its file
 // to onWork instead of opening a tab.
 export default function StudentPage({ config, id, embedded = false, onWork }) {
-  const [stored] = useClassData(config.storageKey);
+  const [stored, update] = useClassData(config.storageKey);
   const [photos] = usePhotos(config.storageKey);
   const data = useWithWorksheetSubmits(useWithPhotos(stored, photos), config);
+  const [editing, setEditing] = useState("");    // the challenge whose grade is being changed, in the popup
+  const [talkOpen, setTalkOpen] = useState(false); // their messages, shown on a press (his rule for private words)
   const roster = useMemo(() => rosterOf(config, data), [config, data]);
   const student = findStudent(roster, id) || findStudent(roster, decodeURIComponent(id));
   const name = student?.name || "";
@@ -184,6 +237,8 @@ export default function StudentPage({ config, id, embedded = false, onWork }) {
     </dl>
   ) : null;
 
+  const talk = (data?.threads?.[name] || []).filter(m => !m.deleted && (m.text || m.kind === "got_it" || m.kind === "meeting"));
+
   return shell(
     <>
       {embedded ? null : (
@@ -203,6 +258,16 @@ export default function StudentPage({ config, id, embedded = false, onWork }) {
         {embedded ? null : fields}
       </section>
       {embedded && fields ? <section className="sp-card">{fields}</section> : null}
+      {embedded && talk.length ? (
+        <section className="sp-card">
+          <div className="sp-acts"><button type="button" className="sp-btn" aria-expanded={talkOpen} onClick={() => setTalkOpen(v => !v)}>{"Messages · " + talk.length}</button></div>
+          {talkOpen ? (
+            <div className="sp-thread">
+              {talk.map(m => <p key={m.id} className={"sp-msg" + (m.from === "instructor" ? " mine" : "")}><b>{m.from === "instructor" ? "You" : shown}</b> <span className="sp-when">{when(m.ts)}</span><br /><Linked text={m.text || (m.kind === "got_it" ? "Thumbs up" : m.kind === "meeting" ? "Make a meeting" : "")} /></p>)}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       {checkins.map(({ asg, answers }) => (
         <section key={asg.id} className="sp-card">
@@ -229,13 +294,22 @@ export default function StudentPage({ config, id, embedded = false, onWork }) {
           const href = story && myStory ? config.path + "/stories?s=" + encodeURIComponent(myStory.id) : docLinks[asg.id] || r.link || "";
           const grade = r.st.letter || (r.pending ? r.pending.letter : "");
           const comment = r.st.letter ? r.st.comments[0] : r.card?.comment;
+          // A grade that did not come off the board (an older one, put in by hand) is not changed from here.
+          const canGrade = asg.submission !== "none" && r.st.state !== "ongoing" && (!r.st.letter || !!r.card?.bucket);
           return (
             <section key={asg.id} className={"sp-card sp-asg" + (r.late ? " late" : "")}>
               <h2 className="sp-h2">{href && embedded && onWork ? <button type="button" onClick={() => onWork({ href, title: asg.title })}>{asg.title}</button> : href ? <a href={href} target="_blank" rel="noopener">{asg.title}</a> : asg.title}</h2>
               <p className="sp-meta">{"Due " + asg.due + (asg.dueTime ? " " + asg.dueTime : "") + (asg.weight ? " · " + asg.weight + "%" : "")}</p>
               {r.status ? <p className={"sp-status" + (r.late ? " late" : "")}>{r.status}</p> : null}
               {grade ? <p className="sp-grade"><b>{grade}</b>{r.pending ? <span className="sp-chip">not released</span> : null}</p> : null}
-              {comment ? <p className="sp-comment">{comment}</p> : null}
+              {comment && editing !== asg.id ? <p className="sp-comment">{comment}</p> : null}
+              {embedded && editing === asg.id ? <GradeEdit config={config} data={data} asg={asg} name={name} update={update} onClose={() => setEditing("")} /> : null}
+              {embedded && editing !== asg.id && (canGrade || canReopen(config, asg, student)) ? (
+                <div className="sp-acts">
+                  {canGrade ? <button type="button" className="sp-btn" onClick={() => setEditing(asg.id)}>{grade ? "Change grade" : "Grade"}</button> : null}
+                  <Reopen config={config} asg={asg} student={student} className="sp-btn" />
+                </div>
+              ) : null}
               {r.card?.note ? <p className="sp-note"><span className="sp-k">Your note</span>{r.card.note}</p> : null}
               {r.thread.length ? (
                 <div className="sp-thread">
@@ -287,6 +361,11 @@ const CSS = `
 .sp-h2 a:hover{text-decoration:underline}
 .sp-h2 button{font:inherit;letter-spacing:inherit;color:var(--ca-accent-ink);background:none;border:0;padding:0;text-align:left;cursor:pointer}
 .sp-h2 button:hover{text-decoration:underline}
+.sp-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sp-edit{display:flex;flex-direction:column;gap:10px}
+.sp-box{font:inherit;font-size:15.5px;line-height:1.5;min-height:140px;resize:vertical;padding:10px 12px;border-radius:12px;border:1px solid var(--line-strong);background:var(--surface-card);color:var(--text-primary)}
+.sp-btn.sp-go{background:var(--text-primary);color:var(--surface-card);border-color:var(--text-primary)}
+.sp-btn:disabled{opacity:.5}
 .sp-in .sp{max-width:none;padding:0}
 .sp-in .sp-hero{order:-2}
 .sp-in .sp-grid{order:-1}

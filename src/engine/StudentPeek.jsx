@@ -17,8 +17,10 @@ import StudentPage, { studentHref } from "./StudentPage.jsx";
 import { embedOf } from "./GradeView.jsx";
 import { nameShown } from "./roster.js";
 
-export default function StudentPeek({ config, data, name, onClose }) {
-  const [work, setWork] = useState(null);   // { href, title, embed } while a file is up
+export default function StudentPeek({ config, data, name, onClose, startWork = null }) {
+  // { href, title, embed } while a file is up. `startWork` opens straight on
+  // one, which is how a link in a message opens.
+  const [work, setWork] = useState(() => (startWork && embedOf(startWork.href) ? { ...startWork, embed: embedOf(startWork.href) } : null));
   const shown = nameShown(data, name);
 
   useEffect(() => {

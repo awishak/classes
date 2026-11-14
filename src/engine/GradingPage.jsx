@@ -88,6 +88,7 @@ export function ToGrade({ classes, onOpen }) {
       {classes.map(c => <ClassQueue key={c.id} config={c} onRows={onRows} />)}
       <div className="gq-head">
         {loaded ? <p className="gq-sum">{total ? <><b>{total}</b> to grade{oldest ? <>, oldest due <b>{whenDue(oldest)}</b></> : null}</> : "Nothing to grade"}</p> : null}
+        {loaded && oldest ? <a className="pt-btn pt-focus gq-next" href={oldest.href} onClick={open(oldest)}>{"Grade " + oldest.title}</a> : null}
         <div className="pt-chips">
           <button type="button" className={"pt-chip pt-focus" + (!filter ? " on" : "")} onClick={() => setFilter("")}>All</button>
           {classes.map(c => <button key={c.id} type="button" className={"pt-chip pt-focus" + (filter === c.id ? " on" : "")} onClick={() => setFilter(c.id)}>{c.code}</button>)}
@@ -136,6 +137,7 @@ const CSS = `
 .gq-sum{margin:0;font-size:16px;color:var(--text-secondary)}
 .gq-sum b{color:var(--text-primary);font-weight:700}
 .gq-row{text-decoration:none;color:inherit}
+.pt-root .gq-next{background:var(--text-primary);margin-right:auto}
 .gq-row:hover{box-shadow:inset 0 0 0 2px var(--line-strong)}
 .gq-n{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;width:84px;gap:0}
 .gq-n .pt-tileN{font-size:40px;line-height:1;font-weight:700;color:var(--pt-due-ink)}
