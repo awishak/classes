@@ -38,7 +38,8 @@ const SHARED = {
   // Andrew, 2026-11-14, his questions with the joins written in.
   worthAsk: "Why do you think this topic is worthwhile for you to research?",
   audienceAsk: "What about it is going to be unique or interesting to your audience?",
-  conceptsAsk: "What are two theories or concepts you would explicate for your audience? Give a definition of each, and say where the definition comes from.",
+  conceptsAsk: "What is one theory or concept you would explicate for your audience? Give a definition, and say where the definition comes from.",
+  topicCol: "Topic",
   askAsk: "What are the kind of questions you would ask about this topic that are interesting to dive into?",
   sitesHead: "Besides social media, what are sites that you like?",
   sitesIntro: "We're looking to build something that is interesting to the audience. Think about the sites you like to go to. For example, I like Wikipedia. Why? Because it has a lot of links, and I learn a lot.",
@@ -191,6 +192,34 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const ideaDone = (s) => (justice ? ["topic", ...M.IDEA_PARTS] : ["topic", ...M.SPORT_PARTS, "ask"]).every(f => !blank(answers, f + ":" + s));
   const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>.</> : <><b>{need - left.length} of {need}</b> answered</>);
   const approved = new Set((mine?.topics || []).map(t => t.slot));
+  // COMM 118's topics as one grid: each question is written once down the
+  // left, and the three topics are the columns. Andrew, 2026-11-14, on five
+  // questions repeated in three boxes: "please make it less repetitive."
+  // The cells run down each topic, so Tab moves through one topic at a time.
+  const GRID_ROWS = [["topicAsk", "topic", "line"], ["worthAsk", "worth", "para"], ["audienceAsk", "audience", "para"], ["conceptsAsk", "concepts", "para"], ["askAsk", "ask", "lines"]];
+  const topicGrid = justice ? null : (
+    <div className="fpp-grid">
+      <div className="fpp-gcorner" />
+      {GRID_ROWS.map(([k]) => <div key={k} className="fpp-gq"><Words k={k} copy={copy} editing={editing} /></div>)}
+      {M.SLOTS.map((s, i) => [
+        <div key={"h" + s} className="fpp-gt">
+          <span>{copy.say("topicCol") + " " + (i + 1)}</span>
+          {approved.has(s) ? <span className="mark ok">{copy.say("approvedSay")}</span> : null}
+          {mine?.says?.[s]?.length ? <ul className="reasons close">{mine.says[s].map(r => <li key={r}>{r}</li>)}</ul> : null}
+        </div>,
+        ...GRID_ROWS.map(([k, f, kind]) => {
+          const label = copy.say(k) + " " + copy.say("topicCol") + " " + (i + 1), id = "fp-" + f + "-" + s, v = answers[f + ":" + s];
+          return (
+            <div key={f + s} className="fpp-gc" data-q={copy.say(k)}>
+              {kind === "line" ? <Line id={id} label={label} value={v} readOnly={readOnly} onChange={x => set(f + ":" + s, x)} />
+                : kind === "para" ? <Para id={id} label={label} value={v} readOnly={readOnly} onChange={x => set(f + ":" + s, x)} rows={3} max={2000} />
+                : <Lines id={id} label={label} value={v || ""} readOnly={readOnly} onChange={x => set(f + ":" + s, x)} />}
+            </div>
+          );
+        }),
+      ])}
+    </div>
+  );
 
   return (
     <div {...root}>
@@ -260,7 +289,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
             </div>
           ) : null}
           {!justice && copy.say("conceptsHint") ? <Words k="conceptsHint" copy={copy} editing={editing} as="p" className="hint" /> : null}
-          <div className={"ideas" + (justice ? "" : " fpp-wide")}>
+          {topicGrid || (<div className="ideas">
             {M.SLOTS.map((s, i) => (
               <div key={s} className="box">
                 {approved.has(s) ? <span className="mark ok">{copy.say("approvedSay")}</span> : null}
@@ -288,7 +317,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
                 </>)}
               </div>
             ))}
-          </div>
+          </div>)}
         </section>
 
         <section className="part">
@@ -378,12 +407,19 @@ const EXTRA = `
 .fpp .fpp-place{margin:0;font-size:22px;font-weight:500;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fpp .fpp-place .fpp-pic{width:44px;height:44px}
 .fpp .box .mark{justify-self:start}
-/* COMM 118 asks five things a topic, so each topic takes the full width and its four explanations sit two by two. */
-.fpp .ideas.fpp-wide{grid-template-columns:1fr;gap:14px}
-.fpp .ideas.fpp-wide .box{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;align-items:start}
-.fpp .ideas.fpp-wide .box>*{grid-column:1/-1}
-.fpp .ideas.fpp-wide .box>div.field{grid-column:auto}
-@media (max-width:860px){.fpp .ideas.fpp-wide .box{grid-template-columns:1fr}}
+/* COMM 118's topics: the questions once down the left, a column a topic. */
+.fpp .fpp-grid{display:grid;grid-auto-flow:column;grid-template-columns:minmax(190px,.9fr) repeat(3,minmax(0,1.2fr));grid-template-rows:repeat(6,auto);gap:12px 14px;align-items:start;background:var(--sunk);border-radius:16px;padding:16px}
+.fpp .fpp-gq{font-size:17px;font-weight:500;line-height:1.3;color:var(--ink);padding-top:10px;padding-right:6px}
+.fpp .fpp-gt{font-size:17px;font-weight:600;color:var(--ink);display:grid;gap:6px;align-self:end}
+.fpp .fpp-gc{min-width:0}
+.fpp .fpp-gc::before{display:none;content:attr(data-q);font-size:16px;font-weight:500;line-height:1.3;color:var(--ink);margin-bottom:6px}
+@media (max-width:860px){
+.fpp .fpp-grid{grid-auto-flow:row;grid-template-columns:1fr;grid-template-rows:none;gap:10px}
+.fpp .fpp-gq,.fpp .fpp-gcorner{display:none}
+.fpp .fpp-gc::before{display:block}
+.fpp .fpp-gt{margin-top:14px;font-size:19px}
+.fpp .fpp-gt:first-of-type{margin-top:0}
+}
 .fpp .fpp-eg{display:grid;gap:10px;margin:4px 0 6px}
 .fpp .fpp-mine{background:var(--accent-light);border:2px solid var(--accent);border-radius:16px;padding:16px 18px;display:grid;gap:12px;margin:4px 0 8px}
 .fpp .fpp-minesay{margin:0;font-size:18px;font-weight:500;line-height:1.35;color:var(--ink);max-width:62ch}

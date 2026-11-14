@@ -39,7 +39,8 @@ export const SLOTS = ["a", "b", "c"];
 // worthwhile for them to research? What about it is going to be unique or
 // interesting to their audience?" and, since every project will explicate at
 // least three concepts or theories, "they should identify 2 per topic proposal
-// for now", each with a definition and where the definition comes from.
+// for now", then the same day "one theoery or concpet per topic", with a
+// definition and where the definition comes from.
 export const SPORT_PARTS = ["worth", "audience", "concepts"];
 
 // The topics a student seemed interested in this term, on the plan row as
