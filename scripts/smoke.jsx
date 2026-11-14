@@ -49,7 +49,7 @@ import { suggest as suggestPairs, join as joinPairs, split as splitPairs, storyF
 import VisualStoryPortal, { PortalBar, partOf, PARTS as PORTAL_PARTS } from "../src/engine/visualstory/portal.jsx";
 import { tally as reviewTally } from "../src/engine/visualstory/reviews.jsx";
 import { stageAt as storyStageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
-import { windowStage as audioWindowStage, assignAll as audioAssignAll, assignOne as audioAssignOne, chaptersOf as audioChapters, chapterOf, chapterWord, chapterSpan, tally as audioTally, NEED_ASSIGNED as AUDIO_NEED } from "../src/engine/audiostory/reviewmodel.js";
+import { windowStage as audioWindowStage, assignAll as audioAssignAll, assignOne as audioAssignOne, chaptersOf as audioChapters, chapterOf, chapterWord, chapterSpan, rangesOf as audioRanges, joinRanges as audioJoin, heardSeconds, tally as audioTally, NEED_ASSIGNED as AUDIO_NEED } from "../src/engine/audiostory/reviewmodel.js";
 import { doorWords as audioDoorWords } from "../src/engine/audiostory/listendoor.jsx";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
@@ -6461,13 +6461,23 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const sp = chapterSpan(st, "aa"), last = chapterSpan(st, "bb");
   if (!sp || sp.from !== 0 || sp.to !== 90 || sp.name !== "Open" || last.to !== 200 || chapterSpan(st, "cc")) say("audio review: a chapter's start and end are wrong");
 
+  // What was heard: seconds to ranges, the union across visits, nothing past the end.
+  if (JSON.stringify(audioRanges([3, 1, 2, 2, 9, 10])) !== "[[1,3],[9,10]]") say("audio review: seconds do not fold into ranges");
+  const u = audioJoin([[0, 9], [40, 49]], [[5, 14], [45, 300]], 60);
+  if (JSON.stringify(u) !== "[[0,14],[40,59]]" || heardSeconds(u) !== 35) say("audio review: the union of what was heard is wrong: " + JSON.stringify(u));
+  if (heardSeconds(audioJoin([[0, 9]], [[0, 9]], 60)) !== 10) say("audio review: the same ten seconds twice counted twice");
+  if (audioJoin(null, [[5, 2], ["a", 3], [-1, 4]], 60).length) say("audio review: a bad range was kept");
+
   const feed = {
     people: [{ name: "Ann", email: "ann@x", section: "8:00" }, { name: "Ben", email: "ben@x", section: "8:00" }, { name: "Cy", email: "cy@x", section: "8:00" }, { name: "Dee", email: "dee@x", section: "10:30" }],
     stories: [{ id: "s1", email: "ann@x", name: "Ann", section: "8:00", submitted_at: "x", headline: "One" }, { id: "s2", email: "ben@x", name: "Ben", section: "8:00", submitted_at: "x", headline: "Two" }, { id: "s3", email: "cy@x", name: "Cy", section: "8:00", submitted_at: null, headline: "Three" }],
     assign: { "ann@x": ["ben@x"], "ben@x": ["ann@x"], "cy@x": ["ann@x", "ben@x"] },
     comments: [{ story: "s2", authorEmail: "ann@x", author: "Ann" }, { story: "s1", authorEmail: "cy@x", author: "Cy" }, { story: "s1", authorEmail: "ann@x", author: "Ann" }],
+    listens: [{ story: "s2", reviewer: "ann@x", heard: 95, length: 100 }, { story: "s1", reviewer: "cy@x", heard: 20, length: 100 }],
   };
   const t = audioTally(feed, "8:00");
+  if (t.rows.find(r => r.name === "Ann").heardFull !== 1 || t.rows.find(r => r.name === "Ann").unheard !== 0) say("audio review: Ann heard a story in full and the numbers do not say so");
+  if (t.rows.find(r => r.name === "Cy").heardFull !== 0 || t.rows.find(r => r.name === "Cy").unheard !== 1) say("audio review: Cy commented having heard a fifth and the numbers do not say so");
   const ann = t.rows.find(r => r.name === "Ann"), cy = t.rows.find(r => r.name === "Cy");
   if (!ann || ann.requiredDone !== 1 || ann.requiredNeed !== 1 || ann.total !== 1 || ann.complete) say("audio review: Ann's numbers are wrong: " + JSON.stringify(ann));
   if (!cy || cy.requiredDone !== 1 || cy.requiredNeed !== 2 || cy.submitted) say("audio review: Cy's numbers are wrong: " + JSON.stringify(cy));

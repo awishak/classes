@@ -88,6 +88,30 @@ export function chapterSpan(story, id) {
   return { name: list[i].name.trim(), from: secondsOf(list[i].at), to: i + 1 < list.length ? secondsOf(list[i + 1].at) : Math.ceil((story.audio && story.audio.seconds) || 0) || null };
 }
 
+// Andrew, 2026-11-13: "i want you to record if a student actually listens to
+// a story or not." The page notes each second of the file that played, as
+// ranges of whole seconds, and the server keeps the union across visits, so
+// playing the same ten seconds six times is ten seconds heard.
+export const HEARD_FULL = 0.9;   // heard in full: nine tenths of the file
+export const HEARD_LITTLE = 0.5; // commented having heard under half
+/** A set of whole seconds to ranges: [[0, 12], [40, 55]]. */
+export function rangesOf(seconds) {
+  const list = [...new Set(seconds)].filter(n => Number.isInteger(n) && n >= 0).sort((a, b) => a - b);
+  const out = [];
+  list.forEach(n => { const last = out[out.length - 1]; if (last && n <= last[1] + 1) last[1] = n; else out.push([n, n]); });
+  return out;
+}
+/** Two lists of ranges as one, overlaps joined, nothing past the end of the file. */
+export function joinRanges(a, b, length = Infinity) {
+  const top = Number.isFinite(length) ? Math.max(0, Math.ceil(length) - 1) : Infinity;
+  const all = [...(a || []), ...(b || [])].filter(r => Array.isArray(r) && Number.isInteger(r[0]) && Number.isInteger(r[1]) && r[0] >= 0 && r[1] >= r[0] && r[0] <= top)
+    .map(r => [r[0], Math.min(r[1], top)]).sort((x, y) => x[0] - y[0]);
+  const out = [];
+  all.forEach(r => { const last = out[out.length - 1]; if (last && r[0] <= last[1] + 1) last[1] = Math.max(last[1], r[1]); else out.push([r[0], r[1]]); });
+  return out;
+}
+export const heardSeconds = (ranges) => (ranges || []).reduce((n, r) => n + r[1] - r[0] + 1, 0);
+
 const lower = (s) => String(s || "").trim().toLowerCase();
 
 /** The numbers for the instructor, from the admin feed: one row a student, one a story. */
@@ -109,15 +133,20 @@ export function tally(feed, section) {
   const assignedTo = new Map();
   Object.entries(assign).forEach(([r, list]) => (list || []).forEach(o => { if (!assignedTo.has(o)) assignedTo.set(o, []); assignedTo.get(o).push(r); }));
   const nameOf = new Map((feed.people || []).map(p => [lower(p.email), p.name]));
+  // What each student heard of each story: "<reviewer> <story id>" to a share of the file.
+  const share = new Map((feed.listens || []).map(l => [lower(l.reviewer) + " " + l.story, l.length ? Math.min(1, l.heard / l.length) : 0]));
+  const idOfOwner = new Map(stories.map(s => [lower(s.email), s.id]));
   const rows = people.map(p => {
     const email = lower(p.email);
+    const heardFull = stories.filter(s => lower(s.email) !== email && (share.get(email + " " + s.id) || 0) >= HEARD_FULL).length;
+    const unheard = [...(byAuthor.get(email) || [])].filter(o => (share.get(email + " " + idOfOwner.get(o)) || 0) < HEARD_LITTLE).length;
     const need = (assign[email] || []).filter(o => submitted.has(o));
     const did = byAuthor.get(email) || new Set();
     const requiredDone = need.filter(o => did.has(o)).length;
     const othersDone = [...did].filter(o => !need.includes(o)).length;
     const total = requiredDone + othersDone;
     const complete = need.length > 0 && requiredDone >= need.length && total >= NEED_TOTAL;
-    return { name: p.name, email, section: p.section, submitted: submitted.has(email), requiredDone, requiredNeed: need.length, othersDone, total, complete, extra: Math.max(0, total - NEED_TOTAL),
+    return { name: p.name, email, section: p.section, submitted: submitted.has(email), requiredDone, requiredNeed: need.length, othersDone, total, complete, heardFull, unheard, extra: Math.max(0, total - NEED_TOTAL),
       missing: complete ? "" : [need.length - requiredDone > 0 ? (need.length - requiredDone) + " in red" : "", total < NEED_TOTAL ? (NEED_TOTAL - total) + " more in all" : ""].filter(Boolean).join(", ") };
   });
   const perStory = stories.map(s => ({ id: s.id, headline: s.headline || "Untitled story", name: s.name, email: lower(s.email), section: s.section, submitted_at: s.submitted_at,

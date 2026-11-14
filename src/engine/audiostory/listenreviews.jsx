@@ -18,6 +18,7 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf } from "../sections.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { REVIEWS_CSS } from "../visualstory/reviews.jsx";
+import { clock } from "./storymodel.js";
 import { tally, NEED_TOTAL, NEED_ASSIGNED } from "./reviewmodel.js";
 
 const ASK = { best: "The best chapter, and why", shone: "One way this story shone", encourage: "One thing you would encourage the author to do" };
@@ -35,8 +36,8 @@ const api = async (config, body) => {
 };
 
 const csvCell = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-const toCsv = (comments) => ["story_id,owner,owner_email,author,author_email,best_chapter,best,shone,encourage,updated_at",
-  ...comments.map(c => [c.story, c.owner, c.ownerEmail, c.author, c.authorEmail, c.chapterName || "", c.best, c.shone, c.encourage, c.updated_at].map(csvCell).join(","))].join("\n");
+const toCsv = (comments, listenOf) => ["story_id,owner,owner_email,author,author_email,heard_seconds,story_seconds,best_chapter,best,shone,encourage,updated_at",
+  ...comments.map(c => [c.story, c.owner, c.ownerEmail, c.author, c.authorEmail, listenOf.get(lower(c.authorEmail) + " " + c.story)?.heard || 0, listenOf.get(lower(c.authorEmail) + " " + c.story)?.length || "", c.chapterName || "", c.best, c.shone, c.encourage, c.updated_at].map(csvCell).join(","))].join("\n");
 const download = (name, text, type) => {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type }));
@@ -74,6 +75,8 @@ export default function AudioReviews({ config }) {
   const storiesSorted = [...perStory].sort((a, b) => a.reviews - b.reviews || a.name.localeCompare(b.name));
   const stage = feed.stages?.[section] || "";
   const headlineOf = new Map(perStory.map(s => [s.id, s]));
+  const listenOf = new Map((feed.listens || []).map(l => [lower(l.reviewer) + " " + l.story, l]));
+  const heardSay = (c) => { const l = listenOf.get(lower(c.authorEmail) + " " + c.story); return "Heard " + clock(l ? l.heard : 0) + (l && l.length ? " of " + clock(l.length) : ""); };
   const inSection = (feed.comments || []).filter(c => headlineOf.has(c.story) && lower(c.authorEmail) !== lower(c.ownerEmail));
   const groups = group === "story"
     ? perStory.map(s => ({ key: s.id, title: s.headline, sub: "by " + s.name, comments: inSection.filter(c => c.story === s.id) }))
@@ -120,7 +123,7 @@ export default function AudioReviews({ config }) {
 
       <div className="vrw-row">
         <button type="button" className="vrw-btn" onClick={() => download(config.id + "-audio-reviews.json", JSON.stringify({ readAt: new Date(at).toISOString(), section, rows, stories: perStory, feed }, null, 2), "application/json")}>Download everything (JSON)</button>
-        <button type="button" className="vrw-btn" onClick={() => download(config.id + "-audio-comments.csv", toCsv(inSection), "text/csv")}>Download the comments (CSV)</button>
+        <button type="button" className="vrw-btn" onClick={() => download(config.id + "-audio-comments.csv", toCsv(inSection, listenOf), "text/csv")}>Download the comments (CSV)</button>
         <a className="vrw-link" href={"/" + config.id + "/audio-stories"}>Every story</a>
         <a className="vrw-link" href={"/" + config.id + "/worksheets/audio-story?control"}>How the review works</a>
       </div>
@@ -135,7 +138,7 @@ export default function AudioReviews({ config }) {
           </div>
         </div>
         <table className="vrw-table">
-          <thead><tr><th>Student</th><th>Story in</th><th>In red</th><th>Their choice</th><th>Total</th><th>Standing</th></tr></thead>
+          <thead><tr><th>Student</th><th>Story in</th><th>In red</th><th>Their choice</th><th>Total</th><th>Heard in full</th><th>Commented, heard under half</th><th>Standing</th></tr></thead>
           <tbody>
             {sorted.map(r => (
               <tr key={r.email} className={r.complete ? "vrw-ok" : r.total ? "vrw-warn" : "vrw-late"}>
@@ -144,6 +147,8 @@ export default function AudioReviews({ config }) {
                 <td>{r.requiredNeed ? r.requiredDone + " of " + r.requiredNeed : "not assigned"}</td>
                 <td>{r.othersDone}</td>
                 <td>{r.total > NEED_TOTAL ? NEED_TOTAL + " + " + (r.total - NEED_TOTAL) : r.total + " of " + NEED_TOTAL}</td>
+                <td>{r.heardFull}</td>
+                <td>{r.unheard || ""}</td>
                 <td>{r.complete ? (r.extra ? "Complete, " + r.extra + " extra" : "Complete") : r.total ? "Needs " + r.missing : "No reviews yet"}</td>
               </tr>
             ))}
@@ -189,6 +194,7 @@ export default function AudioReviews({ config }) {
                 <div className="vrw-c-top">
                   <strong>{group === "story" ? c.author : headlineOf.get(c.story)?.headline}</strong>
                   {group === "author" ? <span className="vrw-muted"> by {c.owner}</span> : null}
+                  <span className="vrw-muted">{heardSay(c)}</span>
                   <span className="vrw-muted vrw-c-when">{when(c.updated_at)}</span>
                 </div>
                 <dl className="vrw-dl">

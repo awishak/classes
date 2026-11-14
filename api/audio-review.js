@@ -25,6 +25,10 @@
 //   - A comment is a row in story_comments, the visual story's table. The
 //     best chapter rides in best_where as chapter:<id>.
 //   - A student does not comment on their own story.
+//   - What a student actually heard of a classmate's story is kept: the page
+//     sends the seconds of the file that played, and the union is saved in
+//     one app_data row a listener a story (audio-listen-...-plan), which only
+//     this route and an instructor can write. Students are never shown it.
 //   - The comments on a student's story reach them, names attached, once the
 //     stage is released.
 //
@@ -37,7 +41,7 @@ import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
 import { audioStoryOf } from "../src/engine/audiostory/storymodel.js";
-import { WINDOW, windowStage, assignAll, assignOne, chapterWord, chapterOf, chaptersOf, NEED_ASSIGNED, NEED_TOTAL, MIN_CHARS } from "../src/engine/audiostory/reviewmodel.js";
+import { WINDOW, windowStage, assignAll, assignOne, chapterWord, chapterOf, chaptersOf, joinRanges, heardSeconds, NEED_ASSIGNED, NEED_TOTAL, MIN_CHARS } from "../src/engine/audiostory/reviewmodel.js";
 
 const KEY = "audio-story";
 const BUCKET = "visual-story";
@@ -107,6 +111,10 @@ async function stageOf(groupKey, section) {
 
 const sheetsOf = (groupKey) => rows(`/rest/v1/worksheet_sheets?select=id,viewer_id,submitted_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&limit=${PAGE}`);
 const dueOf = async (groupKey) => (await rows(`/rest/v1/worksheet_deadlines?select=due_at&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}`))?.[0]?.due_at || null;
+
+// ─── what a listener heard of a story ───
+const listenId = (groupKey, sheetId, email) => "audio-listen-" + groupKey + "-" + sheetId + "-" + slug(email) + "-plan";
+const listensOf = async (groupKey) => ((await rows(`/rest/v1/app_data?id=like.${encodeURIComponent("audio-listen-" + groupKey + "-*")}&select=data&limit=5000`)) || []).map(r => r.data).filter(Boolean);
 
 // ─── who reviews what, saved once a section ───
 const assignId = (groupKey, section) => "audio-review-" + groupKey + "-" + (slug(section) || "all") + "-plan";
@@ -192,6 +200,7 @@ export default async function handler(req, res) {
       const old = fakeList ? ((await rows(`/rest/v1/worksheet_sheets?select=id&worksheet_key=eq.${KEY}&group_key=eq.${groupKey}&viewer_id=in.(${fakeList})`)) || []) : [];
       if (old.length && (await write(`/rest/v1/worksheet_sheets?id=in.(${old.map(o => o.id).join(",")})`, "DELETE")) === null) return res.status(502).json({ ok: false, error: "The old practice stories did not clear." });
       for (const s of sections) await write(`/rest/v1/app_data?id=eq.${encodeURIComponent(assignId(groupKey, s))}`, "DELETE");
+      await write(`/rest/v1/app_data?id=like.${encodeURIComponent("audio-listen-" + groupKey + "-*")}`, "DELETE");
       await write(`/rest/v1/story_stage?worksheet_key=eq.${KEY}&group_key=eq.${groupKey}`, "DELETE");
       if (action === "practice-clear") return res.status(200).json({ ok: true, cleared: old.length });
       const from = lower(body.from) || await callerEmail(req);
@@ -223,8 +232,9 @@ export default async function handler(req, res) {
       const story = audioStoryOf(answersOf(by[sheet.id] || []));
       const urls = await sign([story.audio?.path, story.cover?.path]);
       const who = byEmail.get(sheet.viewer_id);
+      const heardBy = new Map((await listensOf(groupKey)).filter(l => l.story === sheet.id).map(l => [l.reviewer, l]));
       const comments = ((await rows(`/rest/v1/story_comments?select=*&story_sheet=eq.${sheet.id}&order=updated_at`)) || [])
-        .map(c => ({ author: byEmail.get(c.author)?.name || c.author, ...said(c) }));
+        .map(c => ({ author: byEmail.get(c.author)?.name || c.author, ...said(c), heard: heardBy.get(c.author)?.heard || 0, length: story.audio?.seconds || 0 }));
       return res.status(200).json({ ok: true, story, urls, author: who.name, section: who.section, submitted_at: sheet.submitted_at, late: lateOf(sheet, due), comments });
     }
 
@@ -256,7 +266,10 @@ export default async function handler(req, res) {
     const ids = submitted.map(s => s.id);
     const comments = ids.length ? ((await rows(`/rest/v1/story_comments?select=*&story_sheet=in.(${ids.join(",")})&limit=5000`)) || []) : [];
     const ownerOf = new Map(submitted.map(s => [s.id, s.viewer_id]));
+    const listens = (await listensOf(groupKey)).filter(l => ownerOf.has(l.story) && byEmail.has(l.reviewer))
+      .map(l => ({ story: l.story, reviewer: l.reviewer, heard: l.heard || 0, length: l.length || 0, updated_at: l.updated_at || null }));
     return res.status(200).json({
+      listens,
       ok: true, sections, stages, assignedAt, window: WINDOW[groupKey] || null, due, need: { assigned: NEED_ASSIGNED, total: NEED_TOTAL },
       people: roster.map(r => ({ name: r.name, email: r.email, section: r.section })),
       assign,
@@ -281,7 +294,7 @@ export default async function handler(req, res) {
 
   const stage = await stageOf(groupKey, me.section);
   if (stage === "building") {
-    if (action === "comment" || action === "story") return res.status(409).json({ ok: false, error: "The stories are not open yet." });
+    if (action === "comment" || action === "story" || action === "heard") return res.status(409).json({ ok: false, error: "The stories are not open yet." });
     return res.status(200).json({ ok: true, stage, stories: [], need: { assigned: NEED_ASSIGNED, total: NEED_TOTAL } });
   }
 
@@ -336,6 +349,21 @@ export default async function handler(req, res) {
     }
     const my = myComments.find(c => c.story_sheet === story.id);
     return res.status(200).json({ ok: true, stage, story: forListener(full), urls, mine: isMine, author: story.owner.name, myComment: my ? said(my) : null, commentsOpen: open, comments, ...counts });
+  }
+
+  // The seconds of a classmate's story that played on the listener's page.
+  if (action === "heard") {
+    if (isMine) return res.status(200).json({ ok: true });
+    const audioRows = (await rows(`/rest/v1/worksheet_answers?select=field,value,position&sheet_id=eq.${story.id}&field=eq.audio&order=position`)) || [];
+    const length = audioStoryOf(answersOf(audioRows)).audio?.seconds || 0;
+    if (!length) return res.status(200).json({ ok: true });
+    const id = listenId(groupKey, story.id, email);
+    const was = (await rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(id)}&select=data`))?.[0]?.data || null;
+    const ranges = joinRanges(was?.ranges, (Array.isArray(body.ranges) ? body.ranges : []).slice(0, 400), length);
+    const now = new Date().toISOString();
+    const data = { story: story.id, reviewer: email, ranges, heard: Math.min(heardSeconds(ranges), Math.ceil(length)), length, first_at: was?.first_at || now, updated_at: now };
+    const w = await write("/rest/v1/app_data?on_conflict=id", "POST", { id, data, updated_at: now }, "return=representation,resolution=merge-duplicates");
+    return w && w[0] ? res.status(200).json({ ok: true, heard: data.heard }) : res.status(502).json({ ok: false, error: "The listening did not save." });
   }
 
   if (action === "comment") {

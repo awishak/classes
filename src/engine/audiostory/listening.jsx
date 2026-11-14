@@ -29,7 +29,7 @@ import { useCopy, Words } from "../visualstory/pre.jsx";
 import { READING_CSS } from "../visualstory/reading.jsx";
 import { AudioStoryView, AUDIO_STORY_CSS } from "./story.jsx";
 import { clock, secondsOf } from "./storymodel.js";   // secondsOf reads a chapter's time
-import { NEED_TOTAL, MIN_CHARS, chaptersOf, chapterSpan } from "./reviewmodel.js";
+import { NEED_TOTAL, MIN_CHARS, chaptersOf, chapterSpan, rangesOf } from "./reviewmodel.js";
 import * as TOKENS from "../tokens.js";
 import TopNav, { NAV_STUDENT } from "../TopNav.jsx";
 import { useStudentTheme, useDayNight, ThemeStyle } from "../ThemeShell.jsx";
@@ -198,7 +198,7 @@ function EveryStory({ config, id, copy, onBack }) {
           <span className="vrd-muted">{data.comments.length}</span>
           {data.comments.length ? <button type="button" className="vrd-btn" aria-pressed={shown} onClick={() => setShown(s => !s)}>{shown ? "Hide the comments" : "Show the comments"}</button> : null}
         </div>
-        {shown ? data.comments.map((c, i) => <article key={i} className="vrd-comment"><b>{c.author}</b><Said c={c} copy={copy} onPlay={play} story={data.story} /></article>) : null}
+        {shown ? data.comments.map((c, i) => <article key={i} className="vrd-comment"><b>{c.author}</b><span className="vrd-muted">Heard {clock(c.heard)} of {clock(c.length)}</span><Said c={c} copy={copy} onPlay={play} story={data.story} /></article>) : null}
       </section>
     </div>
   );
@@ -298,6 +298,31 @@ function usePlaySection(player) {
   };
 }
 
+// What actually played. Andrew, 2026-11-13: "record if a student actually
+// listens to a story or not." Four times a second, while the player is
+// playing, the second it is on is noted. The seconds go to the server every
+// fifteen seconds, when the listener leaves the story, and when the tab
+// closes; the server keeps the union. Nothing is drawn for the student.
+function useHeard(player, config, id, as, on) {
+  useEffect(() => {
+    if (!on) return undefined;
+    const fresh = new Set();
+    let headers = {};
+    authHeaders().then(h => { headers = h; }).catch(() => {});
+    const send = (keepalive = false) => {
+      if (!fresh.size) return;
+      const ranges = rangesOf([...fresh]);
+      fresh.clear();
+      fetch("/api/audio-review", { method: "POST", keepalive, headers: { "Content-Type": "application/json", ...headers }, body: JSON.stringify({ pin: savedPin(), groupKey: config.id, action: "heard", id, as, ranges }) }).catch(() => {});
+    };
+    const tick = setInterval(() => { const a = player.current; if (a && !a.paused && !a.seeking && !a.ended) fresh.add(Math.floor(a.currentTime || 0)); }, 250);
+    const push = setInterval(() => send(), 15000);
+    const leaving = () => send(true);
+    window.addEventListener("pagehide", leaving);
+    return () => { clearInterval(tick); clearInterval(push); window.removeEventListener("pagehide", leaving); send(true); };
+  }, [player, config.id, id, as, on]);
+}
+
 // Picking the best chapter: the story's own chapters, one tap each. Hearing
 // a chapter again is the story page's job, where each chapter jumps the player.
 function ChapterPick({ story, value, onPick, bad }) {
@@ -323,6 +348,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
   const [short, setShort] = useState([]);
   const player = useRef(null);
   const play = usePlaySection(player);
+  useHeard(player, config, id, as, !!data && !data.mine);
   const key = draftKey(config, as, id);
   useEffect(() => {
     api(config, { action: "story", id, as }).then(out => {
