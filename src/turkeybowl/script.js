@@ -27,10 +27,23 @@
 // looks come from the run's seed, so the server can check every call.
 
 export const MAX_SCORE = 10000;
-export const PLAY_POINTS = 50;
+// Eleven plays in a game, one at a time between questions. Andrew, 2026-11-14:
+// "there's way too much football gameplay, and it needs to be something a lot
+// simpler." A play is one choice, run or pass, against how the defense is set.
+export const PLAY_POINTS = 100;
 /** Share of a decision's points for each rank. */
 export const SHARE = { best: 1, good: 0.6, bad: 0.2, silly: 0, over: 0 };
 export const RANK_SAY = { best: "Best call", good: "Good call", bad: "Not good", silly: "Ludicrous", over: "Game over" };
+// Andrew, 2026-11-14: "You need to say like, well, you chose something that
+// probably wouldn't work that well ... don't tell them what they should have
+// chosen. Tell them you probably could have chosen something else."
+export const VERDICT = {
+  best: "That was the best thing you could have done.",
+  good: "That works. There was a stronger choice.",
+  bad: "That probably would not work very well. You could have chosen something else.",
+  silly: "That would not work at all. You could have chosen something else.",
+  over: "That ends your day. You could have chosen something else.",
+};
 
 // The five ways to get players to do what you ask (French and Raven), for
 // Jerry's pick-two question. Legitimate and expert score highest on gaining
@@ -43,116 +56,125 @@ export const POWER = [
   { k: "coercive", text: "\"Fines and the bench.\"", w: 0 },
 ];
 
-const d = (id, level, points, who, scene, opts, after, extra = {}) => ({ id, level, points, who, scene, opts: opts.map(([k, text, then]) => ({ k, text, then })), after, ...extra });
+// What each question is about, said before the question. Andrew, 2026-11-14:
+// "saying like, hey, here's a question about motivational climate, and then
+// presenting the question first, and then presenting each of the answers."
+export const TOPICS = {
+  breakfast: "eating before you play", stars: "motivational climate", blowup: "emotion", dissent: "conflict and dissent", late: "motivational climate",
+  push: "negative messaging", kickoff: "goal setting", culture: "culture", change: "culture", power: "power", producer: "sport as spectacle", jet: "hydration",
+  receiver: "conflict", reporter: "the media", commercial: "sport as spectacle", speech: "halftime speeches", kicker: "emotion", backup: "clarity of roles", twominute: "time-outs",
+  "pop-stacking": "race and sport", "pop-titleix": "gender and sport", "pop-1968": "politics and sport",
+};
+const d = (id, level, points, who, scene, opts, after, extra = {}) => ({ id, level, points, who, topic: TOPICS[id] || "", scene, opts: opts.map(([k, text, then]) => ({ k, text, then })), after, ...extra });
 
 export const DECISIONS = [
-  d("breakfast", 1, 350, "", "It's 6:30 AM. Kickoff at the park is at 8. What do you eat?", [
+  d("breakfast", 1, 350, "", "It's 6:30 on Thanksgiving morning. Your family's annual football game kicks off at the park at 8. You need breakfast first. What do you eat?", [
     ["best", "Mashed potatoes and mac and cheese", "Energy all morning."],
     ["good", "Turkey, lots of it", "You are stronger, and slow by the second quarter."],
     ["bad", "Cranberry sauce, straight from the can", "Sugar high. Fast for three plays, then you crash."],
     ["silly", "Pumpkin pie and gravy", "You play badly the whole first half."],
   ], "You've got to choose the right food. Don't be silly and choose something that's not good for you. Always eat a good breakfast.", { food: true }),
-  d("stars", 1, 350, "uncle", "Warm-ups, 7:30 AM. Your uncle: \"We've got twenty minutes. Only practice throwing to the two best players. The rest can watch.\"", [
+  d("stars", 1, 350, "uncle", "You're at the park, warming up with your family before the game. Your uncle walks over and says the team should only practice throwing to its two best players. Everyone else can watch. What do you do?", [
     ["best", "\"Everybody gets reps, and here's why: today is about all of us getting better.\"", "Everyone is warm, and everyone knows why."],
     ["good", "Quietly give everyone a few reps, without saying why", "Everybody practices, but nobody knows what the team is about."],
     ["bad", "\"Stars first. Everyone else if there's time.\"", "There is no time. Half your team starts the game cold."],
     ["silly", "Trade Grandma to the other team for a player to be named later", "Grandma scores on you. Twice."],
   ], "A mastery climate values every player and defines success as getting better. A performance climate ignores less-skilled players to focus on stars (Horn et al., 2012)."),
-  d("blowup", 1, 350, "brother", "Your brother drops an easy one, spikes the ball into the leaves and yells at the sky.", [
+  d("blowup", 1, 350, "brother", "The game has started. Your brother drops an easy pass, throws the ball into the leaves and starts yelling. Everyone is looking at you. What do you do?", [
     ["best", "Let him get it out, ask him what he's feeling, then walk him through resetting for the next play", "He catches the next one."],
     ["good", "Crack a joke to break the tension, then call the next play", "He laughs. It works this time."],
     ["bad", "\"Calm down.\"", "Nobody in history has calmed down."],
     ["silly", "\"Emotions are not allowed on this team.\" He sits out until New Year's.", "You are down a receiver and a brother."],
   ], "Coaches help players regulate emotion with feedback, humor, and by asking about the emotion (Tamminen & Crocker, 2013)."),
-  d("dissent", 1, 350, "sister", "Third play in a row, your sister says the call is wrong. Loudly.", [
+  d("dissent", 1, 350, "sister", "Your sister has now complained about three plays in a row. She is loud, and the whole team can hear her. What do you do?", [
     ["best", "Call time-out. \"What would you run, and why?\" Use the part that's right.", "Her idea works. She stops arguing and starts helping."],
     ["good", "\"Give me one change and we'll try it next drive.\"", "She gives you one. The other four she tells the cousins."],
     ["bad", "\"Tell me after the game.\"", "She tells everyone else instead, for the rest of the morning."],
     ["silly", "Make her the coach and go sit with Grandma", "She is a better coach than you."],
   ], "Players bring dissent to a coach whose feedback style is open. With a closed style, they take it to their teammates (Kassing & Anderson, 2014)."),
-  d("late", 1, 350, "cousin", "Second quarter. Your cousin jogs up late and joins your side. \"Don't throw it to me. I haven't practiced. I'll look bad in front of everybody.\"", [
+  d("late", 1, 350, "cousin", "Your cousin shows up late and joins your team. She tells you not to throw her the ball. She hasn't practiced, and she doesn't want to look bad in front of everyone. What do you say?", [
     ["best", "\"Nobody here is worried about looking bad. It's okay to fail, as long as we get it right in the end.\" Then call her number.", "She drops the first, catches the second, and the whole team cheers."],
     ["good", "\"You've got this. I've seen you run.\"", "She feels better and still hides on every play."],
     ["bad", "\"Okay. Just block.\"", "She blocks. She also learns that looking bad is the thing to avoid."],
     ["silly", "Hand her a slice of pumpkin pie", "She eats the pie on the field. Flag."],
   ], "In a mastery climate, mistakes are opportunities for learning, and learning together is useful (Horn et al., 2012)."),
-  d("push", 1, 350, "", "Down 21 to 14 at the half, and the team needs a push. What do you say?", [
+  d("push", 1, 350, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You want to push them to play harder. What do you say?", [
     ["best", "\"Play this half the way we practiced and you'll be telling this story at dinner.\"", "They come out flying."],
     ["good", "\"You will always regret it if you don't play harder in this half.\"", "They play harder, and a little tight."],
     ["bad", "\"You guys stink. There's no way you win this.\"", "Heads drop. Your uncle agrees with you, which is worse."],
     ["silly", "Read them last year's final score, slowly, twice", "Your cousin starts crying."],
   ], "Regret messages come in an upward form (\"if you do this, you'll be successful\") and a downward form (\"if you don't, you won't\"). That is regret messaging (Turman, 2005). Verbal aggression lowers motivation (Mazer et al., 2013)."),
-  d("kickoff", 1, 350, "nephew", "Second half kickoff. Your nephew, age nine, is back deep and looking at you.", [
+  d("kickoff", 1, 350, "nephew", "The second half is about to start. Your nine-year-old nephew is waiting to catch the kickoff, and he looks back at you for instructions. What do you tell him?", [
     ["best", "\"Catch it, tuck it, follow your blockers.\"", "He does all three. Thirty yards."],
     ["good", "\"Get us to midfield.\"", "He knows where to go, not how. Fifteen yards."],
     ["bad", "\"Whatever you do, don't fumble.\"", "He thinks about fumbling the whole way. Guess what happens."],
     ["silly", "\"Score, or you're walking home.\"", "He scores. He also never speaks to you again."],
   ], "Process goals beat outcome goals (Burton & Weiss, 2008), and goals about what to do beat goals about what to avoid (Van Mierlo & Van Hooft, 2020)."),
 
-  d("culture", 2, 400, "jerry", "Jerry: \"First question. What's culture?\"", [
+  d("culture", 2, 400, "jerry", "Jerry Jones starts the interview. His first question is simple: \"What is culture?\" What do you say?", [
     ["best", "\"The shared beliefs, values, customs, behaviors and artifacts that a group of people learn, share and pass down through generations.\"", "Jerry nods slowly."],
     ["good", "\"The way things are done.\"", "Jerry: \"Fine. Short. I like short.\""],
     ["bad", "\"The rules and policies a group writes down so everyone knows what is expected.\"", "Jerry: \"That's a handbook, son.\""],
     ["silly", "\"Whatever's on the hat.\"", "Jerry touches his hat, confused."],
   ], "Culture in sports teams is broadly defined as the way things are done (Wagstaff & Burton-Wylie, 2018)."),
-  d("change", 2, 400, "jerry", "Jerry: \"I've got slogans, I've got a handbook, I've got a star on everything. What has the biggest effect on our culture?\"", [
+  d("change", 2, 400, "jerry", "Jerry says his team already has slogans, a handbook, and a star on everything. He asks what has the biggest effect on a team's culture. What do you say?", [
     ["best", "\"What the coaches and players say and do every day.\"", "Jerry writes something on a napkin."],
     ["good", "\"The expectations the head coach says out loud.\"", "Jerry: \"And then?\""],
     ["bad", "\"The slogans on the walls and the mission statement.\"", "Jerry has eleven slogans already."],
     ["silly", "\"The carpet.\"", "Jerry loves that carpet."],
   ], "Saying what you expect matters, but what coaches and players say and do every day is what creates a team's culture (Donoso-Morales et al., 2017)."),
-  d("power", 2, 400, "jerry", "Jerry: \"These are grown men making more money than you. How do you get them to do what you ask? Pick two.\"", [],
+  d("power", 2, 400, "jerry", "Jerry points out that his players are grown men who make more money than you do. He asks how you will get them to do what you ask. Pick two.", [],
     "Legitimate and expert power were most effective at gaining compliance (Rylander, 2015). Athletes are more satisfied under reward, referent and expert power, and coercive power makes them more sensitive to feedback (Cranmer & Goodboy, 2015).", { pick: 2 }),
-  d("producer", 2, 400, "jerry", "Jerry: \"My TV producer wants my star on the field for the Thanksgiving audience. My trainer says he's hurt. Who wins?\"", [
+  d("producer", 2, 400, "jerry", "Jerry says his TV producer wants his injured star on the field for the Thanksgiving audience. His trainer says the player is hurt. Jerry asks who should win that argument. What do you say?", [
     ["best", "\"The trainer. And I give your producer the star another way: a sideline interview.\"", "Jerry: \"Now that's television.\""],
     ["good", "\"The trainer. End of story.\"", "Jerry sulks a little."],
     ["bad", "\"One series, for the cameras.\"", "He limps off on play two."],
     ["silly", "\"Put him in a turkey costume at midfield.\"", "Jerry considers it for a long time."],
   ], "The show wants the star on screen. The people who look after the athlete want him healthy. That is sports as spectacle against athlete care."),
-  d("jet", 2, 400, "", "You got the job. Somewhere over Oklahoma, the flight attendant comes by with a tray.", [
+  d("jet", 2, 400, "", "You got the job, and now you are on Jerry's jet to Dallas. The flight attendant comes by with drinks. What do you take?", [
     ["best", "Water", "Hydrated. You land sharp."],
     ["good", "Sparkling water with a lime", "Same thing, fancier."],
     ["bad", "Three coffees", "Jittery at kickoff. Your first play call comes out too fast."],
     ["over", "Champagne", "You tell Jerry he reminds you of your grandma, put on his hat, and ask if he wants to parachute into the stadium. He fires you for being weird."],
   ], "Drink water to hydrate.", { drink: true }),
 
-  d("receiver", 3, 500, "receiver", "First quarter. Your best receiver has no catches. He is on the sideline screaming at your quarterback, and every camera in the building is on them.", [
+  d("receiver", 3, 500, "receiver", "You are coaching the Cowboys. It's the first quarter, and your best receiver has no catches. He is on the sideline screaming at your quarterback, and every camera in the stadium is on them. What do you do?", [
     ["best", "Pull him aside, away from the cameras, and talk to him alone", "He comes back and blocks on the next play. Then he gets his catch."],
     ["good", "Send a veteran captain to talk to him privately", "It works, slower. One more outburst first."],
     ["bad", "Let it go. He's the star.", "The quarterback stops throwing his way entirely. The huddle goes quiet."],
     ["over", "Rip into him right there, in front of the team and the cameras", "You lose the team's trust and everything falls apart."],
   ], "Talented but disruptive players are a named source of conflict in teams (Leggat et al., 2018). Take them aside."),
-  d("reporter", 3, 500, "reporter", "Second quarter. A sideline reporter has a microphone in your face and the red light is on.", [
+  d("reporter", 3, 500, "reporter", "It's the second quarter. A sideline reporter puts a microphone in front of you for a live interview while the game is going on. What do you do?", [
     ["best", "Fifteen seconds, and you credit the players", "You are back before the snap."],
     ["good", "Do it in three one-word answers", "No fine. The broadcast calls you \"prickly.\""],
     ["bad", "Refuse. You are coaching.", "The NFL fines you for skipping your media duties."],
     ["silly", "Use the interview to announce your own podcast", "Jerry wants a cut."],
   ], "Talking to the media is part of the job. Skip it and the league fines you."),
-  d("commercial", 3, 500, "jerry", "Halftime. Jerry: \"Truck commercial. Two minutes. You're the star.\" Your players are waiting in the locker room.", [
+  d("commercial", 3, 500, "jerry", "It's halftime. Jerry wants you to film a two-minute truck commercial right now. Your players are waiting for you in the locker room. What do you do?", [
     ["best", "\"After the final whistle, Jerry. I'll do two.\"", "You make your halftime adjustments. Jerry gets his money later and likes you more for it."],
     ["good", "\"No.\"", "The team gets its halftime. Jerry sulks in the owner's box."],
     ["bad", "Do the commercial", "Nobody made adjustments, and your first drive of the half goes nowhere."],
     ["silly", "Do the commercial and bring the whole offense into it", "The commercial is great. You have no offense."],
   ], "When you choose the commercial, you are not calling plays and you are not paying attention to your team."),
-  d("speech", 3, 500, "", "Locker room. Down ten. Fifty-three players are looking at you.", [
+  d("speech", 3, 500, "", "You are in the locker room at halftime, losing by ten. Fifty-three players are waiting for you to say something. What kind of speech do you give?", [
     ["best", "Short, real emotion, and back to what this team values", "They come out of the tunnel loud."],
     ["good", "Short and all tactics", "They know the plan. Nobody is fired up."],
     ["bad", "A long speech that ends with a brand new game plan", "Half of them were lost by minute four."],
     ["silly", "Play them the truck commercial", "Silence. Then the kicker asks for a truck."],
   ], "Players respond to genuine emotion, conciseness and references to team values. They respond badly to poorly timed speeches and surprising information (Breakey et al., 2009)."),
-  d("kicker", 3, 500, "kicker", "Third quarter. Your kicker misses from 38 and walks to the bench without looking up.", [
+  d("kicker", 3, 500, "kicker", "It's the third quarter. Your kicker misses a field goal and walks to the bench staring at the ground. What do you do?", [
     ["best", "Go to him, hand on his shoulder, and give him one technical note", "He makes the next one from 47."],
     ["good", "Ask him how he's doing", "He says \"fine.\" He is a little better."],
     ["bad", "Leave him alone to think about it", "He thinks about it. All quarter."],
     ["silly", "Hold open tryouts for kicker in the stands", "A dentist from Plano is now your kicker."],
   ], "Feedback and asking about the emotion help a teammate regulate emotion (Tamminen & Crocker, 2013), and so does touch (Kraus et al., 2010)."),
-  d("backup", 3, 500, "backup", "Fourth quarter. Your quarterback limps off. The backup has not taken a snap all season, and he is putting his helmet on.", [
+  d("backup", 3, 500, "backup", "It's the fourth quarter. Your quarterback is hurt. The backup has not played all season, and he is putting on his helmet. What do you tell him?", [
     ["best", "Tell him exactly what his job is on this drive, then ask him what he's comfortable running", "He knows the job and he chose two of the plays. First down."],
     ["good", "Tell him exactly what his job is on this drive", "He knows the job. He runs a play he hates, and it shows."],
     ["bad", "\"Just go make plays.\"", "He tries to make all of them at once. Sack."],
     ["silly", "Alternate him and the punter every snap and let the crowd pick", "The crowd picks the punter."],
   ], "The coach names the role and the expectations, and the player accepts or negotiates (Eys et al., 2005). Poor communication leads to role ambiguity and tension (Kang & Seibold, 2017)."),
-  d("twominute", 3, 550, "", "Down four. Two minutes. One time-out. The play clock is running.", [
+  d("twominute", 3, 550, "", "You are losing by four points. There are two minutes left, and you have one time-out. What do you do?", [
     ["best", "Call the time-out and point everyone back at the two-minute situation you rehearsed all week", "Everyone already knows where to be."],
     ["good", "Let the quarterback call what the team knows", "It works. You look like a spectator."],
     ["bad", "Call the time-out and install something clever and brand new", "Four players run four different plays."],
@@ -173,19 +195,19 @@ export const DECISIONS = [
 // What do you say about them?" And: "two answers that look almost identical.
 // You gotta change that."
 export const POPS = [
-  d("pop-stacking", 0, 300, "cousin", "Your cousin, home from her first sociology of sport class: \"We learned about stacking today. Quick, coach. What is stacking?\"", [
+  d("pop-stacking", 0, 300, "cousin", "Your cousin is taking a sociology of sport class. She asks you what \"stacking\" means in sports. What do you tell her?", [
     ["best", "Athletes of one race end up over-represented in certain sports, or get funneled into certain positions within a sport", "Right. Both halves: whole sports, and positions inside a sport."],
     ["good", "Coaches deciding who plays quarterback based on stereotypes about race", "That is one example of the positions half. Stacking is the wider pattern, across positions and whole sports."],
     ["bad", "TV only showing athletes of color in highlight clips", "That is about media coverage. Stacking is about who gets put where."],
     ["silly", "Three linebackers standing on each other's shoulders", "Illegal formation."],
   ], "Stacking: athletes of a certain race are disproportionately represented in specific sports or funneled into specific positions within a sport."),
-  d("pop-titleix", 0, 300, "niece", "Your niece: \"My high school has a boys' flag football team and no girls' team. Isn't there a law about that?\"", [
-    ["best", "\"Title IX. Since 1972, a school that takes federal money cannot discriminate by sex in any program, sports included. Go ask for a team.\"", "She is already writing the email."],
-    ["good", "\"There's a law that says schools have to have girls' sports.\"", "Close. The law never mentions sports. It bars sex discrimination in all of education, and sports fall under that."],
-    ["bad", "\"Title IX. Schools must spend exactly the same on boys' and girls' teams.\"", "Common mistake. The law is about equal opportunity, not identical budgets."],
-    ["silly", "\"That would be Super Bowl IX. Steelers, 16 to 6.\"", "She walks away."],
+  d("pop-titleix", 0, 300, "niece", "Your niece plays three sports in high school. She asks you what Title IX actually says. What do you tell her?", [
+    ["best", "\"No one can be shut out of, or treated worse in, any school program that takes federal money because of their sex. Sports are one of those programs.\"", "That is the law, and it never uses the word sports."],
+    ["good", "\"Schools have to give girls and boys an equal chance to play sports.\"", "That is what it means for sports. The law itself covers every part of a school, not only teams."],
+    ["bad", "\"Every boys' team has to have a matching girls' team.\"", "Common mistake. The law is about equal opportunity overall, not a matching team for every team."],
+    ["silly", "\"It was Super Bowl IX. Steelers 16, Vikings 6.\"", "She walks away."],
   ], "Title IX (1972): no person shall, on the basis of sex, be excluded from or discriminated against in any education program or activity receiving federal financial assistance."),
-  d("pop-1968", 0, 300, "niece", "Your niece goes to San Jose State. \"There's a statue on campus of Tommie Smith and John Carlos. What should I know about them?\"", [
+  d("pop-1968", 0, 300, "niece", "Your niece goes to San Jose State. She says there is a statue on campus of Tommie Smith and John Carlos, and she asks what she should know about them. What do you tell her?", [
     ["best", "\"San Jose State sprinters. On the medal stand at the 1968 Olympics in Mexico City they raised black-gloved fists during the anthem to protest racism, and they were sent home for it.\"", "Right. The statue leaves the silver medal step empty so you can stand where Peter Norman stood."],
     ["good", "\"Two of the fastest men in the world in 1968. They won Olympic gold and bronze in the 200 meters.\"", "True, and it skips why there is a statue. They raised their fists on the medal stand to protest racism."],
     ["bad", "\"They were the first NFL players to kneel during the anthem.\"", "That was Colin Kaepernick in 2016. Smith and Carlos were sprinters, almost fifty years earlier."],
@@ -193,7 +215,7 @@ export const POPS = [
   ], "Mexico City, 1968: Tommie Smith and John Carlos raised their fists on the 200 meter medal stand. The class reading is \"The White Man in That Photo,\" on Peter Norman."),
 ];
 /** How a pop question opens in Dallas, where the family is not on the sideline. */
-export const popScene = (dec, dallas) => (dallas ? "Your phone buzzes on the sideline. A text from home. " + dec.scene : dec.scene);
+export const popScene = (dec, dallas) => (dallas ? "Your phone buzzes on the sideline in Dallas. It's a text from home. " + dec.scene : dec.scene);
 
 // Somewhere to read more, opened in a new tab. Andrew, 2026-11-14: "always
 // include a link, if you can, where somebody can click and open up a new tab
@@ -214,14 +236,14 @@ export const decisionOf = (id) => DECISIONS.find(x => x.id === id) || POPS.find(
 export const FLOW = [
   { s: "title" },
   { d: "breakfast" }, { d: "stars" },
-  { s: "kickoff" }, { p: 2 }, { d: "blowup" }, { p: 2 }, { d: "dissent" }, { p: 2 }, { d: "late" }, { p: 1 },
-  { s: "half1" }, { d: "push" }, { d: "kickoff" }, { p: 3 },
+  { s: "kickoff" }, { p: 1 }, { d: "blowup" }, { p: 1 }, { d: "dissent" }, { p: 1 }, { d: "late" }, { p: 1 },
+  { s: "half1" }, { d: "push" }, { d: "kickoff" }, { p: 1 },
   { gate: 1 },
   { s: "jerry" }, { d: "culture" }, { d: "change" }, { d: "power" }, { d: "producer" },
   { gate: 2 },
   { s: "jet" }, { d: "jet" },
-  { s: "dallas" }, { p: 2 }, { d: "receiver" }, { p: 2 }, { d: "reporter" }, { p: 1 },
-  { d: "commercial" }, { d: "speech" }, { p: 2 }, { d: "kicker" }, { p: 2 }, { d: "backup" }, { p: 2 }, { d: "twominute" }, { p: 1 },
+  { s: "dallas" }, { p: 1 }, { d: "receiver" }, { p: 1 }, { d: "reporter" },
+  { d: "commercial" }, { d: "speech" }, { p: 1 }, { d: "kicker" }, { p: 1 }, { d: "backup" }, { p: 1 }, { d: "twominute" }, { p: 1 },
   { gate: 3 },
 ];
 export const PLAY_COUNT = FLOW.reduce((n, f) => n + (f.p || 0), 0);
@@ -234,10 +256,10 @@ export const HIRED = 7500;
 
 // The defense's look before each play, and the call that beats the look.
 export const LOOKS = [
-  { k: "stack", say: "They are stacked up at the line.", beat: "pass" },
-  { k: "deep", say: "They are playing way back.", beat: "run" },
-  { k: "blitz", say: "Everybody is rushing the quarterback.", beat: "pass" },
-  { k: "spread", say: "They are spread out wide.", beat: "run" },
+  { k: "stack", say: "The other team is crowded up close to the ball.", beat: "pass" },
+  { k: "deep", say: "The other team is standing far back.", beat: "run" },
+  { k: "blitz", say: "The other team is about to rush your quarterback.", beat: "pass" },
+  { k: "spread", say: "The other team is spread out wide.", beat: "run" },
 ];
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 /** The look on play number n of a run. */
