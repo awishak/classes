@@ -70,7 +70,8 @@ export const studentHref = (config, student) => config.path + "/student/" + enco
  * name anywhere to take me to their page." student is a roster entry or a
  * name; the words are the children, or the name.
  */
-export function StudentLink({ config, student, children, className, style }) {
+// `plain`: no underline on hover, for a link that is a whole card or row.
+export function StudentLink({ config, student, children, className, style, plain = false }) {
   // The name they go by, off their profile, the way every surface that shows people reads it (roster.js shownName).
   const data = mergedView(config.storageKey);
   const name = typeof student === "string" ? student : student?.name || "";
@@ -93,7 +94,7 @@ export function StudentLink({ config, student, children, className, style }) {
     <>
       <a href={studentHref(config, student)} className={className} style={{ color: "inherit", textDecoration: "none", ...(style || {}) }}
         onClick={e => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1 || !maybeHis()) return; e.preventDefault(); e.stopPropagation(); setPeek(true); }}
-        onMouseEnter={e => { e.currentTarget.style.textDecoration = "underline"; }} onMouseLeave={e => { e.currentTarget.style.textDecoration = "none"; }}>{children ?? who}</a>
+        onMouseEnter={plain ? undefined : e => { e.currentTarget.style.textDecoration = "underline"; }} onMouseLeave={plain ? undefined : e => { e.currentTarget.style.textDecoration = "none"; }}>{children ?? who}</a>
       {peek && typeof document !== "undefined" ? createPortal(
         <div onClick={stop} onMouseDown={stop} onMouseUp={stop} onKeyDown={stop} onKeyUp={stop} onPointerDown={stop} onDragStart={stop}>
           <PeekGate href={studentHref(config, student)} onClose={() => setPeek(false)}><StudentPeek config={config} data={data} name={name} onClose={() => setPeek(false)} /></PeekGate>

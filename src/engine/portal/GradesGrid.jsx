@@ -27,7 +27,7 @@ import { computeGrade } from "../AssignmentsCard.jsx";
 import { rosterOf, nameShown } from "../roster.js";
 import { realStudents, isHouse, sectionOf, sectionsOf } from "../sections.js";
 import { boardOf, bucketOf, letterOf } from "../grades.js";
-import { studentHref } from "../StudentPage.jsx";
+import { StudentLink } from "../StudentPage.jsx";
 import { ThemeStyle } from "../ThemeShell.jsx";
 import { PORTAL_CSS } from "./style.js";
 import { Chip, Gm, Face } from "./bits.jsx";
@@ -158,10 +158,10 @@ export default function GradesGrid({ config, embedded = false }) {
               {people.map(r => (
                 <tr key={r.student.name}>
                   <th className="gg-name" scope="row">
-                    <a className="gg-who" href={studentHref(config, r.student)}>
+                    <StudentLink config={config} student={r.student} className="gg-who" plain>
                       <Face config={config} data={data} name={r.student.name} size={32} />
                       <span className="gg-whoText"><span>{r.name}</span>{r.section ? <span className="gg-sec">{r.section}</span> : null}</span>
-                    </a>
+                    </StudentLink>
                   </th>
                   {r.cells.map((c, i) => <td key={assignments[i].id} className="gg-cell" title={c.title}>{c.say ? <span className={"gg-pill " + c.kind + (c.tone ? " " + c.tone : "")}>{c.say}</span> : null}</td>)}
                   <td className="gg-sofar">{r.pct == null ? "" : <><b>{letterOf(r.pct)}</b> <span className="gg-pct">{r.pct}</span></>}</td>

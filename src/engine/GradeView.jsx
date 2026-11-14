@@ -20,7 +20,7 @@ import { latenessOf } from "./lateness.js";
 import { signOf, regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
-import { studentHref } from "./StudentPage.jsx";
+import { StudentLink } from "./StudentPage.jsx";
 import { challengePages } from "./portal/Tools.jsx";
 
 const F = TOKENS.FONT.body;
@@ -530,8 +530,8 @@ function Card({ config, student, profile, due, card, work, accent, checkin, colu
               click on their name ... a page for every student." */}
           <Avatar profile={profile} name={student.name} accent={accent} size={52} />
         </button>
-        <a className="gv-focus" href={studentHref(config, student)}
-          style={{ flex: 1, minWidth: 100, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{student.name}</a>
+        <StudentLink config={config} student={student} className="gv-focus"
+          style={{ flex: 1, minWidth: 100, fontFamily: F, fontSize: 17, fontWeight: 600, color: TEXT_PRIMARY, textDecoration: "none", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{student.name}</StudentLink>
         {/* Which sitting they are in, because two rooms of COMM 3 grade
             together. Andrew, 2026-09-23: "when they are in the grade view, i
             need an 8:00 and 10:30 chip next to each students name." */}
