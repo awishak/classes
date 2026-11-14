@@ -37,17 +37,32 @@ export const TOPIC_FIELDS = SLOTS.flatMap(s => ["topic:" + s, "ask:" + s]);
 export const SITE_FIELDS = SLOTS.flatMap(s => ["site:" + s, "like:" + s, "build:" + s]);
 export const FIELDS = ["work", "top", "also", "strengths", ...TOPIC_FIELDS, ...SITE_FIELDS];
 
+// COMM 3's sheet asks more. Andrew, 2026-11-14: "i want them to define social
+// justice using an academic definition, not something from a random site. and
+// then they'll propose ideas, and for each idea, they have to explain why they
+// think it's interesting, what angle will they take to have a unique and
+// engaging story, and how it qualifies as a social justice topic." So a
+// social justice class has two fields for the definition (the words and the
+// academic source), and each idea carries three explanations in place of the
+// questions the topic raises. COMM 118's sheet is as it was.
+export const JUSTICE_CLASSES = ["comm3"];
+export const isJustice = (classId) => JUSTICE_CLASSES.includes(classId);
+export const DEFINE_FIELDS = ["define", "defineSource"];
+export const IDEA_PARTS = ["why", "angle", "justice"];
+export const topicFieldsFor = (classId) => (isJustice(classId) ? SLOTS.flatMap(s => ["topic:" + s, ...IDEA_PARTS.map(part => part + ":" + s)]) : TOPIC_FIELDS);
+const neededFor = (classId) => [...(isJustice(classId) ? DEFINE_FIELDS : []), "work", "strengths", ...topicFieldsFor(classId), ...SITE_FIELDS];
+
 const lines = (v) => String(v || "").split("\n").map(l => l.trim()).filter(Boolean);
 const filled = (a, f) => !!String((a || {})[f] || "").trim();
 
 /** The fields a sheet still needs before it can be handed in. */
-export function missingOf(answers) {
+export function missingOf(answers, classId = "") {
   const a = answers || {};
-  const need = ["work", "strengths", ...TOPIC_FIELDS, ...SITE_FIELDS];
+  const need = neededFor(classId);
   if (picksPartner(a.work)) need.push("top");
   return need.filter(f => !filled(a, f));
 }
-export const requiredCount = (answers) => 2 + TOPIC_FIELDS.length + SITE_FIELDS.length + (picksPartner((answers || {}).work) ? 1 : 0);
+export const requiredCount = (answers, classId = "") => neededFor(classId).length + (picksPartner((answers || {}).work) ? 1 : 0);
 
 /** A sheet's answers as the review reads them. Picks are roster names. */
 export function readAnswers(answers) {
@@ -57,7 +72,9 @@ export function readAnswers(answers) {
     top: String(a.top || "").trim(),
     also: lines(a.also),
     strengths: lines(a.strengths),
-    topics: SLOTS.map(s => ({ slot: s, topic: String(a["topic:" + s] || "").trim(), asks: lines(a["ask:" + s]) })),
+    define: String(a.define || "").trim(),
+    defineSource: String(a.defineSource || "").trim(),
+    topics: SLOTS.map(s => ({ slot: s, topic: String(a["topic:" + s] || "").trim(), asks: lines(a["ask:" + s]), why: String(a["why:" + s] || "").trim(), angle: String(a["angle:" + s] || "").trim(), justice: String(a["justice:" + s] || "").trim() })),
     sites: SLOTS.map(s => ({ slot: s, site: String(a["site:" + s] || "").trim(), like: String(a["like:" + s] || "").trim(), build: String(a["build:" + s] || "").trim() })),
   };
 }

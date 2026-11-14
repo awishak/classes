@@ -476,6 +476,16 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
         {pickedBy.length ? <div className="fp-chips fp-by"><span className="fp-k">Picked by</span>{pickedBy.map(q => <button key={q.id} type="button" className="fp-person" onClick={() => onPick(q.id)}><Disc p={q} size={24} />{q.first}</button>)}</div> : null}
       </div>
 
+      {p.define ? (
+        <div className="fp-block">
+          <div className="fp-bhead"><h2>Social justice, defined</h2></div>
+          <div className="fp-topic">
+            <p className="fp-part">{p.define}</p>
+            {p.defineSource ? <p className="fp-part"><span className="fp-k">Source</span>{p.defineSource}</p> : null}
+          </div>
+        </div>
+      ) : null}
+
       <div className="fp-block">
         <div className="fp-bhead"><h2>Topics</h2><span className={"fp-count" + (full ? " fp-shake" : "")}>{approved.length} of {M.MAX_TOPICS} approved</span></div>
         {p.topics.map(t => {
@@ -485,6 +495,7 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
               {on ? <span className="fp-stamp">Approved</span> : null}
               <p className="fp-ttl">{t.topic || "Nothing written"}</p>
               {t.asks.length ? <ul className="fp-asks">{t.asks.map((q, i) => <li key={i}>{q}</li>)}</ul> : null}
+              {[["Why", t.why], ["Angle", t.angle], ["Social justice", t.justice]].filter(x => x[1]).map(([k, v]) => <p key={k} className="fp-part"><span className="fp-k">{k}</span>{v}</p>)}
               {says.length && open !== t.slot ? <p className="fp-said">{says.join(" · ")}</p> : null}
               <div className="fp-acts">
                 <button type="button" className={"fp-btn" + (on ? "" : " fp-go")} disabled={!t.topic} onClick={() => press(t.slot)}>{on ? "Take back" : "Approve"}</button>
@@ -794,6 +805,7 @@ button.fp-mini{cursor:pointer}
 .fp-topic.fp-on{background:color-mix(in srgb,var(--go) 16%,var(--card));border-color:var(--go)}
 .fp-ttl{margin:0;font-size:18px;font-weight:600;line-height:1.3;overflow-wrap:anywhere;padding-right:96px}
 .fp-ttl.fp-small{font-size:15px;padding:0}
+.fp-part{margin:0;font-size:14px;line-height:1.45;color:var(--dim);display:flex;flex-direction:column;gap:2px;white-space:pre-wrap;overflow-wrap:anywhere}
 .fp-asks{margin:0;padding-left:18px;font-size:14px;line-height:1.45;color:var(--dim)}
 .fp-said{margin:0;font-size:13px;color:var(--warn)}
 .fp-stamp{position:absolute;top:12px;right:12px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--go);border:2px solid var(--go);border-radius:8px;padding:2px 8px;transform:rotate(-6deg);animation:fp-stamp .45s cubic-bezier(.2,1.6,.4,1) both}

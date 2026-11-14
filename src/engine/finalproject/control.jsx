@@ -18,6 +18,11 @@ const RULES = [
     "A student who chose either by-myself answer is never suggested for a pair.",
     "A pair that breaks one of these rules can still be made by hand. The page states which rule is broken and waits for Pair anyway.",
   ]],
+  ["COMM 3's sheet", [
+    "COMM 3 answers two things COMM 118 does not. First, a definition of social justice with the academic source the definition comes from; both boxes have to be filled before the sheet can be handed in. The page cannot tell an academic source from any other, so the source line is there for the review.",
+    "Second, each of the three ideas carries three explanations in place of the questions the topic raises: why the idea is interesting, the angle for a unique and engaging story, and how the idea qualifies as a social justice topic. All nine are required.",
+    "The review shows the definition and its source above the student's topics, and the three explanations under each topic.",
+  ]],
   ["How pairs are suggested", [
     "The suggestions are the largest set of clean pairs the picks allow. Every way of pairing off each group of connected students is tried, so the count is the true maximum.",
     "Between two sets of the same size, the one with stronger ties wins. Each other's top choice counts 3, one top choice with a pick back counts 2, and two students on each other's longer lists count 1.",

@@ -1,5 +1,6 @@
 // Final project preferences: the sheet a student fills in, in COMM 3 and
-// COMM 118, at /<class>/worksheets/final-prefs. Due Wednesday, November 18.
+// COMM 118, at /<class>/worksheets/final-prefs. COMM 3's is due Thursday,
+// November 19 (Andrew, 2026-11-14), and opens Tuesday, November 17.
 //
 // Andrew, 2026-11-13: "What do you want to work on in this class? What's your
 // work preference? Who do you potentially want to work with?" Three topics
@@ -24,7 +25,7 @@ import { rosterOf, nameShown } from "../roster.js";
 import { sectionOf, hasSections } from "../sections.js";
 import { ENGINE } from "../../config/registry.js";
 import { useCopy, Words } from "../visualstory/pre.jsx";
-import { CSS, STATUS, when, blank, linesOf, useSheet, handIn, handSay, Lines, Choices, Line } from "../audiostory/bits.jsx";
+import { CSS, STATUS, when, blank, linesOf, useSheet, handIn, handSay, Lines, Choices, Line, Para } from "../audiostory/bits.jsx";
 import * as M from "./model.js";
 
 export const prefsHref = (classId) => "/" + classId + "/worksheets/" + M.FINAL_PREFS_KEY;
@@ -57,10 +58,18 @@ const SHARED = {
 // 3's example topics are Claude's, offered for him to edit; COMM 118's are his.
 const BY_CLASS = {
   comm3: {
-    credit: "COMM 3. Due Wednesday, November 18, at 11:59 PM.",
+    credit: "COMM 3. Due Thursday, November 19, at 11:59 PM.",
     intro: "Your final project is a multimedia story about social justice.",
+    // Andrew, 2026-11-14, his words with the joins written in.
+    defineHead: "Define social justice.",
+    defineHint: "Use an academic definition, not something from a random site.",
+    defineAsk: "The definition",
+    sourceAsk: "The academic source the definition comes from",
     topicHead: "What do you want to work on in this class?",
     topicHint: "Examples: housing, food access, immigration, disability access, environmental justice, education, health care, voting rights.",
+    whyAsk: "Why do you think this idea is interesting?",
+    angleAsk: "What angle will you take to have a unique and engaging story?",
+    justiceAsk: "How does this idea qualify as a social justice topic?",
   },
   comm118: {
     credit: "COMM 118. Due Wednesday, November 18, at 11:59 PM.",
@@ -135,8 +144,10 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly = fals
   const setWork = (id) => { set("work", id); if (!M.picksPartner(id)) { if (answers.top) set("top", ""); if (answers.also) set("also", ""); } };
   const setTop = (n) => { set("top", answers.top === n ? "" : n); if (also.includes(n)) set("also", also.filter(x => x !== n).join("\n")); };
   const toggleAlso = (n) => set("also", (also.includes(n) ? also.filter(x => x !== n) : [...also, n]).join("\n"));
-  const left = M.missingOf(answers);
-  const need = M.requiredCount(answers);
+  const justice = M.isJustice(classId);
+  const left = M.missingOf(answers, classId);
+  const need = M.requiredCount(answers, classId);
+  const ideaDone = (s) => (justice ? ["topic", ...M.IDEA_PARTS] : ["topic", "ask"]).every(f => !blank(answers, f + ":" + s));
   const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>.</> : <><b>{need - left.length} of {need}</b> answered</>);
   const approved = new Set((mine?.topics || []).map(t => t.slot));
 
@@ -169,8 +180,23 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly = fals
           </section>
         ) : null}
 
+        {justice ? (
+          <section className="part">
+            <div className="phead"><Words k="defineHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.DEFINE_FIELDS.every(f => !blank(answers, f)) ? "✓" : ""}</span></div>
+            <Words k="defineHint" copy={copy} editing={editing} as="p" className="hint" />
+            <div className="field">
+              <Words k="defineAsk" copy={copy} editing={editing} className="ask" />
+              <Para id="fp-define" label={copy.say("defineAsk")} value={answers.define} readOnly={readOnly} onChange={v => set("define", v)} rows={4} max={2000} />
+            </div>
+            <label className="field">
+              <Words k="sourceAsk" copy={copy} editing={editing} className="ask" />
+              <Line id="fp-define-source" label={copy.say("sourceAsk")} value={answers.defineSource} readOnly={readOnly} onChange={v => set("defineSource", v)} max={600} />
+            </label>
+          </section>
+        ) : null}
+
         <section className="part">
-          <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(s => !blank(answers, "topic:" + s) && !blank(answers, "ask:" + s)).length} of 3</span></div>
+          <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
           <Words k="topicHint" copy={copy} editing={editing} as="p" className="hint" />
           <div className="ideas">
             {M.SLOTS.map((s, i) => (
@@ -181,10 +207,17 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly = fals
                   <Words k="topicAsk" copy={copy} editing={editing} className="ask" />
                   <Line id={"fp-topic-" + s} label={copy.say("topicAsk") + " " + (i + 1)} value={answers["topic:" + s]} readOnly={readOnly} onChange={v => set("topic:" + s, v)} />
                 </label>
-                <div className="field">
-                  <Words k="askAsk" copy={copy} editing={editing} className="ask" />
-                  <Lines id={"fp-ask-" + s} label={copy.say("askAsk") + " Topic " + (i + 1)} value={answers["ask:" + s] || ""} readOnly={readOnly} onChange={v => set("ask:" + s, v)} />
-                </div>
+                {justice ? M.IDEA_PARTS.map(part => (
+                  <div className="field" key={part}>
+                    <Words k={part + "Ask"} copy={copy} editing={editing} className="ask" />
+                    <Para id={"fp-" + part + "-" + s} label={copy.say(part + "Ask") + " Topic " + (i + 1)} value={answers[part + ":" + s]} readOnly={readOnly} onChange={v => set(part + ":" + s, v)} rows={3} max={2000} />
+                  </div>
+                )) : (
+                  <div className="field">
+                    <Words k="askAsk" copy={copy} editing={editing} className="ask" />
+                    <Lines id={"fp-ask-" + s} label={copy.say("askAsk") + " Topic " + (i + 1)} value={answers["ask:" + s] || ""} readOnly={readOnly} onChange={v => set("ask:" + s, v)} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -245,7 +278,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly = fals
           <div className="foot">
             <div className="say" aria-live="polite">{say}</div>
             <span className={"status" + (status === "retrying" || status === "failed-load" ? " bad" : "")} aria-live="polite">{STATUS[status]}</span>
-            <button type="button" className="btn primary focusable" disabled={handing === "sending"} onClick={() => handIn({ saver, store, missing: M.missingOf(answers), setHanding, setSubmitted })}>
+            <button type="button" className="btn primary focusable" disabled={handing === "sending"} onClick={() => handIn({ saver, store, missing: M.missingOf(answers, classId), setHanding, setSubmitted })}>
               {handing === "sending" ? "Submitting…" : submitted ? copy.say("again") : copy.say("submit")}
             </button>
           </div>

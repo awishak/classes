@@ -6492,6 +6492,22 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (audioDoorWords(cfg, { stage: "reading", required: 3, requiredDone: 2, total: 5 }).tint !== "due") say("audio review: five with a red story left reads as done");
   if (audioDoorWords(cfg, { stage: "released", mine: "abc" }).href !== "/comm3/audio-stories?s=abc") say("audio review: the released door does not open the student's story");
 }
+// Final project preferences: COMM 3's sheet asks for the definition and three explanations an idea.
+{
+  const FP = await import("../src/engine/finalproject/model.js");
+  const say = (m) => { console.error("  FAIL  final prefs: " + m); failedEarly++; };
+  const full118 = { work: "solo2", strengths: "Audio" };
+  FP.SLOTS.forEach(s => { full118["topic:" + s] = "t"; full118["ask:" + s] = "q"; full118["site:" + s] = "s"; full118["like:" + s] = "l"; full118["build:" + s] = "b"; });
+  if (FP.missingOf(full118, "comm118").length) say("a full COMM 118 sheet still needs " + FP.missingOf(full118, "comm118"));
+  const need3 = FP.missingOf(full118, "comm3");
+  if (!["define", "defineSource", "why:a", "angle:b", "justice:c"].every(f => need3.includes(f)) || need3.includes("ask:a")) say("COMM 3 does not ask for the definition and the three explanations: " + need3);
+  const full3 = { ...full118, define: "d", defineSource: "s" };
+  FP.SLOTS.forEach(s => FP.IDEA_PARTS.forEach(part => { full3[part + ":" + s] = "x"; }));
+  if (FP.missingOf(full3, "comm3").length) say("a full COMM 3 sheet still needs " + FP.missingOf(full3, "comm3"));
+  if (FP.requiredCount(full3, "comm3") !== FP.requiredCount(full118, "comm118") + 2 + 6) say("COMM 3's count of answers is wrong");
+  const read = FP.readAnswers(full3);
+  if (read.define !== "d" || read.topics[0].why !== "x" || read.topics[2].justice !== "x") say("the review does not read the new answers");
+}
 cases.push(["Visual story portal", <VisualStoryPortal config={{ id: "comm3", code: "COMM 3", name: "Digital Storytelling", path: "/comm3", students: [] }} />, "Visual story portal"]);
 
 let failed = failedEarly;
