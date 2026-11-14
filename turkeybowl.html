@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Turkey Bowl's own entry, apart from the class app: one canvas and one
+         script, no React. /turkeybowl and /comm118/turkey-bowl are rewritten
+         here in vercel.json, and drewi.sh/turkeybowl proxies the first.
+         Andrew, 2026-11-14: "it should be on the class website, but also I
+         want it at drewi.sh/turkeybowl ... anybody can play the game." -->
+    <title>Turkey Bowl</title>
+    <meta name="description" content="Coach your family to a Turkey Bowl win. Then Jerry Jones calls." />
+    <meta property="og:title" content="Turkey Bowl" />
+    <meta property="og:description" content="Coach your family to a Turkey Bowl win. Then Jerry Jones calls." />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231f6b3a'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='7' fill='%238a4b1e' transform='rotate(-30 16 16)'/%3E%3Cpath d='M12 18l8-5' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;500;600;700&display=swap" />
+    <style>
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #0b1410; color: #f4f1e6; font-family: 'Outfit', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+      #app { min-height: 100%; display: flex; flex-direction: column; align-items: center; padding: 10px max(10px, env(safe-area-inset-left)) 24px max(10px, env(safe-area-inset-right)); gap: 10px; }
+      #stage { position: relative; width: min(100%, 960px, calc((100vh - 250px) * 16 / 9)); min-width: 300px; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; box-shadow: 0 0 0 4px #1d2b22, 0 18px 50px rgba(0,0,0,.6); background: #000; }
+      #screen { width: 100%; height: 100%; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+      #hud { position: absolute; inset: 0 0 auto 0; display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 10px; pointer-events: none; font-family: 'Press Start 2P', monospace; font-size: clamp(7px, 1.4vw, 12px); line-height: 1.5; text-shadow: 2px 2px 0 #000; }
+      #hud .box { background: rgba(8,14,10,.78); border: 2px solid #f4f1e6; border-radius: 6px; padding: 6px 8px; }
+      #hud b { color: #ffd75e; font-weight: 400; }
+      #mute { position: absolute; right: 8px; bottom: 8px; font: inherit; font-size: 13px; font-weight: 600; background: rgba(8,14,10,.78); color: #f4f1e6; border: 2px solid #f4f1e6; border-radius: 6px; padding: 5px 9px; cursor: pointer; }
+      #banner { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; font-family: 'Press Start 2P', monospace; text-align: center; color: #ffd75e; text-shadow: 3px 3px 0 #000, -1px -1px 0 #000; font-size: clamp(12px, 3.4vw, 34px); line-height: 1.5; padding: 0 6%; }
+      #banner.flash { animation: flash .5s steps(2) infinite; }
+      @keyframes flash { 50% { color: #fff; } }
+      #panel { width: min(100%, 960px); display: flex; flex-direction: column; gap: 10px; }
+      .card { background: #16241c; border: 2px solid #2c4335; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+      .who { font-family: 'Press Start 2P', monospace; font-size: 10px; letter-spacing: .04em; color: #ffd75e; }
+      .scene { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.35; }
+      .say { margin: 0; font-size: 17px; line-height: 1.5; color: #d9e2d6; }
+      .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .opt { font: inherit; font-size: 16.5px; font-weight: 500; line-height: 1.35; text-align: left; color: #f4f1e6; background: #22382b; border: 2px solid #3d5c48; border-radius: 12px; padding: 12px 14px; min-height: 56px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: transform .1s, background .15s, border-color .15s; }
+      .opt:hover { background: #2b4636; border-color: #ffd75e; transform: translateY(-1px); }
+      .opt:focus-visible, .go:focus-visible, #mute:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid #ffd75e; outline-offset: 2px; }
+      .opt[aria-pressed="true"] { background: #3b5a2a; border-color: #ffd75e; }
+      .opt canvas { width: 48px; height: 48px; image-rendering: pixelated; flex: none; }
+      .calls { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .call { font-family: 'Press Start 2P', monospace; font-size: 18px; color: #0b1410; border: 0; border-radius: 12px; padding: 20px 10px; cursor: pointer; box-shadow: 0 5px 0 rgba(0,0,0,.45); }
+      .call:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.45); }
+      .call.run { background: #ffb347; } .call.pass { background: #7fd3ff; }
+      .go { align-self: flex-start; font-family: 'Press Start 2P', monospace; font-size: 13px; color: #0b1410; background: #ffd75e; border: 0; border-radius: 10px; padding: 14px 20px; cursor: pointer; box-shadow: 0 5px 0 #a8820f; }
+      .go:active { transform: translateY(3px); box-shadow: 0 2px 0 #a8820f; }
+      .go[disabled] { opacity: .4; cursor: default; }
+      .rank { font-family: 'Press Start 2P', monospace; font-size: 14px; }
+      .r-best { color: #6ee7a0; } .r-good { color: #8ecbff; } .r-bad { color: #ffb347; } .r-silly { color: #d9a6ff; } .r-over { color: #ff7b72; }
+      .pts { font-family: 'Press Start 2P', monospace; font-size: 12px; color: #ffd75e; }
+      .why { margin: 0; font-size: 15.5px; line-height: 1.5; padding: 10px 14px; border-left: 4px solid #ffd75e; background: #1d2f24; border-radius: 0 10px 10px 0; color: #e8eee4; }
+      .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+      input[type=text] { font: inherit; font-size: 18px; padding: 12px 14px; border-radius: 10px; border: 2px solid #3d5c48; background: #0f1a14; color: #f4f1e6; min-width: 0; flex: 1; max-width: 340px; }
+      .small { font-size: 14.5px; color: #a9b9ac; margin: 0; }
+      a { color: #ffd75e; }
+      table { width: 100%; border-collapse: collapse; font-size: 16px; font-variant-numeric: tabular-nums; }
+      th { text-align: left; font-family: 'Press Start 2P', monospace; font-size: 9px; color: #a9b9ac; padding: 6px 8px; font-weight: 400; }
+      td { padding: 7px 8px; border-top: 1px solid #2c4335; }
+      tr.me td { background: #3b5a2a; font-weight: 600; }
+      .tag { font-family: 'Press Start 2P', monospace; font-size: 8px; background: #7fd3ff; color: #0b1410; border-radius: 5px; padding: 3px 5px; margin-left: 8px; white-space: nowrap; }
+      .board { max-height: 360px; overflow: auto; border-radius: 10px; }
+      @media (max-width: 640px) { .opts { grid-template-columns: 1fr; } .scene { font-size: 18px; } #stage { width: 100%; } }
+      @media (prefers-reduced-motion: reduce) { #banner.flash { animation: none; } }
+    </style>
+    <script type="module" src="/src/turkeybowl/main.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <div id="stage">
+        <canvas id="screen" width="320" height="180"></canvas>
+        <div id="hud"></div>
+        <div id="banner"></div>
+        <button id="mute" type="button">Sound on</button>
+      </div>
+      <div id="panel"></div>
+    </div>
+  </body>
+</html>

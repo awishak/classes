@@ -1,6 +1,8 @@
 {
   "rewrites": [
     { "source": "/worktopia", "destination": "/worktopia.html" },
+    { "source": "/turkeybowl", "destination": "/turkeybowl.html" },
+    { "source": "/comm118/turkey-bowl", "destination": "/turkeybowl.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [

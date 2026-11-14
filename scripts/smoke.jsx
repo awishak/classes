@@ -6508,16 +6508,44 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const FP = await import("../src/engine/finalproject/model.js");
   const say = (m) => { console.error("  FAIL  final prefs: " + m); failedEarly++; };
   const full118 = { work: "solo2", strengths: "Audio" };
-  FP.SLOTS.forEach(s => { full118["topic:" + s] = "t"; full118["ask:" + s] = "q"; full118["site:" + s] = "s"; full118["like:" + s] = "l"; full118["build:" + s] = "b"; });
+  FP.SLOTS.forEach(s => { full118["topic:" + s] = "t"; full118["ask:" + s] = "q"; FP.SPORT_PARTS.forEach(part => { full118[part + ":" + s] = "x"; }); full118["site:" + s] = "s"; full118["like:" + s] = "l"; full118["build:" + s] = "b"; });
   if (FP.missingOf(full118, "comm118").length) say("a full COMM 118 sheet still needs " + FP.missingOf(full118, "comm118"));
+  const bare118 = { ...full118 }; FP.SLOTS.forEach(s => FP.SPORT_PARTS.forEach(part => { delete bare118[part + ":" + s]; }));
+  if (!["worth:a", "audience:b", "concepts:c"].every(f => FP.missingOf(bare118, "comm118").includes(f))) say("COMM 118 does not ask why a topic is worthwhile, what the audience gets, and the two concepts");
+  if (FP.readAnswers(full118).topics[0].concepts !== "x") say("the review does not read a topic's concepts");
   const need3 = FP.missingOf(full118, "comm3");
   if (!["define", "defineSource", "why:a", "angle:b", "justice:c"].every(f => need3.includes(f)) || need3.includes("ask:a")) say("COMM 3 does not ask for the definition and the three explanations: " + need3);
   const full3 = { ...full118, define: "d", defineSource: "s" };
   FP.SLOTS.forEach(s => FP.IDEA_PARTS.forEach(part => { full3[part + ":" + s] = "x"; }));
   if (FP.missingOf(full3, "comm3").length) say("a full COMM 3 sheet still needs " + FP.missingOf(full3, "comm3"));
-  if (FP.requiredCount(full3, "comm3") !== FP.requiredCount(full118, "comm118") + 2 + 6) say("COMM 3's count of answers is wrong");
+  if (FP.requiredCount(full3, "comm3") !== FP.requiredCount(full118, "comm118") + 2 - 3) say("COMM 3's count of answers is wrong");
   const read = FP.readAnswers(full3);
   if (read.define !== "d" || read.topics[0].why !== "x" || read.topics[2].justice !== "x") say("the review does not read the new answers");
+}
+// Turkey Bowl: the server scores a run from what the player did, so the rules have to hold.
+{
+  const T = await import("../src/turkeybowl/script.js");
+  const say = (m) => { console.error("  FAIL  turkey bowl: " + m); failedEarly++; };
+  const every = [...T.DECISIONS, ...T.POPS];
+  const perfect = (seed) => ({ seed, picks: Object.fromEntries(every.map(d => [d.id, d.pick ? ["expert", "legit"] : "best"])), calls: Array.from({ length: T.PLAY_COUNT }, (_, i) => T.lookFor(seed, i).beat) });
+  ["aaaaaa", "k3j9x0q2", "zzzzzzzzzzzz"].forEach(seed => {
+    const r = T.scoreRun(perfect(seed));
+    if (r.score !== T.MAX_SCORE || !r.done || !r.hired || r.level !== 3) say("a perfect run on " + seed + " is " + JSON.stringify(r));
+    const pops = T.flowFor(seed).filter(f => f.pop).map(f => f.d);
+    if (new Set(pops).size !== T.POPS.length) say("the three pop questions are not all in the run on " + seed);
+  });
+  every.forEach(d => { if (!d.pick && (d.opts.length !== 4 || d.opts[0].k !== "best" || new Set(d.opts.map(o => o.k)).size !== 4)) say(d.id + " does not have four ranked options"); if (!d.after) say(d.id + " has no line after the answer"); });
+  if (every.filter(d => d.opts.some(o => o.k === "over")).map(d => d.id).join() !== "jet,receiver") say("the choices that end a run are not the jet and the receiver");
+  const champagne = perfect("aaaaaa"); champagne.picks.jet = "over";
+  const c1 = T.scoreRun(champagne);
+  if (c1.over !== "jet" || c1.level !== 2 || c1.done) say("champagne on the jet does not end the run in Level 2: " + JSON.stringify(c1));
+  const awful = { seed: "aaaaaa", picks: Object.fromEntries(every.map(d => [d.id, d.pick ? ["coercive", "reward"] : "silly"])), calls: Array.from({ length: T.PLAY_COUNT }, () => "run") };
+  awful.picks.jet = "bad"; awful.picks.receiver = "bad";
+  const a1 = T.scoreRun(awful);
+  if (a1.lost !== 1 || a1.level !== 1) say("a terrible run gets past the park: " + JSON.stringify(a1));
+  if (T.scoreRun({ seed: "aaaaaa", picks: { breakfast: "best", stars: "nope" }, calls: [] }).score !== 350) say("an answer that is not an option was scored");
+  if (T.judge(T.decisionOf("power"), ["coercive", "coercive"]) || T.judge(T.decisionOf("power"), ["expert"])) say("the power question took something other than two different picks");
+  if (T.shortName("Sophia Marie Taylor") !== "Sophia T." || T.shortName("Cher") !== "Cher") say("the leaderboard name is not first name and last initial");
 }
 cases.push(["Visual story portal", <VisualStoryPortal config={{ id: "comm3", code: "COMM 3", name: "Digital Storytelling", path: "/comm3", students: [] }} />, "Visual story portal"]);
 
