@@ -735,4 +735,17 @@ async function admin() {
   const back = el("button", "go", "Back"); back.type = "button"; back.onclick = () => location.reload(); k.append(back);
 }
 
-(async function main() { for (;;) { if (!(await title())) return; await run(); } })();
+// The songs on their own, at ?songs, so they can be heard without playing to Austin. Andrew, 2026-11-14: "play all the songs for me."
+function songs() {
+  paint = (t) => { A.stadium(c, t, { team: "texas" }); A.band(c, t, 10 + t); };
+  const k = card("SONGS"), row = el("div", "row"); k.append(row);
+  [["title", "Title"], ["play", "Drumline"], ["band", "The Eyes of Texas"], ["fight", "Texas Fight"]].forEach(([id, label]) => {
+    const b = el("button", "go", label); b.type = "button";
+    b.onclick = () => { muted = false; showMute(); const a = ac(); if (a && a.state === "suspended") a.resume().catch(() => {}); music.stop(); music.start(id); };
+    row.append(b);
+  });
+  const g = el("button", "go", "Gobble"); g.type = "button"; g.onclick = () => { muted = false; showMute(); music.stop(); sfx.gobble(0, 3); }; row.append(g);
+  const stop = el("button", "go", "Stop"); stop.type = "button"; stop.onclick = () => music.stop(); row.append(stop);
+}
+if (new URLSearchParams(location.search).has("songs")) songs();
+else (async function main() { for (;;) { if (!(await title())) return; await run(); } })();
