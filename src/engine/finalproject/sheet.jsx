@@ -20,6 +20,7 @@
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { authHeaders } from "../session.js";
+import { gameClient } from "../gameClient.js";
 import { useClassState } from "../store.js";
 import { rosterOf, nameShown } from "../roster.js";
 import { sectionOf, hasSections } from "../sections.js";
@@ -51,6 +52,7 @@ const SHARED = {
   pairSay: "You're working in a pair with",
   soloSay: "You're working individually.",
   approvedSay: "Approved",
+  lockedSay: "The due date has passed, so the sheet is closed.",
 };
 // The two classes make different things. Andrew, 2026-11-13: COMM 3 is "a
 // multimedia story" and "they have to do something about social justice";
@@ -72,7 +74,7 @@ const BY_CLASS = {
     justiceAsk: "How does this idea qualify as a social justice topic?",
   },
   comm118: {
-    credit: "COMM 118. Due Wednesday, November 18, at 11:59 PM.",
+    credit: "COMM 118. Due Thursday, November 19, at 11:59 PM.",
     intro: "Your final project is an exploration of a topic in communication and sport.",
     topicHead: "What do you want to work on in this class?",
     topicHint: "A topic would be like transnational athletes in the Olympics, or female referees in male dominated sports.",
@@ -116,14 +118,45 @@ function useMine(classId, viewerId, readOnly) {
   return mine;
 }
 
-export function PrefsSheet({ store, viewer, classId, storageKey, readOnly = false, storage, editor = false, theme, classmates = [], photos = {} }) {
+// The due date, which the database enforces: worksheet_locked() refuses every
+// save and submit once now() is past the worksheet_deadlines row, unless a
+// worksheet_unlocks row lets the student through. Andrew, 2026-11-14: "lock on
+// thursday." The page reads the same two rows so the sheet says the sheet is
+// closed and stops taking typing the database would refuse.
+function useLocked(classId, viewerId, skip) {
+  const [lock, setLock] = useState(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (skip || !classId || !viewerId) return undefined;
+    let alive = true;
+    (async () => {
+      try {
+        const d = await gameClient.from("worksheet_deadlines").select("due_at").eq("worksheet_key", M.FINAL_PREFS_KEY).eq("group_key", classId);
+        const due = d.data && d.data[0] ? d.data[0].due_at : null;
+        if (!due) return;
+        const s = await gameClient.from("worksheet_sheets").select("id").eq("worksheet_key", M.FINAL_PREFS_KEY).eq("group_key", classId).eq("viewer_id", viewerId);
+        const id = s.data && s.data[0] && s.data[0].id;
+        let until = null;
+        if (id) { const u = await gameClient.from("worksheet_unlocks").select("until").eq("sheet_id", id); until = u.data && u.data[0] ? u.data[0].until : null; }
+        if (alive) setLock({ due, until });
+      } catch { /* no lock read: the database still refuses a late save */ }
+    })();
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => { alive = false; clearInterval(t); };
+  }, [classId, viewerId, skip]);
+  return !!(lock && now > Date.parse(lock.due) && !(lock.until && Date.parse(lock.until) > now));
+}
+
+export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given = false, storage, editor = false, theme, classmates = [], photos = {} }) {
   const copy = useCopy(editor, copyRow(classId), defaultCopy(classId));
   const [editing, setEditing] = useState(false);
   const [handing, setHanding] = useState("");
   const [data] = useClassState(storageKey || "");
   const draftKey = M.FINAL_PREFS_KEY + ":" + (classId || "") + ":" + (viewer?.id || "");
-  const { answers, set, submitted, setSubmitted, status, saver } = useSheet({ store, draftKey, readOnly, storage });
-  const mine = useMine(classId, viewer?.id, readOnly);
+  const { answers, set, submitted, setSubmitted, status, saver } = useSheet({ store, draftKey, readOnly: given, storage });
+  const mine = useMine(classId, viewer?.id, given);
+  const locked = useLocked(classId, viewer?.id, given);
+  const readOnly = given || locked;
 
   const root = { className: "as fpp" + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
   if (!answers) return <div {...root}><style>{CSS + EXTRA}</style><div className="sheet"><div className="foot"><span className="status">{STATUS[status] || "Loading…"}</span></div></div></div>;
@@ -166,6 +199,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly = fals
               </div>
             ) : null}
             <Words k="intro" copy={copy} editing={editing} as="p" className="intro" />
+            {locked ? <p className="intro"><b><Words k="lockedSay" copy={copy} editing={editing} /></b>{submitted ? <> Submitted {when(submitted)}.</> : null}</p> : null}
           </div>
         </div>
 
