@@ -298,25 +298,19 @@ function usePlaySection(player) {
   };
 }
 
-// Picking the best chapter: the story's own chapters, one tap each, with a
-// button to hear a chapter again.
-function ChapterPick({ story, value, onPick, bad, play }) {
+// Picking the best chapter: the story's own chapters, one tap each. Hearing
+// a chapter again is the story page's job, where each chapter jumps the player.
+function ChapterPick({ story, value, onPick, bad }) {
   const chapters = chaptersOf(story);
   if (!chapters.length) return null;
   return (
     <div className={"ala-chapters" + (bad ? " ala-chapters-bad" : "")} role="radiogroup" aria-label="The best chapter">
-      {chapters.map(c => {
-        const span = chapterSpan(story, c.id);
-        return (
-          <div key={c.id} className="ala-chapter">
-            <button type="button" role="radio" aria-checked={value === c.id} className="ala-chapter-pick" onClick={() => onPick(c.id)}>
-              <span className="ala-chapter-t">{clock(secondsOf(c.at))}</span>
-              <span>{c.name.trim()}</span>
-            </button>
-            <button type="button" className="vrd-btn" aria-label={"Play " + c.name.trim()} onClick={() => play(span.from, span.to)}>Play</button>
-          </div>
-        );
-      })}
+      {chapters.map(c => (
+        <button key={c.id} type="button" role="radio" aria-checked={value === c.id} className="ala-chapter-pick" onClick={() => onPick(c.id)}>
+          <span className="ala-chapter-t">{clock(secondsOf(c.at))}</span>
+          <span>{c.name.trim()}</span>
+        </button>
+      ))}
     </div>
   );
 }
@@ -375,7 +369,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
           {FIELDS.map(f => (
             <div key={f} className="vrd-field">
               <Words k={askKey(f)} copy={copy} editing={editing} className="vrd-ask" />
-              {f === "best" ? <ChapterPick story={data.story} value={form.chapter} onPick={v => change("chapter", v)} bad={short.includes("chapter")} play={play} /> : null}
+              {f === "best" ? <ChapterPick story={data.story} value={form.chapter} onPick={v => change("chapter", v)} bad={short.includes("chapter")} /> : null}
               <textarea className={"vrd-box" + (short.includes(f) ? " vrd-box-bad" : "")} rows={3} maxLength={3000} aria-label={copy.say(askKey(f))}
                 value={form[f] || ""} onChange={e => change(f, e.target.value)} />
               <span className={"vrd-chars" + (String(form[f] || "").trim().length >= MIN_CHARS ? " vrd-chars-ok" : "")}>{charsSay(String(form[f] || "").trim().length)}</span>
@@ -424,10 +418,8 @@ const CSS = `
 .ala-story .asr{min-height:0}
 .ala-chapters{display:flex;flex-direction:column;gap:8px}
 .ala-chapters-bad{padding:8px;border-radius:14px;box-shadow:0 0 0 2px ${ST.late}}
-.ala-chapter{display:flex;align-items:center;gap:10px}
-.ala-chapter-pick{flex:1;display:flex;align-items:baseline;gap:12px;text-align:left;font:inherit;font-size:16px;font-weight:600;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.ala-chapter-pick{display:flex;width:100%;box-sizing:border-box;align-items:baseline;gap:12px;text-align:left;font:inherit;font-size:16px;font-weight:600;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .ala-chapter-pick[aria-checked="true"]{border-color:#16803c;box-shadow:0 0 0 3px #16803c}
 .ala-chapter-pick:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
 .ala-chapter-t{font-size:14px;font-weight:700;color:${T.muted};font-variant-numeric:tabular-nums}
-.ala-chapter .vrd-btn{min-height:44px}
 `;
