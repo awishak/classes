@@ -19,6 +19,7 @@ import { gameClient } from "../gameClient.js";
 import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
 import { StudentLink } from "../StudentPage.jsx";
+import { StudentPicker, pickedStudent, pickStudent } from "./control.jsx";
 import { audioStoryOf, problemsOf, clock, MAX_STORY_SECONDS, MAX_LISTEN_WORDS } from "./storymodel.js";
 import { AUDIO_STORY_KEY, AUDIO_STORY_COPY_ROW, STEPS } from "./story.jsx";
 import { AUDIO_RESEARCH_KEY } from "./research.jsx";
@@ -58,6 +59,10 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
   const sections = sectionsOf(config);
   const [section, setSection] = useState(sections[0] || "");
   const urls = useUrls(config, sheets);
+  // One story at a time, picked from the menu; the page opens on the count.
+  // Andrew, 2026-11-13, on the review pages: "okay yeah get it done."
+  const [who, setWho] = useState(() => (typeof window !== "undefined" ? pickedStudent() : ""));
+  const pick = (id) => { setWho(id); pickStudent(id); };
 
   useEffect(() => {
     let alive = true;
@@ -85,6 +90,13 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
   };
   const submittedCount = people.filter(p => byEmail.get(lower(p.email))?.submitted_at).length;
   const base = "/" + config.id + "/worksheets/" + worksheetKey;
+  // The menu, by name, with the word each row's chip says.
+  const standing = (sheet) => {
+    if (sheet?.submitted_at) return due && Date.parse(sheet.submitted_at) > Date.parse(due) ? "Submitted late" : "Submitted";
+    return sheet && Object.keys(sheet.answers || {}).length > 0 ? "Working" : "Not started";
+  };
+  const menu = [...people].sort((x, y) => x.name.localeCompare(y.name)).map(p => ({ id: idOf(p), name: p.name, status: standing(byEmail.get(lower(p.email))), student: p }));
+  const chosen = menu.find(m => m.id === who) || null;
 
   return (
     <Shell>
@@ -116,7 +128,8 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
       ) : null}
       <h2 className="asv-h2">Stories{section ? ", " + section : ""}</h2>
       <p className="asv-p">{submittedCount} of {people.length} submitted.</p>
-      {people.map(p => <Row key={p.email} config={config} student={p} email={lower(p.email)} link={idOf(p)} sheet={byEmail.get(lower(p.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} />)}
+      <StudentPicker people={menu} value={chosen ? chosen.id : ""} onPick={pick} />
+      {(chosen ? [chosen.student] : []).map(p => <Row key={p.email} config={config} student={p} email={lower(p.email)} link={idOf(p)} sheet={byEmail.get(lower(p.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} />)}
       {others.length ? <h2 className="asv-h2">Not on the roster</h2> : null}
       {others.map(s => <Row key={s.viewer_id} config={config} student={null} email={s.viewer_id} link={null} sheet={s} urls={urls} due={due} past={past} onUnlock={setUnlock} />)}
     </Shell>
@@ -226,7 +239,7 @@ export function AudioStoryControl({ config, worksheetKey = AUDIO_STORY_KEY, rost
       <p className="asv-p">Every line a student reads has a default in the code and can be changed in place on the sheet while signed in as the instructor (Edit the words). Edits live in the app_data row <code>{AUDIO_STORY_COPY_ROW}</code>, which only an instructor can write. A cleared line puts the default back.</p>
 
       <h2 className="asv-h2">Who sees what</h2>
-      <p className="asv-p">A student signed in by email sees and writes their own sheet only. The instructor's own email gets a sheet of its own for trying the page. The review and this page need an instructor session or the PIN. Reads of every sheet go through the server with the service key. Problem reports go into worksheet_reports and show at the top of the review.</p>
+      <p className="asv-p">A student signed in by email sees and writes their own sheet only. The instructor's own email gets a sheet of its own for trying the page. The review and this page need an instructor session or the PIN. Reads of every sheet go through the server with the service key. Problem reports go into worksheet_reports and show at the top of the review. The review shows one story at a time, picked from the Student menu or stepped with Previous and Next, and the address keeps the student as st=.</p>
 
       <h2 className="asv-h2">One student</h2>
       {error ? <p className="asv-p">Could not read the sheets: {error}</p> : null}

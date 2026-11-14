@@ -23,6 +23,8 @@ import { SLOTS, MARKS, marksOf, markOf, saysOf, noteFor, reopenOf, reasonsOf, st
 import { linesOf as linesOfIdea, loadFont } from "./bits.jsx";
 import { PAIRS_ROW, parseWant, suggest, join, split, pairOf } from "./pairs.js";
 import { StudentLink } from "../StudentPage.jsx";
+import { idOf } from "../roster.js";
+import { StudentPicker, pickedStudent, pickStudent } from "./control.jsx";
 import * as TOKENS from "../tokens.js";
 
 const call = async (body) => {
@@ -100,6 +102,12 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
   // else." A mark changes a sheet's group (unmarked, resubmitted) but not
   // where it sits; the list sorts again only when a submission arrives.
   const order = useRef({ sig: "", emails: [] });
+  // One sheet at a time, picked from the menu; the page opens on the counts.
+  // Andrew, 2026-11-13, on the review pages: "okay yeah get it done." The
+  // menu keeps the order the stacked list had (resubmitted, then unmarked,
+  // then newest), so the ones to re-read are still first.
+  const [who, setWho] = useState(() => (typeof window !== "undefined" ? pickedStudent() : ""));
+  const pick = (id) => { setWho(id); pickStudent(id); };
   useEffect(() => { loadFont(); }, []);
 
   if (error) return <Shell><p className="aib-p">Could not read the sheets: {error}</p></Shell>;
@@ -137,6 +145,13 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
   const again = submitted.filter(r => r.again).length;
   const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).map(r => r.student.name);
   const notOpened = rows.filter(r => !r.sheet).map(r => r.student.name);
+  const byName = (x, y) => x.student.name.localeCompare(y.student.name);
+  const menu = [
+    ...submitted.map(r => ({ id: idOf(r.student), name: r.student.name, status: r.again ? "Resubmitted" : r.unmarked ? "Not marked" : "Marked", row: r })),
+    ...rows.filter(r => r.sheet && !r.sheet.submitted_at).sort(byName).map(r => ({ id: idOf(r.student), name: r.student.name, status: "Started", row: null })),
+    ...rows.filter(r => !r.sheet).sort(byName).map(r => ({ id: idOf(r.student), name: r.student.name, status: "Not opened", row: null })),
+  ];
+  const chosen = menu.find(m => m.id === who) || null;
 
   // One write for a sheet's marks and reasons; the student reads it back on
   // their next ask.
@@ -173,10 +188,11 @@ export default function IdeasReview({ config, worksheetKey, roster }) {
       <h1 className="aib-title">{DEFAULT_COPY.title}, every sheet</h1>
       {tabs}
       {views}
-      <p className="aib-p">{submitted.length + " submitted, " + started.length + " started, " + notOpened.length + " not opened. This page asks again every four seconds."}{again ? <> <b className="aib-again-n">{again + " resubmitted since your marks, at the top."}</b></> : null}</p>
+      <p className="aib-p">{submitted.length + " submitted, " + started.length + " started, " + notOpened.length + " not opened. This page asks again every four seconds."}{again ? <> <b className="aib-again-n">{again + " resubmitted since your marks, first in the menu."}</b></> : null}</p>
       <p className="aib-p"><a className="aib-a" href={"/" + config.id + "/worksheets/" + worksheetKey + "?board"} target="_blank" rel="noreferrer">The board for the projector, no names ↗</a> · <a className="aib-a" href={"/" + config.id + "/worksheets/" + worksheetKey + "?control"}>Control page</a></p>
       {failed ? <p className="aib-bad">The mark did not save: {failed}</p> : null}
-      {submitted.map(row => {
+      <StudentPicker people={menu} value={chosen ? chosen.id : ""} onPick={pick} />
+      {(chosen && chosen.row ? [chosen.row] : []).map(row => {
         const marks = marksOf(row.sheet.review);
         const a = row.sheet.answers || {};
         return (

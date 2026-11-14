@@ -23,6 +23,7 @@ import * as R from "./research.jsx";
 import { linesOf } from "./bits.jsx";
 import { audioOf } from "./audio.js";
 import { StudentLink } from "../StudentPage.jsx";
+import { idOf } from "../roster.js";
 import { PORTAL_CSS } from "../portal/style.js";
 import { Face, Chip, Io } from "../portal/bits.jsx";
 import * as TOKENS from "../tokens.js";
@@ -110,26 +111,19 @@ export function ResearchReview({ config, worksheetKey, roster }) {
   const sections = sectionsOf(config);
   const [section, setSection] = useState(sections[0] || "");
   const [part, setPart] = useState("all");
-  const [at, setAt] = useState(0);
-  const list = useRef(null);
+  // One student at a time, picked from the menu in the bar; the page opens on
+  // the summary. Andrew, 2026-11-13, asked for this on the pre-production
+  // review and then for the other review pages: "okay yeah get it done."
+  // Before this every card was stacked and the bar's buttons scrolled
+  // between them.
+  const [who, setWho] = useState(() => (typeof window !== "undefined" ? pickedStudent() : ""));
+  const pick = (id) => { setWho(id); pickStudent(id); };
   const root = useRef(null);
-  // Which card sits under the bar, read as the page scrolls; the bar's
-  // buttons step from there. The bar sticks under the class's own nav, whose
-  // height is read off the page.
+  // The bar sticks under the class's own nav, whose height is read off the page.
   useEffect(() => {
-    const read = () => {
-      const nav = root.current?.previousElementSibling;
-      if (nav && root.current) root.current.style.setProperty("--aic-nav", Math.round(nav.getBoundingClientRect().height) + "px");
-      const cards = [...(list.current?.querySelectorAll(".aic-card") || [])];
-      const top = (document.querySelector(".aic-bar")?.getBoundingClientRect().bottom || 0) + 12;
-      const i = cards.findIndex(c => c.getBoundingClientRect().bottom > top);
-      setAt(i < 0 ? Math.max(0, cards.length - 1) : i);
-    };
-    read();
-    window.addEventListener("scroll", read, { passive: true });
-    return () => window.removeEventListener("scroll", read);
-  }, [sheets, part, section]);
-  const jump = (i) => { const c = list.current?.querySelectorAll(".aic-card")[i]; if (c) { setAt(i); c.scrollIntoView({ block: "start", behavior: "smooth" }); } };
+    const nav = root.current?.previousElementSibling;
+    if (nav && root.current) root.current.style.setProperty("--aic-nav", Math.round(nav.getBoundingClientRect().height) + "px");
+  }, [sheets]);
   if (error) return <Shell config={config}><p className="pt-sub">Could not read the sheets: {error}</p></Shell>;
   if (!sheets) return <Shell config={config}><p className="pt-sub">Loading the sheets.</p></Shell>;
   const byEmail = new Map(sheets.map(s => [s.viewer_id, s]));
@@ -139,10 +133,11 @@ export function ResearchReview({ config, worksheetKey, roster }) {
   const started = rows.filter(r => r.sheet && !r.sheet.submitted_at).length;
   const notIn = rows.filter(r => !r.sheet?.submitted_at).map(r => r.student.name);
   const done = Object.fromEntries(PARTS.map(p => [p.id, rows.filter(r => r.sheet && p.done(r.sheet.answers)).length]));
-  // Submitted sheets first, newest hand-in first; then the started ones by name.
-  const cards = rows.filter(r => r.sheet).sort((x, y) => (y.sheet.submitted_at ? 1 : 0) - (x.sheet.submitted_at ? 1 : 0)
-    || String(y.sheet.submitted_at || "").localeCompare(String(x.sheet.submitted_at || "")) || x.student.name.localeCompare(y.student.name));
-  const here = Math.min(at, Math.max(0, cards.length - 1));
+  // The menu, by name, everyone in the section with where their sheet stands.
+  const menu = [...rows].sort((x, y) => x.student.name.localeCompare(y.student.name))
+    .map(r => ({ id: idOf(r.student), name: r.student.name, status: r.sheet?.submitted_at ? "Submitted" : r.sheet ? "Started" : "Not opened", row: r }));
+  const chosen = menu.find(m => m.id === who) || null;
+  const cards = chosen && chosen.row.sheet ? [chosen.row] : [];
   return (
     <Shell config={config} root={root}>
       <header className="aic-top">
@@ -170,11 +165,7 @@ export function ResearchReview({ config, worksheetKey, roster }) {
             </button>
           ))}
         </div>
-        <div className="aic-pos">
-          <span className="aic-where">{cards.length ? <><b>{here + 1} of {cards.length}</b> {cards[here].student.name}</> : "No sheets yet"}</span>
-          <Io onClick={() => jump(here - 1)} disabled={here <= 0} label="Previous student">Previous</Io>
-          <Io kind="go" onClick={() => jump(here + 1)} disabled={here >= cards.length - 1} label="Next student">Next</Io>
-        </div>
+        <StudentPicker people={menu} value={chosen ? chosen.id : ""} onPick={pick} />
       </div>
       {notIn.length ? (
         <details className="aic-fold">
@@ -182,7 +173,7 @@ export function ResearchReview({ config, worksheetKey, roster }) {
           <div className="aic-names">{notIn.map(n => <span key={n} className="pt-gpill off">{n}</span>)}</div>
         </details>
       ) : <p className="pt-quiet">Everyone is in.</p>}
-      <div className="pt-stack aic-cards" ref={list}>
+      <div className="pt-stack aic-cards">
         {cards.map(({ student, sheet }) => {
           const a = sheet.answers || {};
           const clip = audioOf(a.audio);
@@ -327,7 +318,7 @@ export default function AudioControl({ config, worksheetKey, roster }) {
       {ideas ? <p className="aic-p">Strength options: {I.STRENGTHS.join(", ")}. Work options: {I.WORK.join(", ")}. Chosen options are stored one a line in the field.</p> : null}
 
       <h2 className="aic-h2">Submit</h2>
-      <p className="aic-p">Submit writes submitted_at on the student's worksheet_sheets row; the first submit also sets first_submitted_at, which the lateness read uses. {ideas ? "Nothing shows on the review or the board until submitted_at is set. From then on every answer still saves as typed, so an edit after submitting shows on the board on its next ask." : "The review shows started and submitted sheets."} Submitting again overwrites submitted_at only.</p>
+      <p className="aic-p">Submit writes submitted_at on the student's worksheet_sheets row; the first submit also sets first_submitted_at, which the lateness read uses. {ideas ? "Nothing shows on the review or the board until submitted_at is set. From then on every answer still saves as typed, so an edit after submitting shows on the board on its next ask." : "The review opens on the summary and shows one student at a time, picked from the Student menu in the bar or stepped with Previous and Next, started and submitted sheets alike; the address keeps the student as st=."} Submitting again overwrites submitted_at only.</p>
 
       {ideas ? (<>
         <h2 className="aic-h2">Marks</h2>
@@ -337,7 +328,7 @@ export default function AudioControl({ config, worksheetKey, roster }) {
         <h2 className="aic-h2">Pairs</h2>
         <p className="aic-p">The Pairs view on the review (per section) lists everyone who submitted. Suggest pairs scores every two people who said In a pair or Either one: 3 when one asked for the other's idea, 2 when their Top or Good to go! ideas share a word, 1 when one is technical and the other tells stories or researches, 1 when both said In a pair outright; highest first, then anyone left who said In a pair is paired with the next such person, and everyone else is on their own. The story is the idea asked for, else a Top idea, else a Good to go!. Tap a person then another to pair them, Split to part a pair, pick the story from either member's ideas or type one. Every change writes the row <code>{"audio-pairs-plan"}</code> (instructor-only), which the student's everyone's-ideas page and audio exercise read to say who they work with and on what.</p>
         <h2 className="aic-h2">The board and the review</h2>
-        <p className="aic-p">Both ask /api/worksheet-submits for every sheet on this key every {I.POLL / 1000} seconds while the tab is showing, and stop asking while the tab is hidden. The board shows no names and no strengths, only ideas and marks, newest sheet first. The review shows names, strengths, work preference, and the two general answers under a fold. Sections: the 8:00 and the 10:30 are tabs, off the student's section on the roster.</p>
+        <p className="aic-p">Both ask /api/worksheet-submits for every sheet on this key every {I.POLL / 1000} seconds while the tab is showing, and stop asking while the tab is hidden. The board shows no names and no strengths, only ideas and marks, newest sheet first. The review shows names, strengths, work preference, and the two general answers under a fold, one student at a time from the Student menu, which lists resubmitted sheets first, then unmarked ones, then the newest; the address keeps the student as st=. Sections: the 8:00 and the 10:30 are tabs, off the student's section on the roster.</p>
       </>) : (<>
         <h2 className="aic-h2">The audio story</h2>
         <p className="aic-p">One file, m4a, mp3, wav or aac, at most 60 seconds (a file that reads as 60.9 passes, for rounding) and under 30 MB. The browser reads the length off the file first and refuses a longer one or another format before anything goes up. The file goes straight into the private visual-story bucket at comm3/(email)/audio-(id).(ext) as the student; the bucket's rules keep a student to their own folder and let the instructor read every folder. The field <code>audio</code> holds JSON with the path, the seconds and the file's name. Remove clears the field and leaves the file in the bucket. The student plays the clip back through a signed link an hour long made with their own token; this page and the review sign links through the server. The bucket takes audio only once sql/audio-exercise-bucket.sql has run; before that the upload is refused and the sheet says so.</p>
@@ -385,16 +376,24 @@ export function StudentPicker({ people, value, onPick }) {
   const i = people.findIndex(p => p.id === value);
   const step = (by) => { const next = people[i < 0 ? (by > 0 ? 0 : people.length - 1) : i + by]; if (next) onPick(next.id); };
   return (
-    <div className="pt-chips aic-pick">
-      <select className="pt-chip pt-focus aic-pick-menu" value={i < 0 ? "" : value} aria-label="Student" onChange={e => onPick(e.target.value)}>
+    <div className="stp">
+      <style>{PICK_CSS}</style>
+      <select value={i < 0 ? "" : value} aria-label="Student" onChange={e => onPick(e.target.value)}>
         <option value="">Student</option>
         {people.map(p => <option key={p.id} value={p.id}>{p.name + (p.status ? " · " + p.status : "")}</option>)}
       </select>
-      <button type="button" className="pt-chip pt-focus" disabled={i === 0} onClick={() => step(-1)}>Previous</button>
-      <button type="button" className="pt-chip pt-focus" disabled={i === people.length - 1} onClick={() => step(1)}>Next</button>
+      <button type="button" disabled={i === 0} onClick={() => step(-1)}>Previous</button>
+      <button type="button" disabled={i === people.length - 1} onClick={() => step(1)}>Next</button>
     </div>
   );
 }
+// Its own look, from the tokens, because the review pages do not share a stylesheet.
+const PICK_CSS = `
+.stp{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stp select,.stp button{font:inherit;font-size:15px;font-weight:600;min-height:40px;max-width:100%;padding:0 14px;border-radius:12px;border:1px solid ${TOKENS.LINE.strong};background:${TOKENS.SURFACE.card};color:${TOKENS.TEXT.primary};cursor:pointer}
+.stp button:disabled{opacity:.4;cursor:default}
+.stp select:focus-visible,.stp button:focus-visible{outline:2px solid ${TOKENS.TEXT.primary};outline-offset:2px}
+`;
 // The picked student in the address, as st=<roster id>. ?s= is the instructor's read of one sheet, so it is not that.
 export const pickedStudent = () => { try { return decodeURIComponent((window.location.search.match(/[?&]st=([^&]*)/) || [])[1] || ""); } catch { return ""; } };
 export const pickStudent = (id) => {
@@ -439,9 +438,6 @@ const CSS = `
 .aic-where b{font-variant-numeric:tabular-nums;color:var(--text-primary);font-weight:600;margin-right:4px}
 .aic-fold summary{cursor:pointer;font-size:15px;font-weight:600;color:var(--text-secondary);min-height:34px;display:flex;align-items:center;padding:0 4px}
 .aic-names{display:flex;flex-wrap:wrap;gap:6px;padding:4px 4px 8px}
-.aic-pick{align-items:center}
-.pt-root .aic-pick-menu{font:inherit;font-size:15px;font-weight:600;max-width:100%;cursor:pointer}
-.pt-root .aic-pick .pt-chip:disabled{opacity:.4;cursor:default}
 .aic .pt-row.aic-card{flex-direction:column;align-items:stretch;gap:14px;padding:16px 20px 20px;scroll-margin-top:calc(var(--aic-nav,56px) + 72px)}
 .aic-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 .aic-who{display:flex;align-items:center;gap:12px;min-width:0}
