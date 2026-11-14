@@ -23,7 +23,7 @@
 //     moves the window for a real class. The practice class (COMM 999) has no
 //     window, so Andrew's stage buttons are the word there, and only there.
 //   - A comment is a row in story_comments, the visual story's table. The
-//     strongest 10 to 30 seconds rides in best_where as clip:<from>-<to>.
+//     best chapter rides in best_where as chapter:<id>.
 //   - A student does not comment on their own story.
 //   - The comments on a student's story reach them, names attached, once the
 //     stage is released.
@@ -37,7 +37,7 @@ import { isInstructorEmail } from "../src/instructors.js";
 import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { answersOf } from "../src/engine/worktopia/store.js";
 import { audioStoryOf } from "../src/engine/audiostory/storymodel.js";
-import { WINDOW, windowStage, assignAll, assignOne, clipWord, clipOf, clipProblem, NEED_ASSIGNED, NEED_TOTAL, MIN_CHARS } from "../src/engine/audiostory/reviewmodel.js";
+import { WINDOW, windowStage, assignAll, assignOne, chapterWord, chapterOf, chaptersOf, NEED_ASSIGNED, NEED_TOTAL, MIN_CHARS } from "../src/engine/audiostory/reviewmodel.js";
 
 const KEY = "audio-story";
 const BUCKET = "visual-story";
@@ -154,7 +154,7 @@ async function tilesOf(ids) {
 // What a classmate may see of a story: everything on the story page, and no
 // mark for whether a voice knew they were being recorded.
 const forListener = (story) => ({ ...story, voices: story.voices.map(v => ({ ...v, knew: null })) });
-const said = (c) => ({ clip: clipOf(c.best_where), best: c.best, shone: c.shone, encourage: c.encourage });
+const said = (c) => ({ chapter: chapterOf(c.best_where), best: c.best, shone: c.shone, encourage: c.encourage });
 const lateOf = (s, due) => !!(s.submitted_at && due && Date.parse(s.submitted_at) > Date.parse(due));
 
 export default async function handler(req, res) {
@@ -248,8 +248,10 @@ export default async function handler(req, res) {
       if (saved) { Object.assign(assign, saved.assign); assignedAt[s] = saved.at; }
     }
     const tile = {};
-    const head = list.length ? ((await rows(`/rest/v1/worksheet_answers?select=sheet_id,value,position&sheet_id=in.(${list.map(s => s.id).join(",")})&field=eq.headline&order=position&limit=${PAGE * 2}`)) || []) : [];
-    head.forEach(r => { tile[r.sheet_id] = (tile[r.sheet_id] || "") + r.value; });
+    const head = list.length ? ((await rows(`/rest/v1/worksheet_answers?select=sheet_id,field,value,position&sheet_id=in.(${list.map(s => s.id).join(",")})&field=in.(headline,chapters)&order=position&limit=${PAGE * 4}`)) || []) : [];
+    const chapterText = {};
+    head.forEach(r => { const m = r.field === "headline" ? tile : chapterText; m[r.sheet_id] = (m[r.sheet_id] || "") + r.value; });
+    const chapterName = (sheetId, id) => (chaptersOf(audioStoryOf({ chapters: chapterText[sheetId] || "" })).find(ch => ch.id === id)?.name || "").trim();
     const submitted = list.filter(s => s.submitted_at);
     const ids = submitted.map(s => s.id);
     const comments = ids.length ? ((await rows(`/rest/v1/story_comments?select=*&story_sheet=in.(${ids.join(",")})&limit=5000`)) || []) : [];
@@ -259,7 +261,7 @@ export default async function handler(req, res) {
       people: roster.map(r => ({ name: r.name, email: r.email, section: r.section })),
       assign,
       stories: list.map(s => ({ id: s.id, email: s.viewer_id, name: byEmail.get(s.viewer_id).name, section: byEmail.get(s.viewer_id).section, submitted_at: s.submitted_at, late: lateOf(s, due), headline: clean(tile[s.id]) })),
-      comments: comments.map(c => ({ story: c.story_sheet, owner: byEmail.get(ownerOf.get(c.story_sheet))?.name || "", ownerEmail: ownerOf.get(c.story_sheet) || "", author: byEmail.get(c.author)?.name || c.author, authorEmail: c.author, ...said(c), updated_at: c.updated_at })),
+      comments: comments.map(c => ({ story: c.story_sheet, owner: byEmail.get(ownerOf.get(c.story_sheet))?.name || "", ownerEmail: ownerOf.get(c.story_sheet) || "", author: byEmail.get(c.author)?.name || c.author, authorEmail: c.author, ...said(c), chapterName: chapterName(c.story_sheet, chapterOf(c.best_where)), updated_at: c.updated_at })),
     });
   }
 
@@ -341,15 +343,16 @@ export default async function handler(req, res) {
     if (isMine) return res.status(409).json({ ok: false, error: "This story is yours. Comment on your classmates' stories." });
     const c = { best: clean(body.best).slice(0, 3000), shone: clean(body.shone).slice(0, 3000), encourage: clean(body.encourage).slice(0, 3000) };
     const short = Object.entries(c).filter(([, v]) => v.length < MIN_CHARS).map(([k]) => k);
-    // The section has to sit inside the story's own file, 10 to 30 seconds long.
-    const audioRows = (await rows(`/rest/v1/worksheet_answers?select=field,value,position&sheet_id=eq.${story.id}&field=eq.audio&order=position`)) || [];
-    const seconds = audioStoryOf(answersOf(audioRows)).audio?.seconds || 0;
-    const from = Number(body.clipFrom), to = Number(body.clipTo);
-    const why = clipProblem(from, to, seconds);
-    if (why) short.unshift("clip");
-    if (short.length) return res.status(400).json({ ok: false, error: why && short.length === 1 ? why : `Each comment needs at least ${MIN_CHARS} characters.${why ? " " + why : ""}`, short });
+    // The best chapter has to be one of the story's own. A story with no
+    // chapters takes the comment with no pick.
+    const chapterRows = (await rows(`/rest/v1/worksheet_answers?select=field,value,position&sheet_id=eq.${story.id}&field=eq.chapters&order=position`)) || [];
+    const chapters = chaptersOf(audioStoryOf(answersOf(chapterRows)));
+    const chapter = String(body.chapter || "");
+    const picked = !chapters.length || chapters.some(ch => ch.id === chapter);
+    if (!picked) short.unshift("chapter");
+    if (short.length) return res.status(400).json({ ok: false, error: !picked && short.length === 1 ? "Choose the best chapter." : `Each comment needs at least ${MIN_CHARS} characters${picked ? "" : ", and choose the best chapter"}.`, short });
     const w = await writeOrError("/rest/v1/story_comments?on_conflict=story_sheet,author", "POST",
-      { story_sheet: story.id, author: email, best_image: "", best_where: clipWord(from, to), ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
+      { story_sheet: story.id, author: email, best_image: "", best_where: chapters.length ? chapterWord(chapter) : "", ...c, updated_at: new Date().toISOString() }, "return=representation,resolution=merge-duplicates");
     if (!w.rows || !w.rows[0]) return res.status(502).json({ ok: false, error: "The comment did not save. " + w.error });
     return res.status(200).json({ ok: true });
   }

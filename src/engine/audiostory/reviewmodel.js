@@ -14,7 +14,6 @@
 export const NEED_ASSIGNED = 3;
 export const NEED_TOTAL = 5;
 export const MIN_CHARS = 50;
-export const CLIP_MIN = 10, CLIP_MAX = 30;
 
 // Pacific standard time, eight hours behind UTC in November.
 //   opens     Tuesday, November 17, 12:00 AM
@@ -73,17 +72,20 @@ export function assignOne(reviewer, assign, owners, need = NEED_ASSIGNED) {
   return [...count.entries()].sort((a, b) => a[1] - b[1] || hash(a[0]) - hash(b[0])).slice(0, need).map(([o]) => o);
 }
 
-/** The picked section, kept in the comment's best_where column as clip:65-87. */
-export const clipWord = (from, to) => "clip:" + from + "-" + to;
-export const clipOf = (word) => { const m = /^clip:(\d{1,4})-(\d{1,4})$/.exec(String(word || "")); return m ? { from: Number(m[1]), to: Number(m[2]) } : null; };
-/** Why a pick will not do, or "" when the pick is fine. seconds is the story's length. */
-export function clipProblem(from, to, seconds) {
-  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0) return "Mark where the strongest section starts and ends.";
-  const len = to - from;
-  if (len < CLIP_MIN) return `Your section runs ${Math.max(0, len)} seconds. Pick ${CLIP_MIN} to ${CLIP_MAX} seconds.`;
-  if (len > CLIP_MAX) return `Your section runs ${len} seconds. Pick ${CLIP_MIN} to ${CLIP_MAX} seconds.`;
-  if (seconds && to > Math.ceil(seconds) + 1) return "Your section ends after the story does.";
-  return "";
+// Andrew, 2026-11-13, after seeing the page: "the strongest 10-30 seconds
+// thing isnt great. needs to be easier to review. i think it should be which
+// chapter was the best and why." So the first comment picks one chapter.
+import { secondsOf } from "./storymodel.js";
+/** The chapters a listener can pick: named, with a time, in order. */
+export const chaptersOf = (story) => ((story && story.chapters) || []).filter(c => String(c.name || "").trim() && secondsOf(c.at) !== null).sort((x, y) => secondsOf(x.at) - secondsOf(y.at));
+/** The picked chapter, kept in the comment's best_where column as chapter:<id>. */
+export const chapterWord = (id) => "chapter:" + id;
+export const chapterOf = (word) => { const m = /^chapter:(.{1,80})$/.exec(String(word || "")); return m ? m[1] : ""; };
+/** Where a chapter starts and ends in seconds; the last one ends with the story. */
+export function chapterSpan(story, id) {
+  const list = chaptersOf(story), i = list.findIndex(c => c.id === id);
+  if (i < 0) return null;
+  return { name: list[i].name.trim(), from: secondsOf(list[i].at), to: i + 1 < list.length ? secondsOf(list[i + 1].at) : Math.ceil((story.audio && story.audio.seconds) || 0) || null };
 }
 
 const lower = (s) => String(s || "").trim().toLowerCase();

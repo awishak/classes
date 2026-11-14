@@ -49,7 +49,7 @@ import { suggest as suggestPairs, join as joinPairs, split as splitPairs, storyF
 import VisualStoryPortal, { PortalBar, partOf, PARTS as PORTAL_PARTS } from "../src/engine/visualstory/portal.jsx";
 import { tally as reviewTally } from "../src/engine/visualstory/reviews.jsx";
 import { stageAt as storyStageAt, RELEASES_AT } from "../src/engine/visualstory/model.js";
-import { windowStage as audioWindowStage, assignAll as audioAssignAll, assignOne as audioAssignOne, clipProblem, clipOf, clipWord, tally as audioTally, NEED_ASSIGNED as AUDIO_NEED } from "../src/engine/audiostory/reviewmodel.js";
+import { windowStage as audioWindowStage, assignAll as audioAssignAll, assignOne as audioAssignOne, chaptersOf as audioChapters, chapterOf, chapterWord, chapterSpan, tally as audioTally, NEED_ASSIGNED as AUDIO_NEED } from "../src/engine/audiostory/reviewmodel.js";
 import { doorWords as audioDoorWords } from "../src/engine/audiostory/listendoor.jsx";
 import { JOBS, CATEGORIES, HORRIBLE, findJob, horribleFor } from "../src/engine/worktopia/jobs.js";
 import { F as WF } from "../src/engine/worktopia/terminal.js";
@@ -6454,14 +6454,12 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const late = audioAssignOne("p3@x", a, owners);
   if (late.length !== AUDIO_NEED || late.includes("p3@x")) say("audio review: the late reviewer's three are wrong");
 
-  if (clipProblem(65, 87, 240) !== "") say("audio review: a 22 second section was refused");
-  if (!clipProblem(65, 70, 240)) say("audio review: a 5 second section passed");
-  if (!clipProblem(65, 100, 240)) say("audio review: a 35 second section passed");
-  if (!clipProblem(230, 255, 240)) say("audio review: a section past the end passed");
-  if (!clipProblem(NaN, 20, 240) || !clipProblem(10.5, 30, 240)) say("audio review: a section with no whole seconds passed");
-  if (clipProblem(0, 10, 240) || clipProblem(0, 30, 240)) say("audio review: the 10 and 30 second edges were refused");
-  const c = clipOf(clipWord(65, 87));
-  if (!c || c.from !== 65 || c.to !== 87 || clipOf("image:abc") || clipOf("")) say("audio review: the section does not read back");
+  // The best chapter: only named chapters with a time, in order, and the pick reads back.
+  const st = { audio: { seconds: 200 }, chapters: [{ id: "bb", at: "1:30", name: "Middle" }, { id: "aa", at: "0:00", name: "Open" }, { id: "cc", at: "", name: "No time" }, { id: "dd", at: "2:00", name: " " }] };
+  if (audioChapters(st).map(c => c.id).join() !== "aa,bb") say("audio review: the chapters to pick from are wrong");
+  if (chapterOf(chapterWord("bb")) !== "bb" || chapterOf("clip:1-20") || chapterOf("")) say("audio review: the chapter does not read back");
+  const sp = chapterSpan(st, "aa"), last = chapterSpan(st, "bb");
+  if (!sp || sp.from !== 0 || sp.to !== 90 || sp.name !== "Open" || last.to !== 200 || chapterSpan(st, "cc")) say("audio review: a chapter's start and end are wrong");
 
   const feed = {
     people: [{ name: "Ann", email: "ann@x", section: "8:00" }, { name: "Ben", email: "ben@x", section: "8:00" }, { name: "Cy", email: "cy@x", section: "8:00" }, { name: "Dee", email: "dee@x", section: "10:30" }],

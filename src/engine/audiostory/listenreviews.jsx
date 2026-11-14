@@ -18,13 +18,11 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf } from "../sections.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { REVIEWS_CSS } from "../visualstory/reviews.jsx";
-import { clock } from "./storymodel.js";
 import { tally, NEED_TOTAL, NEED_ASSIGNED } from "./reviewmodel.js";
 
-const ASK = { best: "The strongest 10 to 30 seconds, and why", shone: "One way this story shone", encourage: "One thing you would encourage the author to do" };
+const ASK = { best: "The best chapter, and why", shone: "One way this story shone", encourage: "One thing you would encourage the author to do" };
 const lower = (s) => String(s || "").trim().toLowerCase();
 const when = (t) => (t ? new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
-const clipSay = (c) => (c.clip ? clock(c.clip.from) + " to " + clock(c.clip.to) : "");
 
 const api = async (config, body) => {
   const r = await fetch("/api/audio-review", {
@@ -37,8 +35,8 @@ const api = async (config, body) => {
 };
 
 const csvCell = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-const toCsv = (comments) => ["story_id,owner,owner_email,author,author_email,section_from,section_to,best,shone,encourage,updated_at",
-  ...comments.map(c => [c.story, c.owner, c.ownerEmail, c.author, c.authorEmail, c.clip ? c.clip.from : "", c.clip ? c.clip.to : "", c.best, c.shone, c.encourage, c.updated_at].map(csvCell).join(","))].join("\n");
+const toCsv = (comments) => ["story_id,owner,owner_email,author,author_email,best_chapter,best,shone,encourage,updated_at",
+  ...comments.map(c => [c.story, c.owner, c.ownerEmail, c.author, c.authorEmail, c.chapterName || "", c.best, c.shone, c.encourage, c.updated_at].map(csvCell).join(","))].join("\n");
 const download = (name, text, type) => {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([text], { type }));
@@ -194,7 +192,7 @@ export default function AudioReviews({ config }) {
                   <span className="vrw-muted vrw-c-when">{when(c.updated_at)}</span>
                 </div>
                 <dl className="vrw-dl">
-                  <dt>{ASK.best}</dt><dd>{c.clip ? <span className="vrw-pick">{clipSay(c)}</span> : null}{c.best}</dd>
+                  <dt>{ASK.best}</dt><dd>{c.chapterName ? <span className="vrw-pick">{c.chapterName}</span> : null}{c.best}</dd>
                   <dt>{ASK.shone}</dt><dd>{c.shone}</dd>
                   <dt>{ASK.encourage}</dt><dd>{c.encourage}</dd>
                 </dl>

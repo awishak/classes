@@ -12,9 +12,11 @@
 //     click on them, they can see the names").
 //   - A story opens on its story page: headline, summary, the player,
 //     chapters, voices and sources.
-//   - The first comment is "the 10 to 30 second section I thought was the
-//     strongest," marked on the player, where the visual story had the best
-//     image.
+//   - The first comment is the best chapter, picked from the story's own
+//     chapters, where the visual story had the best image. (The first build
+//     asked for the strongest 10 to 30 seconds; Andrew, 2026-11-13: "needs to
+//     be easier to review. i think it should be which chapter was the best
+//     and why.")
 //   - A student does not comment on their own story.
 // Everything comes through /api/audio-review, which decides what a student
 // may see and when comments save; this page only shows the answer. Signed in
@@ -26,8 +28,8 @@ import { savedPin } from "../../InstructorGate.jsx";
 import { useCopy, Words } from "../visualstory/pre.jsx";
 import { READING_CSS } from "../visualstory/reading.jsx";
 import { AudioStoryView, AUDIO_STORY_CSS } from "./story.jsx";
-import { clock, secondsOf } from "./storymodel.js";
-import { NEED_TOTAL, MIN_CHARS, CLIP_MIN, CLIP_MAX, clipProblem } from "./reviewmodel.js";
+import { clock, secondsOf } from "./storymodel.js";   // secondsOf reads a chapter's time
+import { NEED_TOTAL, MIN_CHARS, chaptersOf, chapterSpan } from "./reviewmodel.js";
 import * as TOKENS from "../tokens.js";
 import TopNav, { NAV_STUDENT } from "../TopNav.jsx";
 import { useStudentTheme, useDayNight, ThemeStyle } from "../ThemeShell.jsx";
@@ -46,13 +48,13 @@ export const LISTENING_COPY = {
   "count.total": "Total",
   "count.done": "That's at least 5. Keep going if you like.",
   prompt: "Please make sure your comments are substantial. A well-crafted sentence is acceptable, and longer than that is also okay.",
-  "ask.best": "The strongest 10 to 30 seconds, and why",
-  "ask.clip": "Play the story. Mark where the strongest section starts and where the section ends.",
+  "ask.chapter": "The best chapter, and why",
   "ask.shone": "One way this story shone",
   "ask.encourage": "One thing you would encourage the author to do",
 };
 const FIELDS = ["best", "shone", "encourage"];
-const EMPTY = { clipFrom: "", clipTo: "", best: "", shone: "", encourage: "" };
+const EMPTY = { chapter: "", best: "", shone: "", encourage: "" };
+const askKey = (f) => (f === "best" ? "ask.chapter" : "ask." + f);
 const charsSay = (n) => (n >= MIN_CHARS ? n + " characters. Long enough!" : n + " characters. Write at least " + MIN_CHARS + ".");
 const when = (t) => new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
@@ -68,7 +70,7 @@ const api = async (config, body) => {
 const draftKey = (config, as, id) => "audio-comment:" + config.id + ":" + (as || "") + ":" + id;
 const readDraft = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
 const writeDraft = (k, v) => { try { if (v) localStorage.setItem(k, JSON.stringify(v)); else localStorage.removeItem(k); } catch { /* the server copy still goes */ } };
-const formOf = (c) => (c ? { clipFrom: c.clip ? clock(c.clip.from) : "", clipTo: c.clip ? clock(c.clip.to) : "", best: c.best || "", shone: c.shone || "", encourage: c.encourage || "" } : null);
+const formOf = (c) => (c ? { chapter: c.chapter || "", best: c.best || "", shone: c.shone || "", encourage: c.encourage || "" } : null);
 
 export default function ClassmatesAudio({ config }) {
   const { session, instructor } = useSession();
@@ -196,7 +198,7 @@ function EveryStory({ config, id, copy, onBack }) {
           <span className="vrd-muted">{data.comments.length}</span>
           {data.comments.length ? <button type="button" className="vrd-btn" aria-pressed={shown} onClick={() => setShown(s => !s)}>{shown ? "Hide the comments" : "Show the comments"}</button> : null}
         </div>
-        {shown ? data.comments.map((c, i) => <article key={i} className="vrd-comment"><b>{c.author}</b><Said c={c} copy={copy} onPlay={play} /></article>) : null}
+        {shown ? data.comments.map((c, i) => <article key={i} className="vrd-comment"><b>{c.author}</b><Said c={c} copy={copy} onPlay={play} story={data.story} /></article>) : null}
       </section>
     </div>
   );
@@ -296,43 +298,25 @@ function usePlaySection(player) {
   };
 }
 
-// Marking the strongest section: two buttons that read the player's clock,
-// and two boxes for typing a time by hand.
-function ClipPick({ player, form, change, bad, play, seconds }) {
-  const [now, setNow] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  useEffect(() => {
-    const t = setInterval(() => { const a = player.current; if (a) { setNow(Math.floor(a.currentTime || 0)); setPlaying(!a.paused); } }, 250);
-    return () => clearInterval(t);
-  }, [player]);
-  // The player is up the page from the boxes, so the picker has its own
-  // play, pause and back ten seconds.
-  const toggle = () => { const a = player.current; if (!a) return; if (a.paused) a.play().catch(() => {}); else a.pause(); };
-  const back = () => { const a = player.current; if (a) a.currentTime = Math.max(0, a.currentTime - 10); };
-  const from = secondsOf(form.clipFrom), to = secondsOf(form.clipTo);
-  const set = from !== null && to !== null;
-  const why = set ? clipProblem(from, to, seconds) : "";
+// Picking the best chapter: the story's own chapters, one tap each, with a
+// button to hear a chapter again.
+function ChapterPick({ story, value, onPick, bad, play }) {
+  const chapters = chaptersOf(story);
+  if (!chapters.length) return null;
   return (
-    <div className={"ala-clip" + (bad ? " ala-clip-bad" : "")}>
-      <div className="ala-clip-row">
-        <button type="button" className="vrd-btn" onClick={toggle}>{playing ? "Pause" : "Play"}</button>
-        <button type="button" className="vrd-btn" onClick={back}>Back 10 seconds</button>
-        <span className="ala-now">{clock(now)}</span>
-      </div>
-      <div className="ala-clip-row">
-        <label className="ala-clip-part">
-          <span className="ala-clip-k">Starts at</span>
-          <input className="vrd-box ala-time" inputMode="numeric" maxLength={5} value={form.clipFrom} onChange={e => change("clipFrom", e.target.value)} />
-        </label>
-        <button type="button" className="vrd-btn" onClick={() => change("clipFrom", clock(now))}>Start here</button>
-        <label className="ala-clip-part">
-          <span className="ala-clip-k">Ends at</span>
-          <input className="vrd-box ala-time" inputMode="numeric" maxLength={5} value={form.clipTo} onChange={e => change("clipTo", e.target.value)} />
-        </label>
-        <button type="button" className="vrd-btn" onClick={() => change("clipTo", clock(now))}>End here</button>
-        {set && !why ? <button type="button" className="vrd-btn" onClick={() => play(from, to)}>Play my section</button> : null}
-      </div>
-      <span className={"vrd-chars" + (set && !why ? " vrd-chars-ok" : "")}>{set ? (why || (to - from) + " seconds. Long enough!") : `Pick ${CLIP_MIN} to ${CLIP_MAX} seconds.`}</span>
+    <div className={"ala-chapters" + (bad ? " ala-chapters-bad" : "")} role="radiogroup" aria-label="The best chapter">
+      {chapters.map(c => {
+        const span = chapterSpan(story, c.id);
+        return (
+          <div key={c.id} className="ala-chapter">
+            <button type="button" role="radio" aria-checked={value === c.id} className="ala-chapter-pick" onClick={() => onPick(c.id)}>
+              <span className="ala-chapter-t">{clock(secondsOf(c.at))}</span>
+              <span>{c.name.trim()}</span>
+            </button>
+            <button type="button" className="vrd-btn" aria-label={"Play " + c.name.trim()} onClick={() => play(span.from, span.to)}>Play</button>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -358,11 +342,11 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
   const save = async () => {
     setState("saving"); setShort([]);
     try {
-      const out = { clipFrom: secondsOf(form.clipFrom), clipTo: secondsOf(form.clipTo), best: form.best, shone: form.shone, encourage: form.encourage };
+      const out = { chapter: form.chapter, best: form.best, shone: form.shone, encourage: form.encourage };
       await api(config, { action: "comment", id, as, ...out });
       writeDraft(key, null);
       setState("saved");
-      setData(d => ({ ...d, myComment: { clip: { from: out.clipFrom, to: out.clipTo }, best: form.best, shone: form.shone, encourage: form.encourage } }));
+      setData(d => ({ ...d, myComment: out }));
     } catch (e) { setState("error:" + e.message); setShort(e.out?.short || []); }
   };
   if (error) return <div className="vrd-stack"><button type="button" className="vrd-back" onClick={onBack}>Back to all stories</button><p className="vrd-p">{error}</p></div>;
@@ -378,7 +362,7 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
           {!data.comments.length ? <p className="vrd-muted">Nobody commented on your story.</p> : data.comments.map((c, i) => (
             <article key={i} className="vrd-comment">
               <b>{c.author}</b>
-              <Said c={c} copy={copy} onPlay={play} />
+              <Said c={c} copy={copy} onPlay={play} story={data.story} />
             </article>
           ))}
         </section>
@@ -390,14 +374,9 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
           <Words k="prompt" copy={copy} editing={editing} as="p" className="vrd-muted" />
           {FIELDS.map(f => (
             <div key={f} className="vrd-field">
-              <Words k={"ask." + f} copy={copy} editing={editing} className="vrd-ask" />
-              {f === "best" ? (
-                <>
-                  <Words k="ask.clip" copy={copy} editing={editing} className="vrd-muted" />
-                  <ClipPick player={player} form={form} change={change} bad={short.includes("clip")} play={play} seconds={data.story.audio?.seconds || 0} />
-                </>
-              ) : null}
-              <textarea className={"vrd-box" + (short.includes(f) ? " vrd-box-bad" : "")} rows={3} maxLength={3000} aria-label={copy.say("ask." + f)}
+              <Words k={askKey(f)} copy={copy} editing={editing} className="vrd-ask" />
+              {f === "best" ? <ChapterPick story={data.story} value={form.chapter} onPick={v => change("chapter", v)} bad={short.includes("chapter")} play={play} /> : null}
+              <textarea className={"vrd-box" + (short.includes(f) ? " vrd-box-bad" : "")} rows={3} maxLength={3000} aria-label={copy.say(askKey(f))}
                 value={form[f] || ""} onChange={e => change(f, e.target.value)} />
               <span className={"vrd-chars" + (String(form[f] || "").trim().length >= MIN_CHARS ? " vrd-chars-ok" : "")}>{charsSay(String(form[f] || "").trim().length)}</span>
             </div>
@@ -413,22 +392,23 @@ function OneStory({ config, as, id, copy, editing, onBack }) {
       ) : data.myComment ? (
         <section className="vrd-form">
           <h2 className="vrd-h2">Your comments</h2>
-          <Said c={data.myComment} copy={copy} onPlay={play} />
+          <Said c={data.myComment} copy={copy} onPlay={play} story={data.story} />
         </section>
       ) : null}
     </div>
   );
 }
 
-// One listener's three comments, with the section they picked as strongest.
-function Said({ c, copy, onPlay }) {
+// One listener's three comments, with the chapter they picked as best.
+function Said({ c, copy, onPlay, story }) {
+  const span = c.chapter ? chapterSpan(story, c.chapter) : null;
   return FIELDS.map(f => (
     <div key={f} className="vrd-said">
-      <span className="vrd-said-k">{copy.say("ask." + f)}</span>
-      {f === "best" && c.clip ? (
+      <span className="vrd-said-k">{copy.say(askKey(f))}</span>
+      {f === "best" && span ? (
         <span className="vrd-said-pick">
-          <span>{clock(c.clip.from)} to {clock(c.clip.to)}</span>
-          {onPlay ? <button type="button" className="vrd-btn" onClick={() => onPlay(c.clip.from, c.clip.to)}>Play the section</button> : null}
+          <span>{span.name}, {clock(span.from)}</span>
+          {onPlay ? <button type="button" className="vrd-btn" onClick={() => onPlay(span.from, span.to)}>Play the chapter</button> : null}
         </span>
       ) : null}
       {c[f]}
@@ -442,12 +422,12 @@ const CSS = `
 .ala-len{position:absolute;right:8px;bottom:8px;font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.72);color:#fff}
 .ala-story{background:#fff;color:#141414}
 .ala-story .asr{min-height:0}
-.ala-clip{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:12px;background:${S.card};box-shadow:0 0 0 1px ${L.soft}}
-.ala-clip-bad{box-shadow:0 0 0 2px ${ST.late}}
-.ala-clip-row{display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px}
-.ala-clip-part{display:flex;flex-direction:column;gap:4px}
-.ala-clip-k{font-size:13px;font-weight:700;color:${T.muted}}
-.ala-now{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;align-self:center}
-.ala-time{width:86px;text-align:center;font-variant-numeric:tabular-nums}
-.ala-clip .vrd-btn{min-height:44px}
+.ala-chapters{display:flex;flex-direction:column;gap:8px}
+.ala-chapters-bad{padding:8px;border-radius:14px;box-shadow:0 0 0 2px ${ST.late}}
+.ala-chapter{display:flex;align-items:center;gap:10px}
+.ala-chapter-pick{flex:1;display:flex;align-items:baseline;gap:12px;text-align:left;font:inherit;font-size:16px;font-weight:600;min-height:48px;padding:10px 14px;border-radius:12px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.ala-chapter-pick[aria-checked="true"]{border-color:#16803c;box-shadow:0 0 0 3px #16803c}
+.ala-chapter-pick:focus-visible{outline:2.5px solid ${T.primary};outline-offset:2px}
+.ala-chapter-t{font-size:14px;font-weight:700;color:${T.muted};font-variant-numeric:tabular-nums}
+.ala-chapter .vrd-btn{min-height:44px}
 `;
