@@ -140,17 +140,21 @@ const workClass = (p) => (p.state === "in" && p.work ? " fp-w-" + p.work : " fp-
 
 // ─── the ring ───
 
-// Pairs first, each two side by side; then the people not placed yet; then
-// the people working alone. A change of place is a change of order, and the
+// Pairs first, each two side by side; then the suggested pairs, each two
+// side by side as well, so a tie is a short line and not a chord across the
+// class (Andrew, 2026-11-13: "the ring should be organized by your suggested
+// pairs"); then the people not placed yet; then the people working alone. A change of place is a change of order, and the
 // faces slide to it.
-function orderOf(people, file) {
+function orderOf(people, file, suggested) {
   const byId = new Map(people.map(p => [p.id, p]));
   const name = (x, y) => x.shown.localeCompare(y.shown);
   const pairs = file.pairs.filter(([a, b]) => byId.has(a) && byId.has(b)).map(([a, b]) => [byId.get(a), byId.get(b)].sort(name)).sort((x, y) => name(x[0], y[0]));
   const inPair = new Set(pairs.flat().map(p => p.id));
   const solo = people.filter(p => !inPair.has(p.id) && file.solo.includes(p.id)).sort(name);
-  const open = people.filter(p => !inPair.has(p.id) && !file.solo.includes(p.id)).sort(name);
-  return { order: [...pairs.flat(), ...open, ...solo], inPair };
+  const sug = suggested.filter(s => byId.has(s.a) && byId.has(s.b) && !inPair.has(s.a) && !inPair.has(s.b)).map(s => [byId.get(s.a), byId.get(s.b)]);
+  const inSug = new Set(sug.flat().map(p => p.id));
+  const open = people.filter(p => !inPair.has(p.id) && !inSug.has(p.id) && !file.solo.includes(p.id)).sort(name);
+  return { order: [...pairs.flat(), ...sug.flat(), ...open, ...solo.filter(p => !inSug.has(p.id))], inPair };
 }
 
 function Ring({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
@@ -167,11 +171,11 @@ function Ring({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
     return () => { if (ro) ro.disconnect(); window.removeEventListener("resize", fit); };
   }, []);
 
-  const { order, inPair } = useMemo(() => orderOf(people, file), [people, file]);
+  const { order, inPair } = useMemo(() => orderOf(people, file, suggested), [people, file, suggested]);
   const n = Math.max(order.length, 1);
   const c = size / 2;
   const gutter = 62;
-  const face = Math.round(Math.max(34, Math.min(88, ((2 * Math.PI * (c - gutter - 30)) / n) * 0.74)));
+  const face = Math.round(Math.max(34, Math.min(88, ((2 * Math.PI * (c - gutter - 30)) / n) * 0.68)));
   const R = c - gutter - face / 2;
   const step = (2 * Math.PI) / n;
   const pos = new Map();
@@ -190,7 +194,12 @@ function Ring({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
     const p = pos.get(a), q = pos.get(b);
     if (!p || !q) return;
     // Two faces side by side are joined straight across, under the faces.
-    if (Math.hypot(p.x - q.x, p.y - q.y) < face * 2.4) { lines.push({ key: a + ">" + b + cls + Math.round(p.x) + Math.round(q.x), d: `M${p.x.toFixed(1)},${p.y.toFixed(1)} L${q.x.toFixed(1)},${q.y.toFixed(1)}`, cls: cls + " fp-l-near" }); return; }
+    if (!arrow && Math.hypot(p.x - q.x, p.y - q.y) < face * 2.4) {
+      const nx = (p.x + q.x) / 2, ny = (p.y + q.y) / 2, dn = Math.hypot(c - nx, c - ny) || 1;
+      const bow = cls.includes("fp-l-pair") ? 0 : face * 1.25;
+      lines.push({ key: a + ">" + b + cls + Math.round(p.x) + Math.round(q.x), d: `M${p.x.toFixed(1)},${p.y.toFixed(1)} Q${(nx + ((c - nx) / dn) * bow).toFixed(1)},${(ny + ((c - ny) / dn) * bow).toFixed(1)} ${q.x.toFixed(1)},${q.y.toFixed(1)}`, cls: cls + " fp-l-near" });
+      return;
+    }
     const mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2;
     const cx = c + (mx - c) * 0.32, cy = c + (my - c) * 0.32;
     const trim = (from, pad) => { const dx = cx - from.x, dy = cy - from.y, d = Math.hypot(dx, dy) || 1; return { x: from.x + (dx / d) * pad, y: from.y + (dy / d) * pad }; };
@@ -541,7 +550,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
   const [releasing, setReleasing] = useState(false);
   useEffect(() => { loadFont(); }, []);
 
-  const people = useMemo(() => all.filter(p => demo || sections.length < 2 || !section || p.section === section), [all, section, demo, sections.length]);
+  const people = useMemo(() => all.filter(p => sections.length < 2 || !section || p.section === section), [all, section, sections.length]);
   const sug = useMemo(() => {
     if (!file) return { pairs: [], maybe: [] };
     const taken = new Set(people.filter(p => M.placeOf(file, p.id)).map(p => p.id));
@@ -574,7 +583,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
       <header className="fp-top">
         <div className="fp-titles">
           <h1>{M.FINAL_PREFS_TITLE}{demo ? <span className="fp-pill fp-demo">Demo</span> : null}</h1>
-          {sections.length > 1 && !demo ? <div className="fp-tabs" role="tablist">{sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"fp-tab" + (s === section ? " fp-set" : "")} onClick={() => { setSection(s); pick(""); }}>{s}</button>)}</div> : null}
+          {sections.length > 1 ? <div className="fp-tabs" role="tablist">{sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"fp-tab" + (s === section ? " fp-set" : "")} onClick={() => { setSection(s); pick(""); }}>{s}</button>)}</div> : null}
         </div>
         <div className="fp-progress">
           <div className="fp-pbar" role="img" aria-label={inPairs + " in pairs, " + solo + " individual, " + open + " to place, " + out + " not submitted"}>
