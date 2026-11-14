@@ -427,6 +427,12 @@ function StudentSchedule({ config, data, blockOf, focusDay, instructor, me, mark
                     {titles[d.date]?.title && !titles[d.date].fromWeek ? (
                       <div style={{ fontSize: 19, fontWeight: 700, color: TEXT_PRIMARY, lineHeight: 1.25, letterSpacing: "-0.01em", marginTop: 2, textWrap: "balance" }}>{titles[d.date].title}</div>
                     ) : null}
+                    {/* A second, quieter line under the day's heading, from the
+                        day plan's `sub`. Andrew, 2026-11-14: "Dr. Ishak at NCA
+                        is still fine for wed and fri as subheading." */}
+                    {String(data?.dayPlans?.[d.date]?.sub || "").trim() ? (
+                      <div style={{ fontSize: 15, fontWeight: 500, color: TEXT_SECONDARY, lineHeight: 1.35, marginTop: 2 }}>{String(data.dayPlans[d.date].sub).trim()}</div>
+                    ) : null}
                     {/* A day with nothing on it yet says nothing: "dont put
                         nothing set for this day". The card is the day. */}
                     {d.items.length ? <DayItems items={inWeekOrder(d.items)} row={row} accent={config.accent} /> : null}
