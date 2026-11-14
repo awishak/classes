@@ -93,6 +93,8 @@ const BY_CLASS = {
 };
 export const defaultCopy = (classId) => ({ ...SHARED, ...(BY_CLASS[classId] || BY_CLASS.comm118) });
 
+// A colour for a face with no photo, the same one every time for a name.
+const hueOf = (name) => [...String(name || "")].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
 const initials = (name) => String(name || "").trim().split(/\s+/).map(w => w[0]).slice(0, 2).join("").toUpperCase();
 
 function FaceGrid({ label, people, picked, readOnly, onToggle }) {
@@ -101,7 +103,7 @@ function FaceGrid({ label, people, picked, readOnly, onToggle }) {
       {people.map(p => {
         const on = picked.includes(p.name);
         return (
-          <button key={p.name} type="button" className={"fpp-face focusable" + (on ? " on" : "")} aria-pressed={on} disabled={readOnly} onClick={() => onToggle(p.name)}>
+          <button key={p.name} type="button" style={{ "--h": hueOf(p.name) }} className={"fpp-face focusable" + (on ? " on" : "")} aria-pressed={on} disabled={readOnly} onClick={() => onToggle(p.name)}>
             <span className="fpp-pic">{p.photo ? <img src={p.photo} alt="" /> : initials(p.shown)}</span>
             <span className="fpp-name">{p.shown}</span>
           </button>
@@ -112,9 +114,11 @@ function FaceGrid({ label, people, picked, readOnly, onToggle }) {
 }
 
 // A paragraph box that grows with its words, so a long answer is never cut
-// off on a phone. Para's markup and classes, with the height set from the text.
+// off on a phone. Para's markup and classes, with the least height set from the
+// text: measured with the box shut, so a box its row has stretched is not
+// measured at the stretched height and never ratchets taller as it is typed in.
 function Grow({ id, label, value, readOnly, onChange, rows = 3, max = 2000 }) {
-  const fit = (el) => { if (el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 3 + "px"; } };
+  const fit = (el) => { if (el) { el.style.minHeight = "0"; el.style.height = "0"; const h = el.scrollHeight; el.style.height = ""; el.style.minHeight = h + 3 + "px"; } };
   return <textarea ref={fit} className="para focusable" id={id} value={value || ""} readOnly={readOnly} maxLength={max} rows={rows} aria-label={label} onChange={e => onChange(e.target.value)} />;
 }
 
@@ -207,6 +211,8 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const [handing, setHanding] = useState("");
   // COMM 118 writes one topic at a time: the topic on the page.
   const [slot, setSlot] = useState(M.SLOTS[0]);
+  // The area of example topics picked out, or -1 for all of them.
+  const [area, setArea] = useState(-1);
   const composer = useRef(null);
   const [data] = useClassState(storageKey || "");
   const draftKey = M.FINAL_PREFS_KEY + ":" + (classId || "") + ":" + (viewer?.id || "");
@@ -271,94 +277,101 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   };
   const read = M.readAnswers(answers);
   const at = M.SLOTS.indexOf(slot);
+  const picker = (t, cls, style) => {
+    const on = !!heldBy(t);
+    return readOnly ? <span key={t} className={cls + (on ? " on" : "")} style={style}><i aria-hidden="true">{on ? "✓" : ""}</i>{t}</span> : (
+      <button key={t} type="button" className={cls + " focusable" + (on ? " on" : "")} style={style} aria-pressed={on} disabled={!on && !roomFor} onClick={() => pickInterest(t)}>
+        <i aria-hidden="true">{on ? "✓" : "+"}</i>{t}
+      </button>
+    );
+  };
+  // The three topics read back: what a tab card and the phone's list both show.
+  const readBack = (t) => [
+    t.topic ? <span key="q" className="fpt-rq">{t.topic}</span> : null,
+    t.worth ? <span key="w" className="fpt-rp">{t.worth}</span> : null,
+    t.audience ? <span key="u" className="fpt-rp">{t.audience}</span> : null,
+    t.concepts ? <span key="c" className="fpt-rc">{t.concepts}</span> : null,
+    t.asks.length ? <span key="a" className="fpt-ra">{t.asks.map((l, k) => <span key={k}>{l}</span>)}</span> : null,
+  ];
+  const pips = (s) => <span className="fpt-pips" aria-hidden="true">{TOPIC_Q.map(([, f]) => <i key={f} className={blank(answers, f + ":" + s) ? "" : "on"} />)}</span>;
   const topics118 = justice ? null : (
     <section className="part fpt-part">
-      <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
-      <Words k="topicHint" copy={copy} editing={editing} as="p" className="fpt-lead" />
+      <div className="fps-band hero">
+        <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
+        <Words k="topicHint" copy={copy} editing={editing} as="p" className="hint" />
+      </div>
       {interests.length || editing ? (
         <div className="fpp-mine">
           <Words k="interestsSay" copy={copy} editing={editing} as="p" className="fpp-minesay" />
-          {interests.length ? (
-            <div className="fpt-picks">
-              {interests.map(t => {
-                const on = !!heldBy(t);
-                return readOnly ? <span key={t} className={"fpt-pick" + (on ? " on" : "")}><i aria-hidden="true">{on ? "✓" : ""}</i>{t}</span> : (
-                  <button key={t} type="button" className={"fpt-pick focusable" + (on ? " on" : "")} aria-pressed={on} disabled={!on && !roomFor} onClick={() => pickInterest(t)}>
-                    <i aria-hidden="true">{on ? "✓" : "+"}</i>{t}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
+          {interests.length ? <div className="fpt-picks">{interests.map(t => picker(t, "fpt-pick"))}</div> : null}
         </div>
       ) : null}
       <div className="fpp-eg">
-        <Words k="examplesHead" copy={copy} editing={editing} as="p" className="fpp-egh" />
-        <div className="fpp-egs">
-          {M.EXAMPLES_118.map((g, n) => (
-            <div key={g.area} className={"fpp-egg fpp-eg" + n}>
-              <p className="fpp-ega">{g.area}</p>
-              <ul>{g.topics.map(t => <li key={t.say}>{t.say}{t.by ? <span className="fpp-egby">{t.by}, Spring 2026</span> : null}</li>)}</ul>
-            </div>
-          ))}
+        <div className="fpp-egtop">
+          <Words k="examplesHead" copy={copy} editing={editing} as="p" className="fpp-egh" />
+          <div className="fpp-egl" role="group" aria-label={copy.say("examplesHead")}>
+            {M.EXAMPLES_118.map((g, n) => (
+              <button key={g.area} type="button" className={"fpp-ega focusable fpp-eg" + n + (area === n ? " on" : area >= 0 ? " off" : "")} aria-pressed={area === n} onClick={() => setArea(a => (a === n ? -1 : n))}>{g.area}</button>
+            ))}
+          </div>
+        </div>
+        <div className="fpp-wall">
+          {M.EXAMPLES_118.map((g, n) => g.topics.map(t => picker(t.say, "fpp-egt fpp-eg" + n + (area >= 0 && area !== n ? " dim" : ""))))}
         </div>
       </div>
-      {copy.say("conceptsHint") ? <Words k="conceptsHint" copy={copy} editing={editing} as="p" className="fpt-note" /> : null}
       <div className="fpt" ref={composer}>
-        <div className="fpt-main">
-          <div className="fpt-tabs" role="tablist" aria-label={copy.say("topicHead")}>
-            {M.SLOTS.map((s, i) => {
-              const n = doneIn(s), on = s === slot, full = n === TOPIC_Q.length;
-              return (
-                <button key={s} type="button" role="tab" id={"fp-tab-" + s} aria-selected={on} aria-controls="fp-topic-panel" aria-label={topicName(i) + ", " + n + " of " + TOPIC_Q.length}
-                  className={"fpt-tab focusable fpt-" + s + (on ? " on" : "") + (full ? " done" : "") + (needs && !full ? " need" : "")} onClick={() => setSlot(s)}>
-                  <span className="fpt-badge" aria-hidden="true">{full ? "✓" : i + 1}</span>
-                  <span className="fpt-tabsay"><span className="fpt-tabn">{topicName(i)}</span><span className="fpt-tabq">{read.topics[i].topic}</span></span>
-                  <span className="fpt-meter" aria-hidden="true"><i style={{ width: (n / TOPIC_Q.length) * 100 + "%" }} /></span>
-                </button>
-              );
-            })}
-          </div>
-          <div key={slot} className={"fpt-panel fpt-" + slot} role="tabpanel" id="fp-topic-panel" aria-labelledby={"fp-tab-" + slot}>
-            {editing || approved.has(slot) || mine?.says?.[slot]?.length ? (
-              <div className="fpt-ph">
-                {editing ? <span className="fpt-phn"><Words k="topicCol" copy={copy} editing={editing} /></span> : null}
-                {approved.has(slot) ? <span className="mark ok">{copy.say("approvedSay")}</span> : null}
-                {mine?.says?.[slot]?.length ? <ul className="reasons close">{mine.says[slot].map(r => <li key={r}>{r}</li>)}</ul> : null}
-              </div>
-            ) : null}
+        {copy.say("conceptsHint") ? <Words k="conceptsHint" copy={copy} editing={editing} as="p" className="fpt-note" /> : null}
+        <div className="fpt-tabs" role="tablist" aria-label={copy.say("topicHead")}>
+          {M.SLOTS.map((s, i) => {
+            const n = doneIn(s), on = s === slot, full = n === TOPIC_Q.length;
+            return (
+              <button key={s} type="button" role="tab" id={"fp-tab-" + s} aria-selected={on} aria-controls="fp-topic-panel" aria-label={topicName(i) + ", " + n + " of " + TOPIC_Q.length}
+                className={"fpt-tab focusable fpt-" + s + (on ? " on" : "") + (full ? " done" : "") + (n ? "" : " blank") + (needs && !full ? " need" : "")} onClick={() => setSlot(s)}>
+                <span className="fpt-num" aria-hidden="true">{i + 1}</span>
+                <span className="fpt-th"><span className="fpt-tabn">{topicName(i)}</span>{full ? <span className="fpt-ok" aria-hidden="true">✓</span> : null}</span>
+                <span className="fpt-prog">{pips(s)}<span className="fpt-ct">{n} of {TOPIC_Q.length}</span></span>
+                {readBack(read.topics[i])}
+              </button>
+            );
+          })}
+        </div>
+        <div key={slot} className={"fpt-panel fpt-" + slot} role="tabpanel" id="fp-topic-panel" aria-labelledby={"fp-tab-" + slot}>
+          {editing || approved.has(slot) || mine?.says?.[slot]?.length ? (
+            <div className="fpt-ph">
+              {editing ? <span className="fpt-phn"><Words k="topicCol" copy={copy} editing={editing} /></span> : null}
+              {approved.has(slot) ? <span className="mark ok">{copy.say("approvedSay")}</span> : null}
+              {mine?.says?.[slot]?.length ? <ul className="reasons close">{mine.says[slot].map(r => <li key={r}>{r}</li>)}</ul> : null}
+            </div>
+          ) : null}
+          <div className="fpt-fields">
             {TOPIC_Q.map(([k, f]) => {
               const field = f + ":" + slot, id = "fp-" + f + "-" + slot, label = copy.say(k) + " " + topicName(at), v = answers[field];
               return (
                 <div key={f} className={"fpt-f fpt-f-" + f + (needs && blank(answers, field) ? " need" : "")}>
                   <Words k={k} copy={copy} editing={editing} className="fpt-ask" />
-                  {f === "topic" ? <Grow id={id} label={label} value={v} readOnly={readOnly} onChange={x => set(field, x.replace(/\n/g, " "))} rows={2} max={300} />
+                  {f === "topic" ? <Grow id={id} label={label} value={v} readOnly={readOnly} onChange={x => set(field, x.replace(/\n/g, " "))} rows={1} max={300} />
                     : f === "ask" ? <Lines id={id} label={label} value={v || ""} readOnly={readOnly} onChange={x => set(field, x)} />
-                    : <Grow id={id} label={label} value={v} readOnly={readOnly} onChange={x => set(field, x)} rows={3} max={2000} />}
+                    : <Grow id={id} label={label} value={v} readOnly={readOnly} onChange={x => set(field, x)} rows={4} max={2000} />}
                 </div>
               );
             })}
-            <div className="fpt-nav">
-              {at > 0 ? <button type="button" className="fpt-go focusable" onClick={() => goTopic(M.SLOTS[at - 1])}><span aria-hidden="true">←</span> {topicName(at - 1)}</button> : <span />}
-              {at < M.SLOTS.length - 1 ? <button type="button" className="fpt-go focusable" onClick={() => goTopic(M.SLOTS[at + 1])}>{topicName(at + 1)} <span aria-hidden="true">→</span></button> : null}
-            </div>
+          </div>
+          <div className="fpt-nav">
+            {at > 0 ? <button type="button" className="fpt-go focusable" onClick={() => goTopic(M.SLOTS[at - 1])}><span aria-hidden="true">←</span> {topicName(at - 1)}</button> : <span />}
+            {at < M.SLOTS.length - 1 ? <button type="button" className="fpt-go focusable" onClick={() => goTopic(M.SLOTS[at + 1])}>{topicName(at + 1)} <span aria-hidden="true">→</span></button> : null}
           </div>
         </div>
-        <aside className="fpt-paper" aria-label={copy.say("topicHead")}>
-          {read.topics.map((t, i) => (
-            <section key={t.slot} className={"fpt-entry fpt-" + t.slot + (t.slot === slot ? " on" : "")}>
-              <button type="button" className="fpt-eh focusable" aria-current={t.slot === slot ? "true" : undefined} onClick={() => setSlot(t.slot)}>
-                <span className="fpt-dot" aria-hidden="true">{doneIn(t.slot) === TOPIC_Q.length ? "✓" : i + 1}</span>
-                <span className="fpt-en">{topicName(i)}</span>
+        {read.topics.some(t => doneIn(t.slot)) ? (
+          <div className="fpt-paper">
+            {read.topics.map((t, i) => doneIn(t.slot) ? (
+              <button key={t.slot} type="button" className={"fpt-entry focusable fpt-" + t.slot + (t.slot === slot ? " on" : "")} aria-label={topicName(i)} onClick={() => goTopic(t.slot)}>
+                <span className="fpt-num" aria-hidden="true">{i + 1}</span>
+                <span className="fpt-th"><span className="fpt-tabn">{topicName(i)}</span></span>
+                {readBack(t)}
               </button>
-              {t.topic ? <p className="fpt-rq">{t.topic}</p> : null}
-              {t.worth ? <p className="fpt-rp">{t.worth}</p> : null}
-              {t.audience ? <p className="fpt-rp">{t.audience}</p> : null}
-              {t.concepts ? <p className="fpt-rc">{t.concepts}</p> : null}
-              {t.asks.length ? <ul className="fpt-ra">{t.asks.map((l, k) => <li key={k}>{l}</li>)}</ul> : null}
-            </section>
-          ))}
-        </aside>
+            ) : null)}
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -366,22 +379,45 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const SITE_Q = [["siteAsk", "site", 300], ["likeAsk", "like", 600], ["buildAsk", "build", 600]];
   const sites118 = justice ? null : (
     <div className="fps-sites">
-      <span className="fps-sh" />
-      {SITE_Q.map(([k]) => <Words key={k} k={k} copy={copy} editing={editing} className="fps-sh" />)}
-      {M.SLOTS.map((s, i) => [
-        <span key={"n" + s} className="fps-sn" aria-hidden="true">{i + 1}</span>,
-        ...SITE_Q.map(([k, f, max]) => {
-          const field = f + ":" + s, label = copy.say(k) + (f === "site" ? " " : " Site ") + (i + 1);
-          return (
-            <div key={f + s} className={"fps-sc fps-sc-" + f + (needs && blank(answers, field) ? " need" : "")} data-q={copy.say(k)}>
-              {f === "site" ? <Line id={"fp-" + f + "-" + s} label={label} value={answers[field]} readOnly={readOnly} onChange={v => set(field, v)} />
-                : <Grow id={"fp-" + f + "-" + s} label={label} value={answers[field]} readOnly={readOnly} onChange={v => set(field, v.replace(/\n/g, " "))} rows={1} max={max} />}
-            </div>
-          );
-        }),
-      ])}
+      <div className="fps-row fps-rowh">
+        <span className="fps-sh" />
+        {SITE_Q.map(([k]) => <Words key={k} k={k} copy={copy} editing={editing} className="fps-sh" />)}
+      </div>
+      {M.SLOTS.map((s, i) => (
+        <div key={s} className="fps-row">
+          <span className="fps-sn" aria-hidden="true">{i + 1}</span>
+          {SITE_Q.map(([k, f, max]) => {
+            const field = f + ":" + s, label = copy.say(k) + (f === "site" ? " " : " Site ") + (i + 1);
+            return (
+              <div key={f} className={"fps-sc fps-sc-" + f + (needs && blank(answers, field) ? " need" : "")} data-q={copy.say(k)}>
+                {f === "site" ? <Line id={"fp-" + f + "-" + s} label={label} value={answers[field]} readOnly={readOnly} onChange={v => set(field, v)} />
+                  : <Grow id={"fp-" + f + "-" + s} label={label} value={answers[field]} readOnly={readOnly} onChange={v => set(field, v.replace(/\n/g, " "))} rows={1} max={max} />}
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
+  // A section's heading and his sentence under it: COMM 3's two lines as they
+  // were, COMM 118's in one band.
+  const band = (k, sub, hint) => {
+    const lines = <>
+      <div className="phead"><Words k={k} copy={copy} editing={editing} className="n" /><span className="sub">{sub}</span></div>
+      <Words k={hint} copy={copy} editing={editing} as="p" className="hint" />
+    </>;
+    return justice ? lines : <div className="fps-band">{lines}</div>;
+  };
+  const faces = <>
+    <div className="field">
+      <Words k="topAsk" copy={copy} editing={editing} className="ask" />
+      <FaceGrid label={copy.say("topAsk")} people={people} picked={answers.top ? [answers.top] : []} readOnly={readOnly} onToggle={setTop} />
+    </div>
+    <div className="field">
+      <Words k="alsoAsk" copy={copy} editing={editing} className="ask" />
+      <FaceGrid label={copy.say("alsoAsk")} people={people.filter(p => p.name !== answers.top)} picked={also} readOnly={readOnly} onToggle={toggleAlso} />
+    </div>
+  </>;
 
   return (
     <div {...root}>
@@ -458,8 +494,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
         </section>)}
 
         <section className="part">
-          <div className="phead"><Words k="sitesHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(s => ["site:", "like:", "build:"].every(f => !blank(answers, f + s))).length} of 3</span></div>
-          <Words k="sitesIntro" copy={copy} editing={editing} as="p" className="hint" />
+          {band("sitesHead", M.SLOTS.filter(s => ["site:", "like:", "build:"].every(f => !blank(answers, f + s))).length + " of 3", "sitesIntro")}
           {sites118 || <div className="ideas">
             {M.SLOTS.map((s, i) => (
               <div key={s} className="box">
@@ -481,31 +516,18 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
         </section>
 
         <section className="part">
-          <div className="phead"><Words k="strengthsHead" copy={copy} editing={editing} className="n" /><span className="sub">{blank(answers, "strengths") ? "" : "✓"}</span></div>
-          <Words k="strengthsIntro" copy={copy} editing={editing} as="p" className="hint" />
+          {band("strengthsHead", blank(answers, "strengths") ? "" : "✓", "strengthsIntro")}
           <Choices label={copy.say("strengthsHead")} options={M.STRENGTHS} value={answers.strengths || ""} readOnly={readOnly} onChange={v => set("strengths", v)} />
         </section>
 
         <section className="part">
-          <div className="phead"><Words k="workHead" copy={copy} editing={editing} className="n" /><span className="sub">{blank(answers, "work") ? "" : "✓"}</span></div>
-          <Words k="workHint" copy={copy} editing={editing} as="p" className="hint" />
+          {band("workHead", blank(answers, "work") ? "" : "✓", "workHint")}
           <div className="fpp-work" role="radiogroup" aria-label={copy.say("workHead")}>
             {M.WORK.map(w => (
               <button key={w.id} type="button" role="radio" aria-checked={answers.work === w.id} disabled={readOnly} className={"fpp-opt focusable fpp-" + w.id + (answers.work === w.id ? " on" : "")} onClick={() => setWork(w.id)}>{w.say}</button>
             ))}
           </div>
-          {answers.work && M.picksPartner(answers.work) ? (
-            <>
-              <div className="field">
-                <Words k="topAsk" copy={copy} editing={editing} className="ask" />
-                <FaceGrid label={copy.say("topAsk")} people={people} picked={answers.top ? [answers.top] : []} readOnly={readOnly} onToggle={setTop} />
-              </div>
-              <div className="field">
-                <Words k="alsoAsk" copy={copy} editing={editing} className="ask" />
-                <FaceGrid label={copy.say("alsoAsk")} people={people.filter(p => p.name !== answers.top)} picked={also} readOnly={readOnly} onToggle={toggleAlso} />
-              </div>
-            </>
-          ) : null}
+          {answers.work && M.picksPartner(answers.work) ? (justice ? faces : <div className="fps-team">{faces}</div>) : null}
         </section>
 
         {!readOnly ? (
@@ -552,131 +574,232 @@ const EXTRA = `
 .fpp .fpp-place .fpp-pic{width:44px;height:44px}
 .fpp .box .mark{justify-self:start}
 /* COMM 118's sheet (.fps). COMM 3's keeps the rules above and nothing below. */
-.fps .sheet{gap:0;border-radius:20px}
-.fps .head{padding:40px 40px 32px}
-.fps .name{font-size:clamp(30px,4.6vw,42px);line-height:1.08;letter-spacing:-.025em}
-.fps .credit{font-size:16px}
-.fps .intro{font-size:21px;line-height:1.4;max-width:44ch;padding-top:10px}
-.fps .part{padding:36px 40px 44px;gap:18px}
-.fps .phead{align-items:center}
-.fps .phead .n{font-size:clamp(24px,3.2vw,29px);line-height:1.15;letter-spacing:-.015em;max-width:40ch;text-wrap:balance}
-.fps .phead .sub{flex:none;font-size:14px;font-weight:600;color:var(--ink);background:var(--sunk);border-radius:999px;padding:5px 12px}
-.fps .phead .sub:empty{display:none}
-.fps .hint{font-size:18px;max-width:64ch}
-.fps .fpt-lead{margin:0;font-size:20px;line-height:1.45;color:var(--ink);max-width:56ch}
-.fps .fpt-note{margin:8px 0 0;font-size:18px;line-height:1.5;color:var(--ink);max-width:64ch;white-space:pre-line}
-/* His note to the student: a speech bubble, the topics ready to tap in. */
-.fps .fpp-mine{background:var(--accent-light);border-radius:22px 22px 22px 6px;padding:22px 24px 24px;display:grid;gap:16px;justify-self:start;max-width:820px;margin:6px 0}
-.fps .fpp-minesay{margin:0;font-size:18px;font-weight:500;line-height:1.45;color:var(--ink);max-width:60ch}
-.fps .fpt-picks{display:flex;flex-wrap:wrap;gap:8px}
-.fps .fpt-pick{font:inherit;font-family:var(--font);display:inline-flex;align-items:center;gap:10px;text-align:left;font-size:16px;font-weight:500;line-height:1.3;color:var(--ink);background:var(--card);border:1.5px solid var(--line-strong);border-radius:999px;padding:7px 18px 7px 8px;min-height:44px;cursor:pointer;overflow-wrap:anywhere;transition:transform .12s,border-color .15s}
+.fps{--pitch:#0c4a42;--deep:#072e29;--volt:#d8f75c;--chalk:#e6f3ee;--on-volt:#0a2b26}
+.fps .sheet{max-width:1120px;gap:0;border-radius:26px;overflow:clip;padding-bottom:0;border-color:var(--line-strong)}
+/* The masthead: a pitch from above, the halfway line and the centre circle. */
+.fps .head{position:relative;isolation:isolate;display:block;overflow:hidden;padding:46px 40px 44px;color:#fff;background:var(--deep) repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 88px,transparent 88px 176px)}
+.fps .head::before{content:"";position:absolute;z-index:-1;right:-150px;top:50%;width:540px;height:540px;border-radius:50%;border:3px solid rgba(255,255,255,.16);background:radial-gradient(circle,rgba(255,255,255,.3) 0 8px,transparent 9px);transform:translateY(-50%)}
+.fps .head::after{content:"";position:absolute;z-index:-1;right:119px;top:0;bottom:0;width:3px;background:rgba(255,255,255,.16)}
+.fps .title{gap:16px;max-width:780px}
+.fps .credit{order:-1;justify-self:start;font-size:14px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;line-height:1.3;color:var(--on-volt);background:var(--volt);border-radius:999px;padding:7px 15px}
+.fps .name{font-size:clamp(44px,8.4vw,84px);font-weight:700;line-height:.96;letter-spacing:-.04em;color:#fff;text-wrap:balance}
+.fps .intro{font-size:clamp(19px,2.2vw,23px);line-height:1.35;color:var(--chalk);max-width:36ch;padding-top:2px}
+.fps .head .status{color:var(--chalk)}
+.fps .vsp-edit{color:var(--ink)}
+.fps .head .focusable:focus-visible,.fps .foot .focusable:focus-visible{outline-color:var(--volt)}
+.fps .part{padding:28px 40px 0;gap:14px;border-top:0}
+.fps .part:last-of-type{padding-bottom:36px}
+/* A section opens on a band: his heading on the left, his sentence beside it. */
+.fps .fps-band{display:grid;grid-template-columns:320px minmax(0,1fr);gap:10px 40px;align-items:center;background:var(--pitch);color:#fff;border-radius:22px;padding:24px 30px 26px}
+.fps .fps-band .phead{display:grid;gap:12px;justify-items:start;align-content:center}
+.fps .fps-band .phead .n{font-size:27px;font-weight:600;line-height:1.12;letter-spacing:-.02em;color:#fff;max-width:none;text-wrap:balance}
+.fps .fps-band .sub{flex:none;font-size:14px;font-weight:700;line-height:1;color:var(--on-volt);background:var(--volt);border-radius:999px;padding:6px 12px}
+.fps .fps-band .sub:empty{display:none}
+.fps .fps-band .hint{font-size:18px;line-height:1.5;color:var(--chalk);max-width:none}
+.fps .fps-band.hero{padding:34px 30px 36px}
+.fps .fps-band.hero .phead .n{font-size:23px;line-height:1.2;letter-spacing:-.01em;color:var(--volt)}
+.fps .fps-band.hero .hint{font-size:clamp(27px,3.9vw,44px);font-weight:600;line-height:1.06;letter-spacing:-.03em;color:#fff;text-wrap:pretty}
+.fps .fps-band .phead .vsp-edit.n,.fps .fps-band.hero .vsp-edit.hint,.fps .fps-band .vsp-edit.hint{color:var(--ink)}
+.fps .fps-band .vsp-edit.n{font-size:20px}
+.fps .fps-band .vsp-edit.hint{font-size:17px;font-weight:400;letter-spacing:0;line-height:1.45}
+/* His note to the student: his sentence, and the topics ready to tap in. */
+.fps .fpp-mine{display:grid;grid-template-columns:320px minmax(0,1fr);gap:14px 40px;align-items:center;background:var(--accent-light);border:2px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:22px;padding:22px 28px;margin:0;max-width:none}
+.fps .fpp-minesay{margin:0;font-size:17px;font-weight:500;line-height:1.45;color:var(--ink)}
+.fps .fpt-picks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fps .fpt-pick{font:inherit;font-family:var(--font);display:inline-flex;align-items:center;gap:10px;text-align:left;font-size:16px;font-weight:500;line-height:1.25;color:var(--ink);background:var(--card);border:2px solid var(--line-strong);border-radius:999px;padding:6px 18px 6px 7px;min-height:46px;cursor:pointer;overflow-wrap:anywhere;transition:transform .12s,border-color .15s,background .15s}
 .fps span.fpt-pick{cursor:default;padding-left:18px}
-.fps span.fpt-pick.on{padding-left:8px}
-.fps .fpt-pick i{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:17px;font-weight:600;line-height:1;background:var(--accent);color:var(--on-accent)}
+.fps span.fpt-pick.on{padding-left:7px}
+.fps .fpt-pick i{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:18px;font-weight:600;line-height:1;background:var(--accent);color:var(--on-accent)}
 .fps .fpt-pick i:empty{display:none}
 .fps button.fpt-pick:hover:not(:disabled){transform:translateY(-1px);border-color:var(--accent)}
-.fps .fpt-pick.on{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.fps .fpt-pick.on{background:var(--pitch);border-color:var(--pitch);color:#fff}
+.fps .fpt-pick.on i{background:var(--volt);color:var(--on-volt)}
 .fps .fpt-pick:disabled{cursor:default;opacity:.55}
-/* Example topics: five columns of type under a colored rule, no boxes. */
-.fps .fpp-eg{display:grid;gap:14px;margin:14px 0 6px}
-.fps .fpp-egh{margin:0;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--secondary)}
-.fps .fpp-egs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:26px 24px}
-.fps .fpp-egg{border-top:4px solid var(--w);padding-top:12px;min-width:0}
-.fps .fpp-ega{margin:0 0 10px;font-size:17px;font-weight:600;line-height:1.2;color:var(--ink)}
-.fps .fpp-egg ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.fps .fpp-egg li{font-size:15.5px;line-height:1.35;color:var(--secondary);overflow-wrap:anywhere}
-.fps .fpp-egby{display:block;font-size:14px;font-weight:500}
-.fps .fpp-eg0{--w:#2563eb}.fps .fpp-eg1{--w:#e11d48}.fps .fpp-eg2{--w:#7c3aed}.fps .fpp-eg3{--w:#d97706}.fps .fpp-eg4{--w:#0891b2}.fps .fpp-eg5{--w:#059669}
-/* The three topics: tabs, the questions once, and the read-back beside them. */
+/* Example topics: one wall of them, coloured by area, the areas as a filter. */
+.fps .fpp-eg0{--w:#2563eb}.fps .fpp-eg1{--w:#e11d48}.fps .fpp-eg2{--w:#7c3aed}.fps .fpp-eg3{--w:#b45309}.fps .fpp-eg4{--w:#0e7490}.fps .fpp-eg5{--w:#047857}
+.fps .fpp-eg{display:grid;gap:16px;background:var(--sunk);border-radius:22px;padding:20px 28px 26px;margin:0}
+.fps .fpp-egtop{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;flex-wrap:wrap}
+.fps .fpp-egh{margin:0;font-size:22px;font-weight:600;line-height:1.2;letter-spacing:-.01em;color:var(--ink)}
+.fps .fpp-egl{display:flex;flex-wrap:wrap;gap:6px}
+.fps .fpp-ega{font:inherit;font-family:var(--font);font-size:14.5px;font-weight:600;line-height:1.2;color:#fff;background:var(--w);border:2px solid var(--w);border-radius:999px;padding:0 14px;min-height:38px;cursor:pointer;transition:transform .12s,background .15s,color .15s}
+.fps .fpp-ega:hover{transform:translateY(-1px)}
+.fps .fpp-ega.off{background:transparent;color:var(--ink)}
+.fps .fpp-wall{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fps .fpp-egt{font:inherit;font-family:var(--font);flex:1 1 auto;display:inline-flex;align-items:center;gap:10px;text-align:left;font-size:15.5px;font-weight:500;line-height:1.25;color:var(--ink);background:color-mix(in srgb,var(--w) 9%,var(--card));border:0;box-shadow:inset 5px 0 0 var(--w);border-radius:12px;padding:8px 16px 8px 17px;min-height:46px;cursor:pointer;overflow-wrap:anywhere;transition:transform .12s,background .15s,opacity .15s}
+.fps span.fpp-egt{cursor:default}
+.fps .fpp-egt i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:16px;font-weight:600;line-height:1;color:var(--w);background:var(--card)}
+.fps .fpp-egt i:empty{display:none}
+.fps button.fpp-egt:hover:not(:disabled){transform:translateY(-1px);background:color-mix(in srgb,var(--w) 20%,var(--card))}
+.fps .fpp-egt.on{background:var(--w);color:#fff}
+.fps .fpp-egt.dim{opacity:.3}
+.fps .fpp-egt:disabled{cursor:default}
+/* The three topics: a card a topic down the left that fills in as it is
+   written, and the questions, once, on the card that is open. */
 .fps .fpt-a{--w:#2563eb}.fps .fpt-b{--w:#7c3aed}.fps .fpt-c{--w:#c2410c}
-.fps .fpt{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:28px;align-items:start;margin-top:10px;scroll-margin-top:84px}
-.fps .fpt-main{display:grid;gap:12px;min-width:0}
-.fps .fpt-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.fps .fpt-tab{font:inherit;font-family:var(--font);position:relative;overflow:hidden;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:10px;text-align:left;color:var(--ink);background:var(--sunk);border:2px solid var(--line-soft);border-radius:16px;padding:12px 14px 15px;min-height:64px;cursor:pointer;transition:transform .12s,background .15s,border-color .15s}
-.fps .fpt-tab:hover{transform:translateY(-2px)}
-.fps .fpt-tab.on{background:color-mix(in srgb,var(--w) 12%,var(--card));border-color:var(--w);box-shadow:0 0 0 3px color-mix(in srgb,var(--w) 22%,transparent)}
-.fps .fpt-tab.need{border-color:var(--bad)}
-.fps .fpt-badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:600;line-height:1;background:var(--card);border:2px solid var(--w);color:var(--ink)}
-.fps .fpt-tab.on .fpt-badge,.fps .fpt-tab.done .fpt-badge{background:var(--w);color:#fff}
-.fps .fpt-tabsay{display:grid;min-width:0}
-.fps .fpt-tabn{font-size:17px;font-weight:600;line-height:1.2}
-.fps .fpt-tabq{font-size:14px;line-height:1.3;color:var(--secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.fps .fpt-tabq:empty{display:none}
-.fps .fpt-meter{position:absolute;left:0;right:0;bottom:0;height:5px;background:var(--line-strong)}
-.fps .fpt-meter i{display:block;height:100%;background:var(--w);transition:width .25s ease}
-.fps .fpt-panel{display:grid;gap:24px;background:var(--sunk);border-radius:18px;border-top:6px solid var(--w);padding:26px 26px 22px;animation:fpt-in .22s ease both}
-@keyframes fpt-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fps .fpt{display:grid;grid-template-columns:320px minmax(0,1fr);gap:10px 14px;align-items:stretch;margin:0;scroll-margin-top:84px}
+.fps .fpt-note{grid-column:1/-1;margin:0;font-size:18px;font-weight:500;line-height:1.4;color:var(--card);background:var(--ink);border-radius:22px 22px 8px 8px;padding:18px 30px 19px;max-width:none;white-space:pre-line}
+.fps .fpt-tabs{display:grid;gap:10px;min-width:0}
+.fps .fpt-tab,.fps .fpt-entry{font:inherit;font-family:var(--font);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;gap:9px;text-align:left;color:var(--ink);background:color-mix(in srgb,var(--w) 10%,var(--card));border:0;box-shadow:inset 6px 0 0 var(--w);border-radius:18px;padding:16px 20px 18px 24px;min-height:118px;cursor:pointer;transition:background .15s,transform .12s}
+.fps .fpt-tab:hover:not(.on){background:color-mix(in srgb,var(--w) 17%,var(--card))}
+.fps .fpt-tab.on{background:var(--w);color:#fff;margin-right:-14px;padding-right:34px;border-radius:18px 0 0 18px}
+.fps .fpt-tab.need:not(.on){box-shadow:inset 6px 0 0 var(--w),inset 0 0 0 2px var(--bad)}
+.fps .fpt-num{position:absolute;right:14px;top:8px;font-size:76px;font-weight:700;line-height:1;letter-spacing:-.05em;color:var(--w);opacity:.2;pointer-events:none}
+.fps .fpt-tab.on .fpt-num{color:#fff;opacity:.26;right:28px}
+.fps .fpt-tab.blank .fpt-num,.fps .fpt-tab.blank.on .fpt-num{top:auto;bottom:-8px;right:18px;font-size:150px}
+.fps .fpt-tab.blank.on .fpt-num{right:32px}
+.fps .fpt-th{display:flex;align-items:center;gap:8px}
+.fps .fpt-tabn{font-size:14px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;line-height:1.2}
+.fps .fpt-ok{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;line-height:1;background:var(--w);color:#fff}
+.fps .fpt-tab.on .fpt-ok{background:#fff;color:var(--w)}
+.fps .fpt-prog{display:flex;align-items:center;gap:10px}
+.fps .fpt-pips{display:flex;gap:4px}
+.fps .fpt-pips i{width:22px;height:7px;border-radius:999px;background:color-mix(in srgb,var(--w) 26%,var(--card))}
+.fps .fpt-pips i.on{background:var(--w)}
+.fps .fpt-tab.on .fpt-pips i{background:rgba(255,255,255,.34)}
+.fps .fpt-tab.on .fpt-pips i.on{background:#fff}
+.fps .fpt-ct{font-size:14px;font-weight:600;line-height:1}
+.fps .fpt-rq{position:relative;font-size:20px;font-weight:600;line-height:1.18;letter-spacing:-.015em;overflow-wrap:anywhere;padding-top:4px}
+.fps .fpt-rp,.fps .fpt-rc{font-size:14.5px;line-height:1.42;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+.fps .fpt-rp{-webkit-line-clamp:2}
+.fps .fpt-rc{padding-left:11px;border-left:3px solid var(--w)}
+.fps .fpt-tab:not(.on) .fpt-rp{display:none}
+.fps .fpt-tab.on .fpt-rc,.fps .fpt-entry.on .fpt-rc{border-left-color:#fff}
+.fps .fpt-ra{display:flex;flex-wrap:wrap;gap:5px}
+.fps .fpt-ra span{background:var(--card);border-radius:12px 12px 12px 4px;padding:5px 10px;font-size:13.5px;line-height:1.3;overflow-wrap:anywhere}
+.fps .fpt-tab.on .fpt-ra span,.fps .fpt-entry.on .fpt-ra span{background:rgba(0,0,0,.22)}
+.fps .fpt-panel{display:flex;flex-direction:column;gap:20px;min-width:0;background:color-mix(in srgb,var(--w) 6%,var(--card));border:3px solid var(--w);border-radius:20px;padding:24px 26px 20px;animation:fpt-in .22s ease both}
+@keyframes fpt-in{from{opacity:.4;transform:translateX(6px)}to{opacity:1;transform:none}}
 .fps .fpt-ph{display:grid;gap:10px;justify-items:start}
 .fps .fpt-phn{font-size:17px;font-weight:600;width:100%}
-.fps .fpt-f{display:grid;gap:9px;min-width:0}
-.fps .fpt-ask{font-size:18px;font-weight:500;line-height:1.35;color:var(--ink);max-width:52ch}
-.fps .fpt-f .para{max-width:none;display:block;background:var(--card);border-width:1.5px;border-radius:12px;padding:13px 15px;resize:none;overflow:hidden}
-.fps .fpt-f-topic .para{font-size:21px;font-weight:500;line-height:1.3;resize:none}
-.fps .fpt-f .lines .row input{background:var(--card);border-width:1.5px;border-radius:12px;font-size:17px;min-height:48px}
-.fps .fpt-f .save{width:48px;height:48px;border-radius:12px}
-.fps .fpt-f .chip.bubble{font-size:16px;padding:8px 6px 8px 14px}
+.fps .fpt-fields{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:min-content min-content min-content auto min-content auto;gap:20px 20px}
+.fps .fpt-f{display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:8px;min-width:0;align-content:start}
+.fps .fpt-f-topic{grid-column:1/-1}
+.fps .fpt-ask{font-size:16.5px;font-weight:600;line-height:1.3;color:var(--ink);align-self:end}
+.fps .fpt-f .para{max-width:none;display:block;background:var(--card);border:2px solid var(--line-strong);border-radius:14px;padding:12px 14px;font-size:16.5px;resize:none;overflow:hidden;align-self:stretch;height:100%}
+.fps .fpt-f .para:focus,.fps .fpt-f .lines .row input:focus,.fps .fps-sc .para:focus,.fps .fps-sc .row input:focus{border-color:var(--w,var(--accent))}
+.fps .fpt-f-topic .para{font-size:25px;font-weight:600;line-height:1.2;letter-spacing:-.015em;padding:16px 18px;border-color:color-mix(in srgb,var(--w) 55%,var(--card));min-height:64px}
+.fps .fpt-f .lines{align-content:start;align-self:start}
+.fps .fpt-f .lines .row input{background:var(--card);border:2px solid var(--line-strong);border-radius:14px;font-size:16.5px;min-height:50px}
+.fps .fpt-f .save{width:50px;height:50px;border-radius:14px;background:var(--w);color:#fff}
+.fps .fpt-f .chip.bubble{font-size:15.5px;padding:7px 6px 7px 13px;border-width:2px;border-color:color-mix(in srgb,var(--w) 35%,var(--card))}
 .fps .fpt-f.need .para,.fps .fpt-f.need .lines .row input,.fps .fps-sc.need .para,.fps .fps-sc.need .row input{border-color:var(--bad)}
-.fps .fpt-nav{display:flex;justify-content:space-between;align-items:center;gap:10px}
-.fps .fpt-go{font:inherit;font-family:var(--font);font-size:15px;font-weight:600;color:var(--ink);background:var(--card);border:1.5px solid var(--line-strong);border-radius:999px;padding:0 18px;min-height:44px;cursor:pointer}
-.fps .fpt-go:hover{border-color:var(--w)}
-.fps .fpt-paper{position:sticky;top:84px;max-height:calc(100vh - 108px);overflow:auto;min-width:0;background:var(--card);border:1px solid var(--line-strong);border-radius:18px;box-shadow:0 18px 40px -24px rgba(0,0,0,.45)}
-.fps .fpt-entry{display:grid;gap:10px;padding:20px 22px 22px;border-top:1px solid var(--line-soft);box-shadow:inset 4px 0 0 transparent;transition:background .15s,box-shadow .15s}
-.fps .fpt-entry:first-child{border-top:0}
-.fps .fpt-entry.on{background:color-mix(in srgb,var(--w) 7%,var(--card));box-shadow:inset 4px 0 0 var(--w)}
-.fps .fpt-eh{font:inherit;font-family:var(--font);display:flex;align-items:center;gap:10px;justify-self:start;color:var(--ink);background:none;border:0;border-radius:999px;padding:0 8px 0 0;min-height:32px;cursor:pointer}
-.fps .fpt-dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:14px;font-weight:600;line-height:1;background:var(--w);color:#fff}
-.fps .fpt-en{font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase}
-.fps .fpt-rq{margin:0;font-size:21px;font-weight:600;line-height:1.22;letter-spacing:-.01em;color:var(--ink);overflow-wrap:anywhere;text-wrap:balance}
-.fps .fpt-rp{margin:0;font-size:15.5px;line-height:1.5;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
-.fps .fpt-rc{margin:2px 0;padding:2px 0 2px 14px;border-left:3px solid var(--w);font-size:15.5px;line-height:1.5;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
-.fps .fpt-ra{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
-.fps .fpt-ra li{background:var(--sunk);border-radius:14px 14px 14px 4px;padding:6px 12px;font-size:14.5px;line-height:1.35;color:var(--ink);overflow-wrap:anywhere}
-.fps .fpt-entry.on .fpt-ra li{background:var(--card)}
+.fps .fpt-nav{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:auto}
+.fps .fpt-go{font:inherit;font-family:var(--font);font-size:15px;font-weight:600;color:#fff;background:var(--w);border:0;border-radius:999px;padding:0 20px;min-height:44px;cursor:pointer;transition:transform .12s}
+.fps .fpt-go:hover{transform:translateY(-1px)}
+.fps .fpt-paper{display:none}
 /* The sites: the three questions across the top, a row a site. */
-.fps .fps-sites{display:grid;grid-template-columns:36px minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1.2fr);gap:12px 16px;align-items:start;margin-top:4px}
-.fps .fps-sh{font-size:16px;font-weight:600;line-height:1.3;color:var(--ink);align-self:end;padding-bottom:2px}
-.fps .fps-sn{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:600;background:var(--sunk);color:var(--ink);margin-top:6px}
+.fps .fps-sites{display:grid;grid-template-columns:54px minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1.2fr);gap:8px 14px;margin:0}
+.fps .fps-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:start;background:var(--sunk);border-radius:18px;padding:12px 14px 12px 6px}
+.fps .fps-rowh{align-items:center;background:var(--ink);color:var(--card);border-radius:18px 18px 8px 8px;padding-block:13px}
+.fps .fps-sh{font-size:16px;font-weight:600;line-height:1.3;color:inherit}
+.fps .fps-sn{font-size:34px;font-weight:700;line-height:52px;letter-spacing:-.03em;text-align:center;color:var(--accent)}
 .fps .fps-sc{min-width:0}
-.fps .fps-sc::before{display:none;content:attr(data-q);font-size:16px;font-weight:500;line-height:1.3;color:var(--ink);margin-bottom:6px}
-.fps .fps-sc .row input{max-width:none;border-width:1.5px;border-radius:12px;font-weight:500;min-height:52px}
-.fps .fps-sc .para{max-width:none;display:block;border-width:1.5px;border-radius:12px;min-height:52px;padding:12px 14px;line-height:1.5;resize:none;overflow:hidden}
-/* Strengths, the choice of how to work, and the foot. */
-.fps .choices{gap:8px}
-.fps .choices .chip{font-size:16px;min-height:44px;padding:8px 18px;background:var(--card);border:1.5px solid var(--line-strong)}
-.fps .choices .chip.on{background:var(--accent);border-color:var(--accent)}
-.fps .fpp-work{margin-bottom:6px}
-.fps .foot{padding:22px 40px 30px;gap:14px 16px}
-.fps .fps-meter{flex:0 0 100%;height:8px;border-radius:999px;background:var(--line-strong);overflow:hidden}
-.fps .fps-meter i{display:block;height:100%;border-radius:999px;background:var(--accent);transition:width .3s ease}
-.fps .foot .btn.primary{min-height:52px;padding:0 28px;font-size:17px;border-radius:999px}
-@media (max-width:1000px){
-.fps .fpp-egs{grid-template-columns:repeat(3,minmax(0,1fr))}
+.fps .fps-sc::before{display:none;content:attr(data-q);font-size:15.5px;font-weight:600;line-height:1.3;color:var(--ink);margin-bottom:6px}
+.fps .fps-sc .row{position:relative}
+.fps .fps-sc-site .row::before{content:"";position:absolute;left:16px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:#f87171;box-shadow:13px 0 0 #fbbf24,26px 0 0 #34d399;pointer-events:none}
+.fps .fps-sc .row input{max-width:none;border-width:2px;border-radius:14px;min-height:52px}
+.fps .fps-sc-site .row input{border-radius:999px;padding-left:62px;font-family:var(--mono);font-size:15.5px;font-weight:500}
+.fps .fps-sc .para{max-width:none;display:block;border-width:2px;border-radius:14px;height:100%;padding:11px 14px;line-height:1.5;resize:none;overflow:hidden}
+/* Strengths: a tile a skill. */
+.fps .choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.fps .choices .chip{justify-content:flex-start;gap:11px;text-align:left;white-space:normal;font-size:16.5px;font-weight:500;line-height:1.2;color:var(--ink);background:var(--sunk);border:2px solid transparent;border-radius:16px;min-height:62px;padding:10px 14px;transition:transform .12s,background .15s}
+.fps .choices .chip::before{content:"";flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line-ghost);background:var(--card);font-size:15px;font-weight:700;line-height:1}
+.fps .choices .chip:hover:not(:disabled){transform:translateY(-1px);border-color:var(--pitch);color:var(--ink)}
+.fps .choices .chip.on{background:var(--pitch);border-color:var(--pitch);color:#fff}
+.fps .choices .chip.on::before{content:"✓";background:var(--volt);border-color:var(--volt);color:var(--on-volt)}
+/* Pair or solo: four tiles, and the faces under them. */
+.fps .fpp-pair2{--w:#047857}.fps .fpp-pair1{--w:#1d4ed8}.fps .fpp-solo1{--w:#b45309}.fps .fpp-solo2{--w:#be123c}
+.fps .fpp-work{gap:8px}
+.fps .fpp-opt{display:flex;flex-direction:column;justify-content:space-between;gap:16px;font-size:18px;font-weight:600;line-height:1.2;letter-spacing:-.01em;background:color-mix(in srgb,var(--w) 10%,var(--card));border:0;box-shadow:inset 0 6px 0 var(--w);border-radius:18px;padding:22px 18px 18px;min-height:128px}
+.fps .fpp-opt::before{content:"";width:28px;height:28px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--w);background:var(--card);font-size:16px;font-weight:700;line-height:1}
+.fps .fpp-opt.on{background:var(--w);color:#fff;box-shadow:none}
+.fps .fpp-opt.on::before{content:"✓";border-color:#fff;background:#fff;color:var(--w)}
+.fps .fps-team{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 8px}
+.fps .fps-team .field{grid-row:span 2;grid-template-rows:subgrid;align-content:start;gap:14px;background:var(--sunk);border-radius:18px;padding:20px 20px 22px}
+.fps .fps-team .ask{font-size:18px;font-weight:600;line-height:1.25;text-wrap:balance;align-self:center}
+.fps .fps-team .fpp-faces{align-content:start}
+.fps .fpp-faces{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.fps .fpp-face{position:relative;background:var(--card);border-radius:16px;padding:12px 6px 10px}
+.fps .fpp-pic{width:54px;height:54px;font-size:18px;background:hsl(var(--h,170) 58% 32%);color:#fff}
+.fps .fpp-face.on{background:var(--pitch);border-color:var(--pitch);color:#fff}
+.fps .fpp-face.on .fpp-pic{box-shadow:0 0 0 3px var(--volt)}
+.fps .fpp-face.on::after{content:"✓";position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;line-height:1;background:var(--volt);color:var(--on-volt)}
+.fps .fpp-result{margin:28px 40px 0;border-radius:22px;padding:22px 28px}
+/* The foot stays in reach: how far along, and the button. */
+.fps .foot{position:sticky;bottom:0;z-index:5;margin-top:0;min-height:0;padding:14px 40px;gap:8px 18px;border-top:0;background:var(--deep);color:#fff}
+.fps .fps-meter{order:2;flex:1 1 180px;height:12px;border-radius:999px;background:rgba(255,255,255,.18);overflow:hidden}
+.fps .fps-meter i{display:block;height:100%;border-radius:999px;background:var(--volt);transition:width .3s ease}
+.fps .foot .say{order:1;flex:0 1 auto;min-width:0;font-size:17px;color:var(--chalk)}
+.fps .foot .say b{color:var(--volt)}
+.fps .foot .bad{color:#fde68a}
+.fps .foot .status{order:3;color:var(--chalk)}
+.fps .foot .status:empty{display:none}
+.fps .foot .btn.primary{order:4;min-height:50px;padding:0 28px;font-size:17px;font-weight:700;border-radius:999px;background:var(--volt);border-color:var(--volt);color:var(--on-volt)}
+@media (max-width:900px){
+.fps .fps-band,.fps .fpp-mine{grid-template-columns:1fr}
 .fps .fpt{grid-template-columns:1fr}
-.fps .fpt-paper{position:static;max-height:none}
+.fps .fpt-tabs{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.fps .fpt-tab{min-height:0;padding:12px 10px 13px 16px;gap:8px}
+.fps .fpt-tab.on{margin-right:0;padding-right:10px;border-radius:18px}
+.fps .fpt-tab .fpt-rq,.fps .fpt-tab .fpt-rp,.fps .fpt-tab .fpt-rc,.fps .fpt-tab .fpt-ra,.fps .fpt-tab .fpt-ct{display:none}
+.fps .fpt-tab .fpt-num{display:none}
+.fps .fpt-tabn{font-size:13px;letter-spacing:.08em}
+.fps .fpt-pips i{width:auto;flex:1}
+.fps .fpt-pips{flex:1}
+.fps .fpt-paper{display:grid;gap:8px}
+.fps .fpt-entry{min-height:0;padding-right:18px}
+.fps .fpt-entry .fpt-num{font-size:60px;top:8px;right:14px}
+.fps .fpt-entry .fpt-rq{padding-right:44px}
+.fps .fpt-entry .fpt-rp,.fps .fpt-entry .fpt-rc{display:block}
+.fps .fpt-entry.on{background:var(--w);color:#fff}
+.fps .fpt-entry.on .fpt-num{color:#fff;opacity:.26}
+.fps .choices{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fps .fpp-wall{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:860px){
-.fps .head{padding:28px 18px 24px}
-.fps .part{padding:28px 18px 34px}
-.fps .foot{padding:18px 18px 26px}
+.fps .head{padding:32px 20px 30px}
+.fps .head::before{right:-330px;opacity:.7}
+.fps .head::after{right:-61px}
+.fps .part{padding:16px 16px 0}
+.fps .part:last-of-type{padding-bottom:22px}
+.fps .fps-band{padding:20px 20px 22px}
+.fps .fps-band.hero{padding:24px 20px 26px}
+.fps .fps-band .phead .n{font-size:24px}
+.fps .fps-band .hint{font-size:17px}
+.fps .fpp-mine{padding:18px 18px 20px}
+.fps .fpp-eg{padding:18px 16px 18px}
+.fps .fpt-note{padding:16px 20px;font-size:17px}
+.fps .fpp-result{margin:16px 16px 0}
+.fps .foot{padding:10px 16px 12px}
 }
 @media (max-width:760px){
-.fps .fps-sites{grid-template-columns:36px minmax(0,1fr);gap:10px 12px}
-.fps .fps-sh{display:none}
-.fps .fps-sn{grid-row:span 3;margin-top:0}
+.fps .fps-sites{grid-template-columns:44px minmax(0,1fr);gap:8px 6px}
+.fps .fps-rowh{display:none}
+.fps .fps-row{padding:14px 14px 16px 4px;row-gap:12px}
+.fps .fps-sn{grid-row:span 3}
 .fps .fps-sc{grid-column:2}
 .fps .fps-sc::before{display:block}
-.fps .fps-sc-build{padding-bottom:16px}
+.fps .fps-team{grid-template-columns:1fr;gap:8px}
 }
 @media (max-width:600px){
-.fps .fpp-egs{grid-template-columns:1fr 1fr;gap:22px 18px}
-.fps .fpp-mine{padding:18px 18px 20px}
-.fps .fpt-pick{border-radius:16px;width:100%}
-.fps .fpt-tabs{gap:6px}
-.fps .fpt-tab{grid-template-columns:1fr;justify-items:start;gap:6px;padding:10px 10px 14px}
-.fps .fpt-tabq{display:none}
-.fps .fpt-panel{padding:20px 16px 18px;gap:22px}
-.fps .fpt-f-topic .para{font-size:19px}
-.fps .fpt-entry{padding:18px 18px 20px}
+.fps{padding-inline:8px;padding-block:8px 40px}
+.fps .sheet{border-radius:22px}
+.fps .fpt-pick{border-radius:18px;width:100%}
+.fps .fpt-picks{grid-template-columns:1fr}
+.fps .fpp-wall{grid-template-columns:1fr;gap:5px}
+.fps .fpp-egt{min-height:42px;padding-block:6px}
+.fps .fpt-fields{grid-template-rows:none}
+.fps .fpp-ega{font-size:14px;padding:0 12px}
+.fps .fpp-egt{font-size:15px}
+.fps .fpt-fields{grid-template-columns:1fr;gap:18px}
+.fps .fpt-panel{padding:18px 14px 16px;border-radius:18px}
+.fps .fpt-f-topic .para{font-size:21px;padding:13px 14px}
+.fps .fpp-opt{min-height:112px;font-size:17px;padding:20px 14px 14px}
+.fps .foot{gap:8px;padding-inline:12px}
+.fps .foot .say{font-size:15.5px}
+.fps .foot .status{flex:1;font-size:13px}
+.fps .foot .btn.primary{min-height:46px;padding:0 16px;font-size:15.5px}
+.fps .fps-meter{order:0;flex:0 0 100%;height:8px}
 }
 @media (prefers-reduced-motion: reduce){.fps .fpt-panel{animation:none}}
 @media (max-width:860px){.fpp .fpp-work{grid-template-columns:1fr 1fr}}
