@@ -413,14 +413,11 @@ async function snap() {
   G.calls.push(call); G.busy = true; showBack();
   const good = look.beat === call;
   ui.textContent = ""; sfx.snap();
-  // A half ends at a set score, so a drive that would break the score stops short of the goal line.
-  const cap = where === "dallas" ? (G.half === 1 ? 7 : 99) : (G.half === 1 ? 14 : 99);
-  const score = good && G.us + 7 <= cap && !G.noTd;
-  await playOut(call, good, where, look.k, score);
+  // The right call is a touchdown. The wrong call is a punt. Nothing in between.
+  await playOut(call, good, where, look.k, good);
   G.busy = false; showBack();
   let word;
-  if (score) { G.us += 7; word = "Touchdown."; await touchdown(where); }
-  else if (good) { word = "A big gain, and then the drive stalls. You punt."; say("BIG GAIN!   +100"); sfx.good(); await wait(1600); say("THE DRIVE STALLS. YOU PUNT."); await wait(1700); }
+  if (good) { G.us += 7; word = "Touchdown."; await touchdown(where); }
   else { word = call === "run" ? "Stopped at the line. You punt." : "Incomplete. You punt."; say(call === "run" ? "STOPPED AT THE LINE" : "INCOMPLETE"); sfx.bad(); await wait(1600); say("YOU PUNT."); await wait(1500); }
   say(""); showHud();
   G.log.push({ who: "A PLAY", lines: ["The other team: " + look.say, "You called a " + call + ". " + word] }); showBack();
@@ -430,12 +427,12 @@ async function plays() {
   const where = G.where === "dallas" ? "dallas" : "park";
   await snap();
   // What the other team does with the ball. The story needs 21 to 14 at the park's half and down ten at Dallas's.
-  const theirs = { 1: 7, 3: 14, 6: 7, 7: 14, 10: 20 }[G.window];
+  // Plays 1 and 2 are the park's first half, 3 its second; 4 is Dallas before halftime and 5 after.
+  const theirs = { 1: 7, 2: 14, 4: 7, 5: 20 }[G.window];
   const r = rng(G.seed + "their" + G.window);
-  const last = G.window === 5 || G.window === 11;
+  const last = G.window === 3;
   if (theirs && theirs > G.them) { await theirDrive(where, true, THEIR_TD[where][Math.floor(r() * 3)]); G.them = theirs; showHud(); await wait(400); }
   else if (!last) await theirDrive(where, false, THEIR_STOP[where][Math.floor(r() * 2)]);
-  if (G.window === 9 && (G.picks.kicker === "best" || G.picks.kicker === "good")) { G.us += 3; say("FIELD GOAL FROM 47. IT'S GOOD!"); sfx.good(); showHud(); await wait(1800); say(""); }
 }
 
 // ─── cut scenes ───
@@ -457,7 +454,7 @@ async function scene(name) {
     G.half = 2; G.us = 14; G.them = Math.max(G.them, 21);
     paint = (t) => A.sideline(c, t, "park", FACE);
     say("HALFTIME  14 - 21"); sfx.whistle(); showHud();
-    await lines("HALFTIME", [short ? "Your team scrapes together 14 points by halftime. Uncle Rick's team scores on the last play of the half." : "Uncle Rick's team scores on the last play of the half.", "You are losing 21 to 14. Your team sits on the bench and looks at you."]);
+    await lines("HALFTIME", [short ? "Your nephew returns a kick for a touchdown, and your team gets to 14 points by halftime. Then Uncle Rick's team scores on the last play of the half." : "Uncle Rick's team scores on the last play of the half.", "You are losing 21 to 14. Your team sits on the bench and looks at you."]);
     say(""); G.q = "Q3";
   } else if (name === "jerry") {
     G.jerry = true; G.q = "FINAL"; showHud(); const start = now();
@@ -568,11 +565,12 @@ async function run() {
     if (step.s) await scene(step.s);
     else if (step.d) {
       if (step.d === "twominute") { G.q = "Q4"; G.noTd = true; const want = Math.max(G.them, G.us + 4); if (want !== G.them || G.us !== want - 4) { say("LATE IN THE FOURTH QUARTER"); await wait(1500); say(""); } G.them = want; G.us = want - 4; showHud(); }
-      if (step.d === "commercial") { G.q = "HALF"; if (G.us < 7) { say("DALLAS SCORES BEFORE THE HALF"); G.us = 7; showHud(); await wait(1800); } G.half = 2; G.us = 7; G.them = Math.max(G.them, 17); say("HALFTIME  7 - 17"); sfx.whistle(); showHud(); await wait(1500); say(""); }
+      if (step.d === "commercial") { G.q = "HALF"; if (G.us < 7) { say("DALLAS SCORES BEFORE THE HALF"); G.us = 7; showHud(); await wait(1800); } G.half = 2; G.us = 7; if (G.them < 17) { say("THE VISITORS SCORE TEN MORE BEFORE THE HALF"); await wait(2000); } G.them = Math.max(G.them, 17); say("HALFTIME  7 - 17"); sfx.whistle(); showHud(); await wait(1500); say(""); }
       if (step.d === "kicker") G.q = "Q3";
       if (step.d === "backup") G.q = "Q4";
       const got = await decide(step.d);
       if (got.over) { await ending(step.d); store.set(SAVE, null); return; }
+      if (step.d === "kicker" && (got.rank === "best" || got.rank === "good")) { G.us += 3; paint = idle("dallas"); say("YOUR KICKER MAKES THE NEXT ONE FROM 47"); sfx.good(); showHud(); await wait(2200); say(""); }
     } else if (step.p) await plays();
     else if (step.gate) { const ok = await gate(step.gate); if (!ok || step.gate === 3) { store.set(SAVE, null); return; } }
     G.step = i + 1; save();

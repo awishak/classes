@@ -6545,7 +6545,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   awful.picks.jet = "bad"; awful.picks.receiver = "bad";
   const a1 = T.scoreRun(awful);
   if (a1.lost !== 1 || a1.level !== 1) say("a terrible run gets past the park: " + JSON.stringify(a1));
-  if (T.scoreRun({ seed: "aaaaaa", picks: { breakfast: "best", stars: "nope" }, calls: [] }).score !== 350) say("an answer that is not an option was scored");
+  if (T.scoreRun({ seed: "aaaaaa", picks: { breakfast: "best", stars: "nope" }, calls: [] }).score !== T.decisionOf("breakfast").points) say("an answer that is not an option was scored");
   if (T.judge(T.decisionOf("power"), ["coercive", "coercive"]) || T.judge(T.decisionOf("power"), ["expert"])) say("the power question took something other than two different picks");
   if (T.shortName("Sophia Marie Taylor") !== "Sophia T." || T.shortName("Cher") !== "Cher") say("the leaderboard name is not first name and last initial");
 }
