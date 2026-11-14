@@ -703,7 +703,7 @@ async function title() {
   k.append(el("p", "scene", "It's Thanksgiving morning. Your family is playing their annual football game at 8 AM at the park, and you are the coach."));
   k.append(el("p", "scene", "If you're lucky, the day will end with you coaching the Dallas Cowboys to victory."));
   k.append(el("p", "say", CREDIT));
-  if (!me.open) { k.append(el("p", "say", "Turkey Bowl opens Tuesday, November 17.")); return false; }
+  if (!me.open) { k.append(el("p", "say", "Turkey Bowl opens Wednesday, November 18.")); return false; }
   if (classRoute && !me.tag && !me.instructor) { const p = el("p", "say", "Sign in to play for COMM 118. "); const a = el("a", "", "Sign in"); a.href = "/login?next=" + encodeURIComponent(location.pathname); p.append(a); k.append(p); }
   let input = null;
   const row = el("div", "row"); k.append(row);

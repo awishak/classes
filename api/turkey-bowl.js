@@ -21,7 +21,7 @@
 // Rows live in app_data as turkeybowl-<key>-plan, written only by this route
 // with the service key; a "-plan" row is one no student's browser can write.
 //
-// The game opens Tuesday, November 17, 2026, at 12:00 AM Pacific. Before
+// The game opens Wednesday, November 18, 2026, at 12:00 AM Pacific. Before
 // then only the instructor can play or post.
 //
 // POST { action: "me" }                              -> { ok, open, name, tag, instructor, photo }
@@ -35,7 +35,7 @@ import { SUPABASE_URL, serviceKey, serviceHeaders } from "./_supabase.js";
 import { scoreRun, shortName, PLAY_COUNT } from "../src/turkeybowl/script.js";
 import { shownName } from "../src/engine/roster.js";
 
-export const OPENS = "2026-11-17T08:00:00.000Z";
+export const OPENS = "2026-11-18T08:00:00.000Z";
 const CLASS = { id: "comm118", tag: "COMM 118", storage: "comm118-f26-v1" };
 const VISITOR = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const PREFIX = "turkeybowl-";
@@ -111,7 +111,7 @@ export default async function handler(req, res) {
   if (action === "board") return res.status(200).json({ ok: true, rows: board(await allRows(), key) });
 
   if (action === "post") {
-    if (!open && !instructor) return res.status(403).json({ ok: false, closed: true, error: "Turkey Bowl opens Tuesday, November 17." });
+    if (!open && !instructor) return res.status(403).json({ ok: false, closed: true, error: "Turkey Bowl opens Wednesday, November 18." });
     if (!key) return res.status(400).json({ ok: false, error: "No player." });
     const log = body.log && typeof body.log === "object" ? body.log : null;
     const seed = String(log?.seed || "");
