@@ -54,6 +54,10 @@ import { AudioStoryReview, AudioStoryControl } from "./audiostory/storypages.jsx
 import { AUDIO_DROP_KEY, AUDIO_DROP_TITLE, mountAudioDrop, DropReview } from "./audiostory/drop.jsx";
 import { CULTURE_GUIDE_KEY, CULTURE_GUIDE_TITLE, mountCultureGuide } from "./sitdown2/guide.jsx";
 import { CultureReview, CultureControl, CultureRead } from "./sitdown2/control.jsx";
+import { FINAL_PREFS_KEY, FINAL_PREFS_TITLE, FINAL_PRE_KEY, FINAL_PRE_TITLE, FINAL_PROJECT_KEY, FINAL_PROJECT_TITLE } from "./finalproject/model.js";
+import { mountFinalPrefs, mountSoon } from "./finalproject/sheet.jsx";
+import FinalReview from "./finalproject/review.jsx";
+import FinalControl from "./finalproject/control.jsx";
 
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
@@ -110,6 +114,15 @@ export const LOCAL_WORKSHEETS = [
   // release it to students." Open to COMM 3 from then, with the feedback on
   // their pre-production at the top (the notes file's `released`).
   { key: AUDIO_STORY_KEY, title: AUDIO_STORY_TITLE, mount: mountAudioStory, review: AudioStoryReview, control: AudioStoryControl, open: ["comm999", "comm3"], classes: ["comm3", "comm999"] },
+  // The final project, both classes, built 2026-11-13. Step one is the
+  // preferences sheet, due Wednesday, November 18: topics, sites, strengths,
+  // a work preference and the people they would work with. review is the
+  // ring of faces where he pairs students and approves topics (add &demo for
+  // made-up answers), control is how every rule works. COMM 999 only until
+  // he opens the sheet. Steps three and four are closed stubs.
+  { key: FINAL_PREFS_KEY, title: FINAL_PREFS_TITLE, mount: mountFinalPrefs, review: FinalReview, control: FinalControl, open: ["comm999"], classes: ["comm3", "comm118", "comm999"] },
+  { key: FINAL_PRE_KEY, title: FINAL_PRE_TITLE, mount: mountSoon(FINAL_PRE_TITLE), open: false, classes: ["comm3", "comm118", "comm999"] },
+  { key: FINAL_PROJECT_KEY, title: FINAL_PROJECT_TITLE, mount: mountSoon(FINAL_PROJECT_TITLE), open: false, classes: ["comm3", "comm118", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
   { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },
 ];
