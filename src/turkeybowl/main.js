@@ -34,7 +34,7 @@ import { accessToken } from "../engine/session.js";
 
 const $ = (id) => document.getElementById(id);
 const canvas = $("screen"), c = canvas.getContext("2d"), ui = $("ui"), hud = $("hud"), banner = $("banner"), hint = $("hint"), pad = $("pad"), backBtn = $("back");
-c.imageSmoothingEnabled = false;
+c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high";
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const store = { get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }, set(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } } };
@@ -205,9 +205,8 @@ const shake = (ms = 280) => { shakeUntil = performance.now() + ms; };
 const flash = (ms = 90) => { flashUntil = performance.now() + ms; };
 (function frame() {
   const t = performance.now() < stopUntil ? stopAt : now();
-  // The picture is drawn at half size, 320 by 180, and the browser scales it up in hard pixels.
-  // Every drawing still thinks in 640 by 360.
-  c.save(); c.scale(0.5, 0.5);
+  // The picture is drawn at 1280 by 720, smooth. Every drawing still thinks in 640 by 360.
+  c.save(); c.scale(2, 2);
   try {
     const shaking = fx && ((fx.kind === "over") || (fx.kind === "shake" && t - fx.start < 0.4));
     const left = shakeUntil - performance.now();
@@ -247,7 +246,7 @@ function showHud() {
   const r = tally(), names = { park: ["YOU", "RICK"], dallas: ["DAL", "VIS"], texas: ["TEX", "A&M"] }[G.where];
   const left = el("div", "box"); left.append(document.createTextNode(names[0] + " " + G.us + "  " + names[1] + " " + G.them), el("br"), document.createTextNode(G.q));
   const right = el("div", "box");
-  if (FACE) { const f = el("canvas"); f.width = 21; f.height = 24; f.getContext("2d").drawImage(FACE, 0, 0); right.append(f); }
+  if (FACE) { const f = el("canvas"); f.width = 63; f.height = 72; f.getContext("2d").drawImage(FACE, 0, 0); right.append(f); }
   right.append(document.createTextNode("LEVEL " + r.level + "  "), el("b", "", r.score.toLocaleString("en-US")));
   hud.append(left, right);
 }
@@ -338,7 +337,7 @@ async function situation(id, dec, base, phone) {
     await beat(1700); say("");
   } else if (S.act === "miss") {
     const s0 = now();
-    paint = (t) => { const p = clamp((t - s0) / 1.3, 0, 1); A.stadium(c, t, { team: "texas", endzone: true }); A.ball(c, 250 + p * 340, 300 - Math.sin(p * Math.PI * 0.8) * 250, p * 9); A.beams(c, t); A.letterbox(c); };
+    paint = (t) => { const p = clamp((t - s0) / 1.3, 0, 1); field(t, "texas", 0, true); fp(170, 268, kin("texas", "us", 4), 0); fb(190 + p * 470, 268 + p * 70, 4 + Math.sin(p * Math.PI * 0.8) * 250, p * 9); flush(); A.beams(c, t); A.letterbox(c); };
     sfx.snap(); await beat(1300); say("NO GOOD!", "slam low"); sfx.boo(); shake(260); announce("miss"); await beat(1300); say("");
   }
   const sid = dec.slot || id, back = sid === "commercial" ? jerryRemembers(G.picks) : "";
@@ -402,26 +401,28 @@ async function consequence(id, got, who, phone, base) {
   else if (kind === "bench") paint = (t) => { const e = t - s0; A.sideline(c, t, where, FACE); for (let i = 0; i < 5; i++) rainCloud(72 + i * 92, 96 + Math.sin(e * 2 + i) * 4, e + i * 0.3); };
   else if (kind === "walk") paint = (t) => { const e = t - s0; base(t); A.cast(c, who, 500 + Math.max(0, e - 0.6) * 170, 250, 1.3, { angry: true, grin: false, armUp: false, look: 3, ...(G.where === "texas" ? TX : {}) }); };
   else if (kind === "gain" || kind === "grandma") paint = (t) => {
-    const e = t - s0, x = Math.max(44, 610 - e * 210), in_ = x <= 44; field(t, where, 0, false);
-    for (let i = 0; i < 5; i++) { const px = 140 + i * 84, passed = x < px; A.player(c, px, 228 + i * 25, { ...kin(where, "us", i), down: passed, face: i === 2 && where === "park" ? FACE : null }, passed ? 0 : Math.floor(t * 8) + i); }
+    const e = t - s0, x = Math.max(44, 610 - e * 210), in_ = x <= 44, hop = in_ ? Math.abs(Math.sin(e * 7)) * 22 : 0; field(t, where, 0, false, TEAM[where].them.jersey + "bb");
+    for (let i = 0; i < 5; i++) { const px = 140 + i * 84, passed = x < px; fp(px, 228 + i * 25, { ...kin(where, "us", i), down: passed }, passed ? 0 : Math.floor(t * 8) + i); }
     const r = kind === "grandma" ? { ...kin(where, "them", 1), hair: "#e3e6ea", skin: "#f0c8a0", long: false } : kin(where, "them", 1);
-    A.player(c, x, in_ ? 284 - Math.abs(Math.sin(e * 7)) * 22 : 284, { ...r, arms: in_ ? 1 : 0 }, in_ ? 0 : Math.floor(t * 10)); A.ball(c, x - 10, in_ ? 250 - Math.abs(Math.sin(e * 7)) * 22 : 258); leaf(t);
+    fp(x, 284, { ...r, arms: in_ ? 1 : 0, ring: true }, in_ ? 0 : Math.floor(t * 10), hop); fb(x - 3, 293, 24 + hop); flush(); leaf(t);
   };
   else if (kind === "fumble") paint = (t) => {
     const e = t - s0, lost = e > 0.95, x = Math.min(330, 140 + e * 200), f = Math.max(0, e - 0.95); field(t, where, 0, false); if (lost) bang();
-    A.player(c, x, 280, { ...kin(where, "us", 3), down: e > 1.2 }, lost ? 0 : Math.floor(t * 9));
-    const bx = lost ? 338 + Math.min(f, 0.9) * 110 : x + 8, by = lost ? Math.min(340, 256 - 190 * f + 300 * f * f) : 256, got2 = f > 1.1;
-    A.player(c, got2 ? bx : 600 - Math.min(f, 1.1) / 1.1 * (600 - bx - 14), 300, { ...kin(where, "them", 2), arms: got2 ? 1 : 0 }, got2 ? 0 : Math.floor(t * 10));
-    if (got2) A.ball(c, bx + 2, 244); else A.ball(c, bx, by, f * 14); leaf(t);
+    fp(x, 280, { ...kin(where, "us", 3), down: e > 1.2, ring: !lost }, lost ? 0 : Math.floor(t * 9));
+    const bx = lost ? 338 + Math.min(f, 0.9) * 110 : x + 2, bh = lost ? Math.max(0, 24 + 190 * f - 300 * f * f) : 24, got2 = f > 1.1;
+    fp(got2 ? bx : 600 - Math.min(f, 1.1) / 1.1 * (600 - bx - 14), 292, { ...kin(where, "them", 2), arms: got2 ? 1 : 0, ring: got2 }, got2 ? 0 : Math.floor(t * 10));
+    if (got2) fb(bx - 2, 292, 50); else fb(bx, 288, bh, f * 14); flush(); leaf(t);
   };
   else if (kind === "sack") paint = (t) => {
     const e = t - s0, p = Math.min(1, e / 0.9); field(t, where, 0, false); if (p >= 1) bang();
-    A.player(c, 170, 290, { ...kin(where, "us", 6), down: p >= 1, face: where === "park" ? FACE : null }, 0);
-    for (let i = 0; i < 3; i++) A.player(c, 540 - p * (340 - i * 16), 240 + i * 34 + (290 - (240 + i * 34)) * p, kin(where, "them", i), p >= 1 ? 0 : Math.floor(t * 10) + i);
-    if (p >= 1) { for (let k = 0; k < 5; k++) A.star(c, 170 + Math.cos(t * 6 + k * 1.26) * 26, 232 + Math.sin(t * 6 + k * 1.26) * 8, 5, "#ffd75e", "#1c1626"); A.ball(c, 150 - Math.min(60, (e - 0.9) * 90), Math.min(344, 270 + (e - 0.9) * 160), e * 9); } else A.ball(c, 180, 266);
+    fp(170, 290, { ...kin(where, "us", 6), down: p >= 1, ring: true }, 0);
+    for (let i = 0; i < 3; i++) fp(540 - p * (340 - i * 16), 240 + i * 34 + (290 - (240 + i * 34)) * p, kin(where, "them", i), p >= 1 ? 0 : Math.floor(t * 10) + i);
+    if (p >= 1) fb(150 - Math.min(60, (e - 0.9) * 90), 304, Math.max(0, 20 - (e - 0.9) * 160), e * 9); else fb(174, 298, 24);
+    flush();
+    if (p >= 1) { const q = A.proj(170, 290, 48); for (let k = 0; k < 5; k++) A.star(c, q.x + Math.cos(t * 6 + k * 1.26) * 26 * q.s, q.y + Math.sin(t * 6 + k * 1.26) * 8 * q.s, 5 * q.s, "#ffd75e", "#1c1626"); }
     leaf(t);
   };
-  else if (kind === "wide") { sfx.snap(); paint = (t) => { const p = clamp((t - s0) / 1.3, 0, 1); A.stadium(c, t, { team: "texas", endzone: true }); A.ball(c, 250 + p * 340, 300 - Math.sin(p * Math.PI * 0.8) * 250, p * 9); A.beams(c, t); }; }
+  else if (kind === "wide") { sfx.snap(); paint = (t) => { const p = clamp((t - s0) / 1.3, 0, 1); field(t, "texas", 0, true); fp(170, 268, kin("texas", "us", 4), 0); fb(190 + p * 470, 268 + p * 70, 4 + Math.sin(p * Math.PI * 0.8) * 250, p * 9); flush(); A.beams(c, t); }; }
   say(got.then, "line low"); if (kind !== "sack" && kind !== "fumble" && kind !== "jerry") sfx.bad(); if (kind === "gain" || kind === "grandma" || kind === "wide") sfx.boo();
   await beat(3600); say("");
 }
@@ -461,7 +462,7 @@ async function decide(id) {
         const o = dec.opts[i], b = el("button", "opt"); b.type = "button"; b.dataset.k = o.k;
         b.append(el("kbd", "", String(n + 1)));
         const icon = (A.FOOD_OF[id] || {})[o.k];
-        if (icon) { const cv = el("canvas"); cv.width = 32; cv.height = 32; A.food(cv.getContext("2d"), icon); b.append(cv); }
+        if (icon) { const cv = el("canvas"); cv.width = 96; cv.height = 96; const fc = cv.getContext("2d"); fc.scale(3, 3); A.food(fc, icon); b.append(cv); }
         b.append(el("span", "", o.text));
         b.onclick = () => { onKey = null; res(o.k); };
         opts.append(b); btns.push(b);
@@ -520,7 +521,14 @@ const TEAM = {
 const THEM = { park: "UNCLE RICK'S TEAM", dallas: "THE VISITORS", texas: "TEXAS A&M" };
 const HAIRS = ["#5a3a1e", "#1e1410", "#f3d67a", "#a8551c", "#e3e6ea"], SKINS = ["#e8b98a", "#c98a5a", "#8a5a3a", "#f0c8a0"];
 const kin = (where, side, i) => ({ ...TEAM[where][side], hair: HAIRS[(i + (side === "us" ? 0 : 2)) % 5], skin: SKINS[(i + (side === "us" ? 0 : 1)) % 4], long: where === "park" && i % 3 === 1, dir: side === "us" ? 1 : -1 });
-const field = (t, where, scroll, endzone) => { if (where === "park") A.park(c, t, { scroll }); else A.stadium(c, t, { scroll, endzone, team: where }); };
+// Andrew, 2026-11-15, with two pictures of a 1998 console football game: the field during a play is seen from above and
+// behind the offense, filling the screen. A spot is still (x, y): x is how far downfield and y is across. Players and the
+// ball are queued with how high off the ground they are, then drawn far to near, so whoever is nearer the camera is in front.
+const fq = [];
+const fp = (x, y, o = {}, frame = 0, h = 0) => fq.push([x, () => { const p = A.proj(x, y, h); A.player(c, p.x, p.y, { ...o, s: (o.s || 1) * p.s, lift: h * p.s }, frame); }]);
+const fb = (x, y, h = 0, tilt = 0) => fq.push([x - 1, () => { const p = A.proj(x, y, h); A.ball(c, p.x, p.y, tilt, p.s * 1.3, h * p.s); }]);
+const flush = () => { fq.sort((a, b) => b[0] - a[0]).forEach(([, f]) => f()); fq.length = 0; };
+const field = (t, where, scroll, endzone, near = "") => A.turf(c, t, { where, scroll, endzone, near });
 const ease = (p) => p * p * (3 - 2 * p);
 /** Where the other team stands for a look: [x, y] for each of five. */
 const setOf = (look) => [0, 1, 2, 3, 4].map(i => look === "deep" ? [470 + (i % 2) * 50, 222 + i * 26] : look === "stack" ? [236 + (i % 2) * 10, 232 + i * 22] : look === "blitz" ? [250, 226 + i * 26] : [280 + (i % 2) * 40, 204 + i * 34]);
@@ -528,10 +536,11 @@ const setOf = (look) => [0, 1, 2, 3, 4].map(i => look === "deep" ? [470 + (i % 2
 const lineup = (where, look0) => (t) => {
   const look = look0 === "mystery" ? ["deep", "stack", "blitz", "spread"][Math.floor(t * 1.4) % 4] : look0;   // a defense nobody can read keeps shifting
   field(t, where, 0, false);
-  for (let i = 0; i < 5; i++) A.player(c, 200, 226 + i * 26, kin(where, "us", i), 0);
-  setOf(look).forEach(([x, y], i) => A.player(c, x + (look === "blitz" ? Math.sin(t * 9 + i) * 3 : 0), y, kin(where, "them", i), look === "blitz" ? Math.floor(t * 8) + i : 0));
-  A.player(c, 150, 290, { ...kin(where, "us", 6), face: where === "park" ? FACE : null }, 0);
-  A.ball(c, 214, 344);   // on the ground at the line, where a football sits before the snap
+  for (let i = 0; i < 5; i++) fp(200, 226 + i * 26, kin(where, "us", i), 0);
+  setOf(look).forEach(([x, y], i) => fp(x + (look === "blitz" ? Math.sin(t * 9 + i) * 3 : 0), y, kin(where, "them", i), look === "blitz" ? Math.floor(t * 8) + i : 0));
+  fp(150, 290, { ...kin(where, "us", 6), ring: true }, 0);
+  fb(216, 278, 0);   // on the ground at the line, where a football sits before the snap
+  flush();
   if (where === "park") A.leaves(c, t, 30);
 };
 // Six plays, so no two games look alike: three ways to run and three ways to throw.
@@ -555,28 +564,31 @@ function playOut(call, good, where, look, which) {
     paint = (t) => {
       const p = clamp((t - start) / dur, 0, 1), go = ease(clamp((p - 0.1) / 0.82, 0, 1)), fr = p > 0.08 && p < 0.96 ? Math.floor(t * 8) : 0;
       field(t, where, 0, good);
-      for (let i = 0; i < 5; i++) A.player(c, 200 + go * 14, 226 + i * 26, kin(where, "us", i), fr + i);
-      const qb = { ...kin(where, "us", 6), face: where === "park" ? FACE : null };
+      for (let i = 0; i < 5; i++) fp(200 + go * 14, 226 + i * 26, kin(where, "us", i), fr + i);
+      const qb = kin(where, "us", 6);
+      let dust = null;
       if (call === "run") {
-        A.player(c, 150, 290, qb, 0);
+        fp(150, 290, qb, 0);
         const g = good ? go : go * 0.07, [x, y] = v.path(g);
-        them.forEach(([hx, hy], i) => { const tx = good ? x - 46 - i * 18 : x + 16, ty = good ? hy + (y - hy) * 0.5 : y + (i - 2) * 9; A.player(c, hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
-        A.player(c, x, y, { ...kin(where, "us", 3), arms: good && p > 0.93 ? 1 : 0, down: !good && p > 0.7 }, fr);
-        A.ball(c, x + 8, y - 24);
-        if (good && fr) for (let k = 0; k < 4; k++) { c.fillStyle = "rgba(255,255,255," + (0.3 - k * 0.07) + ")"; c.fillRect(x - 14 - k * 9, y - 6 + k, 6, 3); }   // dust at the runner's heels
+        them.forEach(([hx, hy], i) => { const tx = good ? x - 46 - i * 18 : x + 16, ty = good ? hy + (y - hy) * 0.5 : y + (i - 2) * 9; fp(hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
+        fp(x, y, { ...kin(where, "us", 3), arms: good && p > 0.93 ? 1 : 0, down: !good && p > 0.7, ring: true }, fr);
+        fb(x + 1, y + 8, 24);
+        if (good && fr) dust = [x, y];
       } else {
-        const qx = 150 - go * 16, th0 = 0.34, th1 = 0.6;
-        A.player(c, qx, 290, { ...qb, arms: p > th0 && p < th1 ? 1 : 0 }, 0);
-        const rx0 = 230 + v.depth * ease(clamp(p / th1, 0, 1)), ry = 214, th = clamp((p - th0) / (th1 - th0), 0, 1), caught = p >= th1;
+        const qx = 150 - go * 16, th0 = 0.34, th1 = 0.6, caught = p >= th1;
+        fp(qx, 290, { ...qb, arms: p > th0 && p < th1 ? 1 : 0, ring: !caught }, 0);
+        const rx0 = 230 + v.depth * ease(clamp(p / th1, 0, 1)), ry = 214, th = clamp((p - th0) / (th1 - th0), 0, 1);
         const run = good && caught ? ease(clamp((p - th1) / (1 - th1), 0, 1)) * v.after : 0, rx = rx0 + run;
-        them.forEach(([hx, hy], i) => { const tx = good ? rx - 56 - i * 16 : (i === 0 ? rx0 - 4 : qx + 40 + i * 12), ty = good ? hy + (ry - hy) * 0.5 : (i === 0 ? ry + 4 : 290); A.player(c, hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
-        A.player(c, good ? rx : Math.min(rx0, 330), ry, { ...kin(where, "us", 3), arms: good && caught && p < th1 + 0.08 ? 1 : 0 }, fr);
+        them.forEach(([hx, hy], i) => { const tx = good ? rx - 56 - i * 16 : (i === 0 ? rx0 - 4 : qx + 40 + i * 12), ty = good ? hy + (ry - hy) * 0.5 : (i === 0 ? ry + 4 : 290); fp(hx + (tx - hx) * go, hy + (ty - hy) * go, kin(where, "them", i), fr + i); });
+        fp(good ? rx : Math.min(rx0, 330), ry, { ...kin(where, "us", 3), arms: good && caught && p < th1 + 0.08 ? 1 : 0, ring: good && caught }, fr);
         const aimX = good ? rx0 : Math.min(rx0, 330) + 26;
-        if (p < th0) A.ball(c, qx + 10, 264);
-        else if (!caught) A.ball(c, qx + (aimX - qx) * th, 264 + (ry - 30 - 264) * th - Math.sin(th * Math.PI) * v.arc, -0.5 + th);
-        else if (good) A.ball(c, rx + 8, ry - 24);
-        else A.ball(c, aimX + 10, Math.min(344, 240 + (p - th1) * 380));   // it falls, and it stays a football
+        if (p < th0) fb(qx + 2, 298, 26);
+        else if (!caught) fb(qx + (aimX - qx) * th, 296 + (ry + 6 - 296) * th, 30 + Math.sin(th * Math.PI) * v.arc, -0.5 + th);
+        else if (good) fb(rx + 1, ry + 8, 24);
+        else fb(aimX + 10, ry + 8, Math.max(0, 40 - (p - th1) * 380));   // it falls, and it stays a football
       }
+      flush();
+      if (dust) for (let k = 0; k < 4; k++) { const q = A.proj(dust[0] - 14 - k * 9, dust[1], 3 + k); c.fillStyle = "rgba(255,255,255," + (0.3 - k * 0.07) + ")"; c.fillRect(q.x - 3 * q.s, q.y, 6 * q.s, 3 * q.s); }   // dust at the runner's heels
       if (where === "park") A.leaves(c, t, 30);
       if (p >= 1 && !done) { done = true; res(); }
     };
@@ -585,7 +597,8 @@ function playOut(call, good, where, look, which) {
 /** Between plays: both sides standing around, so no finished play is left frozen on the screen. */
 const idle = (where) => (t) => {
   field(t, where, 0, false);
-  for (let i = 0; i < 5; i++) { A.player(c, 150 + (i % 2) * 30, 226 + i * 26, kin(where, "us", i), 0); A.player(c, 470 + (i % 2) * 30, 226 + i * 26, kin(where, "them", i), 0); }
+  for (let i = 0; i < 5; i++) { fp(150 + (i % 2) * 30, 226 + i * 26, kin(where, "us", i), 0); fp(470 + (i % 2) * 30, 226 + i * 26, kin(where, "them", i), 0); }
+  flush();
   if (where === "park") A.leaves(c, t, 30);
 };
 /** A touchdown in three shots: the spike up close, everybody dancing, and a pie for somebody new each time. */
@@ -593,14 +606,15 @@ const PIE_FOR = { park: "uncle", dallas: "jerry", texas: "reporter" };
 async function touchdown(where, text = "TOUCHDOWN!") {
   const was = inCine; cine(true); ui.textContent = "";
   const cols = TEAM[where].us; let start = now();
-  paint = (t) => { const e = t - start; A.burst(c, t, 320, 200, A.darken(cols.jersey, 0.2), "#ffd75e"); c.save(); c.translate(320, 330 - Math.abs(Math.sin(Math.min(e, 0.5) * Math.PI * 2)) * 30); c.scale(5, 5); A.player(c, 0, 0, { ...kin(where, "us", 3), arms: 1, face: where === "park" ? FACE : null }, 0); c.restore(); A.ball(c, 430, 60 + Math.min(1, e * 4) * 250, e * 20); A.letterbox(c); };
+  paint = (t) => { const e = t - start; A.burst(c, t, 320, 200, A.darken(cols.jersey, 0.2), "#ffd75e"); c.save(); c.translate(320, 330 - Math.abs(Math.sin(Math.min(e, 0.5) * Math.PI * 2)) * 30); c.scale(5, 5); A.player(c, 0, 0, { ...kin(where, "us", 3), arms: 1, front: true, face: where === "park" ? FACE : null }, 0); c.restore(); A.ball(c, 430, 60 + Math.min(1, e * 4) * 250, e * 20, 4); A.letterbox(c); };
   say(text, "slam"); sfx.slam(); hitStop(140); shake(380); flash(90); sfx.td(); showHud(); announce("td");
   if (where === "texas") music.start("fight");
   await beat(1300);
   start = now();
   paint = (t) => {
-    const e = t - start, up = Math.max(0, 1 - e * 2.5) * 140; field(t, where, 1800, true);
-    for (let i = 0; i < 6; i++) A.player(c, 90 + i * 60, 318 - Math.abs(Math.sin(e * 5 + i)) * 30, { ...kin(where, "us", i), face: i === 2 && where === "park" ? FACE : null, arms: 1 }, 0);
+    const e = t - start, up = Math.max(0, 1 - e * 2.5) * 140; field(t, where, 0, true);
+    for (let i = 0; i < 6; i++) fp(250 + (i % 2) * 40, 196 + i * 29, { ...kin(where, "us", i), face: i === 2 && where === "park" ? FACE : null, arms: 1, front: true }, 0, Math.abs(Math.sin(e * 5 + i)) * 30);
+    flush();
     A.turkeyDance(c, 500, 330 + up, t, where === "dallas" ? "dougie" : "macarena", 2.4);
     if (where === "texas") A.turkeyDance(c, 590, 336 + up, t, "dougie", 1.6);
     if (where === "park") A.leaves(c, t, 80); else A.confetti(c, t, [cols.jersey, cols.pants, "#fff"]);
@@ -629,11 +643,11 @@ async function theirDrive(where, scores, how) {
   paint = (t) => {
     // Their runner goes right to left. Nobody is knocked flat: your side chases, and either catches the runner or does not.
     const e = t - start, x = scores ? Math.max(60, 560 - e * 130) : 470 - Math.min(e, 1.6) * 90, in_ = scores && x <= 60;
-    field(t, where, 0, false);
-    if (scores) { const top = where === "park" ? 200 : 150, h = where === "park" ? 148 : 196; c.fillStyle = TEAM[where].them.jersey + "bb"; c.fillRect(0, top, 96, h); c.fillStyle = "#fff"; c.fillRect(96, top - 2, 3, h + 4); }
-    for (let i = 0; i < 4; i++) A.player(c, scores ? x + 70 + i * 40 : Math.max(x - 26, 330 - i * 30 + Math.min(e, 1.6) * 20), 236 + i * 28, kin(where, "us", i), e < 4 ? Math.floor(t * 8) + i : 0);
-    A.player(c, x, in_ ? 284 - Math.abs(Math.sin(e * 6)) * 24 : 284, { ...who, arms: in_ ? 1 : 0 }, in_ || (!scores && e > 1.6) ? 0 : Math.floor(t * 8));
-    A.ball(c, x - 10, (in_ ? 258 - Math.abs(Math.sin(e * 6)) * 24 : 258));
+    const hop = in_ ? Math.abs(Math.sin(e * 6)) * 24 : 0;
+    field(t, where, 0, false, scores ? TEAM[where].them.jersey + "bb" : "");
+    for (let i = 0; i < 4; i++) fp(scores ? x + 70 + i * 40 : Math.max(x - 26, 330 - i * 30 + Math.min(e, 1.6) * 20), 236 + i * 28, { ...kin(where, "us", i), front: scores }, e < 4 ? Math.floor(t * 8) + i : 0);
+    fp(x, 284, { ...who, arms: in_ ? 1 : 0, ring: true }, in_ || (!scores && e > 1.6) ? 0 : Math.floor(t * 8), hop);
+    fb(x - 3, 293, 24 + hop); flush();
     if (where === "park") A.leaves(c, t, 30);
   };
   say(how, "line"); await wait(scores ? 4200 : 2800);
@@ -681,15 +695,16 @@ async function scene(name) {
   if (name === "kickoff") {
     G.q = "Q1"; showHud();
     // Feet, a face, feet, a face, and then the ball is in the air.
+    paint = (t) => { A.leafBall(c, t); A.leaves(c, t, 40); A.letterbox(c); }; await beat(1500);
     let s0 = now(); paint = (t) => { A.cleats(c, t, "#6a4bb0"); A.letterbox(c); }; sfx.whistle(); await beat(520);
     paint = (t) => { A.speedLines(c, t, "#a8551c", "#f6c945"); A.bust(c, "grandma", 320, 2.1, { blink: Math.floor(t * 2) % 5 === 0, look: -2 }, 30); A.letterbox(c); }; await beat(620);
     paint = (t) => { A.cleats(c, t, "#e2622a"); A.letterbox(c); }; await beat(480);
     paint = (t) => { A.speedLines(c, t, "#3f7a32", "#b9e08a"); A.bust(c, "uncle", 320, 2.1, { armUp: false, look: 2 }, 30); A.letterbox(c); }; await beat(560);
     s0 = now();
     paint = (t) => {
-      const p = Math.min(1, (t - s0) / 2.6); A.park(c, t);
-      for (let i = 0; i < 5; i++) { A.player(c, 80 + p * 60, 226 + i * 26, kin("park", "them", i), Math.floor(t * 9)); A.player(c, 560 - p * 40, 226 + i * 26, { ...kin("park", "us", i), dir: -1, face: i === 2 ? FACE : null }, Math.floor(t * 9)); }
-      A.ball(c, 140 + p * 380, 240 - Math.sin(p * Math.PI) * 150, -0.6 + p); A.leaves(c, t, 70);
+      const p = Math.min(1, (t - s0) / 2.6); field(t, "park", 0, false);
+      for (let i = 0; i < 5; i++) { fp(520 - p * 70, 200 + i * 34, kin("park", "them", i), Math.floor(t * 9)); fp(110 + p * 40, 200 + i * 34, kin("park", "us", i), Math.floor(t * 9)); }
+      fb(500 - p * 370, 268, 6 + Math.sin(p * Math.PI) * 190, -0.6 + p); flush(); A.leaves(c, t, 70);
     };
     say("KICKOFF", "slam"); sfx.slam(); shake(220); announce("kickoff"); await beat(1500); say("");
     await talk("THE GAME STARTS", "It's 8 AM. The leaves are coming down, and Uncle Rick's team kicks off to yours.");
@@ -730,6 +745,7 @@ async function scene(name) {
   } else if (name === "dallas") {
     G.where = "dallas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1; G.jerry = false;
     await eyecatch("DALLAS", "#1d3c8f", "#c9d3e6", true);
+    paint = (t) => { A.dome(c, t); A.letterbox(c); }; await beat(1900);
     const s0 = now();
     paint = (t) => { A.stadium(c, t, { midfield: true, scroll: Math.max(0, 1 - (t - s0) / 1.4) * 240 }); A.fireworks(c, t, 4); A.confetti(c, t, ["#1d3c8f", "#c9d3e6", "#fff"], 50); };
     flash(120); sfx.cheer(); sfx.slam(); shake(260); showHud(); announce("dallas");
@@ -752,7 +768,7 @@ async function scene(name) {
     G.where = "texas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1;
     await eyecatch("AUSTIN", "#bf5700", "#ffffff", false);
     const s2 = now(); music.start("band");
-    paint = (t) => { A.stadium(c, t, { team: "texas" }); A.band(c, t, t - s2); A.beams(c, t); A.fireworks(c, t, 3); };
+    paint = (t) => { A.turf(c, t, { where: "texas" }); A.band(c, t, t - s2); A.beams(c, t); A.fireworks(c, t, 3); };
     ui.textContent = ""; say("TEXAS vs TEXAS A&M", "slam"); announce("texas"); sfx.cheer(); flash(120); showHud();
     await beat(2200); say(""); await beat(6400);   // the band has the field to itself, and the last tuba is late
     await talk("THANKSGIVING NIGHT", "A night game in Austin. A hundred thousand people in burnt orange, and the band is on the field.");
@@ -849,7 +865,7 @@ async function gate(n) {
     const start = now();
     if (passed) {
       music.start("band");
-      paint = (t) => { A.stadium(c, t, { team: "texas" }); A.band(c, t, 10 + (t - start)); A.turkeyDance(c, 320, 350, t, "macarena", 2.8); A.person(c, 560, 226, 0.85, { ...A.CAST.you, face: FACE, shirt: "#bf5700", number: "", armUp: true, wave: t }); A.fireworks(c, t, 8); };
+      paint = (t) => { A.turf(c, t, { where: "texas" }); A.band(c, t, 10 + (t - start)); A.turkeyDance(c, 320, 350, t, "macarena", 2.8); A.person(c, 560, 226, 0.85, { ...A.CAST.you, face: FACE, shirt: "#bf5700", number: "", armUp: true, wave: t }); A.fireworks(c, t, 8); };
       fx = { kind: "td", start }; say("CHAMPION!", "flash big"); announce("champion"); sfx.cheer(); ui.textContent = "";
       await wait(6500);   // the band and the turkey get the whole screen before the score card comes up
       await checkpoint("YOU ARE THE CHAMPION", ["Texas beats Texas A&M, " + G.us + " to " + G.them + ". The band plays, the turkey dances, and you won all three games in one day."], "Play again"); fx = null; music.stop();

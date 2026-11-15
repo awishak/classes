@@ -22,12 +22,12 @@
       #app { height: 100%; display: grid; place-items: center; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
       /* One screen. The picture fills it, and every word and button sits on the picture. */
       #stage { position: relative; width: min(100vw, calc(100dvh * 16 / 9)); aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden; background: #000; }
-      #screen { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+      #screen { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
       .px { font-family: 'Press Start 2P', monospace; }
       #hud { position: absolute; inset: 0 0 auto 0; display: flex; justify-content: space-between; align-items: flex-start; padding: 1.2cqw 1.4cqw; pointer-events: none; font-family: 'Press Start 2P', monospace; font-size: 1.25cqw; line-height: 1.6; text-shadow: 0.15cqw 0.15cqw 0 #000; }
       #hud .box { background: linear-gradient(#1b2a6be6, #0c1436e6); border: 0.25cqw solid #f4f1e6; border-radius: 0.8cqw; padding: 0.8cqw 1.1cqw; box-shadow: 0 0.4cqw 0 rgba(0,0,0,.45); }
       #hud b { color: #ffd75e; font-weight: 400; }
-      #hud img, #hud canvas { width: 3.2cqw; height: 3.6cqw; image-rendering: pixelated; vertical-align: middle; margin-right: 0.8cqw; border: 0.2cqw solid #f4f1e6; }
+      #hud img, #hud canvas { width: 3.2cqw; height: 3.6cqw; vertical-align: middle; margin-right: 0.8cqw; border: 0.2cqw solid #f4f1e6; }
       #tools { position: absolute; left: 50%; top: 1.2cqw; transform: translateX(-50%); display: flex; gap: 0.8cqw; z-index: 6; }
       .tool { font: 400 1.6cqw 'Jersey 20', 'Press Start 2P', monospace; background: #0c1436d9; color: #f4f1e6; border: 0.2cqw solid #f4f1e6; border-radius: 0.7cqw; padding: 0.5cqw 1cqw; cursor: pointer; }
       .tool[disabled] { opacity: .35; cursor: default; }
@@ -50,7 +50,7 @@
       .opt { letter-spacing: .02em; font: 400 2.4cqw/1.08 'Jersey 20', 'Press Start 2P', monospace; text-align: left; color: #f4f1e6; background: #223380; border: 0.22cqw solid #5a74e0; border-radius: 1cqw; padding: 0.9cqw 1.2cqw; cursor: pointer; display: flex; align-items: center; gap: 1cqw; transition: transform .1s, background .12s, border-color .12s; }
       .opt:hover, .opt:focus-visible { background: #2f46a8; border-color: #ffd75e; transform: translateY(-0.15cqw); outline: none; }
       .opt[aria-pressed="true"] { background: #1f7a3c; border-color: #ffd75e; }
-      .opt canvas { width: 4.6cqw; height: 4.6cqw; image-rendering: pixelated; flex: none; }
+      .opt canvas { width: 4.6cqw; height: 4.6cqw; flex: none; }
       .opt kbd { font: 400 1cqw 'Press Start 2P', monospace; color: #ffd75e; flex: none; }
       .calls { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2cqw; }
       .call { font: 400 1.7cqw 'Press Start 2P', monospace; color: #0b1410; border: 0.3cqw solid #0b1410; border-radius: 1.2cqw; padding: 1.1cqw 1cqw; cursor: pointer; box-shadow: 0 0.6cqw 0 rgba(0,0,0,.5); }
@@ -94,7 +94,7 @@
       .board { max-height: 26cqw; overflow: auto; border-radius: 0.8cqw; }
       .faces { display: grid; grid-template-columns: repeat(auto-fill, minmax(8cqw, 1fr)); gap: 1cqw; }
       .faces figure { margin: 0; display: grid; justify-items: center; gap: 0.4cqw; font-size: 1.15cqw; text-align: center; }
-      .faces canvas { width: 6.3cqw; height: 7.2cqw; image-rendering: pixelated; border: 0.25cqw solid #f4f1e6; }
+      .faces canvas { width: 6.3cqw; height: 7.2cqw; border: 0.25cqw solid #f4f1e6; }
       #pad { position: absolute; right: 2%; bottom: 4%; z-index: 6; display: none; gap: 1cqw; flex-direction: column; }
       #pad button { font: 400 3cqw 'Press Start 2P', monospace; width: 9cqw; height: 9cqw; border-radius: 50%; border: 0.35cqw solid #0b1410; background: #ffd75ecc; color: #0b1410; cursor: pointer; touch-action: manipulation; }
       #pad.throw button { width: 18cqw; height: 9cqw; border-radius: 1.4cqw; font-size: 2.2cqw; background: #7fd3ffdd; }
@@ -122,7 +122,7 @@
   <body>
     <div id="app">
       <div id="stage">
-        <canvas id="screen" width="320" height="180"></canvas>
+        <canvas id="screen" width="1280" height="720"></canvas>
         <div id="hud"></div>
         <div id="tools">
           <button id="back" class="tool" type="button" disabled>Back</button>
