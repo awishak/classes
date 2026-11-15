@@ -6545,7 +6545,7 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   const champagne = perfect("aaaaaa"); champagne.picks.jet = "over";
   const c1 = T.scoreRun(champagne);
   if (c1.over !== "jet" || c1.level !== 2 || c1.done) say("champagne on the jet does not end the run in Level 2: " + JSON.stringify(c1));
-  const awful = { seed: "aaaaaa", picks: Object.fromEntries(every.map(d => [d.id, d.pick ? ["coercive", "reward"] : "silly"])), calls: Array.from({ length: T.PLAY_COUNT }, () => "run") };
+  const awful = { seed: "aaaaaa", picks: Object.fromEntries(every.map(d => [d.id, d.pick ? ["coercive", "reward"] : d.opts.some(o => o.k === "silly") ? "silly" : "bad"])), calls: Array.from({ length: T.PLAY_COUNT }, () => "run") };   // not every question has a joke
   awful.picks.jet = "bad"; awful.picks.receiver = "bad";
   const a1 = T.scoreRun(awful);
   if (a1.lost !== 1 || a1.level !== 1) say("a terrible run gets past the park: " + JSON.stringify(a1));

@@ -18,6 +18,13 @@
 // (4) Texas against Texas A&M that night. Credit in COMM 118 is still
 // reaching Level 3, which is landing in Dallas.
 //
+// Andrew, 2026-11-14, after the fifth pass: "questions are still too easy."
+// The joke stays in about half the questions, two options can both be best
+// when the review lists both as effective, and no option is ranked on a
+// judgment the review does not make ("don't use your judgment"): every
+// option that is not a joke is something the text supports as working or as
+// not working, or one of his own stated rules.
+//
 // Every question has four options, ranked best, good, bad, silly, shown in a
 // shuffled order. Two options end the run ("over"). He found the first set
 // too easy to read: "obviously, a longer answer is more likely to be
@@ -74,13 +81,13 @@ export const TOPICS = {
   culture: "culture", power: "power", jet: "hydration",
   receiver: "conflict", commercial: "sport as spectacle", speech: "halftime speeches",
   returner: "goal setting", kicker: "emotion", backup: "clarity of roles", twominute: "time-outs",
-  shout: "talking during play", open: "halftime talks", points: "how much to say",
+  shout: "talking during play", open: "halftime talks", points: "how much to say", dissent: "dissent", conflict: "conflict", cohesion: "cohesion",
   "pop-stacking": "race and sport", "pop-titleix": "gender and sport", "pop-1968": "politics and sport",
 };
 // Three questions have a second version, and a run's seed picks which one a
 // player gets, so two runs are not the same list. An alternate names the
 // question it stands in for as its slot, and is worth the same points.
-const d = (id, level, points, who, scene, opts, after, extra = {}) => ({ id, level, points, who, topic: TOPICS[id] || "", scene, opts: opts.map(([k, text, then]) => ({ k, text, then })), after, ...extra });
+const d = (id, level, points, who, scene, opts, after, extra = {}) => ({ id, level, points, who, topic: TOPICS[id] || "", scene, opts: opts.map(([rank, text, then], i) => ({ k: opts.findIndex(o => o[0] === rank) === i ? rank : rank + (i + 1), rank, text, then })), after, ...extra });
 
 export const DECISIONS = [
   // ─── Level 1: the park ───
@@ -91,23 +98,23 @@ export const DECISIONS = [
     ["silly", "Pumpkin pie with gravy on top", "You play badly the whole first half."],
   ], "You've got to choose the right food. Don't be silly and choose something that's not good for you. Always eat a good breakfast.", { food: true }),
   d("stars", 1, 500, "uncle", "You're at the park, warming up with your family before the game. Your uncle walks over and says the team should only practice throwing to its two best players. Everyone else can watch. What do you do?", [
-    ["best", "Give everyone a turn, and say today is about getting better.", "Everyone is warm, and everyone knows why."],
-    ["good", "Give everyone a turn, and keep your reasons to yourself.", "Everybody practices. Nobody knows what the team is about."],
-    ["bad", "Start with the two best, and work the others in if there's time left.", "There is no time. Half your team starts the game cold."],
+    ["best", "Rotate everyone through, and say the goal today is to improve.", "Everyone is warm, and everyone knows why."],
+    ["good", "Rotate everyone through, and say nothing about why.", "Everybody practices. Nobody knows what the team is about."],
+    ["bad", "Start with the two best, and work the others in after.", "There is no time after. Half your team starts the game cold."],
     ["silly", "Trade Grandma to Uncle Rick's team for a player to be named later.", "Grandma scores on you. Twice."],
-  ], "A mastery climate values every player and defines success as getting better. A performance climate ignores less-skilled players to focus on stars (Horn et al., 2012)."),
+  ], "A mastery climate values every player and defines success as getting better. A performance climate ignores less-skilled players to focus on stars (Horn et al., 2012). The climate has to be both communicated and implemented."),
   d("blowup", 1, 500, "brother", "The game has started. Your brother drops an easy pass, throws the ball into the leaves and starts yelling. Everyone is looking at you. What do you do?", [
-    ["best", "Ask him what he's feeling, and listen to the answer.", "He catches the next one."],
-    ["good", "Make a joke to break the tension, and then call the next play.", "He laughs. It works this time."],
-    ["bad", "Tell him firmly to calm down and get back in the huddle now.", "Nobody in history has calmed down."],
-    ["silly", "Announce that emotions are banned on this team until New Year's.", "You are down a receiver and a brother."],
-  ], "Coaches help players regulate emotion with feedback, humor, and by asking about the emotion (Tamminen & Crocker, 2013)."),
+    ["best", "Ask him what he's feeling right now.", "He tells you. Then he catches the next one."],
+    ["best", "Make a joke to break the tension.", "He laughs, and he catches the next one."],
+    ["best", "Tell him one thing to fix on the next catch.", "He fixes it, and he catches the next one."],
+    ["bad", "Tell him, loudly, that he is costing the team.", "He stops trying for the rest of the half."],
+  ], "Teammates regulate each other's emotion with positive or technical feedback, with humor, and by asking about the emotion (Tamminen & Crocker, 2013). Verbal aggressiveness lowers an athlete's motivation (Mazer et al., 2013)."),
   d("push", 1, 500, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You want to push them to play harder. What do you say?", [
     ["best", "\"Play like we practiced, and you'll tell this story at dinner.\"", "They come out flying."],
-    ["good", "\"If you don't play harder this half, you will regret it all year long.\"", "They play harder, and a little tight."],
-    ["bad", "\"You are playing terribly, and at this rate you cannot win.\"", "Heads drop. Your uncle agrees with you, which is worse."],
-    ["silly", "\"Listen to last year's final score. I'll read it slowly, twice.\"", "Your cousin starts crying."],
-  ], "Regret messages come in an upward form (\"if you do this, you'll be successful\") and a downward form (\"if you don't, you won't\"). That is regret messaging (Turman, 2005). Verbal aggression lowers motivation (Mazer et al., 2013)."),
+    ["best", "\"If you coast through this half, you'll regret it all year.\"", "They come out flying."],
+    ["bad", "\"That half was embarrassing, and every one of you knows it.\"", "Heads drop. Your uncle agrees with you, which is worse."],
+    ["bad", "\"Anyone who loafs this half sits out next year's game.\"", "They play scared, and it shows."],
+  ], "Regret messages come in an upward form (\"if you do this, you'll be successful\") and a downward form (\"if you don't, you won't\") (Turman, 2005). Motivation drops under coaches who use intimidation (Occhino et al., 2014) and verbal aggressiveness (Mazer et al., 2013)."),
 
   // ─── Level 2: Jerry Jones ───
   d("culture", 2, 500, "jerry", "Jerry Jones starts the interview. His first question is simple: \"What is culture?\" What do you say?", [
@@ -128,10 +135,10 @@ export const DECISIONS = [
   // ─── Level 3: Dallas ───
   d("receiver", 3, 800, "receiver", "You are coaching the Cowboys. It's the first quarter, and your best receiver has no catches. He is on the sideline screaming at your quarterback, and every camera in the stadium is on them. What do you do?", [
     ["best", "Pull him aside, off camera, and talk with him alone.", "He comes back and blocks on the next play. Then he gets his catch."],
-    ["good", "Send a veteran captain to talk with him in private.", "It works, slower. One more outburst first."],
-    ["bad", "Say nothing for now. He's your star, and it may pass.", "The quarterback stops throwing his way. The huddle goes quiet."],
+    ["good", "Stay out of it for now, and let it cool off.", "It cools off. It takes most of the quarter."],
+    ["silly", "Hand him your headset and let him call the plays.", "He calls eleven straight passes to himself."],
     ["over", "Correct him right there, so the whole team sees where you stand.", "You lose the team's trust and everything falls apart."],
-  ], "Talented but disruptive players are a named source of conflict in teams (Leggat et al., 2018). Take them aside."),
+  ], "Talented but disruptive players are a named source of conflict in teams (Leggat et al., 2018). Take them aside. Avoiding was among the effective ways to handle a conflict (Laios & Tsetzis, 2005), and embarrassment and ridicule lower a team's cohesion (Turman, 2003)."),
   d("commercial", 3, 800, "jerry", "It's halftime in Dallas. Jerry wants you to film a two-minute truck commercial right now. Your players are waiting for you in the locker room. What do you do?", [
     ["best", "Tell Jerry you'll film two after the final whistle.", "You make your halftime adjustments. Jerry gets his money later."],
     ["good", "Tell Jerry no, and walk straight to the locker room.", "The team gets its halftime. Jerry sulks in the owner's box."],
@@ -139,52 +146,70 @@ export const DECISIONS = [
     ["silly", "Film it, and bring the whole offense to be in it.", "The commercial is great. You have no offense."],
   ], "When you choose the commercial, you are not calling plays and you are not paying attention to your team."),
   d("speech", 3, 800, "", "You are in the locker room at halftime, losing by ten. Fifty-three players are waiting for you to say something. What kind of speech do you give?", [
-    ["best", "Short and heartfelt, about what this team stands for.", "They come out of the tunnel loud."],
-    ["good", "Short and practical, covering only the tactics.", "They know the plan. Nobody is fired up."],
-    ["bad", "Long and rousing, and ending with a brand new game plan.", "Half of them were lost by minute four."],
-    ["silly", "No speech. You play them the truck commercial.", "Silence. Then the kicker asks for a truck."],
-  ], "Players respond to genuine emotion, conciseness and references to team values. They respond badly to poorly timed speeches and surprising information (Breakey et al., 2009)."),
+    ["best", "Keep it under a minute, and mean every word.", "They come out of the tunnel loud."],
+    ["best", "Talk about what this team stands for.", "They come out of the tunnel loud."],
+    ["bad", "Unveil a new game plan they have not seen.", "Half of them are still working it out at kickoff."],
+    ["bad", "Save it for the tunnel, as they run out.", "Nobody hears it over the crowd."],
+  ], "Players responded to genuine emotion, conciseness and references to team values. They responded badly to poorly timed speeches and surprising information (Breakey et al., 2009)."),
 
   // ─── Level 4: Texas against Texas A&M, at night ───
   d("returner", 4, 575, "returner", "You are coaching Texas against Texas A&M, at night, in front of a hundred thousand people. Your freshman kick returner looks over at you before the opening kickoff. What do you tell him?", [
     ["best", "\"Catch it, tuck it, and follow your blockers.\"", "He does all three. Forty yards."],
-    ["good", "\"Get us out past the thirty-yard line.\"", "He knows where to go, not how. He gets to the twenty."],
-    ["bad", "\"Whatever happens out there, do not fumble this.\"", "He thinks about fumbling the whole way. Guess what happens."],
-    ["silly", "\"Score a touchdown, or walk back to the dorm.\"", "He scores. He also transfers in December."],
+    ["best", "\"Eyes on the ball until it is in your hands.\"", "He watches it all the way in. Thirty-five yards."],
+    ["bad", "\"Get this one out past the thirty-yard line, at least.\"", "He knows where to go, not how. He gets to the twenty."],
+    ["bad", "\"Whatever happens out there, do not fumble.\"", "He thinks about fumbling the whole way. Guess what happens."],
   ], "Process goals beat outcome goals (Burton & Weiss, 2008), and goals about what to do beat goals about what to avoid (Van Mierlo & Van Hooft, 2020)."),
   d("kicker", 4, 575, "kicker", "It's the second quarter in Austin. Your kicker misses a field goal and walks to the bench staring at the ground. What do you do?", [
     ["best", "Walk over and put a hand on his shoulder.", "He makes the next one from 47."],
-    ["good", "Walk over and ask how he feels about the miss.", "He says \"fine.\" He is a little better."],
-    ["bad", "Give him space to work through it by himself.", "He thinks about it. All quarter."],
-    ["silly", "Hold open tryouts for kicker in the student section.", "A sophomore in overalls is now your kicker."],
-  ], "Feedback and asking about the emotion help a teammate regulate emotion (Tamminen & Crocker, 2013), and so does touch (Kraus et al., 2010)."),
+    ["best", "Walk over and ask how he feels about the miss.", "He tells you. He makes the next one from 47."],
+    ["bad", "Tell him what the next kick means for the season.", "He thinks about the season. All quarter."],
+    ["bad", "Tell him he has to be perfect from here on.", "He lines up the next one shaking."],
+  ], "Asking about the emotion helps a teammate regulate it (Tamminen & Crocker, 2013), and so does touch (Kraus et al., 2010). An outcome-focused climate encourages choking (Hill et al., 2011), and perfectionism predicts anxiety (Hall et al., 1998)."),
   d("backup", 4, 575, "backup", "It's the fourth quarter. Your quarterback is hurt. The backup has not played all season, and he is putting on his helmet. What do you tell him?", [
-    ["best", "Tell him his job, then ask which plays he likes.", "He knows the job and he chose two of the plays. First down."],
-    ["good", "Tell him exactly what his job is on this drive.", "He knows the job. He runs a play he hates, and it shows."],
-    ["bad", "Tell him to relax, trust his talent, and go make plays.", "He tries to make all of them at once. Sack."],
-    ["silly", "Alternate him with the punter and let the crowd vote.", "The crowd votes for the punter."],
+    ["best", "Tell him his job, and ask which plays he likes.", "He knows the job and he chose two of the plays. First down."],
+    ["best", "Tell him exactly what his job is on this drive.", "He knows the job. First down."],
+    ["bad", "Tell him to trust his talent and go make plays.", "He tries to make all of them at once. Sack."],
+    ["bad", "Tell him nothing, so he does not overthink it.", "He is not sure what he is supposed to do. Neither is the huddle."],
   ], "The coach names the role and the expectations, and the player accepts or negotiates (Eys et al., 2005). Poor communication leads to role ambiguity and tension (Kang & Seibold, 2017)."),
   d("twominute", 4, 575, "", "You are losing to Texas A&M by four points. There are two minutes left, and you have one time-out. What do you do?", [
-    ["best", "Call time-out and point everyone back to the practiced plan.", "Everyone already knows where to be."],
-    ["good", "Save the time-out and let your quarterback call what he knows.", "It works. You look like a spectator."],
-    ["bad", "Call time-out and draw up a clever new play for this moment.", "Four players run four different plays."],
+    ["best", "Call time-out and point everyone back to the plan.", "Everyone already knows where to be."],
+    ["bad", "Call time-out and draw up a new play for this moment.", "Four players run four different plays."],
+    ["bad", "Call time-out and cover six things they need to fix.", "They remember the first one."],
     ["silly", "Call time-out and ask the marching band what to run.", "The tubas want a reverse."],
-  ], "Teams talk through scenarios ahead of time because there is no time in the moment. A time-out works best when it points the team back at a path they already know (Ishak & Ballard, 2012)."),
+  ], "Teams talk through scenarios ahead of time because there is no time in the moment. A time-out works best when it points the team back at a path they already know (Ishak & Ballard, 2012). The more ideas a coach gives, the less athletes retain (Mesquita et al., 2008)."),
 ];
 
 export const ALTS = [
   d("shout", 1, 500, "cousin", "The game has started. Your cousin is on defense, and she keeps ending up in the wrong spot. The other team is about to snap the ball, and you can yell one thing to her. What do you yell?", [
     ["best", "\"Stay on Rick until he crosses the cone!\"", "She stays on Rick. He does not get the ball."],
-    ["good", "\"Watch number seven the whole way!\"", "She watches him. She is not sure what to do about him."],
-    ["bad", "\"Go left! Go left! Go left! Go left!\"", "She goes left. So does the entire defense."],
+    ["bad", "\"Go left!\"", "She goes left. So does the entire defense."],
+    ["bad", "\"Cover him!\"", "She covers somebody. It is not Rick."],
     ["silly", "\"Remember everything we said in the car today!\"", "Nobody remembers the car."],
   ], "Two-word directives like \"Go left!\" coordinated players less well than more specific instructions (LeCouteur & Feo, 2011).", { slot: "blowup" }),
   d("open", 1, 500, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You have three things to tell them. What do you open with?", [
     ["best", "Something the team did well in the first half.", "They are still listening when you get to the two fixes."],
-    ["good", "The two fixes, and then something they did well.", "They hear the fixes. A few heads are already down."],
+    ["bad", "The two fixes, and then something they did well.", "A few heads are down before you reach the good part."],
     ["bad", "The biggest mistake, while it is still fresh.", "Your brother knows it was him. He hears nothing after that."],
     ["silly", "A moment of silence for the first half.", "It lasts four minutes. Halftime is over."],
   ], "In a short break, the first point should highlight something positive about the game so far, and the second and third points should give corrective feedback (Andrews, 2015).", { slot: "push" }),
+  d("dissent", 2, 500, "jerry", "Jerry Jones starts the interview with a plan of his own. He says he will call the first play of the game himself, from the owner's box. You think it is a bad idea. What do you say?", [
+    ["best", "\"Here is the play I would open with, and why.\"", "Jerry listens. \"All right. Yours.\""],
+    ["best", "\"Play calls come from the sideline, not the box.\"", "Jerry nods slowly. \"Fair.\""],
+    ["bad", "\"Ha. And I'll go sell the hot dogs up there, Jerry.\"", "Jerry laughs. He still calls the first play."],
+    ["silly", "\"Fine, but I own the team for one quarter.\"", "Jerry checks whether you are serious. You are."],
+  ], "Dissent to a coach worked when it came with potential solutions and direct, factual appeals, and without humor (Cranmer, Buckner, et al., 2017).", { slot: "culture" }),
+  d("conflict", 3, 800, "", "It's halftime in Dallas. Two of your assistant coaches are arguing over who calls the defense in the second half. What do you do?", [
+    ["best", "Have each say what he needs, and build one plan from both.", "They walk out with one plan, and both of them call it theirs."],
+    ["best", "Stay out of it for now, and let it cool off.", "By the end of halftime they have settled it."],
+    ["bad", "Let the louder one have it, to keep the peace.", "The quiet one stops talking on the headset."],
+    ["bad", "Decide it yourself, and end the discussion.", "It ends. They argue again in the third quarter."],
+  ], "The most effective ways to resolve conflict were collaborating, compromising and avoiding. The least effective were competing and accommodating (Laios & Tsetzis, 2005).", { slot: "commercial" }),
+  d("cohesion", 4, 575, "", "You are coaching Texas against Texas A&M, at night, in front of a hundred thousand people. Kickoff is in ten minutes, and you want this team closer before it runs out. What do you do?", [
+    ["best", "Tease a few seniors by name in front of everyone.", "The room laughs, seniors included."],
+    ["best", "Tell them how good Texas A&M is.", "They get quiet, and they get closer."],
+    ["bad", "Call out the player who was late, in front of everyone.", "He looks at the floor. So does everybody else."],
+    ["bad", "Give the starters the good seats on the bench.", "The backups notice."],
+  ], "Sarcasm and teasing, motivational speeches and the quality of the opponent raised cohesion. Inequity, embarrassment and ridicule lowered it (Turman, 2003).", { slot: "returner" }),
   d("points", 3, 800, "", "You are in the locker room at halftime, losing by ten. Your assistants hand you a list of nine adjustments, and you have four minutes with the offense. What do you do with the list?", [
     ["best", "Give them the two biggest and skip the rest.", "They come out and run both."],
     ["good", "Give them four, and say which two matter most.", "They get the two. The other two are gone by kickoff."],
@@ -234,7 +259,7 @@ export const popScene = (dec, away) => (away ? "Your phone buzzes on the sidelin
 const REVIEW = { say: "Read the review this comes from", url: "https://scholarcommons.scu.edu/crt/vol36/iss4/1" };
 export const LINKS = {
   stars: REVIEW, blowup: REVIEW, push: REVIEW, culture: REVIEW, power: REVIEW, receiver: REVIEW, speech: REVIEW,
-  returner: REVIEW, kicker: REVIEW, backup: REVIEW, twominute: REVIEW, shout: REVIEW, open: REVIEW, points: REVIEW,
+  returner: REVIEW, kicker: REVIEW, backup: REVIEW, twominute: REVIEW, shout: REVIEW, open: REVIEW, points: REVIEW, dissent: REVIEW, conflict: REVIEW, cohesion: REVIEW,
   "pop-titleix": { say: "Read the law", url: "https://www.law.cornell.edu/uscode/text/20/1681" },
   "pop-1968": { say: "Read \"The White Man in That Photo\"", url: "https://www.filmsforaction.org/articles/the-white-man-in-that-photo/" },
 };
@@ -311,7 +336,7 @@ export function judge(decision, pick) {
   }
   const opt = decision.opts.find(o => o.k === pick);
   if (!opt) return null;
-  return { rank: opt.k, points: Math.round(decision.points * SHARE[opt.k]), over: opt.k === "over", then: opt.then };
+  return { rank: opt.rank, points: Math.round(decision.points * SHARE[opt.rank]), over: opt.rank === "over", then: opt.then };
 }
 
 /** A run, scored. log is { seed, picks: { id: key | [key, key] }, calls: ["run" | "pass", ...] }.

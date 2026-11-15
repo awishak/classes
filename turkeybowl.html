@@ -71,6 +71,8 @@
       @keyframes slam { from { transform: scale(3.4); opacity: 0; } }
       #banner.r-best { color: #6ee7a0; } #banner.r-good { color: #8ecbff; } #banner.r-bad { color: #ffb347; } #banner.r-silly { color: #e0b0ff; } #banner.r-over { color: #ff8a80; }
       .strip { display: flex; gap: 0.5cqw; flex-wrap: wrap; } .strip i { width: 2cqw; height: 2cqw; border: 0.2cqw solid #0b1410; background: currentColor; }
+      .answers { display: flex; flex-direction: column; gap: 1.6cqw; } .answers .q { display: flex; flex-direction: column; gap: 0.5cqw; border-top: 0.2cqw solid #3b55c4; padding-top: 1.2cqw; }
+      .ans { margin: 0; font-size: 2.2cqw; line-height: 1.15; color: #dfe6ff; } .ans b { display: inline-block; min-width: 13cqw; font: 400 1.1cqw 'Press Start 2P', monospace; } .ans.mine { background: #223380; outline: 0.2cqw solid #ffd75e; }
       #banner.low { top: auto; bottom: 9%; }
       .rank { font-family: 'Press Start 2P', monospace; font-size: 1.7cqw; }
       .r-best { color: #6ee7a0; } .r-good { color: #8ecbff; } .r-bad { color: #ffb347; } .r-silly { color: #e0b0ff; } .r-over { color: #ff8a80; }
@@ -106,7 +108,7 @@
         .opt canvas { width: 10cqw; height: 10cqw; } .opt kbd { display: none; }
         .who, .pts { font-size: 2.6cqw; } .rank { font-size: 3.6cqw; } .go { font-size: 3.2cqw; padding: 2.6cqw 3.6cqw; } .call { font-size: 5cqw; padding: 5cqw 2cqw; } .call small { font-size: 3.2cqw; }
         .more, .small { font-size: 3.6cqw; } table { font-size: 3.6cqw; } th { font-size: 2.2cqw; } .tag { font-size: 2cqw; } input[type=text] { font-size: 4.4cqw; width: 100%; padding: 2.4cqw; }
-        #hud { font-size: 2.2cqw; } .tool { font-size: 2.8cqw; padding: 1.2cqw 2cqw; } #banner { font-size: 6cqw; top: 14cqw; } #banner.big { font-size: 8cqw; top: 16cqw; } #banner.slam { font-size: 8cqw; top: 14cqw; } #banner.low { top: 38cqw; bottom: auto; } .card.talk { min-height: 24cqw; } .strip i { width: 4cqw; height: 4cqw; }
+        #hud { font-size: 2.2cqw; } .tool { font-size: 2.8cqw; padding: 1.2cqw 2cqw; } #banner { font-size: 6cqw; top: 14cqw; } #banner.big { font-size: 8cqw; top: 16cqw; } #banner.slam { font-size: 8cqw; top: 14cqw; } #banner.low { top: 38cqw; bottom: auto; } .ans { font-size: 4.4cqw; } .ans b { display: block; font-size: 2.4cqw; } .card.talk { min-height: 24cqw; } .strip i { width: 4cqw; height: 4cqw; }
         #pad { top: 34cqw; bottom: auto; } #pad button { width: 16cqw; height: 16cqw; font-size: 5cqw; } #pad.throw button { width: 34cqw; }
         #hint { top: 50cqw; bottom: auto; font-size: 2.6cqw; } .board { max-height: none; }
       }

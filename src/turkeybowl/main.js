@@ -371,7 +371,8 @@ async function decide(id) {
   const r = card(label);
   r.append(el("div", "rank r-" + got.rank, RANK_SAY[got.rank] + "   +" + got.points));
   r.append(el("p", "say", "You chose: " + chose));
-  r.append(el("p", "scene", VERDICT[got.rank]));
+  const bests = dec.pick ? 1 : dec.opts.filter(o => o.rank === "best").length;
+  r.append(el("p", "scene", got.rank === "best" && bests > 1 ? "That works. It was one of the best things you could have done." : VERDICT[got.rank]));
   r.append(el("p", "say", got.then));
   r.append(el("p", "why", dec.after));
   const link = LINKS[id];
@@ -667,6 +668,22 @@ function boardCard(k, rows) {
   });
   wrap.append(tb); k.append(wrap);
 }
+/** Every question of the run that just ended, each option with its rank, the player's own marked. Andrew, 2026-11-14: ranks are shown at the end of a run. */
+function answers(k) {
+  const box = el("div", "answers");
+  flowFor(G.seed).forEach(f => {
+    if (!f.d || !Object.prototype.hasOwnProperty.call(G.picks, f.d)) return;
+    const dec = decisionOf(f.d), pick = G.picks[f.d], q = el("div", "q");
+    q.append(el("div", "who", "A QUESTION ABOUT " + (dec.topic || "the game").toUpperCase()), el("p", "say", dec.scene));
+    const list = dec.pick ? POWER.map(p => ({ k: p.k, text: p.text, rank: p.w >= 1 ? "best" : p.w > 0 ? "good" : "silly" })) : dec.opts;
+    list.slice().sort((a, b) => ["best", "good", "bad", "silly", "over"].indexOf(a.rank) - ["best", "good", "bad", "silly", "over"].indexOf(b.rank)).forEach(o => {
+      const mine = Array.isArray(pick) ? pick.includes(o.k) : pick === o.k, row = el("p", "ans" + (mine ? " mine" : ""));
+      row.append(el("b", "r-" + o.rank, RANK_SAY[o.rank]), document.createTextNode(o.text + (mine ? "  (you)" : ""))); q.append(row);
+    });
+    q.append(el("p", "why", dec.after)); box.append(q);
+  });
+  k.append(box);
+}
 async function checkpoint(who, textLines, label) {
   const k = card(who); textLines.forEach(x => k.append(el("p", "say", x)));
   const r = tally(); k.append(el("div", "pts", r.score.toLocaleString("en-US") + " of " + MAX_SCORE.toLocaleString("en-US")));
@@ -674,6 +691,7 @@ async function checkpoint(who, textLines, label) {
   G.log.push({ who, lines: textLines }); showBack();
   const out = await post();
   if (out && out.ok) boardCard(k, out.rows); else k.append(el("p", "small", "The leaderboard did not answer. Your score is still on this screen."));
+  if (label === "Play again") { const see = el("button", "tool", "See every answer"); see.type = "button"; see.onclick = () => { see.remove(); answers(k); k.querySelector(".answers").scrollIntoView({ block: "start" }); }; k.append(see); }
   await next(k, label);
 }
 
