@@ -37,7 +37,7 @@
       #banner.big { font-size: 6.4cqw; top: 22%; }
       @keyframes flash { 50% { color: #fff; transform: scale(1.06); } }
       #ui { position: absolute; left: 2.2%; right: 2.2%; bottom: 2.4%; z-index: 5; display: flex; flex-direction: column; gap: 1cqw; max-height: 78%; }
-      #ui.top { bottom: auto; top: 13%; left: 18%; right: 18%; }
+      #ui.top { bottom: auto; top: 21%; left: 18%; right: 18%; }
       .card { background: linear-gradient(#18246be8, #0a1238f0); border: 0.32cqw solid #f4f1e6; border-radius: 1.4cqw; box-shadow: 0 0.6cqw 0 rgba(0,0,0,.5), inset 0 0 0 0.2cqw #3b55c4; padding: 1.5cqw 1.8cqw; display: flex; flex-direction: column; gap: 1cqw; overflow: auto; animation: rise .22s ease both; }
       @keyframes rise { from { transform: translateY(1.4cqw); opacity: 0; } }
       /* A question: what it is about and the situation on the left, the answers listed one to four on the right. */
@@ -73,6 +73,9 @@
       .strip { display: flex; gap: 0.5cqw; flex-wrap: wrap; } .strip i { width: 2cqw; height: 2cqw; border: 0.2cqw solid #0b1410; background: currentColor; }
       .answers { display: flex; flex-direction: column; gap: 1.6cqw; } .answers .q { display: flex; flex-direction: column; gap: 0.5cqw; border-top: 0.2cqw solid #3b55c4; padding-top: 1.2cqw; }
       .ans { margin: 0; font-size: 2.2cqw; line-height: 1.15; color: #dfe6ff; } .ans b { display: inline-block; min-width: 13cqw; font: 400 1.1cqw 'Press Start 2P', monospace; } .ans.mine { background: #223380; outline: 0.2cqw solid #ffd75e; }
+      /* The announcer's line, under the scoreboard: shown while it is spoken, and readable with the sound off. */
+      #booth { position: absolute; left: 50%; top: 5.4cqw; transform: translateX(-50%); max-width: 62%; z-index: 8; pointer-events: none; background: #0b1410e6; border: 0.22cqw solid #ffd75e; border-radius: 0.8cqw; padding: 0.5cqw 1.1cqw; font: 400 2cqw/1.12 'Jersey 20', 'Press Start 2P', monospace; color: #fff; text-align: center; opacity: 0; transition: opacity .2s; }
+      #booth.on { opacity: 1; } #booth b { font: 400 0.9cqw 'Press Start 2P', monospace; color: #ffd75e; margin-right: 0.9cqw; vertical-align: middle; }
       #banner.low { top: auto; bottom: 9%; }
       .rank { font-family: 'Press Start 2P', monospace; font-size: 1.7cqw; }
       .r-best { color: #6ee7a0; } .r-good { color: #8ecbff; } .r-bad { color: #ffb347; } .r-silly { color: #e0b0ff; } .r-over { color: #ff8a80; }
@@ -108,7 +111,7 @@
         .opt canvas { width: 10cqw; height: 10cqw; } .opt kbd { display: none; }
         .who, .pts { font-size: 2.6cqw; } .rank { font-size: 3.6cqw; } .go { font-size: 3.2cqw; padding: 2.6cqw 3.6cqw; } .call { font-size: 5cqw; padding: 5cqw 2cqw; } .call small { font-size: 3.2cqw; }
         .more, .small { font-size: 3.6cqw; } table { font-size: 3.6cqw; } th { font-size: 2.2cqw; } .tag { font-size: 2cqw; } input[type=text] { font-size: 4.4cqw; width: 100%; padding: 2.4cqw; }
-        #hud { font-size: 2.2cqw; } .tool { font-size: 2.8cqw; padding: 1.2cqw 2cqw; } #banner { font-size: 6cqw; top: 14cqw; } #banner.big { font-size: 8cqw; top: 16cqw; } #banner.slam { font-size: 8cqw; top: 14cqw; } #banner.low { top: 38cqw; bottom: auto; } .ans { font-size: 4.4cqw; } .ans b { display: block; font-size: 2.4cqw; } .card.talk { min-height: 24cqw; } .strip i { width: 4cqw; height: 4cqw; }
+        #hud { font-size: 2.2cqw; } .tool { font-size: 2.8cqw; padding: 1.2cqw 2cqw; } #banner { font-size: 6cqw; top: 14cqw; } #banner.big { font-size: 8cqw; top: 16cqw; } #banner.slam { font-size: 8cqw; top: 14cqw; } #banner.low { top: 38cqw; bottom: auto; } #booth { top: 9cqw; max-width: 92%; font-size: 3.6cqw; } #booth b { font-size: 1.8cqw; } .ans { font-size: 4.4cqw; } .ans b { display: block; font-size: 2.4cqw; } .card.talk { min-height: 24cqw; } .strip i { width: 4cqw; height: 4cqw; }
         #pad { top: 34cqw; bottom: auto; } #pad button { width: 16cqw; height: 16cqw; font-size: 5cqw; } #pad.throw button { width: 34cqw; }
         #hint { top: 50cqw; bottom: auto; font-size: 2.6cqw; } .board { max-height: none; }
       }
@@ -125,6 +128,7 @@
           <button id="back" class="tool" type="button" disabled>Back</button>
           <button id="mute" class="tool" type="button">Sound on</button>
         </div>
+        <div id="booth" aria-live="polite"></div>
         <div id="banner"></div>
         <div id="hint"></div>
         <div id="pad"></div>

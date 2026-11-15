@@ -297,6 +297,8 @@ export const CAST = {
   backup: { skin: "#c98a5a", shirt: "#1b2a6b", pants: "#c9d3e6", helmet: "#c9d3e6", dot: "#1d3c8f", number: "14" },
   returner: { skin: "#8a5a3a", shirt: "#bf5700", pants: "#f4f1e6", helmet: "#f4f1e6", number: "5" },
   you: { skin: "#e8b98a", hair: "#3a2a1e", shirt: "#e2622a", number: "1" },
+  coachA: { skin: "#c98a5a", hair: "#1e1410", shirt: "#1b2440", cap: "#1d3c8f" },
+  coachB: { skin: "#f0c8a0", hair: "#e3e6ea", shirt: "#c9d3e6", glasses: true, bald: true },
   grandma: { skin: "#f0c8a0", hair: "#e3e6ea", shirt: "#8a5ac0", pants: "#4a4058", glasses: true, bun: true },
 };
 export function cast(c, who, x, y, s = 1, extra = {}) { if (who === "jerry") jerry(c, x, y, s, extra); else if (CAST[who]) person(c, x, y, who === "nephew" ? s * 0.7 : s, { ...CAST[who], ...extra }); }
