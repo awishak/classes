@@ -106,7 +106,42 @@ export function couch(t, picks) {
   if (b && b.id === "blowup") out.push(ok(b) ? ["brother", "\"I lost it this morning, and I got asked how I was doing. I caught the next one.\"", { angry: false, grin: true, armUp: false }] : ["brother", "\"I got yelled at in front of everybody this morning. I'm watching the other channel.\"", { angry: true, armUp: false }]);
   else if (b) out.push(ok(b) ? ["cousin", "\"'Stay on Rick until he crosses the cone.' I knew exactly what to do.\"", { sad: false, grin: true }] : ["cousin", "\"I got told 'go left.' Left of what?\"", { sad: true }]);
   if (h) out.push(ok(h) ? ["sister", "\"That halftime talk this morning worked on me, and I don't even like football.\"", { armUp: false, grin: true }] : ["sister", "\"After that halftime talk this morning, I nearly went home.\"", { armUp: false, sad: true }]);
+  out.push(JUDGE);
   return out;
 }
 /** Can the player read the defense? Only if at least half of this level's answers so far were best or good. */
 export function clearRead(ranks) { return !ranks.length || ranks.filter(r => r === "best" || r === "good").length * 2 >= ranks.length; }
+
+// ─── the rest of the reading list, in the mouths of the people in the game ───
+// Andrew, 2026-11-14: "i want stuff from other readings." Each line is the
+// reading's idea in the character's own words, said once, at a point in the
+// day where it fits. The key says when: "q:" before a question's slot, "a:"
+// after it, "s:" after a cut scene. who is a person, "ann" for the announcer,
+// or "text:<who>" for a text message. The reading is named beside each line.
+export const ASIDES = {
+  "q:stars": [
+    ["cousin", "\"Park rules. We call our own fouls, and the winners keep the field.\"", { sad: false }],                                           // "The Rules of Pickup Basketball" (SB Nation)
+    ["sister", "\"And none of that co-ed league stuff where a girl's touchdown counts double. I'll score regular ones.\"", { armUp: false }],        // "Why Co-Ed Sports Leagues Are Never Really Co-Ed" (Deadspin)
+  ],
+  "s:kickoff": [["nephew", "\"My travel team costs more than this whole park. Dad says kids' sports is a fifteen-billion-dollar business now.\""]],   // "How Kids Sports Became a $15 Billion Industry" (Time)
+  "s:half1": [["niece", "\"At school the boys get handed a baseball and the girls get handed a softball. Nobody has ever told me why.\"", { armUp: false }]],   // "Is Softball Sexist?" (NYT)
+  "q:culture": [["jerry", "\"Before we start. Congress let the league sell its television rights as one package back in 1961. The same law keeps us off Fridays and Saturdays in the fall, for the high schools and the colleges. Thursday, though? Thursday is mine.\""]],   // Sports Broadcasting Act of 1961
+  "q:jet": [["jerry", "\"A coach once sent his four best players home before a big television game. The league fined the team a quarter of a million dollars. So tell me. Do you owe the people a show?\""]],   // "Are You Not Entertained?" (Klosterman, Grantland)
+  "s:dallas": [
+    ["jerry", "\"Look up. Every new stadium has fewer cheap seats and more clubs and suites. That's where the money is.\"", { armUp: true }],       // "How the Sports Stadium Went Luxe" (New Yorker)
+    ["ann", "That flyover was lovely. For years, the military paid teams for moments like that one."],                                             // "Veterans Affairs: The Uneasy Marriage of Military Money and the NFL" (Grantland)
+  ],
+  "q:receiver": [["ann", "A network once ordered its football theme by asking for Batman on steroids. Ours was written by a turkey."]],             // "Batman on Steroids" (Deadspin)
+  "q:commercial": [["jerry", "\"Helmets were plain until television came along. Then somebody worked out that you could sell the picture on the side.\""]],   // "How TV and Roy Rogers Helped Put Logos on NFL Helmets" (Radom)
+  "q:returner": [["text:brother", "\"I put ten dollars on your kicker missing his first field goal. Nothing personal.\""]],                         // NCAA on prop bets
+  "a:kicker": [
+    ["text:brother", "\"He missed! I won! Tell him thanks from me.\""],
+    ["ann", "The NCAA has asked states to stop taking bets on single players. The players hear from the people who make them."],                  // "NCAA Urges Gambling Commissions to Eliminate Prop Bets"
+  ],
+  "q:backup": [["returner", "\"They call us student-athletes, coach. The NCAA made that word up so it would not have to pay for players who got hurt.\"", { sad: true }]],   // "The Shame of College Sports" (Branch, The Atlantic)
+  "q:twominute": [["kicker", "\"Coach, I've got a brand deal riding on this drive. Name, image and likeness. Mostly image.\"", { grin: true }]],      // the Livvy Dunne NIL piece (ESPN)
+};
+/** After a stopped play in a stadium: the quarterback who compliments the man who hit him. "Andrew Luck: The NFL's Most Perplexing Trash Talker" (WSJ). */
+export const NICE_HIT = "The quarterback just told the man who tackled him, nice hit. He meant it.";
+/** Grandma, scoring the turkey. "The Quandary of Subjective Sports" (NPR). */
+export const JUDGE = ["grandma", "\"And I gave that turkey's halftime dance a 9.4. Put a judge on anything, and somebody goes home mad.\"", {}];

@@ -28,7 +28,7 @@
 // coach.
 
 import { flowFor, decisionOf, judge, scoreRun, lookFor, orderFor, popScene, POWER, RANK_SAY, VERDICT, LINKS, MAX_SCORE, shortName, ALTS } from "./script.js";
-import { SHOW, NAMES, ANN, RECORDED, took, parkTarget, dallasTarget, jerryRemembers, couch, clearRead } from "./story.js";
+import { SHOW, NAMES, ANN, RECORDED, took, parkTarget, dallasTarget, jerryRemembers, couch, clearRead, ASIDES, NICE_HIT } from "./story.js";
 import * as A from "./art.js";
 import { accessToken } from "../engine/session.js";
 
@@ -346,6 +346,22 @@ async function situation(id, dec, base, phone) {
   for (const [who, line, mood] of S.shots) { if (phone) { paint = wide; await talk("A TEXT FROM HOME", line); } else await shot(who, line, mood, bg); }
   cine(false);
 }
+const sceneBg = () => (G.jerry ? ["#b9763a", "#ffe9b0"] : G.where === "park" ? ["#a8551c", "#f6c945"] : G.where === "dallas" ? ["#1d3c8f", "#c9d3e6"] : ["#8a3f00", "#ffd9a8"]);
+/** Something from the reading list, said by somebody in the game, at the point in the day where it fits. */
+async function aside(key) {
+  const list = ASIDES[key]; if (!list) return;
+  cine(true); ui.textContent = ""; say("");
+  const wide = paint, boxed = (t) => { wide(t); A.letterbox(c); };
+  for (const [who, line, mood] of list) {
+    if (who === "ann") { paint = boxed; announce("", line); await beat(1500 + line.length * 55); }
+    else if (who.startsWith("text:")) {
+      const s0 = now();
+      paint = (t) => { boxed(t); c.save(); c.translate(270, 50 + (t - s0 < 0.8 ? Math.sin(t * 60) * 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 100, 170); c.fillStyle = "#dff3ff"; c.fillRect(7, 16, 86, 134); c.fillStyle = "#2f6fc4"; c.fillRect(14, 28, 66, 18); c.fillRect(14, 52, 52, 14); c.fillRect(14, 72, 60, 14); c.restore(); };
+      sfx.good(); await talk("A TEXT FROM " + NAMES[who.slice(5)], line);
+    } else await shot(who, line, mood || {}, sceneBg());
+  }
+  paint = wide; cine(false);
+}
 /** Back home during the Texas game: the family, each remembering how the morning went. */
 async function family() {
   cine(true); ui.textContent = ""; say("");
@@ -369,6 +385,46 @@ function backdrop(id) {
   return (t) => { A.park(c, t); A.leaves(c, t); };
 }
 
+// Andrew, 2026-11-14: "after i choose something bad, i want to see something bad happen on screen."
+// A bad or ludicrous answer is followed by what it cost, played out: the other team running through
+// yours, a fumble, a sack, a kick going wide, somebody walking off, a bench under rain, or Jerry fuming.
+const BAD = { breakfast: "sick", jet: "sick", stars: { bad: "gain", silly: "grandma" }, blowup: "walk", shout: "gain", push: "bench", open: "bench", culture: "jerry", dissent: "jerry", power: "jerry",
+  receiver: "sack", commercial: "gain", conflict: "bench", speech: "bench", points: "bench", returner: "fumble", cohesion: "bench", kicker: "wide", backup: "sack", twominute: "sack",
+  "pop-stacking": "walk", "pop-titleix": "walk", "pop-1968": "walk" };
+const rainCloud = (x, y, e) => { c.fillStyle = "rgba(60,64,90,.92)"; [[0, 0, 26], [26, 6, 20], [-24, 8, 18]].forEach(([dx, dy, r]) => { c.beginPath(); c.arc(x + dx, y + dy, r, 0, 7); c.fill(); }); c.fillStyle = "#7fd3ff"; for (let i = 0; i < 10; i++) c.fillRect(x - 40 + (i * 17) % 80, y + 22 + ((e * 180 + i * 37) % 90), 2, 9); };
+async function consequence(id, got, who, phone, base) {
+  let kind = BAD[id]; if (kind && typeof kind === "object") kind = kind[got.rank] || kind.bad;
+  if (!kind || (kind === "walk" && (phone || !who))) return;
+  const where = G.where, s0 = now(), leaf = (t) => { if (where === "park") A.leaves(c, t, 30); else if (where === "texas") A.beams(c, t); };
+  let hit = false; const bang = () => { if (!hit) { hit = true; sfx.thud(); hitStop(140); shake(380); } };
+  if (kind === "sick") paint = (t) => { A.speedLines(c, t, "#3f6a2a", "#a8d070"); A.bust(c, "you", 320 + Math.sin(t * 30) * 3, 2.1, { face: FACE, sad: true, sweat: true, shirt: where === "park" ? "#e2622a" : "#1b2440", number: "" }); A.letterbox(c); };
+  else if (kind === "jerry") { shake(420); paint = (t) => { const e = t - s0; A.burst(c, t, 320, 150, "#7a1212", "#ff8a80"); A.bust(c, "jerry", 320 + Math.sin(t * 40) * 2, 2.1, { angry: true, grin: false }); c.fillStyle = "rgba(255,255,255,.85)"; [[-1, 0], [1, 0.4]].forEach(([d, o]) => { const p = ((e + o) * 1.4) % 1; c.beginPath(); c.arc(320 + d * (120 + p * 30), 120 - p * 90, 10 + p * 14, 0, 7); c.fill(); }); A.letterbox(c); }; }
+  else if (kind === "bench") paint = (t) => { const e = t - s0; A.sideline(c, t, where, FACE); for (let i = 0; i < 5; i++) rainCloud(72 + i * 92, 96 + Math.sin(e * 2 + i) * 4, e + i * 0.3); };
+  else if (kind === "walk") paint = (t) => { const e = t - s0; base(t); A.cast(c, who, 500 + Math.max(0, e - 0.6) * 170, 250, 1.3, { angry: true, grin: false, armUp: false, look: 3, ...(G.where === "texas" ? TX : {}) }); };
+  else if (kind === "gain" || kind === "grandma") paint = (t) => {
+    const e = t - s0, x = Math.max(44, 610 - e * 210), in_ = x <= 44; field(t, where, 0, false);
+    for (let i = 0; i < 5; i++) { const px = 140 + i * 84, passed = x < px; A.player(c, px, 228 + i * 25, { ...kin(where, "us", i), down: passed, face: i === 2 && where === "park" ? FACE : null }, passed ? 0 : Math.floor(t * 8) + i); }
+    const r = kind === "grandma" ? { ...kin(where, "them", 1), hair: "#e3e6ea", skin: "#f0c8a0", long: false } : kin(where, "them", 1);
+    A.player(c, x, in_ ? 284 - Math.abs(Math.sin(e * 7)) * 22 : 284, { ...r, arms: in_ ? 1 : 0 }, in_ ? 0 : Math.floor(t * 10)); A.ball(c, x - 10, in_ ? 250 - Math.abs(Math.sin(e * 7)) * 22 : 258); leaf(t);
+  };
+  else if (kind === "fumble") paint = (t) => {
+    const e = t - s0, lost = e > 0.95, x = Math.min(330, 140 + e * 200), f = Math.max(0, e - 0.95); field(t, where, 0, false); if (lost) bang();
+    A.player(c, x, 280, { ...kin(where, "us", 3), down: e > 1.2 }, lost ? 0 : Math.floor(t * 9));
+    const bx = lost ? 338 + Math.min(f, 0.9) * 110 : x + 8, by = lost ? Math.min(340, 256 - 190 * f + 300 * f * f) : 256, got2 = f > 1.1;
+    A.player(c, got2 ? bx : 600 - Math.min(f, 1.1) / 1.1 * (600 - bx - 14), 300, { ...kin(where, "them", 2), arms: got2 ? 1 : 0 }, got2 ? 0 : Math.floor(t * 10));
+    if (got2) A.ball(c, bx + 2, 244); else A.ball(c, bx, by, f * 14); leaf(t);
+  };
+  else if (kind === "sack") paint = (t) => {
+    const e = t - s0, p = Math.min(1, e / 0.9); field(t, where, 0, false); if (p >= 1) bang();
+    A.player(c, 170, 290, { ...kin(where, "us", 6), down: p >= 1, face: where === "park" ? FACE : null }, 0);
+    for (let i = 0; i < 3; i++) A.player(c, 540 - p * (340 - i * 16), 240 + i * 34 + (290 - (240 + i * 34)) * p, kin(where, "them", i), p >= 1 ? 0 : Math.floor(t * 10) + i);
+    if (p >= 1) { for (let k = 0; k < 5; k++) A.star(c, 170 + Math.cos(t * 6 + k * 1.26) * 26, 232 + Math.sin(t * 6 + k * 1.26) * 8, 5, "#ffd75e", "#1c1626"); A.ball(c, 150 - Math.min(60, (e - 0.9) * 90), Math.min(344, 270 + (e - 0.9) * 160), e * 9); } else A.ball(c, 180, 266);
+    leaf(t);
+  };
+  else if (kind === "wide") { sfx.snap(); paint = (t) => { const p = clamp((t - s0) / 1.3, 0, 1); A.stadium(c, t, { team: "texas", endzone: true }); A.ball(c, 250 + p * 340, 300 - Math.sin(p * Math.PI * 0.8) * 250, p * 9); A.beams(c, t); }; }
+  say(got.then, "line low"); if (kind !== "sack" && kind !== "fumble" && kind !== "jerry") sfx.bad(); if (kind === "gain" || kind === "grandma" || kind === "wide") sfx.boo();
+  await beat(3600); say("");
+}
 async function decide(id) {
   const dec = decisionOf(id), sid = dec.slot || id, pop = !dec.level, dallas = G.where !== "park", base = backdrop(sid);
   const who = ["commercial", "push", "speech", "breakfast", "jet"].includes(sid) ? "" : dec.level === 2 ? "jerry" : dec.who;
@@ -426,7 +482,9 @@ async function decide(id) {
   G.streak = got.rank === "best" ? (G.streak || 0) + 1 : 0;
   say(G.streak >= 3 ? G.streak + " BEST CALLS IN A ROW" : RANK_SAY[got.rank].toUpperCase(), "slam low r-" + got.rank); showHud();
   if (got.rank === "silly" || got.rank === "over") announce(got.rank); else if (G.streak === 3) announce("streak");
-  await beat(1500); say(""); cine(false);
+  await beat(1500); say("");
+  if (got.rank === "bad" || got.rank === "silly") await consequence(sid, got, who, phone, base);
+  cine(false);
   paint = (t) => { base(t); if (who && !phone) A.cast(c, who, 500, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}), ...(got.rank === "best" ? { grin: true } : got.rank === "bad" ? { sad: true, angry: false } : {}) }); };
   fx = got.rank === "good" ? null : { kind: got.rank, start: now(), x: who && !phone ? 530 : 320, y: who && !phone ? 84 : 110 };
   const chose = Array.isArray(pick) ? pick.map(x => POWER.find(p => p.k === x).text).join(" and ") : dec.opts.find(o => o.k === pick).text;
@@ -611,7 +669,7 @@ async function plays() {
   music.stop(); G.busy = false; showBack();
   let word;
   if (good) { G.us += 7; word = "Touchdown."; await touchdown(where); }
-  else { word = call === "run" ? "Stopped at the line. You punt." : "Incomplete. You punt."; say(call === "run" ? "STOPPED AT THE LINE" : "INCOMPLETE", "slam"); sfx.bad(); hitStop(160); shake(300); announce(call === "run" ? "stop" : "inc"); await wait(1700); say("YOU PUNT."); await wait(1500); }
+  else { word = call === "run" ? "Stopped at the line. You punt." : "Incomplete. You punt."; say(call === "run" ? "STOPPED AT THE LINE" : "INCOMPLETE", "slam"); sfx.bad(); hitStop(160); shake(300); announce(where === "park" || call !== "run" ? (call === "run" ? "stop" : "inc") : "", where === "park" || call !== "run" ? undefined : NICE_HIT); await wait(1700); say("YOU PUNT."); await wait(1500); }
   say(""); showHud(); paint = idle(where);
   G.log.push({ who: "THE LAST DRIVE", lines: ["The other team: " + look.say, "You called a " + call + ", " + PLAYS[call][which].name.toLowerCase() + ". " + word] }); showBack();
 }
@@ -836,7 +894,7 @@ async function run() {
   for (let i = G.step; i < flow.length; i++) {
     let step = flow[i];
     if (step.s === "title") { G.step = i + 1; continue; }
-    if (step.s) await scene(step.s);
+    if (step.s) { await scene(step.s); await aside("s:" + step.s); }
     else if (step.d) {
       // The story's scores, said out loud before the question that depends on them.
       const slotOf = decisionOf(step.d).slot || step.d;
@@ -844,8 +902,10 @@ async function run() {
       if (slotOf === "speech") G.q = "Q4";
       if (slotOf === "kicker") { G.q = "Q2"; G.us = 7; G.them = 7; showHud(); }
       if (slotOf === "twominute") { G.q = "Q4"; G.them = 21; G.us = 17; say("TWO MINUTES LEFT  17 - 21"); showHud(); await wait(1900); say(""); }
+      await aside("q:" + slotOf);
       const got = await decide(step.d); step = { ...step, d: slotOf };
       ui.textContent = "";   // the answered card comes down before anything else is drawn
+      if (!got.over) await aside("a:" + slotOf);
       if (got.over) { await ending(slotOf); store.set(SAVE, null); return; }
       if (step.d === "kicker" && (got.rank === "best" || got.rank === "good")) { G.us += 3; paint = idle("texas"); say("YOUR KICKER MAKES THE NEXT ONE FROM 47"); sfx.good(); showHud(); await wait(2200); say(""); }
     } else if (step.p) { if (G.where === "texas") await family(); await plays(); }
