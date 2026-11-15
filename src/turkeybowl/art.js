@@ -282,8 +282,6 @@ export function person(c, x, y, s, o) {
 // Jerry Jones as a cartoon: silver hair swept back, glasses, a tan, a wide
 // grin, a dark suit, and a blue star on a silver pin.
 export const jerry = (c, x, y, s = 1, extra = {}) => person(c, x, y, s, { skin: "#d9996a", hair: "#e6e9ee", shirt: "#1b2440", pants: "#1b2440", suit: true, tie: "#1d3c8f", glasses: true, grin: true, swept: true, tan: true, pin: true, ...extra });
-// The woman who walks by the park, as Andrew described her.
-export const passerby = (c, x, y, s, shades) => person(c, x, y, s, { skin: "#f2cba6", hair: "#f6d878", shirt: "#8a2f52", pants: "#2a2a3a", long: true, shades, look: -1 });
 export const CAST = {
   uncle: { skin: "#d9a06c", hair: "#3a2a1e", shirt: "#a8551c", mustache: true, cap: "#27325c", armUp: true },
   brother: { skin: "#e8b98a", hair: "#5a3a1e", shirt: "#e2622a", angry: true, number: "7", armUp: true },
@@ -340,11 +338,10 @@ export function burst(c, t, x, y, bg = "#e2622a", col = "#ffd75e", n = 28) {
 }
 /** Everything black except a circle of radius r at (x, y). */
 export function iris(c, x, y, r) { c.fillStyle = "#000"; c.beginPath(); c.rect(0, 0, W, H); c.arc(x, y, Math.max(0, r), 0, Math.PI * 2, true); c.fill("evenodd"); }
-/** Somebody from the chest up, filling the screen: who is a CAST key or "jerry" or "passerby". */
+/** Somebody from the chest up, filling the screen: who is a CAST key or "jerry". */
 export function bust(c, who, x, s, extra = {}) {
   s *= 1.55; const y = 158 + 133 * s;   // the head sits in the middle of the screen, and the shoulders run off the bottom
-  if (who === "passerby") person(c, x, y, s, { skin: "#f2cba6", hair: "#f6d878", shirt: "#8a2f52", pants: "#2a2a3a", long: true, ...extra });
-  else cast(c, who, x, y, who === "nephew" ? s / 0.7 : s, extra);
+  cast(c, who, x, y, who === "nephew" ? s / 0.7 : s, extra);
 }
 /** Two feet in cleats on grass, mid-stride. */
 export function cleats(c, t, col = "#e2622a") {

@@ -380,7 +380,7 @@ function backdrop(id) {
   if (id === "speech") return (t) => { A.locker(c, t); for (let i = 0; i < 4; i++) A.cast(c, "kicker", 360 + i * 70, 214, 0.62, { number: String(52 + i * 11) }); A.person(c, 200, 222, 0.95, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "", armUp: true, wave: t }); };
   if (id === "push" || id === "commercial") return (t) => { A.sideline(c, t, where, FACE); if (id === "commercial") A.jerry(c, 150, 220, 0.9, { armUp: true, wave: t }); };
   if (id === "twominute") return (t) => A.sideline(c, t, "texas", FACE);
-  if (G.jerry) return (t) => { A.park(c, t, { time: "gold", field: false }); A.passerby(c, 120, 214, 0.6, "on"); A.leaves(c, t); };
+  if (G.jerry) return (t) => { A.park(c, t, { time: "gold", field: false }); A.leaves(c, t); };
   if (where !== "park") return (t) => A.stadium(c, t, { midfield: true, team: where });
   return (t) => { A.park(c, t); A.leaves(c, t); };
 }
@@ -705,16 +705,8 @@ async function scene(name) {
     let s0 = now();
     paint = (t) => { A.park(c, t, { time: "gold", field: false, scroll: (t - s0) * 30 }); A.leaves(c, t, 90); A.letterbox(c); };
     await talk("AFTER THE GAME", "The park is gold and orange, and the leaves are falling slowly.");
-    s0 = now();
-    paint = (t) => { const e = t - s0; A.park(c, t, { time: "gold", field: false }); A.passerby(c, Math.max(420, 700 - e * 120), 216, 0.72, "on"); A.leaves(c, t, 90); A.letterbox(c); };
-    await beat(2300);
-    // Up close: the sunglasses come down.
-    s0 = now(); let dinged = false;
-    paint = (t) => { const e = t - s0; A.speedLines(c, t, "#8a2f52", "#f6b8d0"); A.bust(c, "passerby", 320, 2.2, { shades: e > 0.9 ? "down" : "on", look: e > 0.9 ? -1 : 0 }, 24); A.letterbox(c); if (e > 0.9 && !dinged) { dinged = true; sfx.good(); hitStop(260); } };
-    await beat(2100);
-    await talk("AFTER THE GAME", "A beautiful blonde woman walks by in sunglasses. She pulls her sunglasses down and looks at you.");
     s0 = now(); announce("jerry");
-    paint = (t) => { const e = t - s0; A.park(c, t, { time: "gold", field: false }); A.passerby(c, 420 + e * 90, 216, 0.72, "on"); A.jerry(c, Math.min(200, -80 + e * 130), 226, 0.95, {}); A.leaves(c, t, 90); A.letterbox(c); };
+    paint = (t) => { const e = t - s0; A.park(c, t, { time: "gold", field: false }); A.jerry(c, Math.min(200, -80 + e * 130), 226, 0.95, {}); A.leaves(c, t, 90); A.letterbox(c); };
     await beat(2300);
     // Up close: Jerry Jones, looking the park over.
     s0 = now(); sfx.sting(); flash(60);
