@@ -15,10 +15,10 @@
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231f6b3a'/%3E%3Cellipse cx='16' cy='16' rx='11' ry='7' fill='%238a4b1e' transform='rotate(-30 16 16)'/%3E%3Cpath d='M12 18l8-5' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Pixelify+Sans:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Jersey+20&display=swap" />
     <style>
       * { box-sizing: border-box; }
-      html, body { margin: 0; height: 100%; background: #07090f; color: #f4f1e6; font-family: 'Pixelify Sans', 'Press Start 2P', monospace; -webkit-font-smoothing: antialiased; overflow: hidden; }
+      html, body { margin: 0; height: 100%; background: #07090f; color: #f4f1e6; font-family: 'Jersey 20', 'Press Start 2P', monospace; -webkit-font-smoothing: antialiased; overflow: hidden; }
       #app { height: 100%; display: grid; place-items: center; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
       /* One screen. The picture fills it, and every word and button sits on the picture. */
       #stage { position: relative; width: min(100vw, calc(100dvh * 16 / 9)); aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden; background: #000; }
@@ -29,48 +29,59 @@
       #hud b { color: #ffd75e; font-weight: 400; }
       #hud img, #hud canvas { width: 3.2cqw; height: 3.6cqw; image-rendering: pixelated; vertical-align: middle; margin-right: 0.8cqw; border: 0.2cqw solid #f4f1e6; }
       #tools { position: absolute; left: 50%; top: 1.2cqw; transform: translateX(-50%); display: flex; gap: 0.8cqw; z-index: 6; }
-      .tool { font: 600 1.25cqw 'Pixelify Sans', 'Press Start 2P', monospace; background: #0c1436d9; color: #f4f1e6; border: 0.2cqw solid #f4f1e6; border-radius: 0.7cqw; padding: 0.5cqw 1cqw; cursor: pointer; }
+      .tool { font: 400 1.6cqw 'Jersey 20', 'Press Start 2P', monospace; background: #0c1436d9; color: #f4f1e6; border: 0.2cqw solid #f4f1e6; border-radius: 0.7cqw; padding: 0.5cqw 1cqw; cursor: pointer; }
       .tool[disabled] { opacity: .35; cursor: default; }
       #banner { position: absolute; left: 0; right: 0; top: 12%; display: grid; place-items: center; pointer-events: none; font-family: 'Press Start 2P', monospace; text-align: center; color: #ffd75e; text-shadow: 0.35cqw 0.35cqw 0 #000, -0.12cqw -0.12cqw 0 #000, 0 0 2cqw rgba(0,0,0,.6); font-size: 4.2cqw; line-height: 1.4; padding: 0 5%; z-index: 4; }
-      #banner.line { font: 600 3cqw/1.3 'Pixelify Sans', 'Press Start 2P', monospace; color: #fff; top: 9%; }
+      #banner.line { font: 400 3.6cqw/1.2 'Jersey 20', 'Press Start 2P', monospace; color: #fff; top: 9%; }
       #banner.flash { animation: flash .4s steps(2) infinite; }
       #banner.big { font-size: 6.4cqw; top: 22%; }
       @keyframes flash { 50% { color: #fff; transform: scale(1.06); } }
       #ui { position: absolute; left: 2.2%; right: 2.2%; bottom: 2.4%; z-index: 5; display: flex; flex-direction: column; gap: 1cqw; max-height: 78%; }
-      #ui.top { bottom: auto; top: 13%; left: 20%; right: 20%; }
+      #ui.top { bottom: auto; top: 13%; left: 18%; right: 18%; }
       .card { background: linear-gradient(#18246be8, #0a1238f0); border: 0.32cqw solid #f4f1e6; border-radius: 1.4cqw; box-shadow: 0 0.6cqw 0 rgba(0,0,0,.5), inset 0 0 0 0.2cqw #3b55c4; padding: 1.5cqw 1.8cqw; display: flex; flex-direction: column; gap: 1cqw; overflow: auto; animation: rise .22s ease both; }
       @keyframes rise { from { transform: translateY(1.4cqw); opacity: 0; } }
       /* A question: what it is about and the situation on the left, the answers listed one to four on the right. */
       .card.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 1.6cqw; align-items: start; }
       .ask { display: flex; flex-direction: column; gap: 1cqw; }
       .who { font-family: 'Press Start 2P', monospace; font-size: 1.3cqw; line-height: 1.6; color: #ffd75e; letter-spacing: .04em; }
-      .scene { margin: 0; font-size: 2.3cqw; font-weight: 600; line-height: 1.3; letter-spacing: .02em; }
-      .say { margin: 0; font-size: 2.05cqw; font-weight: 500; letter-spacing: .02em; line-height: 1.35; color: #dfe6ff; }
+      .scene { margin: 0; font-size: 2.75cqw; font-weight: 400; line-height: 1.12; letter-spacing: .02em; }
+      .say { margin: 0; font-size: 2.45cqw; font-weight: 400; letter-spacing: .02em; line-height: 1.15; color: #dfe6ff; }
       .opts { display: grid; grid-template-columns: 1fr; gap: 0.7cqw; }
-      .opt { letter-spacing: .02em; font: 600 1.9cqw/1.25 'Pixelify Sans', 'Press Start 2P', monospace; text-align: left; color: #f4f1e6; background: #223380; border: 0.22cqw solid #5a74e0; border-radius: 1cqw; padding: 0.9cqw 1.2cqw; cursor: pointer; display: flex; align-items: center; gap: 1cqw; transition: transform .1s, background .12s, border-color .12s; }
+      .opt { letter-spacing: .02em; font: 400 2.4cqw/1.08 'Jersey 20', 'Press Start 2P', monospace; text-align: left; color: #f4f1e6; background: #223380; border: 0.22cqw solid #5a74e0; border-radius: 1cqw; padding: 0.9cqw 1.2cqw; cursor: pointer; display: flex; align-items: center; gap: 1cqw; transition: transform .1s, background .12s, border-color .12s; }
       .opt:hover, .opt:focus-visible { background: #2f46a8; border-color: #ffd75e; transform: translateY(-0.15cqw); outline: none; }
       .opt[aria-pressed="true"] { background: #1f7a3c; border-color: #ffd75e; }
       .opt canvas { width: 4.6cqw; height: 4.6cqw; image-rendering: pixelated; flex: none; }
       .opt kbd { font: 400 1cqw 'Press Start 2P', monospace; color: #ffd75e; flex: none; }
       .calls { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2cqw; }
-      .call { font: 400 2.6cqw 'Press Start 2P', monospace; color: #0b1410; border: 0.3cqw solid #0b1410; border-radius: 1.2cqw; padding: 1.8cqw 1cqw; cursor: pointer; box-shadow: 0 0.6cqw 0 rgba(0,0,0,.5); }
+      .call { font: 400 1.7cqw 'Press Start 2P', monospace; color: #0b1410; border: 0.3cqw solid #0b1410; border-radius: 1.2cqw; padding: 1.1cqw 1cqw; cursor: pointer; box-shadow: 0 0.6cqw 0 rgba(0,0,0,.5); }
       .call:active { transform: translateY(0.4cqw); box-shadow: 0 0.2cqw 0 rgba(0,0,0,.5); }
       .call.run { background: linear-gradient(#ffd08a, #ff9d2e); } .call.pass { background: linear-gradient(#b8ecff, #58bdf5); }
-      .call small { display: block; font: 600 1.3cqw 'Pixelify Sans', 'Press Start 2P', monospace; margin-top: 0.7cqw; }
+      .call small { display: block; font: 400 1.9cqw 'Jersey 20', 'Press Start 2P', monospace; margin-bottom: 0.5cqw; opacity: .75; }
       .go { align-self: flex-start; font: 400 1.5cqw 'Press Start 2P', monospace; color: #0b1410; background: linear-gradient(#ffe58a, #ffc21f); border: 0.25cqw solid #0b1410; border-radius: 1cqw; padding: 1.1cqw 1.7cqw; cursor: pointer; box-shadow: 0 0.5cqw 0 #8a6a0a; }
       .go:active { transform: translateY(0.3cqw); box-shadow: 0 0.2cqw 0 #8a6a0a; }
       .go[disabled] { opacity: .4; cursor: default; }
       .go:focus-visible, .tool:focus-visible, .call:focus-visible, input:focus-visible, a:focus-visible { outline: 0.3cqw solid #ffd75e; outline-offset: 0.2cqw; }
+      /* Words typed under the picture in a cut scene: a short box, and a mark when the line is finished. */
+      .card.talk { min-height: 11cqw; cursor: pointer; }
+      .card.talk.done::after { content: "\25BC"; position: absolute; right: 1.6cqw; bottom: 1cqw; font-size: 1.4cqw; color: #ffd75e; animation: bob .5s steps(2) infinite; }
+      @keyframes bob { 50% { transform: translateY(0.4cqw); } }
+      .card { position: relative; }
+      .opt.dim { opacity: .3; } .opt.lock { background: #ffd75e; color: #0b1410; border-color: #fff; animation: flash .12s steps(2) 5; } .opt.lock kbd { color: #0b1410; }
+      #banner.slam { font-size: 6.4cqw; top: 20%; animation: slam .28s cubic-bezier(.2, 1.6, .4, 1) both; }
+      @keyframes slam { from { transform: scale(3.4); opacity: 0; } }
+      #banner.r-best { color: #6ee7a0; } #banner.r-good { color: #8ecbff; } #banner.r-bad { color: #ffb347; } #banner.r-silly { color: #e0b0ff; } #banner.r-over { color: #ff8a80; }
+      .strip { display: flex; gap: 0.5cqw; flex-wrap: wrap; } .strip i { width: 2cqw; height: 2cqw; border: 0.2cqw solid #0b1410; background: currentColor; }
+      #banner.low { top: auto; bottom: 9%; }
       .rank { font-family: 'Press Start 2P', monospace; font-size: 1.7cqw; }
       .r-best { color: #6ee7a0; } .r-good { color: #8ecbff; } .r-bad { color: #ffb347; } .r-silly { color: #e0b0ff; } .r-over { color: #ff8a80; }
       .pts { font-family: 'Press Start 2P', monospace; font-size: 1.3cqw; color: #ffd75e; }
-      .why { margin: 0; font-size: 1.75cqw; letter-spacing: .02em; line-height: 1.4; padding: 0.8cqw 1.2cqw; border-left: 0.4cqw solid #ffd75e; background: #0a1238; border-radius: 0 0.8cqw 0.8cqw 0; color: #e8eeff; }
-      .more { font-size: 1.5cqw; font-weight: 600; color: #ffd75e; }
+      .why { margin: 0; font-size: 2.15cqw; letter-spacing: .02em; line-height: 1.15; padding: 0.8cqw 1.2cqw; border-left: 0.4cqw solid #ffd75e; background: #0a1238; border-radius: 0 0.8cqw 0.8cqw 0; color: #e8eeff; }
+      .more { font-size: 1.9cqw; font-weight: 400; color: #ffd75e; }
       .row { display: flex; gap: 1.2cqw; align-items: center; flex-wrap: wrap; }
-      input[type=text] { font: 500 1.9cqw 'Pixelify Sans', 'Press Start 2P', monospace; padding: 1cqw 1.2cqw; border-radius: 0.9cqw; border: 0.22cqw solid #5a74e0; background: #070c24; color: #f4f1e6; width: 34cqw; }
-      .small { font-size: 1.4cqw; color: #b9c4ee; margin: 0; }
+      input[type=text] { font: 400 2.4cqw 'Jersey 20', 'Press Start 2P', monospace; padding: 1cqw 1.2cqw; border-radius: 0.9cqw; border: 0.22cqw solid #5a74e0; background: #070c24; color: #f4f1e6; width: 34cqw; }
+      .small { font-size: 1.8cqw; color: #b9c4ee; margin: 0; }
       a { color: #ffd75e; }
-      table { width: 100%; border-collapse: collapse; font-size: 1.55cqw; font-variant-numeric: tabular-nums; }
+      table { width: 100%; border-collapse: collapse; font-size: 2cqw; font-variant-numeric: tabular-nums; }
       th { text-align: left; font: 400 0.95cqw 'Press Start 2P', monospace; color: #b9c4ee; padding: 0.5cqw 0.8cqw; }
       td { padding: 0.55cqw 0.8cqw; border-top: 0.1cqw solid #2c3f9a; }
       tr.me td { background: #1f7a3c; font-weight: 600; }
@@ -91,22 +102,22 @@
         #screen { position: relative; height: auto; aspect-ratio: 16 / 9; }
         #ui, #ui.top { position: static; max-height: none; padding: 2cqw; }
         .card { padding: 3cqw; gap: 2.2cqw; border-radius: 3cqw; }
-        .card.split { grid-template-columns: 1fr; } .scene { font-size: 4.6cqw; } .say, .why { font-size: 4cqw; } .opts { gap: 2cqw; } .opt { font-size: 4cqw; padding: 2.6cqw 3cqw; border-radius: 2.4cqw; }
+        .card.split { grid-template-columns: 1fr; } .scene { font-size: 5.4cqw; } .say, .why { font-size: 4.8cqw; } .opts { gap: 2cqw; } .opt { font-size: 4.8cqw; padding: 2.6cqw 3cqw; border-radius: 2.4cqw; }
         .opt canvas { width: 10cqw; height: 10cqw; } .opt kbd { display: none; }
         .who, .pts { font-size: 2.6cqw; } .rank { font-size: 3.6cqw; } .go { font-size: 3.2cqw; padding: 2.6cqw 3.6cqw; } .call { font-size: 5cqw; padding: 5cqw 2cqw; } .call small { font-size: 3.2cqw; }
         .more, .small { font-size: 3.6cqw; } table { font-size: 3.6cqw; } th { font-size: 2.2cqw; } .tag { font-size: 2cqw; } input[type=text] { font-size: 4.4cqw; width: 100%; padding: 2.4cqw; }
-        #hud { font-size: 2.2cqw; } .tool { font-size: 2.8cqw; padding: 1.2cqw 2cqw; } #banner { font-size: 6cqw; top: 14cqw; } #banner.big { font-size: 8cqw; top: 16cqw; }
+        #hud { font-size: 2.2cqw; } .tool { font-size: 2.8cqw; padding: 1.2cqw 2cqw; } #banner { font-size: 6cqw; top: 14cqw; } #banner.big { font-size: 8cqw; top: 16cqw; } #banner.slam { font-size: 8cqw; top: 14cqw; } #banner.low { top: 38cqw; bottom: auto; } .card.talk { min-height: 24cqw; } .strip i { width: 4cqw; height: 4cqw; }
         #pad { top: 34cqw; bottom: auto; } #pad button { width: 16cqw; height: 16cqw; font-size: 5cqw; } #pad.throw button { width: 34cqw; }
         #hint { top: 50cqw; bottom: auto; font-size: 2.6cqw; } .board { max-height: none; }
       }
-      @media (prefers-reduced-motion: reduce) { #banner.flash, .card { animation: none; } }
+      @media (prefers-reduced-motion: reduce) { #banner.flash, #banner.slam, .card, .opt.lock { animation: none; } }
     </style>
     <script type="module" src="/src/turkeybowl/main.js"></script>
   </head>
   <body>
     <div id="app">
       <div id="stage">
-        <canvas id="screen" width="640" height="360"></canvas>
+        <canvas id="screen" width="320" height="180"></canvas>
         <div id="hud"></div>
         <div id="tools">
           <button id="back" class="tool" type="button" disabled>Back</button>

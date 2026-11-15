@@ -54,8 +54,14 @@ function tree(c, x, base, s, i) {
 
 // ─── backdrops ───
 const SKY = { dawn: [[0, "#2b2f6b"], [0.55, "#e0728a"], [1, "#fbc27a"]], day: [[0, "#5fa8e6"], [1, "#d8efff"]], gold: [[0, "#f08a4b"], [0.6, "#fbc56a"], [1, "#ffe9b0"]] };
+const BANDS = { dawn: ["#2b2f6b", "#4a3a80", "#7a4a8a", "#b85a8a", "#e0728a", "#f09a80", "#fbc27a"], day: ["#4a94dc", "#5fa8e6", "#7dbcee", "#9ccdf4", "#bcdffa", "#d8efff"], gold: ["#e0703f", "#f08a4b", "#f6a558", "#fbc56a", "#ffd98a", "#ffe9b0"] };
+/** A sky in flat bands, top to bottom, with two checkered rows where one band meets the next. */
+export function bands(c, y0, y1, cols) {
+  const h = (y1 - y0) / cols.length;
+  cols.forEach((col, i) => { const y = Math.round(y0 + i * h); R(c, 0, y, W, Math.ceil(h) + 1, col); if (i) { c.fillStyle = cols[i - 1]; for (let x = 0; x < W; x += 4) { c.fillRect(x, y, 2, 2); c.fillRect(x + 2, y + 2, 2, 2); if (x % 8 === 0) c.fillRect(x, y + 4, 2, 2); } } });
+}
 function sunAndHills(c, t, time) {
-  c.fillStyle = grad(c, 0, 190, SKY[time]); c.fillRect(0, 0, W, 190);
+  bands(c, 0, 190, BANDS[time]);
   const sx = time === "dawn" ? 120 : time === "gold" ? 500 : 520, sy = time === "day" ? 52 : 150;
   disc(c, sx, sy, 46, "rgba(255,240,190,.25)"); disc(c, sx, sy, 30, "#fff3c0");
   for (let i = 0; i < 5; i++) { const x = ((rnd(i) * 800 + t * (4 + i)) % 800) - 80, y = 28 + rnd(i + 3) * 70; ell(c, x, y, 44, 10, "rgba(255,255,255,.75)"); ell(c, x + 22, y - 7, 26, 9, "rgba(255,255,255,.75)"); }
@@ -77,7 +83,7 @@ export function kitchen(c, t) {
   R(c, 0, 0, W, H, "#3a3358"); c.fillStyle = grad(c, 0, 240, [[0, "#4a4270"], [1, "#322c4e"]]); c.fillRect(0, 0, W, 240);
   for (let x = 0; x < W; x += 40) R(c, x, 0, 1, 240, "rgba(0,0,0,.12)");
   B(c, 380, 40, 170, 120, "#f0a070"); c.fillStyle = grad(c, 40, 160, [[0, "#3b3f8f"], [0.6, "#e0728a"], [1, "#fbc27a"]]); c.fillRect(380, 40, 170, 120); disc(c, 440, 150, 22, "#fff3c0"); R(c, 462, 40, 5, 120, "#e8dcc0"); R(c, 380, 96, 170, 5, "#e8dcc0"); B(c, 372, 160, 186, 8, "#e8dcc0", "#fff", "#b9ad90");
-  B(c, 70, 60, 110, 56, "#16121f"); c.fillStyle = "#ff5a3c"; c.font = "30px 'Press Start 2P', monospace"; c.fillText(Math.floor(t * 2) % 2 ? "6:30" : "6 30", 76, 104);
+  B(c, 70, 60, 110, 56, "#16121f"); c.fillStyle = "#ff5a3c"; c.font = "32px 'Press Start 2P', monospace"; c.fillText(Math.floor(t * 2) % 2 ? "6:30" : "6 30", 76, 104);
   B(c, 230, 110, 60, 130, "#c9d3e6", "#eef2f8", "#8793bd"); R(c, 236, 118, 48, 4, "#8793bd"); R(c, 280, 150, 4, 26, "#55607f");
   R(c, 0, 240, W, 120, "#5a3f2e"); for (let x = 0; x < W; x += 64) R(c, x, 240, 2, 120, "rgba(0,0,0,.18)");
   // The table sits high, so the food shows above the question.
@@ -105,13 +111,13 @@ export function stadium(c, t, { midfield = false, scroll = 0, endzone = false, t
   crowd(c, t, 22, 8, h);
   B(c, 214, 4, 212, 66, "#05070f"); c.fillStyle = grad(c, 8, 66, [[0, h.a], [1, darken(h.a, 0.5)]]); c.fillRect(218, 8, 204, 58);
   if (team === "dallas") star(c, 262, 37, 20, "#c9d3e6", "#0a1030");
-  c.fillStyle = h.b; c.font = (team === "dallas" ? 14 : 22) + "px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText(h.name, team === "dallas" ? 348 : 320, team === "dallas" ? 44 : 48); c.textAlign = "left";
+  c.fillStyle = h.b; c.font = (team === "dallas" ? 16 : 32) + "px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText(h.name, team === "dallas" ? 348 : 320, team === "dallas" ? 44 : 48); c.textAlign = "left";
   for (const x of [26, 614]) { R(c, x - 3, 0, 6, 126, "#39406b"); B(c, x - 20, 2, 40, 16, "#fff8d0"); const g = c.createRadialGradient(x, 10, 4, x, 10, h.night ? 210 : 150); g.addColorStop(0, h.night ? "rgba(255,248,208,.5)" : "rgba(255,248,208,.34)"); g.addColorStop(1, "rgba(255,248,208,0)"); c.fillStyle = g; c.fillRect(x - 210, 0, 420, 230); }
   B(c, 0, 126, W, 14, h.b === "#ffffff" ? "#f4f1e6" : h.b, "#ffffff", "#8793bd"); R(c, 0, 131, W, 4, h.a);
   c.fillStyle = grad(c, 140, H, [[0, h.turf[0]], [1, h.turf[1]]]); c.fillRect(0, 140, W, H - 140);
   for (let k = -1; k < 9; k++) { const x = k * 80 - ((scroll % 80) + 80) % 80 + 80; if (Math.floor((x + scroll) / 80) % 2) R(c, x, 140, 80, 220, "rgba(0,0,0,.07)"); c.fillStyle = "rgba(255,255,255,.85)"; c.fillRect(Math.round(x), 148, 2, 200); for (let n = 0; n < 4; n++) R(c, x + 20 * n, 244, 2, 8, "rgba(255,255,255,.6)"); }
   R(c, 0, 148, W, 3, "rgba(255,255,255,.85)"); R(c, 0, 346, W, 3, "rgba(255,255,255,.85)");
-  if (endzone) { R(c, 560, 150, 80, 196, h.a); R(c, 556, 148, 4, 200, "#fff"); c.save(); c.translate(604, 250); c.rotate(Math.PI / 2); c.fillStyle = h.b; c.font = "18px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText(h.name, 0, 6); c.restore(); c.textAlign = "left"; }
+  if (endzone) { R(c, 560, 150, 80, 196, h.a); R(c, 556, 148, 4, 200, "#fff"); c.save(); c.translate(604, 250); c.rotate(Math.PI / 2); c.fillStyle = h.b; c.font = "16px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText(h.name, 0, 6); c.restore(); c.textAlign = "left"; }
   if (midfield && team === "dallas") { ell(c, 320, 248, 70, 40, INK); ell(c, 320, 248, 67, 38, "#c9d3e6"); c.save(); c.translate(320, 248); c.scale(1, 0.58); star(c, 0, 0, 52, "#1d3c8f", "#0a1030"); c.restore(); }
   if (midfield && team === "texas") { c.save(); c.translate(320, 262); c.scale(1, 0.6); c.fillStyle = "rgba(0,0,0,.25)"; c.font = "64px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText("TEXAS", 3, 3); c.fillStyle = h.a; c.fillText("TEXAS", 0, 0); c.restore(); c.textAlign = "left"; }
   if (h.night) { const v = c.createRadialGradient(320, 200, 160, 320, 200, 420); v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,20,.45)"); c.fillStyle = v; c.fillRect(0, 0, W, H); }
@@ -158,7 +164,6 @@ export function player(c, x, y, o = {}, frame = 0) {
   RB(c, -7 + a * 0.4, -15 + drop, 6, 13 - drop - Math.abs(a) * 0.3, pants, null, null, 2); RB(c, 1 + b * 0.4, -15, 6, 13 - Math.abs(b) * 0.3, pants, null, null, 2);
   RB(c, -8 + a * 0.6, -3, 8, 3, "#f4f1e6", null, null, 1.5); RB(c, 0 + b * 0.6, -3, 8, 3, "#f4f1e6", null, null, 1.5);
   RB(c, -9, -30 + drop * 0.5, 18, 16, jersey, lighten(jersey), darken(jersey), 4);
-  if (o.num) { c.fillStyle = "#fff"; c.font = "7px 'Press Start 2P', monospace"; c.textAlign = "center"; c.fillText(o.num, 0, -19); c.textAlign = "left"; }
   const up = arms ? -14 : 0, hy = drop * 0.5;
   RB(c, -13, -29 + up + hy, 4, 11, jersey, null, null, 2); RB(c, -13, -19 + up * 1.8 + hy, 4, 4, skin, null, null, 2); RB(c, 9, -29 + up + hy, 4, 11, jersey, null, null, 2); RB(c, 9, -19 + up * 1.8 + hy, 4, 4, skin, null, null, 2);
   if (helmet) { disc(c, 0, -37 + hy, 9, INK); disc(c, 0, -37 + hy, 8, helmet); disc(c, -3, -40 + hy, 3, lighten(helmet, 0.5)); R(c, 3, -37 + hy, 7, 6, INK); R(c, 4, -36 + hy, 5, 1, "#c9d3e6"); R(c, 4, -33 + hy, 5, 1, "#c9d3e6"); if (o.dot) star(c, -2, -37 + hy, 4, o.dot); }
@@ -216,7 +221,9 @@ export function band(c, t, e, word = "TEXAS") {
   const GLYPH = { T: ["111", "010", "010", "010", "010"], E: ["111", "100", "110", "100", "111"], X: ["101", "101", "010", "101", "101"], A: ["010", "101", "111", "101", "101"], S: ["111", "100", "111", "001", "111"] };
   const spots = []; word.split("").forEach((ch, n) => (GLYPH[ch] || []).forEach((row, ry) => row.split("").forEach((on, rx) => { if (on === "1") spots.push([92 + n * 96 + rx * 26, 196 + ry * 30]); })));
   const p = Math.max(0, Math.min(1, (e - 2.5) / 3)), ease = p * p * (3 - 2 * p);
-  spots.map((sp, i) => { const sx = -40 + ((e * 70 + i * 14) % 720), sy = 200 + (i % 6) * 26; return [sx + (sp[0] - sx) * ease, sy + (sp[1] - sy) * ease, i]; })
+  // The last tuba is late: it runs in from the left after everyone else is set, and finishes the S.
+  const last = spots.length - 1, lp = Math.max(0, Math.min(1, (e - 6.2) / 1.2));
+  spots.map((sp, i) => { if (i === last) return [-60 + (sp[0] + 60) * lp, sp[1] - Math.abs(Math.sin(e * 16)) * (lp < 1 ? 6 : 0), 0]; const sx = -40 + ((e * 70 + i * 14) % 720), sy = 200 + (i % 6) * 26; return [sx + (sp[0] - sx) * ease, sy + (sp[1] - sy) * ease, i]; })
     .sort((a, b) => a[1] - b[1]).forEach(([x, y, i]) => marcher(c, x, y, t, i));
 }
 export function fireworks(c, t, n = 5) {
@@ -252,16 +259,21 @@ export function person(c, x, y, s, o) {
     if (o.cap) { c.fillStyle = INK; c.beginPath(); c.ellipse(0, -143, 24, 19, 0, Math.PI, 0); c.fill(); c.fillStyle = o.cap; c.beginPath(); c.ellipse(0, -143, 22.5, 17.5, 0, Math.PI, 0); c.fill(); RB(c, 2, -146, 32, 5, o.cap, null, null, 2); }
     if (o.hat) { RB(c, -34, -152, 68, 7, o.hat, lighten(o.hat), null, 3); RB(c, -19, -176, 38, 26, o.hat, lighten(o.hat), darken(o.hat), 8); R(c, -19, -158, 38, 5, "#3a2a1e"); }
     const ey = -134, lk = o.look || 0;
-    disc(c, -8 + lk, ey, 2.6, INK); disc(c, 8 + lk, ey, 2.6, INK);
+    if (o.blink) { R(c, -11 + lk, ey, 6, 2, INK); R(c, 5 + lk, ey, 6, 2, INK); }
+    else if (o.shock) { disc(c, -8, ey, 5.5, "#fff"); disc(c, 8, ey, 5.5, "#fff"); disc(c, -8 + lk, ey, 2.2, INK); disc(c, 8 + lk, ey, 2.2, INK); }
+    else { disc(c, -8 + lk, ey, 2.6, INK); disc(c, 8 + lk, ey, 2.6, INK); }
     if (o.glasses) { c.strokeStyle = "#3a3a44"; c.lineWidth = 2; c.beginPath(); c.arc(-8, ey, 7, 0, 7); c.stroke(); c.beginPath(); c.arc(8, ey, 7, 0, 7); c.stroke(); R(c, -1, ey - 1, 2, 2, "#3a3a44"); }
     if (o.shades === "on") { RB(c, -16, ey - 5, 14, 10, "#16121f", "#3a3a55", null, 3); RB(c, 2, ey - 5, 14, 10, "#16121f", "#3a3a55", null, 3); R(c, -2, ey - 2, 4, 2, "#16121f"); }
     if (o.shades === "down") { RB(c, -16, ey + 7, 14, 8, "#16121f", "#3a3a55", null, 3); RB(c, 2, ey + 7, 14, 8, "#16121f", "#3a3a55", null, 3); R(c, -2, ey + 9, 4, 2, "#16121f"); }
     if (o.mustache) RB(c, -9, -124, 18, 5, hair, null, null, 2);
     c.strokeStyle = "#7a3b2a"; c.lineWidth = 2; c.beginPath();
-    if (o.grin) c.arc(0, -124, 8, Math.PI * 0.1, Math.PI * 0.9); else if (o.sad || o.angry) { c.moveTo(-5, -119); c.lineTo(5, -119); } else c.arc(0, -124, 6, Math.PI * 0.2, Math.PI * 0.8);
+    if (o.talk || o.shock) { ell(c, 0, -119, o.shock ? 5 : 6, o.shock ? 6 : 4, "#5a1e1e"); c.moveTo(0, 0); }
+    else if (o.grin) c.arc(0, -124, 8, Math.PI * 0.1, Math.PI * 0.9); else if (o.sad || o.angry) { c.moveTo(-5, -119); c.lineTo(5, -119); } else c.arc(0, -124, 6, Math.PI * 0.2, Math.PI * 0.8);
     c.stroke();
     if (o.tan) { ell(c, -14, -127, 4, 2.5, "rgba(200,90,60,.3)"); ell(c, 14, -127, 4, 2.5, "rgba(200,90,60,.3)"); }
     if (o.angry) { c.strokeStyle = "#e0342b"; c.lineWidth = 3; [[30, -168], [38, -160]].forEach(([mx, my], k) => { c.beginPath(); c.moveTo(mx - 5, my - 5 + k * 0); c.lineTo(mx + 5, my + 5); c.moveTo(mx + 5, my - 5); c.lineTo(mx - 5, my + 5); c.stroke(); }); }
+    if (o.bun) { disc(c, 0, -162, 9, INK); disc(c, 0, -162, 7.5, hair); }
+    if (o.sweat) { c.fillStyle = "#9fdcff"; c.beginPath(); c.moveTo(-28, -150); c.quadraticCurveTo(-34, -138, -28, -136); c.quadraticCurveTo(-22, -138, -28, -150); c.fill(); }
     if (o.sad) { c.fillStyle = "#6fc3f5"; c.beginPath(); c.moveTo(30, -166); c.quadraticCurveTo(22, -150, 30, -148); c.quadraticCurveTo(38, -150, 30, -166); c.fill(); }
   }
   if (o.pin) { disc(c, -13, -90, 7, INK); disc(c, -13, -90, 6, "#c9d3e6"); star(c, -13, -90, 4.5, "#1d3c8f"); }
@@ -285,6 +297,7 @@ export const CAST = {
   backup: { skin: "#c98a5a", shirt: "#1b2a6b", pants: "#c9d3e6", helmet: "#c9d3e6", dot: "#1d3c8f", number: "14" },
   returner: { skin: "#8a5a3a", shirt: "#bf5700", pants: "#f4f1e6", helmet: "#f4f1e6", number: "5" },
   you: { skin: "#e8b98a", hair: "#3a2a1e", shirt: "#e2622a", number: "1" },
+  grandma: { skin: "#f0c8a0", hair: "#e3e6ea", shirt: "#8a5ac0", pants: "#4a4058", glasses: true, bun: true },
 };
 export function cast(c, who, x, y, s = 1, extra = {}) { if (who === "jerry") jerry(c, x, y, s, extra); else if (CAST[who]) person(c, x, y, who === "nephew" ? s * 0.7 : s, { ...CAST[who], ...extra }); }
 
@@ -309,3 +322,58 @@ export function faceFrom(img) {
   try { const d = x.getImageData(0, 0, 21, 24); for (let i = 0; i < d.data.length; i += 4) for (let k = 0; k < 3; k++) d.data[i + k] = Math.min(255, Math.round(d.data[i + k] / 36) * 36); x.putImageData(d, 0, 0); } catch { /* a picture that cannot be read stays as drawn */ }
   return cv;
 }
+
+// ─── the cut scenes' kit: bars, lines, an iris, and things seen very close ───
+/** Black bars top and bottom, p from 0 to 1. */
+export function letterbox(c, p = 1, h = 34) { R(c, 0, 0, W, h * p, "#000"); R(c, 0, H - h * p, W, h * p + 1, "#000"); }
+/** Lines rushing past behind something that is standing still. */
+export function speedLines(c, t, bg = "#1d3c8f", col = "#ffffff", n = 34) {
+  R(c, 0, 0, W, H, bg);
+  for (let i = 0; i < n; i++) { const len = 60 + rnd(i + 2) * 200, y = Math.round(rnd(i + 31) * H / 4) * 4, x = W + len - ((t * (700 + rnd(i) * 900) + rnd(i + 7) * 1400) % (W + len * 2)); c.fillStyle = i % 3 ? col : lighten(bg, 0.35); c.fillRect(Math.round(x), y, len, i % 4 ? 2 : 4); }
+}
+/** Lines bursting out from a point, for a moment that has stopped. */
+export function burst(c, t, x, y, bg = "#e2622a", col = "#ffd75e", n = 28) {
+  R(c, 0, 0, W, H, bg); c.fillStyle = col;
+  for (let i = 0; i < n; i++) { const a = i * Math.PI * 2 / n + (Math.floor(t * 8) % 2) * 0.06, w = 0.05 + rnd(i) * 0.05, r0 = 90 + rnd(i + 5) * 50; c.beginPath(); c.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0); c.lineTo(x + Math.cos(a - w) * 800, y + Math.sin(a - w) * 800); c.lineTo(x + Math.cos(a + w) * 800, y + Math.sin(a + w) * 800); c.fill(); }
+}
+/** Everything black except a circle of radius r at (x, y). */
+export function iris(c, x, y, r) { c.fillStyle = "#000"; c.beginPath(); c.rect(0, 0, W, H); c.arc(x, y, Math.max(0, r), 0, Math.PI * 2, true); c.fill("evenodd"); }
+/** Somebody from the chest up, filling the screen: who is a CAST key or "jerry" or "passerby". */
+export function bust(c, who, x, s, extra = {}) {
+  s *= 1.55; const y = 158 + 133 * s;   // the head sits in the middle of the screen, and the shoulders run off the bottom
+  if (who === "passerby") person(c, x, y, s, { skin: "#f2cba6", hair: "#f6d878", shirt: "#8a2f52", pants: "#2a2a3a", long: true, ...extra });
+  else cast(c, who, x, y, who === "nephew" ? s / 0.7 : s, extra);
+}
+/** Two feet in cleats on grass, mid-stride. */
+export function cleats(c, t, col = "#e2622a") {
+  c.fillStyle = grad(c, 0, H, [[0, "#6aa84a"], [1, "#2f6a28"]]); c.fillRect(0, 0, W, H);
+  for (let i = 0; i < 40; i++) R(c, ((rnd(i) * 900 - t * 900) % 760 + 760) % 760 - 60, 200 + rnd(i + 3) * 150, 14, 3, "rgba(255,255,255,.18)");
+  const f = Math.floor(t * 7) % 2;
+  [[200, f ? 0 : -46, 0], [400, f ? -46 : 0, 1]].forEach(([x, up]) => {
+    ell(c, x + 60, 318, 90, 12, "rgba(0,0,0,.3)");
+    RB(c, x + 10, 40 + up, 70, 190, "#3a4a66", "#4a5e80", "#2a3650", 16); RB(c, x + 6, 200 + up, 78, 40, "#f4f1e6", "#fff", "#c9c2ae", 8);
+    RB(c, x, 232 + up, 150, 58, "#16121f", "#3a3348", null, 18); R(c, x + 30, 244 + up, 60, 6, col); R(c, x + 30, 256 + up, 60, 6, col);
+    for (let k = 0; k < 5; k++) R(c, x + 12 + k * 28, 290 + up, 10, 12, "#c9d3e6");
+    if (!up) for (let k = 0; k < 6; k++) R(c, x - 20 - k * 14, 296 - k * 8 - rnd(k) * 10, 8, 8, "#4f8a3a");
+  });
+}
+/** Two hands and a football, very large. p is 0 (ball coming) to 1 (caught). */
+export function bigCatch(c, t, p, sleeve = "#e2622a", skin = "#e8b98a") {
+  const bx = 320 + (1 - p) * 260, by = 170 - (1 - p) * 60;
+  [[-1, 0], [1, 0]].forEach(([side]) => { const hx = 320 + side * (80 - p * 22); RB(c, hx - 34, 190, 68, 190, sleeve, lighten(sleeve), darken(sleeve), 14); RB(c, hx - 30, 120, 60, 86, skin, lighten(skin, 0.15), darken(skin, 0.15), 22); for (let k = 0; k < 4; k++) RB(c, hx - 28 + k * 15, 96, 12, 40, skin, null, null, 6); });
+  c.save(); c.translate(bx, by); c.rotate(-0.4 + (1 - p) * t * 9); ell(c, 0, 0, 74, 44, INK); ell(c, 0, 0, 70, 40, "#8a4b1e"); ell(c, -14, -14, 34, 12, "#b06a34"); R(c, -30, -4, 60, 6, "#fff"); for (let k = -2; k <= 2; k++) R(c, k * 12 - 2, -12, 4, 22, "#fff"); c.restore();
+}
+/** The inside of Jerry's jet: windows with the sky going by, and big leather seats. */
+export function cabin(c, t, scroll = 0) {
+  R(c, 0, 0, W, H, "#e4d2aa"); R(c, 0, 0, W, 40, "#c7b08b"); R(c, 0, 250, W, 110, "#5a4e44"); R(c, 0, 250, W, 6, "#423934");
+  for (let i = -1; i < 8; i++) { const x = i * 150 - (((scroll % 150) + 150) % 150) + 40; c.fillStyle = INK; c.beginPath(); c.ellipse(x + 40, 118, 38, 50, 0, 0, 7); c.fill(); c.save(); c.beginPath(); c.ellipse(x + 40, 118, 33, 45, 0, 0, 7); c.clip(); R(c, x, 60, 90, 120, "#5fa8e6"); ell(c, x + 40 + ((t * 60 + i * 37) % 130) - 60, 110 + (i % 3) * 14, 26, 8, "#fff"); c.restore(); R(c, x + 12, 76, 5, 30, "rgba(255,255,255,.5)"); }
+}
+export function seat(c, x, y) { RB(c, x - 46, y - 150, 92, 160, "#dba463", "#f4d29c", "#a87840", 18); RB(c, x - 56, y - 50, 112, 56, "#dba463", "#f4d29c", "#a87840", 14); RB(c, x - 60, y - 74, 18, 60, "#a87840", "#c08a52", null, 8); RB(c, x + 42, y - 74, 18, 60, "#a87840", "#c08a52", null, 8); }
+/** Stadium lights as beams, drawn over a night scene. */
+export function beams(c, t) {
+  c.save(); c.globalCompositeOperation = "lighter";
+  [[26, 1], [614, -1], [200, 1], [440, -1]].forEach(([x, d], i) => { const sw = Math.sin(t * 0.5 + i * 2) * 60; c.fillStyle = "rgba(255,244,190,.07)"; c.beginPath(); c.moveTo(x - 8, 6); c.lineTo(x + 8, 6); c.lineTo(x + d * 220 + sw + 110, H); c.lineTo(x + d * 220 + sw - 110, H); c.fill(); });
+  c.restore();
+}
+/** Confetti in a team's colours. */
+export function confetti(c, t, cols, n = 90) { for (let i = 0; i < n; i++) { const y = ((t * (60 + rnd(i) * 90) + rnd(i + 3) * 500) % (H + 20)) - 10, x = (rnd(i + 5) * W + Math.sin(t * 2 + i) * 16 + W) % W; R(c, x, y, Math.floor(t * 6 + i) % 2 ? 6 : 3, 4, cols[i % cols.length]); } }

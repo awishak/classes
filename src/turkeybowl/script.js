@@ -74,8 +74,12 @@ export const TOPICS = {
   culture: "culture", power: "power", jet: "hydration",
   receiver: "conflict", commercial: "sport as spectacle", speech: "halftime speeches",
   returner: "goal setting", kicker: "emotion", backup: "clarity of roles", twominute: "time-outs",
+  shout: "talking during play", open: "halftime talks", points: "how much to say",
   "pop-stacking": "race and sport", "pop-titleix": "gender and sport", "pop-1968": "politics and sport",
 };
+// Three questions have a second version, and a run's seed picks which one a
+// player gets, so two runs are not the same list. An alternate names the
+// question it stands in for as its slot, and is worth the same points.
 const d = (id, level, points, who, scene, opts, after, extra = {}) => ({ id, level, points, who, topic: TOPICS[id] || "", scene, opts: opts.map(([k, text, then]) => ({ k, text, then })), after, ...extra });
 
 export const DECISIONS = [
@@ -93,7 +97,7 @@ export const DECISIONS = [
     ["silly", "Trade Grandma to Uncle Rick's team for a player to be named later.", "Grandma scores on you. Twice."],
   ], "A mastery climate values every player and defines success as getting better. A performance climate ignores less-skilled players to focus on stars (Horn et al., 2012)."),
   d("blowup", 1, 500, "brother", "The game has started. Your brother drops an easy pass, throws the ball into the leaves and starts yelling. Everyone is looking at you. What do you do?", [
-    ["best", "Let him vent, ask what he's feeling, and reset him.", "He catches the next one."],
+    ["best", "Ask him what he's feeling, and listen to the answer.", "He catches the next one."],
     ["good", "Make a joke to break the tension, and then call the next play.", "He laughs. It works this time."],
     ["bad", "Tell him firmly to calm down and get back in the huddle now.", "Nobody in history has calmed down."],
     ["silly", "Announce that emotions are banned on this team until New Year's.", "You are down a receiver and a brother."],
@@ -149,9 +153,9 @@ export const DECISIONS = [
     ["silly", "\"Score a touchdown, or walk back to the dorm.\"", "He scores. He also transfers in December."],
   ], "Process goals beat outcome goals (Burton & Weiss, 2008), and goals about what to do beat goals about what to avoid (Van Mierlo & Van Hooft, 2020)."),
   d("kicker", 4, 575, "kicker", "It's the second quarter in Austin. Your kicker misses a field goal and walks to the bench staring at the ground. What do you do?", [
-    ["best", "Go to him, hand on his shoulder, and give one tip.", "He makes the next one from 47."],
-    ["good", "Walk over and ask how he's feeling about the miss.", "He says \"fine.\" He is a little better."],
-    ["bad", "Give him space to work through it on his own.", "He thinks about it. All quarter."],
+    ["best", "Walk over and put a hand on his shoulder.", "He makes the next one from 47."],
+    ["good", "Walk over and ask how he feels about the miss.", "He says \"fine.\" He is a little better."],
+    ["bad", "Give him space to work through it by himself.", "He thinks about it. All quarter."],
     ["silly", "Hold open tryouts for kicker in the student section.", "A sophomore in overalls is now your kicker."],
   ], "Feedback and asking about the emotion help a teammate regulate emotion (Tamminen & Crocker, 2013), and so does touch (Kraus et al., 2010)."),
   d("backup", 4, 575, "backup", "It's the fourth quarter. Your quarterback is hurt. The backup has not played all season, and he is putting on his helmet. What do you tell him?", [
@@ -166,6 +170,27 @@ export const DECISIONS = [
     ["bad", "Call time-out and draw up a clever new play for this moment.", "Four players run four different plays."],
     ["silly", "Call time-out and ask the marching band what to run.", "The tubas want a reverse."],
   ], "Teams talk through scenarios ahead of time because there is no time in the moment. A time-out works best when it points the team back at a path they already know (Ishak & Ballard, 2012)."),
+];
+
+export const ALTS = [
+  d("shout", 1, 500, "cousin", "The game has started. Your cousin is on defense, and she keeps ending up in the wrong spot. The other team is about to snap the ball, and you can yell one thing to her. What do you yell?", [
+    ["best", "\"Stay on Rick until he crosses the cone!\"", "She stays on Rick. He does not get the ball."],
+    ["good", "\"Watch number seven the whole way!\"", "She watches him. She is not sure what to do about him."],
+    ["bad", "\"Go left! Go left! Go left! Go left!\"", "She goes left. So does the entire defense."],
+    ["silly", "\"Remember everything we said in the car today!\"", "Nobody remembers the car."],
+  ], "Two-word directives like \"Go left!\" coordinated players less well than more specific instructions (LeCouteur & Feo, 2011).", { slot: "blowup" }),
+  d("open", 1, 500, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You have three things to tell them. What do you open with?", [
+    ["best", "Something the team did well in the first half.", "They are still listening when you get to the two fixes."],
+    ["good", "The two fixes, and then something they did well.", "They hear the fixes. A few heads are already down."],
+    ["bad", "The biggest mistake, while it is still fresh.", "Your brother knows it was him. He hears nothing after that."],
+    ["silly", "A moment of silence for the first half.", "It lasts four minutes. Halftime is over."],
+  ], "In a short break, the first point should highlight something positive about the game so far, and the second and third points should give corrective feedback (Andrews, 2015).", { slot: "push" }),
+  d("points", 3, 800, "", "You are in the locker room at halftime, losing by ten. Your assistants hand you a list of nine adjustments, and you have four minutes with the offense. What do you do with the list?", [
+    ["best", "Give them the two biggest and skip the rest.", "They come out and run both."],
+    ["good", "Give them four, and say which two matter most.", "They get the two. The other two are gone by kickoff."],
+    ["bad", "Go through all nine fast so nothing is missed.", "Ask any of them what number six was."],
+    ["silly", "Sing all nine to the tune of a fight song.", "They remember the tune."],
+  ], "The more ideas a coach communicated, the less athletes retained and the less coherent their recall was (Mesquita et al., 2008).", { slot: "speech" }),
 ];
 
 // Three questions that are not part of the story. Andrew, 2026-11-14: "i want
@@ -209,11 +234,11 @@ export const popScene = (dec, away) => (away ? "Your phone buzzes on the sidelin
 const REVIEW = { say: "Read the review this comes from", url: "https://scholarcommons.scu.edu/crt/vol36/iss4/1" };
 export const LINKS = {
   stars: REVIEW, blowup: REVIEW, push: REVIEW, culture: REVIEW, power: REVIEW, receiver: REVIEW, speech: REVIEW,
-  returner: REVIEW, kicker: REVIEW, backup: REVIEW, twominute: REVIEW,
+  returner: REVIEW, kicker: REVIEW, backup: REVIEW, twominute: REVIEW, shout: REVIEW, open: REVIEW, points: REVIEW,
   "pop-titleix": { say: "Read the law", url: "https://www.law.cornell.edu/uscode/text/20/1681" },
   "pop-1968": { say: "Read \"The White Man in That Photo\"", url: "https://www.filmsforaction.org/articles/the-white-man-in-that-photo/" },
 };
-export const decisionOf = (id) => DECISIONS.find(x => x.id === id) || POPS.find(x => x.id === id) || null;
+export const decisionOf = (id) => DECISIONS.find(x => x.id === id) || POPS.find(x => x.id === id) || ALTS.find(x => x.id === id) || null;
 
 // The order of the game. "d" is a question, "p" is one play call, "s" is a
 // cut scene the page draws, "gate" is where a level is won or lost.
@@ -266,7 +291,11 @@ export function flowFor(seed) {
   const which = orderFor(seed, "pop-order", POPS.length);
   const after = new Map(order.map((spot, n) => [spot, POPS[which[n]].id]));
   const out = [];
-  FLOW.forEach((f, i) => { out.push(f); if (after.has(i)) out.push({ d: after.get(i), pop: true }); });
+  FLOW.forEach((f, i) => {
+    const alt = f.d && ALTS.find(a => a.slot === f.d);
+    out.push(alt && (hash(String(seed) + "~" + f.d) >>> 11) & 1 ? { d: alt.id } : f);
+    if (after.has(i)) out.push({ d: after.get(i), pop: true });
+  });
   return out;
 }
 

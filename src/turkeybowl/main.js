@@ -60,6 +60,11 @@ function noise(at, dur, vol = 0.05) {
 }
 const sfx = {
   click: () => tone(660, 0, 0.05),
+  blip: () => tone(420 + Math.random() * 60, 0, 0.025, "square", 0.025),
+  roll: (dur = 0.55) => { for (let i = 0; i < dur / 0.05; i++) noise(i * 0.05, 0.045, 0.04 + i * 0.004); },
+  slam: () => { tone(110, 0, 0.22, "square", 0.12, 40); noise(0, 0.18, 0.09); },
+  sting: () => [392, 523, 659, 784].forEach((f, i) => tone(f, i * 0.09, 0.16, "square", 0.06)),
+  splat: () => { noise(0, 0.25, 0.12); tone(240, 0, 0.2, "sine", 0.1, 70); },
   thud: () => tone(140, 0, 0.16, "square", 0.1, 50),
   whistle: () => { tone(2100, 0, 0.18, "sine", 0.08); tone(2300, 0.2, 0.3, "sine", 0.08); },
   snap: () => tone(180, 0, 0.06, "square", 0.08),
@@ -178,13 +183,23 @@ function drawFx(t) {
     else { c.fillStyle = "#d9772a"; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(x + Math.cos(i) * (10 + i * 3), y + Math.sin(i * 2) * (8 + i * 2) + Math.min(30, (e - 0.5) * 12), 9 - i * 0.5, 0, 7); c.fill(); } c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y - 4, 9, 0, 7); c.fill(); }
   } else if (fx.kind === "over") { c.fillStyle = `rgba(200,30,30,${0.35 + Math.sin(e * 16) * 0.2})`; c.fillRect(0, 0, A.W, A.H); }
 }
+// A moment that stops (hit-stop), a screen that shakes, and a white flash: the cut scenes' punctuation.
+let stopUntil = 0, stopAt = 0, shakeUntil = 0, flashUntil = 0;
+const hitStop = (ms = 110) => { stopAt = now(); stopUntil = performance.now() + ms; };
+const shake = (ms = 280) => { shakeUntil = performance.now() + ms; };
+const flash = (ms = 90) => { flashUntil = performance.now() + ms; };
 (function frame() {
-  const t = now();
-  c.save();
+  const t = performance.now() < stopUntil ? stopAt : now();
+  // The picture is drawn at half size, 320 by 180, and the browser scales it up in hard pixels.
+  // Every drawing still thinks in 640 by 360.
+  c.save(); c.scale(0.5, 0.5);
   try {
     const shaking = fx && ((fx.kind === "over") || (fx.kind === "shake" && t - fx.start < 0.4));
+    const left = shakeUntil - performance.now();
     if (shaking) c.translate(Math.sin(t * 70) * 4, Math.cos(t * 55) * 3);
+    else if (left > 0) c.translate(Math.round(Math.sin(left * 0.9) * left / 40), Math.round(Math.cos(left * 0.7) * left / 60));
     paint(t); drawFx(t);
+    if (performance.now() < flashUntil) { c.fillStyle = "#fff"; c.fillRect(-10, -10, A.W + 20, A.H + 20); }
   } catch { /* one bad frame is not worth a dead game */ }
   c.restore();
   requestAnimationFrame(frame);
@@ -225,8 +240,30 @@ function showHud() {
 // ─── the words on the screen ───
 // A card sits at the bottom of the screen, except a play call, which sits at the top so the field stays in view.
 const card = (who, top = false) => { ui.textContent = ""; ui.classList.toggle("top", top); const k = el("div", "card"); if (who) k.append(el("div", "who", who)); ui.append(k); return k; };
-let onKey = null, review = null;
-addEventListener("keydown", (e) => { if (onKey && review === null) onKey(e); });
+let onKey = null, onTap = null, review = null;
+// A cut scene is a list of beats. A press while one is playing jumps to its end, and never past words that wait for the player.
+let skipping = false, inCine = false;
+const cine = (on) => { inCine = on; skipping = false; };
+const beat = async (ms) => { const end = performance.now() + ms; while (!skipping && performance.now() < end) await wait(30); };
+addEventListener("keydown", (e) => { if (review !== null) return; if (onKey) onKey(e); else if (inCine && (e.key === "Enter" || e.key === " " || e.key === "Escape")) skipping = true; });
+$("stage").addEventListener("pointerdown", (e) => { if (review !== null || e.target.closest("button, a, input, .board")) return; if (onTap) onTap(); else if (inCine) skipping = true; });
+/** Words typed out under the picture, one box at a time. The first press finishes the line and the second moves on. */
+async function talk(who, text) {
+  const k = card(who); k.classList.add("talk"); const p = el("p", "scene", ""); k.append(p);
+  if (G) { G.log.push({ who, lines: [text] }); showBack(); }
+  await new Promise(res => {
+    let i = 0;
+    const timer = setInterval(() => { if (i >= text.length) return; i++; p.textContent = text.slice(0, i); if (i % 3 === 0) sfx.blip(); if (i >= text.length) k.classList.add("done"); }, 26);
+    const press = () => { if (i < text.length) { i = text.length; p.textContent = text; k.classList.add("done"); return; } clearInterval(timer); onKey = null; onTap = null; sfx.click(); res(); };
+    onKey = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); press(); } }; onTap = press;
+  });
+  ui.textContent = "";
+}
+/** A title card between places: a word on a flat colour, and four notes. */
+async function eyecatch(word, bg, fg, star) {
+  paint = (t) => { c.fillStyle = bg; c.fillRect(0, 0, A.W, A.H); for (let i = 0; i < 12; i++) { c.fillStyle = i % 2 ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.08)"; c.fillRect(0, i * 30, A.W, 30); } if (star) A.star(c, 320, 130, 56, fg, "#0a1030"); c.fillStyle = "#000"; c.textAlign = "center"; c.font = "48px 'Press Start 2P', monospace"; c.fillText(word, 324, star ? 264 : 204); c.fillStyle = fg; c.fillText(word, 320, star ? 260 : 200); c.textAlign = "left"; A.letterbox(c, 1); };
+  ui.textContent = ""; say(""); sfx.sting(); await beat(1500);
+}
 const next = (k, label = "Continue") => new Promise(res => {
   const b = el("button", "go", label); b.type = "button";
   const done = () => { onKey = null; sfx.click(); res(); };
@@ -277,13 +314,13 @@ function backdrop(id) {
 }
 
 async function decide(id) {
-  const dec = decisionOf(id), pop = !dec.level, dallas = G.where !== "park", base = backdrop(id);
-  const who = ["commercial", "push", "speech", "breakfast", "jet"].includes(id) ? "" : dec.level === 2 ? "jerry" : dec.who;
+  const dec = decisionOf(id), sid = dec.slot || id, pop = !dec.level, dallas = G.where !== "park", base = backdrop(sid);
+  const who = ["commercial", "push", "speech", "breakfast", "jet"].includes(sid) ? "" : dec.level === 2 ? "jerry" : dec.who;
   const phone = pop && dallas;
   const start = now();
   paint = (t) => {
     base(t);
-    if (who && !phone) A.cast(c, who, 530, 218, 0.95, { wave: t - start, ...(dec.level === 4 ? TX : {}) });
+    if (who && !phone) A.cast(c, who, 500, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}) });
     if (phone) { c.save(); c.translate(500, 30 + (t - start < 1 ? Math.sin(t * 60) * 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 84, 150); c.fillStyle = "#dff3ff"; c.fillRect(6, 14, 72, 118); c.fillStyle = "#2f6fc4"; c.fillRect(12, 24, 56, 16); c.fillRect(12, 46, 44, 12); c.fillRect(12, 64, 50, 12); c.restore(); }
   };
   say("");
@@ -296,7 +333,7 @@ async function decide(id) {
     if (dec.pick) {
       const chosen = new Set(), go = el("button", "go", "Lock it in"); go.type = "button"; go.disabled = true;
       orderFor(G.seed, id, POWER.length).forEach(i => {
-        const p = POWER[i], b = el("button", "opt", p.text); b.type = "button"; b.setAttribute("aria-pressed", "false");
+        const p = POWER[i], b = el("button", "opt", p.text); b.type = "button"; b.dataset.k = p.k; b.setAttribute("aria-pressed", "false");
         b.onclick = () => { sfx.click(); if (chosen.has(p.k)) chosen.delete(p.k); else if (chosen.size < dec.pick) chosen.add(p.k); b.setAttribute("aria-pressed", String(chosen.has(p.k))); go.disabled = chosen.size !== dec.pick; };
         opts.append(b);
       });
@@ -304,7 +341,7 @@ async function decide(id) {
     } else {
       const btns = [];
       orderFor(G.seed, id, dec.opts.length).forEach((i, n) => {
-        const o = dec.opts[i], b = el("button", "opt"); b.type = "button";
+        const o = dec.opts[i], b = el("button", "opt"); b.type = "button"; b.dataset.k = o.k;
         b.append(el("kbd", "", String(n + 1)));
         const icon = (A.FOOD_OF[id] || {})[o.k];
         if (icon) { const cv = el("canvas"); cv.width = 32; cv.height = 32; A.food(cv.getContext("2d"), icon); b.append(cv); }
@@ -317,9 +354,19 @@ async function decide(id) {
   });
   G.picks[id] = pick;
   const got = judge(dec, pick);
+  // The answer is locked, a drum rolls, and then the person it landed on is seen up close.
+  opts.querySelectorAll(".opt").forEach(b => { b.disabled = true; if (b.dataset.k !== pick && !(Array.isArray(pick) && pick.includes(b.dataset.k))) b.classList.add("dim"); else b.classList.add("lock"); });
+  cine(true); sfx.roll(); await beat(650); ui.textContent = "";
+  const face = !who || phone ? "you" : who, mood = { best: { grin: true, armUp: true }, good: { armUp: false }, bad: { sad: true, sweat: true, grin: false, armUp: false, angry: false }, silly: { shock: true, grin: false, angry: false, armUp: true }, over: { angry: true, grin: false, armUp: true } }[got.rank];
+  const tint = { best: ["#1f7a3c", "#6ee7a0"], good: ["#1d3c8f", "#8ecbff"], bad: ["#8a4a12", "#ffb347"], silly: ["#6a2f9a", "#e0b0ff"], over: ["#7a1212", "#ff8a80"] }[got.rank], s0 = now();
+  paint = (t) => { A.burst(c, t, 320, 150, tint[0], tint[1]); const e = t - s0, pop = 1.9 + Math.max(0, 0.25 - e) * 1.2; A.bust(c, face, 320, pop, { ...(face === "you" ? { face: FACE, shirt: G.where === "dallas" ? "#1b2440" : G.where === "texas" ? "#bf5700" : "#e2622a", number: "" } : {}), ...(dec.level === 4 && face !== "you" ? TX : {}), ...mood, wave: e, blink: got.rank === "good" && Math.floor(e * 3) % 3 === 0 }, 40); A.letterbox(c, 1, 26); };
   ({ best: sfx.good, good: sfx.meh, bad: sfx.bad, silly: sfx.silly, over: sfx.over })[got.rank]();
+  sfx.slam(); hitStop(120); shake(got.rank === "good" ? 0 : 300); flash(70);
+  G.streak = got.rank === "best" ? (G.streak || 0) + 1 : 0;
+  say(G.streak >= 3 ? G.streak + " BEST CALLS IN A ROW" : RANK_SAY[got.rank].toUpperCase(), "slam low r-" + got.rank); showHud();
+  await beat(1500); say(""); cine(false);
+  paint = (t) => { base(t); if (who && !phone) A.cast(c, who, 500, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}), ...(got.rank === "best" ? { grin: true } : got.rank === "bad" ? { sad: true, angry: false } : {}) }); };
   fx = got.rank === "good" ? null : { kind: got.rank, start: now(), x: who && !phone ? 530 : 320, y: who && !phone ? 84 : 110 };
-  showHud();
   const chose = Array.isArray(pick) ? pick.map(x => POWER.find(p => p.k === x).text).join(" and ") : dec.opts.find(o => o.k === pick).text;
   const r = card(label);
   r.append(el("div", "rank r-" + got.rank, RANK_SAY[got.rank] + "   +" + got.points));
@@ -419,19 +466,38 @@ const idle = (where) => (t) => {
   for (let i = 0; i < 5; i++) { A.player(c, 150 + (i % 2) * 30, 226 + i * 26, kin(where, "us", i), 0); A.player(c, 470 + (i % 2) * 30, 226 + i * 26, kin(where, "them", i), 0); }
   if (where === "park") A.leaves(c, t, 30);
 };
-/** Everybody celebrates, and the turkey dances. */
+/** A touchdown in three shots: the spike up close, everybody dancing, and a pie for somebody new each time. */
+const PIE_FOR = { park: "uncle", dallas: "jerry", texas: "reporter" };
 async function touchdown(where, text = "TOUCHDOWN!") {
-  const start = now();
-  paint = (t) => {
-    const e = t - start; field(t, where, 1800, true);
-    for (let i = 0; i < 6; i++) A.player(c, 90 + i * 60, 318 - Math.abs(Math.sin(e * 5 + i)) * 30, { ...kin(where, "us", i), face: i === 2 && where === "park" ? FACE : null, arms: 1 }, 0);
-    A.turkeyDance(c, 500, 330, t, where === "dallas" ? "dougie" : "macarena", 2.4);
-    if (where === "texas") A.turkeyDance(c, 590, 336, t, "dougie", 1.6);
-    if (where === "park") A.leaves(c, t, 80);
-  };
-  fx = { kind: "td", start }; say(text, "flash big"); sfx.td(); showHud();
+  const was = inCine; cine(true); ui.textContent = "";
+  const cols = TEAM[where].us; let start = now();
+  paint = (t) => { const e = t - start; A.burst(c, t, 320, 200, A.darken(cols.jersey, 0.2), "#ffd75e"); c.save(); c.translate(320, 330 - Math.abs(Math.sin(Math.min(e, 0.5) * Math.PI * 2)) * 30); c.scale(5, 5); A.player(c, 0, 0, { ...kin(where, "us", 3), arms: 1, face: where === "park" ? FACE : null }, 0); c.restore(); A.ball(c, 430, 60 + Math.min(1, e * 4) * 250, e * 20); A.letterbox(c); };
+  say(text, "slam"); sfx.slam(); hitStop(140); shake(380); flash(90); sfx.td(); showHud();
   if (where === "texas") music.start("fight");
-  await wait(where === "texas" ? 6200 : 4200); fx = null; say(""); if (where === "texas") music.stop();
+  await beat(1300);
+  start = now();
+  paint = (t) => {
+    const e = t - start, up = Math.max(0, 1 - e * 2.5) * 140; field(t, where, 1800, true);
+    for (let i = 0; i < 6; i++) A.player(c, 90 + i * 60, 318 - Math.abs(Math.sin(e * 5 + i)) * 30, { ...kin(where, "us", i), face: i === 2 && where === "park" ? FACE : null, arms: 1 }, 0);
+    A.turkeyDance(c, 500, 330 + up, t, where === "dallas" ? "dougie" : "macarena", 2.4);
+    if (where === "texas") A.turkeyDance(c, 590, 336 + up, t, "dougie", 1.6);
+    if (where === "park") A.leaves(c, t, 80); else A.confetti(c, t, [cols.jersey, cols.pants, "#fff"]);
+    if (where === "texas") A.beams(c, t);
+  };
+  fx = { kind: "td", start }; say(text, "flash big");
+  await beat(where === "texas" ? 4200 : 3000); fx = null; say("");
+  G.pied = G.pied || {}; if (G.pied[where]) { cine(was); return; } G.pied[where] = 1;
+  // Silence, a face, and then the pie. One pie a game.
+  const who = PIE_FOR[where]; start = now(); let hit = false; music.stop();
+  paint = (t) => {
+    const e = t - start, p = clamp((e - 0.9) / 0.22, 0, 1);
+    A.speedLines(c, e > 0.9 ? t : 0, "#3a3358", "#8a80c0"); A.bust(c, who, 320, 2.2, { armUp: false, grin: e < 0.9, shock: e >= 0.9 && p < 1, look: e > 0.6 ? 3 : 0, ...(where === "texas" && who !== "reporter" ? TX : {}) }, 26);
+    if (p > 0 && p < 1) { c.save(); c.translate(760 - p * 440, 150); c.scale(3 + p, 3); c.rotate(e * 20); A.food(c, "pie"); c.restore(); }
+    if (p >= 1) { c.fillStyle = "#d9772a"; for (let i = 0; i < 12; i++) { c.beginPath(); c.arc(320 + Math.cos(i * 1.7) * (20 + i * 5), 126 + Math.sin(i * 2.3) * (18 + i * 3) + Math.min(40, (e - 1.12) * 22) * (i % 3 === 0 ? 1 : 0.2), 26 - i, 0, 7); c.fill(); } c.fillStyle = "#fff"; c.beginPath(); c.arc(316, 112, 24, 0, 7); c.fill(); c.beginPath(); c.arc(340, 138, 14, 0, 7); c.fill(); }
+    A.letterbox(c);
+    if (p >= 1 && !hit) { hit = true; sfx.splat(); hitStop(150); shake(420); flash(60); say("PIE.", "slam low"); sfx.gobble(0.5, 2); }
+  };
+  await beat(2700); say(""); cine(was);
 }
 /** The other team has the ball, and the player watches what they do with it. */
 async function theirDrive(where, scores, how) {
@@ -454,94 +520,135 @@ async function theirDrive(where, scores, how) {
 }
 
 /** The one play of a game: the last drive. */
+let pickedPlay = 0;
 async function plays() {
   const n = G.calls.length, look = lookFor(G.seed, n), where = G.where;
   if (!n) await lines("HOW THE FOOTBALL WORKS", ["Each game comes down to one drive, and you call the play.", "First you see how the other team is lined up. Then you choose RUN or PASS.", "If they are crowded close or rushing, pass over them. If they are far back or spread wide, run at them."], "Got it");
-  paint = lineup(where, look.k); say("THE LAST DRIVE");
+  paint = lineup(where, look.k); say("");
   const k = card("YOUR BALL. CALL THE PLAY.", true);
   k.append(el("p", "scene", look.say));
   const calls = el("div", "calls"); k.append(calls);
   const call = await new Promise(res => {
-    const mk = (v) => { const b = el("button", "call " + v, v.toUpperCase()); b.type = "button"; b.onclick = () => { onKey = null; res(v); }; calls.append(b); };
-    mk("run"); mk("pass");
-    onKey = (e) => { if (e.key === "r" || e.key === "1") { onKey = null; res("run"); } else if (e.key === "p" || e.key === "2") { onKey = null; res("pass"); } };
-  });
+    // Four plays: two runs and two passes, a different pair each game.
+    const base = (n + (G.seed.charCodeAt(0) % 3)) % 3, btns = [];
+    const mk = (v, w) => { const b = el("button", "call " + v); b.type = "button"; b.append(el("small", "", v.toUpperCase()), document.createTextNode(PLAYS[v][w].name)); b.onclick = () => { onKey = null; res([v, w]); }; calls.append(b); btns.push(b); };
+    mk("run", base); mk("pass", base); mk("run", (base + 1) % 3); mk("pass", (base + 1) % 3);
+    onKey = (e) => { const i = Number(e.key); if (i >= 1 && i <= 4) btns[i - 1].click(); };
+  }).then(([v, w]) => { pickedPlay = w; return v; });
   G.calls.push(call); G.busy = true; showBack();
-  const good = look.beat === call, which = (n + (G.seed.charCodeAt(0) % 3)) % 3;
-  ui.textContent = ""; sfx.snap(); music.start(where === "texas" ? "fight" : "play"); say(PLAYS[call][which].name);
+  const good = look.beat === call, which = pickedPlay;
+  ui.textContent = ""; cine(true); paint = (t) => { A.cleats(c, t, TEAM[where].us.jersey); A.letterbox(c); }; say("HUT!", "slam"); sfx.snap(); sfx.slam(); await beat(650); cine(false);
+  music.start(where === "texas" ? "fight" : "play"); say(PLAYS[call][which].name);
   await playOut(call, good, where, look.k, which);
   music.stop(); G.busy = false; showBack();
   let word;
   if (good) { G.us += 7; word = "Touchdown."; await touchdown(where); }
-  else { word = call === "run" ? "Stopped at the line. You punt." : "Incomplete. You punt."; say(call === "run" ? "STOPPED AT THE LINE" : "INCOMPLETE"); sfx.bad(); await wait(1700); say("YOU PUNT."); await wait(1500); }
+  else { word = call === "run" ? "Stopped at the line. You punt." : "Incomplete. You punt."; say(call === "run" ? "STOPPED AT THE LINE" : "INCOMPLETE", "slam"); sfx.bad(); hitStop(160); shake(300); await wait(1700); say("YOU PUNT."); await wait(1500); }
   say(""); showHud(); paint = idle(where);
   G.log.push({ who: "THE LAST DRIVE", lines: ["The other team: " + look.say, "You called a " + call + ", " + PLAYS[call][which].name.toLowerCase() + ". " + word] }); showBack();
 }
 
 // ─── cut scenes ───
 async function scene(name) {
+  cine(true); ui.textContent = "";
+  const YOU = () => ({ face: FACE, shirt: G.where === "dallas" ? "#1b2440" : G.where === "texas" ? "#bf5700" : "#e2622a", number: "" });
   if (name === "kickoff") {
-    G.q = "Q1"; const start = now();
+    G.q = "Q1"; showHud();
+    // Feet, a face, feet, a face, and then the ball is in the air.
+    let s0 = now(); paint = (t) => { A.cleats(c, t, "#6a4bb0"); A.letterbox(c); }; sfx.whistle(); await beat(520);
+    paint = (t) => { A.speedLines(c, t, "#a8551c", "#f6c945"); A.bust(c, "grandma", 320, 2.1, { blink: Math.floor(t * 2) % 5 === 0, look: -2 }, 30); A.letterbox(c); }; await beat(620);
+    paint = (t) => { A.cleats(c, t, "#e2622a"); A.letterbox(c); }; await beat(480);
+    paint = (t) => { A.speedLines(c, t, "#3f7a32", "#b9e08a"); A.bust(c, "uncle", 320, 2.1, { armUp: false, look: 2 }, 30); A.letterbox(c); }; await beat(560);
+    s0 = now();
     paint = (t) => {
-      const p = Math.min(1, (t - start) / 2.6); A.park(c, t);
+      const p = Math.min(1, (t - s0) / 2.6); A.park(c, t);
       for (let i = 0; i < 5; i++) { A.player(c, 80 + p * 60, 226 + i * 26, kin("park", "them", i), Math.floor(t * 9)); A.player(c, 560 - p * 40, 226 + i * 26, { ...kin("park", "us", i), dir: -1, face: i === 2 ? FACE : null }, Math.floor(t * 9)); }
       A.ball(c, 140 + p * 380, 240 - Math.sin(p * Math.PI) * 150, -0.6 + p); A.leaves(c, t, 70);
     };
-    say("KICKOFF", "big"); sfx.whistle(); showHud();
-    await lines("THE GAME STARTS", ["It's 8 AM. The leaves are coming down, and Uncle Rick's team kicks off to yours."]);
-    say("");
+    say("KICKOFF", "slam"); sfx.slam(); shake(220); await beat(1500); say("");
+    await talk("THE GAME STARTS", "It's 8 AM. The leaves are coming down, and Uncle Rick's team kicks off to yours.");
   } else if (name === "half1") {
     G.q = "HALF"; G.half = 2; G.us = 14; G.them = 21;
     paint = (t) => A.sideline(c, t, "park", FACE);
-    say("HALFTIME  14 - 21"); sfx.whistle(); showHud();
-    await lines("HALFTIME", ["Both teams have scored twice. Then Uncle Rick's team scores on the last play of the half.", "You are losing 21 to 14. Your team sits on the bench and looks at you."]);
-    say(""); G.q = "Q4";
+    say("HALFTIME  14 - 21", "slam"); sfx.whistle(); showHud(); await beat(1400); say("");
+    await talk("HALFTIME", "Both teams have scored twice. Then Uncle Rick's team scores on the last play of the half.");
+    await talk("HALFTIME", "You are losing 21 to 14. Your team sits on the bench and looks at you.");
+    G.q = "Q4";
   } else if (name === "jerry") {
-    G.jerry = true; G.q = "FINAL"; showHud(); const start = now();
-    paint = (t) => { const e = t - start; A.park(c, t, { time: "gold", field: false }); A.passerby(c, Math.max(500, 700 - e * 46), 216, 0.72, e > 5.4 ? "down" : "on"); A.jerry(c, Math.min(180, -80 + e * 60), 226, 0.95, { wave: e > 5 ? e : 0, armUp: e > 5 }); A.leaves(c, t, 90); };
-    say("");
-    const k = card("AFTER THE GAME"); const add = (cls, x) => k.append(el("p", cls, x));
-    add("say", "The park is gold and orange, and the leaves are falling slowly.");
-    await wait(2600); add("say", "A beautiful blonde woman walks by in sunglasses. She pulls her sunglasses down and looks at you.");
-    await wait(3400); sfx.good(); add("scene", "Jerry Jones: \"Hey, we got a big game today. I just happened to be walking by your park, and I saw you playing there, and I saw the way you've been coaching, and I like it. I want you to coach the Dallas Cowboys. But first we have to do a quick interview.\"");
-    G.log.push({ who: "AFTER THE GAME", lines: ["A beautiful blonde woman walks by in sunglasses. She pulls her sunglasses down and looks at you.", "Jerry Jones: \"I want you to coach the Dallas Cowboys. But first we have to do a quick interview.\""] }); showBack();
-    await next(k, "Okay, Jerry");
+    G.jerry = true; G.q = "FINAL"; showHud(); say("");
+    let s0 = now();
+    paint = (t) => { A.park(c, t, { time: "gold", field: false, scroll: (t - s0) * 30 }); A.leaves(c, t, 90); A.letterbox(c); };
+    await talk("AFTER THE GAME", "The park is gold and orange, and the leaves are falling slowly.");
+    s0 = now();
+    paint = (t) => { const e = t - s0; A.park(c, t, { time: "gold", field: false }); A.passerby(c, Math.max(420, 700 - e * 120), 216, 0.72, "on"); A.leaves(c, t, 90); A.letterbox(c); };
+    await beat(2300);
+    // Up close: the sunglasses come down.
+    s0 = now(); let dinged = false;
+    paint = (t) => { const e = t - s0; A.speedLines(c, t, "#8a2f52", "#f6b8d0"); A.bust(c, "passerby", 320, 2.2, { shades: e > 0.9 ? "down" : "on", look: e > 0.9 ? -1 : 0 }, 24); A.letterbox(c); if (e > 0.9 && !dinged) { dinged = true; sfx.good(); hitStop(260); } };
+    await beat(2100);
+    await talk("AFTER THE GAME", "A beautiful blonde woman walks by in sunglasses. She pulls her sunglasses down and looks at you.");
+    s0 = now();
+    paint = (t) => { const e = t - s0; A.park(c, t, { time: "gold", field: false }); A.passerby(c, 420 + e * 90, 216, 0.72, "on"); A.jerry(c, Math.min(200, -80 + e * 130), 226, 0.95, {}); A.leaves(c, t, 90); A.letterbox(c); };
+    await beat(2300);
+    // Up close: Jerry Jones, looking the park over.
+    s0 = now(); sfx.sting(); flash(60);
+    const jerryUp = (extra) => (t) => { const e = t - s0; A.burst(c, t, 320, 160, "#1d3c8f", "#c9d3e6"); A.bust(c, "jerry", 320, 2.2, { look: e < 0.5 ? -3 : e < 1 ? 3 : 0, blink: Math.floor(t * 2.5) % 6 === 0, ...extra(t) }, 26); A.letterbox(c); };
+    paint = jerryUp(() => ({})); await beat(1500);
+    const mouth = (t) => ({ talk: Math.floor(t * 9) % 2 === 0, grin: Math.floor(t * 9) % 2 !== 0 });
+    paint = jerryUp(mouth);
+    await talk("JERRY JONES", "\"Hey, we got a big game today. I just happened to be walking by your park, and I saw you playing there, and I saw the way you've been coaching, and I like it.\"");
+    await talk("JERRY JONES", "\"I want you to coach the Dallas Cowboys. But first we have to do a quick interview.\"");
+    s0 = now(); paint = (t) => { jerryUp(() => ({ grin: true }))(t); A.iris(c, 320, 128, Math.max(46, 420 - (t - s0) * 700)); }; await beat(1100);
   } else if (name === "jet") {
-    const start = now();
-    paint = (t) => { A.sky(c, t); A.plane(c, -200 + Math.min(1, (t - start) / 3) * 420, 130 + Math.sin(t * 1.7) * 6); };
-    say("WHEELS UP", "big"); sfx.jet();
-    await lines("JERRY'S JET", ["Jerry: \"You're hired. For today. Wheels up.\""]);
-    say("");
+    let s0 = now();
+    paint = (t) => { A.speedLines(c, t, "#2f6fc4", "#cfeaff", 22); A.plane(c, 230 + Math.sin(t * 2) * 8, 150 + Math.sin(t * 3.1) * 5); A.letterbox(c); };
+    say("WHEELS UP", "slam"); sfx.jet(); sfx.slam(); await beat(1700); say("");
+    paint = (t) => { A.cabin(c, t, 0); A.seat(c, 200, 300); A.jerry(c, 200, 300, 1.0, { talk: Math.floor(t * 9) % 2 === 0, grin: false }); A.seat(c, 440, 300); A.person(c, 440, 300 + Math.round(Math.abs(Math.sin(t * 7)) * -3), 1.0, { ...A.CAST.you, ...YOU(), shirt: "#1b2440" }); A.letterbox(c); };
+    await talk("JERRY'S JET", "Jerry: \"You're hired. For today. Wheels up.\"");
+    // The cabin goes on, and somebody else is flying first class.
+    s0 = now(); let gob = false;
+    paint = (t) => { const e = t - s0, sc = Math.min(1, e / 1.6) * 520; A.cabin(c, t, sc); A.seat(c, 440 - sc, 300); A.seat(c, 200 - sc, 300); A.seat(c, 840 - sc, 300); c.save(); c.translate(838 - sc, 266); c.scale(2.2, 2.2); A.turkey(c, 0, 0, e > 1.6 ? 0 : t); if (e > 1.6) { c.fillStyle = "#16121f"; c.fillRect(8, -38, 12, 5); } c.restore(); c.save(); c.translate(900 - sc, 200); c.scale(1.6, 1.6); A.food(c, "sparkling"); c.restore(); A.letterbox(c); if (e > 2.3 && !gob) { gob = true; sfx.gobble(0, 1); } };
+    await beat(3300);
   } else if (name === "dallas") {
     G.where = "dallas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1; G.jerry = false;
-    paint = (t) => { A.stadium(c, t, { midfield: true }); A.fireworks(c, t, 4); };
-    say("DALLAS", "big"); sfx.cheer(); showHud();
+    await eyecatch("DALLAS", "#1d3c8f", "#c9d3e6", true);
+    const s0 = now();
+    paint = (t) => { A.stadium(c, t, { midfield: true, scroll: Math.max(0, 1 - (t - s0) / 1.4) * 240 }); A.fireworks(c, t, 4); A.confetti(c, t, ["#1d3c8f", "#c9d3e6", "#fff"], 50); };
+    flash(120); sfx.cheer(); sfx.slam(); shake(260); showHud();
     post();   // reaching Level 3 is the credit, so the server hears about the landing
-    await lines("THANKSGIVING AFTERNOON", ["The stadium, the big screen, a blue star on silver at midfield, a full crowd, cameras everywhere.", "You are the head coach of the Dallas Cowboys."]);
-    say("");
+    await beat(1500);
+    await talk("THANKSGIVING AFTERNOON", "The stadium, the big screen, a blue star on silver at midfield, a full crowd, cameras everywhere.");
+    paint = (t) => { A.burst(c, t, 320, 160, "#1d3c8f", "#c9d3e6"); A.bust(c, "you", 320, 2.1, { ...YOU(), grin: true }, 30); A.letterbox(c); }; sfx.sting();
+    await talk("THANKSGIVING AFTERNOON", "You are the head coach of the Dallas Cowboys.");
   } else if (name === "texas") {
     // The third game. "You get the real best head coaching job, which is the Texas Longhorns against Texas A&M. And that's a night game."
     const start = now();
-    paint = (t) => { A.stadium(c, t, { midfield: true }); A.jerry(c, 150, 226, 0.9, { armUp: true, wave: t }); A.person(c, 470, 226, 0.9, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "" }); c.save(); c.translate(520, 40 + Math.sin(t * 60) * (t - start < 2 ? 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 60, 106); c.fillStyle = "#bf5700"; c.fillRect(5, 10, 50, 84); c.fillStyle = "#fff"; c.font = "8px 'Press Start 2P', monospace"; c.fillText("TEXAS", 9, 56); c.restore(); };
-    say("YOUR PHONE RINGS"); sfx.good();
-    await lines("ONE MORE CALL", ["It's the University of Texas. Their head coach quit an hour ago, and they play Texas A&M tonight.", "They watched you win in Dallas. They want you in Austin by kickoff."], "Go to Austin");
+    paint = (t) => { A.stadium(c, t, { midfield: true }); A.jerry(c, 150, 226, 0.9, { armUp: true, wave: t }); A.person(c, 470, 226, 0.9, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "" }); c.save(); c.translate(520, 40 + Math.sin(t * 60) * (t - start < 2 ? 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 60, 106); c.fillStyle = "#bf5700"; c.fillRect(5, 10, 50, 84); c.fillStyle = "#fff"; c.font = "16px 'Press Start 2P', monospace"; c.fillText("UT", 14, 60); c.restore(); };
+    say("YOUR PHONE RINGS", "slam"); sfx.good(); await beat(1400); say("");
+    await talk("ONE MORE CALL", "It's the University of Texas. Their head coach quit an hour ago, and they play Texas A&M tonight.");
+    paint = (t) => { A.speedLines(c, t, "#bf5700", "#ffd9a8"); A.bust(c, "you", 320, 2.1, { ...YOU(), shirt: "#1b2440", shock: true }, 30); A.letterbox(c); };
+    await talk("ONE MORE CALL", "They watched you win in Dallas. They want you in Austin by kickoff.");
     G.where = "texas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1;
+    await eyecatch("AUSTIN", "#bf5700", "#ffffff", false);
     const s2 = now(); music.start("band");
-    paint = (t) => { A.stadium(c, t, { team: "texas" }); A.band(c, t, t - s2); A.fireworks(c, t, 3); };
-    ui.textContent = ""; say("TEXAS vs TEXAS A&M"); sfx.cheer(); showHud();
-    await wait(7000);   // the band has the field to itself before any words come up
-    await lines("THANKSGIVING NIGHT", ["A night game in Austin. A hundred thousand people in burnt orange, and the band is on the field.", "Win this one and you are the champion of the whole day."]);
+    paint = (t) => { A.stadium(c, t, { team: "texas" }); A.band(c, t, t - s2); A.beams(c, t); A.fireworks(c, t, 3); };
+    ui.textContent = ""; say("TEXAS vs TEXAS A&M", "slam"); sfx.cheer(); flash(120); showHud();
+    await beat(2200); say(""); await beat(6400);   // the band has the field to itself, and the last tuba is late
+    await talk("THANKSGIVING NIGHT", "A night game in Austin. A hundred thousand people in burnt orange, and the band is on the field.");
+    await talk("THANKSGIVING NIGHT", "Win this one and you are the champion of the whole day.");
     music.stop(); say("");
   } else if (name === "band") {
     // Halftime in Austin: the band, and the turkey with the band.
     G.q = "HALF"; G.half = 2; G.us = 10; G.them = 14; showHud();
     const start = now(); music.start("band");
-    paint = (t) => { const e = t - start; A.stadium(c, t, { team: "texas" }); A.band(c, t, e); if (e > 5) { A.turkeyDance(c, 320, 346, t, "macarena", 2.6); A.turkeyDance(c, 90, 346, t, "dougie", 1.8); A.turkeyDance(c, 550, 346, t, "dougie", 1.8); } };
-    ui.textContent = ""; say("HALFTIME  10 - 14"); sfx.whistle();
-    await wait(5200); say("THE TURKEY JOINS THE BAND", "line"); sfx.gobble(0, 3); await wait(6000);
-    await lines("HALFTIME IN AUSTIN", ["The band spells TEXAS across the field. Then a turkey walks out and does the Macarena, and a hundred thousand people do it too.", "You are losing to Texas A&M, 14 to 10."]);
+    paint = (t) => { const e = t - start; A.stadium(c, t, { team: "texas" }); A.band(c, t, e); if (e > 5) { const up = Math.max(0, 1 - (e - 5) * 3) * 120; A.turkeyDance(c, 320, 346 + up, t, "macarena", 2.6); A.turkeyDance(c, 90, 346 + up, t, "dougie", 1.8); A.turkeyDance(c, 550, 346 + up, t, "dougie", 1.8); } A.beams(c, t); };
+    ui.textContent = ""; say("HALFTIME  10 - 14", "slam"); sfx.whistle();
+    await beat(1600); say(""); await beat(3400); say("THE TURKEY JOINS THE BAND", "line"); sfx.gobble(0, 3); await beat(5000); say("");
+    await talk("HALFTIME IN AUSTIN", "The band spells TEXAS across the field. Then a turkey walks out and does the Macarena, and a hundred thousand people do it too.");
+    await talk("HALFTIME IN AUSTIN", "You are losing to Texas A&M, 14 to 10.");
     music.stop(); say(""); G.q = "Q4";
   }
+  cine(false);
 }
 
 async function post() {
@@ -563,6 +670,7 @@ function boardCard(k, rows) {
 async function checkpoint(who, textLines, label) {
   const k = card(who); textLines.forEach(x => k.append(el("p", "say", x)));
   const r = tally(); k.append(el("div", "pts", r.score.toLocaleString("en-US") + " of " + MAX_SCORE.toLocaleString("en-US")));
+  const strip = el("div", "strip"); flowFor(G.seed).forEach(f => { if (!f.d || !Object.prototype.hasOwnProperty.call(G.picks, f.d)) return; const got = judge(decisionOf(f.d), G.picks[f.d]); if (got) { const sq = el("i", "r-" + got.rank); sq.title = RANK_SAY[got.rank]; strip.append(sq); } }); k.append(strip);
   G.log.push({ who, lines: textLines }); showBack();
   const out = await post();
   if (out && out.ok) boardCard(k, out.rows); else k.append(el("p", "small", "The leaderboard did not answer. Your score is still on this screen."));
@@ -638,18 +746,19 @@ async function run() {
   // A reload lands at the start of the step that was under way, so a call made inside that step is taken back.
   G.calls.length = Math.min(G.calls.length, G.step > 0 ? due[G.step - 1] : 0);
   for (let i = G.step; i < flow.length; i++) {
-    const step = flow[i];
+    let step = flow[i];
     if (step.s === "title") { G.step = i + 1; continue; }
     if (step.s) await scene(step.s);
     else if (step.d) {
       // The story's scores, said out loud before the question that depends on them.
-      if (step.d === "commercial") { G.q = "HALF"; G.half = 2; G.us = 7; G.them = 17; say("HALFTIME IN DALLAS  7 - 17"); sfx.whistle(); showHud(); await wait(1900); say(""); }
-      if (step.d === "speech") G.q = "Q4";
-      if (step.d === "kicker") { G.q = "Q2"; G.us = 7; G.them = 7; showHud(); }
-      if (step.d === "twominute") { G.q = "Q4"; G.them = 21; G.us = 17; say("TWO MINUTES LEFT  17 - 21"); showHud(); await wait(1900); say(""); }
-      const got = await decide(step.d);
+      const slotOf = decisionOf(step.d).slot || step.d;
+      if (slotOf === "commercial") { G.q = "HALF"; G.half = 2; G.us = 7; G.them = 17; say("HALFTIME IN DALLAS  7 - 17"); sfx.whistle(); showHud(); await wait(1900); say(""); }
+      if (slotOf === "speech") G.q = "Q4";
+      if (slotOf === "kicker") { G.q = "Q2"; G.us = 7; G.them = 7; showHud(); }
+      if (slotOf === "twominute") { G.q = "Q4"; G.them = 21; G.us = 17; say("TWO MINUTES LEFT  17 - 21"); showHud(); await wait(1900); say(""); }
+      const got = await decide(step.d); step = { ...step, d: slotOf };
       ui.textContent = "";   // the answered card comes down before anything else is drawn
-      if (got.over) { await ending(step.d); store.set(SAVE, null); return; }
+      if (got.over) { await ending(slotOf); store.set(SAVE, null); return; }
       if (step.d === "kicker" && (got.rank === "best" || got.rank === "good")) { G.us += 3; paint = idle("texas"); say("YOUR KICKER MAKES THE NEXT ONE FROM 47"); sfx.good(); showHud(); await wait(2200); say(""); }
     } else if (step.p) await plays();
     else if (step.gate) { const ok = await gate(step.gate); if (!ok || step.gate === 4) { store.set(SAVE, null); return; } }
@@ -659,20 +768,31 @@ async function run() {
 }
 // ─── the opening ───
 async function titleSequence() {
-  const start = now(); let skip = false, thuds = 0, gobbled = false, strut = false;
+  // Before the name: a leaf in the dark, the park at dawn, feet, a face, and a catch that stops in the air.
+  cine(true); let s0 = now();
+  paint = (t) => { const e = t - s0; c.fillStyle = "#000"; c.fillRect(0, 0, A.W, A.H); c.save(); c.translate(320 + Math.sin(e * 3) * 40, -10 + e * 130); c.rotate(e * 3); c.fillStyle = "#e2622a"; c.beginPath(); c.ellipse(0, 0, 12, 6, 0, 0, 7); c.fill(); c.restore(); c.fillStyle = "#f4f1e6"; c.textAlign = "center"; c.font = "16px 'Press Start 2P', monospace"; c.globalAlpha = clamp(e - 0.4, 0, 1); c.fillText("COMM 118 PRESENTS", 320, 300); c.globalAlpha = 1; c.textAlign = "left"; };
+  await beat(2000);
+  s0 = now(); paint = (t) => { A.park(c, t, { time: "dawn", field: false, scroll: (t - s0) * 120 }); A.leaves(c, t, 70); A.letterbox(c); }; await beat(2200);
+  paint = (t) => { A.cleats(c, t); A.letterbox(c); }; await beat(480);
+  paint = (t) => { A.speedLines(c, t, "#a8551c", "#f6c945"); A.bust(c, "grandma", 320, 2.1, { look: 2 }, 30); A.letterbox(c); }; await beat(560);
+  paint = (t) => { A.cleats(c, t, "#6a4bb0"); A.letterbox(c); }; await beat(480);
+  s0 = now(); let caught = false;
+  paint = (t) => { const p = clamp((t - s0) / 0.45, 0, 1); A.burst(c, t, 320, 170, "#e2622a", "#ffd75e"); A.bigCatch(c, t, p); A.letterbox(c); if (p >= 1 && !caught) { caught = true; if (!skipping) { sfx.slam(); hitStop(500); shake(300); flash(80); } } };
+  await beat(1500);
+  const start = now() - 1.8; let skip = skipping, thuds = 0, gobbled = false, strut = false; cine(true);
   const letters = "TURKEY BOWL".split("");
   const stop = () => { skip = true; };
   canvas.addEventListener("pointerdown", stop, { once: true }); onKey = stop;
   paint = (t) => {
     const e = skip ? 99 : t - start;
-    if (e < 1.8) { c.fillStyle = "#000"; c.fillRect(0, 0, A.W, A.H); c.fillStyle = "#f4f1e6"; c.textAlign = "center"; c.font = "14px 'Press Start 2P', monospace"; c.globalAlpha = clamp(e / 0.5, 0, 1) * clamp((1.8 - e) / 0.4, 0, 1); c.fillText("COMM 118 PRESENTS", 320, 184); c.globalAlpha = 1; c.textAlign = "left"; return; }
+    if (e < 1.8) { c.fillStyle = "#000"; c.fillRect(0, 0, A.W, A.H); c.fillStyle = "#f4f1e6"; c.textAlign = "center"; c.font = "16px 'Press Start 2P', monospace"; c.globalAlpha = clamp(e / 0.5, 0, 1) * clamp((1.8 - e) / 0.4, 0, 1); c.fillText("COMM 118 PRESENTS", 320, 184); c.globalAlpha = 1; c.textAlign = "left"; return; }
     A.park(c, t, { time: e < 4.5 ? "dawn" : "day", field: false });
-    c.textAlign = "center"; c.font = "44px 'Press Start 2P', monospace";
+    c.textAlign = "center"; c.font = "48px 'Press Start 2P', monospace";
     letters.forEach((ch, i) => {
       const at = 2.4 + i * 0.16, p = clamp((e - at) / 0.28, 0, 1); if (p <= 0) return;
-      if (p >= 1 && thuds <= i && !skip) { thuds = i + 1; sfx.thud(); }
+      if (p >= 1 && thuds <= i && !skip) { thuds = i + 1; sfx.thud(); shake(120); }
       const bounce = p >= 1 ? Math.max(0, Math.sin((e - at - 0.28) * 14) * 10 * Math.exp(-(e - at) * 2.4)) : 0;
-      const y = -40 + 190 * (p < 1 ? p * p : 1) - bounce, x = 84 + i * 47;
+      const y = -40 + 190 * (p < 1 ? p * p : 1) - bounce, x = 80 + i * 48;
       c.fillStyle = "#1c1626"; c.fillText(ch, x + 4, y + 4); c.fillStyle = i < 6 ? "#ffd75e" : "#ff9d2e"; c.fillText(ch, x, y);
     });
     c.textAlign = "left";
@@ -680,10 +800,10 @@ async function titleSequence() {
     if (te > 0 && !strut && !skip) { strut = true; sfx.gobble(0, 3); }
     if (te > 0) { const tx = Math.min(320, 60 + te * 150); if (tx < 320) A.turkey(c, tx, 334, t); else A.turkeyDance(c, 320, 338, t, "macarena", 2.4); }
     A.leaves(c, t, 90);
-    if (e > 5 && Math.floor(t * 2) % 2) { c.textAlign = "center"; c.font = "14px 'Press Start 2P', monospace"; c.fillStyle = "#1c1626"; c.fillText("THANKSGIVING MORNING", 322, 214); c.fillStyle = "#fff"; c.fillText("THANKSGIVING MORNING", 320, 212); c.textAlign = "left"; }
+    if (e > 5 && Math.floor(t * 2) % 2) { c.textAlign = "center"; c.font = "16px 'Press Start 2P', monospace"; c.fillStyle = "#1c1626"; c.fillText("THANKSGIVING MORNING", 322, 214); c.fillStyle = "#fff"; c.fillText("THANKSGIVING MORNING", 320, 212); c.textAlign = "left"; }
   };
-  for (let i = 0; i < 92 && !skip; i++) await wait(100);
-  skip = true; onKey = null; canvas.removeEventListener("pointerdown", stop);
+  for (let i = 0; i < 74 && !skip && !skipping; i++) await wait(100);
+  skip = true; onKey = null; canvas.removeEventListener("pointerdown", stop); cine(false);
 }
 
 async function title() {

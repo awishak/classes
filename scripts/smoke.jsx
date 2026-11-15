@@ -6531,7 +6531,8 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
 {
   const T = await import("../src/turkeybowl/script.js");
   const say = (m) => { console.error("  FAIL  turkey bowl: " + m); failedEarly++; };
-  const every = [...T.DECISIONS, ...T.POPS];
+  const every = [...T.DECISIONS, ...T.POPS, ...T.ALTS];   // an alternate stands in for a question on some seeds, so a full log answers both
+  T.ALTS.forEach(a => { const base = T.DECISIONS.find(d => d.id === a.slot); if (!base || base.points !== a.points || base.level !== a.level) say(a.id + " does not match the question it stands in for"); });
   const perfect = (seed) => ({ seed, picks: Object.fromEntries(every.map(d => [d.id, d.pick ? ["expert", "legit"] : "best"])), calls: Array.from({ length: T.PLAY_COUNT }, (_, i) => T.lookFor(seed, i).beat) });
   ["aaaaaa", "k3j9x0q2", "zzzzzzzzzzzz"].forEach(seed => {
     const r = T.scoreRun(perfect(seed));
