@@ -6432,12 +6432,12 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
 {
   const at = (iso) => Date.parse(iso);
   // Pacific standard time is UTC-8. Monday 7:29 AM is still building; Monday
-  // 7:30 AM is open; Wednesday 11:59 PM is open; Thursday 12:00 AM is closed;
+  // 7:30 AM is open; Monday 9:59 AM is open; Monday 10:00 AM is closed;
   // Thursday 12:05 AM the comments are out.
   if (audioWindowStage("comm3", at("2026-11-16T15:29:59Z")) !== "building") say("audio review: open before Monday morning");
   if (audioWindowStage("comm3", at("2026-11-16T15:30:00Z")) !== "reading") say("audio review: not open Monday at 7:30 AM");
-  if (audioWindowStage("comm3", at("2026-11-19T07:59:30Z")) !== "reading") say("audio review: closed before Wednesday 11:59 PM ran out");
-  if (audioWindowStage("comm3", at("2026-11-19T08:00:00Z")) !== "closed") say("audio review: still open Thursday");
+  if (audioWindowStage("comm3", at("2026-11-16T17:59:30Z")) !== "reading") say("audio review: closed before Monday 10:00 AM");
+  if (audioWindowStage("comm3", at("2026-11-16T18:00:00Z")) !== "closed") say("audio review: still open Monday at 10:00 AM");
   if (audioWindowStage("comm3", at("2026-11-19T08:05:00Z")) !== "released") say("audio review: comments not out Thursday 12:05 AM");
   if (audioWindowStage("comm999", at("2026-11-18T08:00:00Z")) !== "building") say("audio review: a class with no window is open");
 

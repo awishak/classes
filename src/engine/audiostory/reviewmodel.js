@@ -25,10 +25,11 @@ export const FEEL_MIN = 3, FEEL_MAX = 200;
 // Pacific standard time, eight hours behind UTC in November.
 //   opens     Monday, November 16, 7:30 AM. Andrew, 2026-11-16: "Let's open
 //             up both of those assignments now." It was Tuesday at 12:00 AM.
-//   closes    Wednesday, November 18, 11:59 PM (the minute runs out at midnight)
+//   closes    Monday, November 16, 10:00 AM. Andrew, 2026-11-16: "Close audio
+//             stories." It was Wednesday, November 18, 11:59 PM.
 //   releases  Thursday, November 19, 12:05 AM, comments with names attached
 export const WINDOW = {
-  comm3: { opens: "2026-11-16T15:30:00.000Z", closes: "2026-11-19T08:00:00.000Z", releases: "2026-11-19T08:05:00.000Z" },
+  comm3: { opens: "2026-11-16T15:30:00.000Z", closes: "2026-11-16T18:00:00.000Z", releases: "2026-11-19T08:05:00.000Z" },
 };
 /** When the bright bar on the home steps down: Sunday, November 22, 11:59 PM. */
 export const BAR_UNTIL = { comm3: "2026-11-23T07:59:00.000Z" };
