@@ -1,6 +1,16 @@
 // Final project preferences: the sheet a student fills in, in COMM 3 and
-// COMM 118, at /<class>/worksheets/final-prefs. COMM 3's is due Thursday,
-// November 19 (Andrew, 2026-11-14), and opens Tuesday, November 17.
+// COMM 118, at /<class>/worksheets/final-prefs. Both are due Thursday,
+// November 19 (Andrew, 2026-11-14); COMM 3's opened Monday, November 16.
+//
+// One design for both classes. Andrew, 2026-11-16: "redo the comm 3 final
+// project preferences to make it look more like comm 118 assignment, but with
+// no sports branding and with the comm 3 questions." So the masthead, the
+// bands, the three topic cards with the questions once, the sites table, the
+// tiles and the sticky foot are shared (.fps); COMM 118 adds the pitch
+// (.fps-sport: the stripes, the halfway line, the centre circle, green and
+// volt) and COMM 3 gets a plain ink-and-gold cover (.fps-story). COMM 3's
+// questions are its own: the definition first, then why, angle and how it
+// qualifies for each idea.
 //
 // Andrew, 2026-11-13: "What do you want to work on in this class? What's your
 // work preference? Who do you potentially want to work with?" Three topics
@@ -26,7 +36,7 @@ import { rosterOf, nameShown } from "../roster.js";
 import { sectionOf, hasSections } from "../sections.js";
 import { ENGINE } from "../../config/registry.js";
 import { useCopy, Words } from "../visualstory/pre.jsx";
-import { CSS, STATUS, when, blank, linesOf, useSheet, handIn, handSay, Lines, Choices, Line, Para } from "../audiostory/bits.jsx";
+import { CSS, STATUS, when, blank, linesOf, useSheet, handIn, handSay, Lines, Choices, Line } from "../audiostory/bits.jsx";
 import * as M from "./model.js";
 
 export const prefsHref = (classId) => "/" + classId + "/worksheets/" + M.FINAL_PREFS_KEY;
@@ -223,7 +233,8 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const past = usePast(classId, viewer?.id, M.isJustice(classId));
   const readOnly = given || locked;
 
-  const root = { className: "as fpp" + (M.isJustice(classId) ? "" : " fps") + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
+  const justice = M.isJustice(classId);
+  const root = { className: "as fpp fps " + (justice ? "fps-story" : "fps-sport") + (readOnly ? " ro" : ""), "data-theme": theme || undefined };
   if (!answers) return <div {...root}><style>{CSS + EXTRA}</style><div className="sheet"><div className="foot"><span className="status">{STATUS[status] || "Loading…"}</span></div></div></div>;
 
   // Classmates in the student's own section: a pair never crosses sections.
@@ -242,27 +253,32 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const setWork = (id) => { set("work", id); if (!M.picksPartner(id)) { if (answers.top) set("top", ""); if (answers.also) set("also", ""); } };
   const setTop = (n) => { set("top", answers.top === n ? "" : n); if (also.includes(n)) set("also", also.filter(x => x !== n).join("\n")); };
   const toggleAlso = (n) => set("also", (also.includes(n) ? also.filter(x => x !== n) : [...also, n]).join("\n"));
-  const justice = M.isJustice(classId);
   const left = M.missingOf(answers, classId);
   const need = M.requiredCount(answers, classId);
-  const ideaDone = (s) => (justice ? ["topic", ...M.IDEA_PARTS] : ["topic", ...M.SPORT_PARTS, "ask"]).every(f => !blank(answers, f + ":" + s));
+  // The questions a topic takes, in the order they are asked. COMM 3: the
+  // idea, why it is interesting, the angle, and how it qualifies as social
+  // justice. COMM 118: the question, why it is worthwhile, what is unique for
+  // the audience, the concept to explicate, and the questions it raises.
+  const TOPIC_Q = justice
+    ? [["topicAsk", "topic"], ["whyAsk", "why"], ["angleAsk", "angle"], ["justiceAsk", "justice"]]
+    : [["topicAsk", "topic"], ["worthAsk", "worth"], ["audienceAsk", "audience"], ["conceptsAsk", "concepts"], ["askAsk", "ask"]];
+  const ideaDone = (s) => TOPIC_Q.every(([, f]) => !blank(answers, f + ":" + s));
   const say = handSay(handing, left) || (submitted ? <>Submitted <b>{when(submitted)}</b>.</> : <><b>{need - left.length} of {need}</b> answered</>);
   const approved = new Set((mine?.topics || []).map(t => t.slot));
-  // COMM 118's topics, one on the page at a time, so each question is written
-  // once. Andrew, 2026-11-14, on five questions repeated in three boxes:
-  // "please make it less repetitive", then on a grid of plain boxes: "this is
-  // not pretty. look at how we did things in the past." So: three tabs that
-  // fill as a topic does (the progress pills of the earlier sheets), the
-  // questions once under them, and beside them the three topics read back as
-  // they are typed, the way the Culture Guide and the audio pre-production do.
-  const TOPIC_Q = [["topicAsk", "topic"], ["worthAsk", "worth"], ["audienceAsk", "audience"], ["conceptsAsk", "concepts"], ["askAsk", "ask"]];
+  // The topics, one on the page at a time, so each question is written once.
+  // Andrew, 2026-11-14, on five questions repeated in three boxes: "please
+  // make it less repetitive", then on a grid of plain boxes: "this is not
+  // pretty. look at how we did things in the past." So: three tabs that fill
+  // as a topic does (the progress pills of the earlier sheets), the questions
+  // once under them, and beside them the three topics read back as they are
+  // typed, the way the Culture Guide and the audio pre-production do.
   const doneIn = (s) => TOPIC_Q.filter(([, f]) => !blank(answers, f + ":" + s)).length;
   const needs = handing === "missing";
   const topicName = (i) => copy.say("topicCol") + " " + (i + 1);
   const goTopic = (s) => { setSlot(s); try { composer.current?.scrollIntoView({ block: "start", behavior: "smooth" }); } catch { /* stays put */ } };
   const submit = () => {
     const missing = M.missingOf(answers, classId);
-    if (!justice && missing.length) { const first = M.SLOTS.find(s => doneIn(s) < TOPIC_Q.length); if (first && doneIn(slot) === TOPIC_Q.length) setSlot(first); }
+    if (missing.length) { const first = M.SLOTS.find(s => doneIn(s) < TOPIC_Q.length); if (first && doneIn(slot) === TOPIC_Q.length) setSlot(first); }
     handIn({ saver, store, missing, setHanding, setSubmitted });
   };
   // A topic from the student's own list drops into the first open question.
@@ -295,27 +311,38 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
     );
   };
   // The three topics read back: what a tab card and the phone's list both show.
-  const readBack = (t) => [
+  const readBack = (t) => (justice ? [
+    t.topic ? <span key="q" className="fpt-rq">{t.topic}</span> : null,
+    t.why ? <span key="w" className="fpt-rp">{t.why}</span> : null,
+    t.angle ? <span key="g" className="fpt-rp">{t.angle}</span> : null,
+    t.justice ? <span key="j" className="fpt-rc">{t.justice}</span> : null,
+  ] : [
     t.topic ? <span key="q" className="fpt-rq">{t.topic}</span> : null,
     t.worth ? <span key="w" className="fpt-rp">{t.worth}</span> : null,
     t.audience ? <span key="u" className="fpt-rp">{t.audience}</span> : null,
     t.concepts ? <span key="c" className="fpt-rc">{t.concepts}</span> : null,
     t.asks.length ? <span key="a" className="fpt-ra">{t.asks.map((l, k) => <span key={k}>{l}</span>)}</span> : null,
-  ];
+  ]);
   const pips = (s) => <span className="fpt-pips" aria-hidden="true">{TOPIC_Q.map(([, f]) => <i key={f} className={blank(answers, f + ":" + s) ? "" : "on"} />)}</span>;
-  const topics118 = justice ? null : (
+  const topics = (
     <section className="part fpt-part">
       <div className="fps-band hero">
         <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
         <Words k="topicHint" copy={copy} editing={editing} as="p" className="hint" />
       </div>
-      {interests.length || editing ? (
+      {!justice && (interests.length || editing) ? (
         <div className="fpp-mine">
           <Words k="interestsSay" copy={copy} editing={editing} as="p" className="fpp-minesay" />
           {interests.length ? <div className="fpt-picks">{interests.map(picker)}</div> : null}
         </div>
       ) : null}
-      <div className="fpp-eg">
+      {justice && (past.length || editing) ? (
+        <div className="fpp-mine fpp-past">
+          <Words k="pastSay" copy={copy} editing={editing} as="p" className="fpp-minesay" />
+          {past.length ? <ul>{past.map(x => <li key={x.what}><span>{x.what}</span>{x.say}</li>)}</ul> : null}
+        </div>
+      ) : null}
+      {justice ? null : <div className="fpp-eg">
         <div className="fpp-egtop">
           <Words k="examplesHead" copy={copy} editing={editing} as="p" className="fpp-egh" />
           <p className={"fpp-liked" + (liked.size ? " on" : "")}>{heart}<Words k="likedSay" copy={copy} editing={editing} /><b>{liked.size}</b></p>
@@ -328,7 +355,7 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
             </div>
           ))}
         </div>
-      </div>
+      </div>}
       <div className="fpt" ref={composer}>
         {copy.say("conceptsHint") ? <Words k="conceptsHint" copy={copy} editing={editing} as="p" className="fpt-note" /> : null}
         <div className="fpt-tabs" role="tablist" aria-label={copy.say("topicHead")}>
@@ -385,9 +412,9 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
       </div>
     </section>
   );
-  // COMM 118's sites: the three questions once across the top, a row a site.
+  // The sites: the three questions once across the top, a row a site.
   const SITE_Q = [["siteAsk", "site", 300], ["likeAsk", "like", 600], ["buildAsk", "build", 600]];
-  const sites118 = justice ? null : (
+  const sites = (
     <div className="fps-sites">
       <div className="fps-row fps-rowh">
         <span className="fps-sh" />
@@ -409,15 +436,13 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
       ))}
     </div>
   );
-  // A section's heading and his sentence under it: COMM 3's two lines as they
-  // were, COMM 118's in one band.
-  const band = (k, sub, hint, look) => {
-    const lines = <>
+  // A section opens on a band: his heading on the left, his sentence beside it.
+  const band = (k, sub, hint, look) => (
+    <div className={"fps-band " + look}>
       <div className="phead"><Words k={k} copy={copy} editing={editing} className="n" /><span className="sub">{sub}</span></div>
       <Words k={hint} copy={copy} editing={editing} as="p" className="hint" />
-    </>;
-    return justice ? lines : <div className={"fps-band " + look}>{lines}</div>;
-  };
+    </div>
+  );
   const faces = <>
     <div className="field">
       <Words k="topAsk" copy={copy} editing={editing} className="ask" />
@@ -461,68 +486,25 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
 
         {justice ? (
           <section className="part">
-            <div className="phead"><Words k="defineHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.DEFINE_FIELDS.every(f => !blank(answers, f)) ? "✓" : ""}</span></div>
-            <Words k="defineHint" copy={copy} editing={editing} as="p" className="hint" />
-            <div className="field">
-              <Words k="defineAsk" copy={copy} editing={editing} className="ask" />
-              <Para id="fp-define" label={copy.say("defineAsk")} value={answers.define} readOnly={readOnly} onChange={v => set("define", v)} rows={4} max={2000} />
+            {band("defineHead", M.DEFINE_FIELDS.every(f => !blank(answers, f)) ? "✓" : "", "defineHint", "fps-b0")}
+            <div className="fps-define">
+              <div className={"fpt-f fpt-f-define" + (needs && blank(answers, "define") ? " need" : "")}>
+                <Words k="defineAsk" copy={copy} editing={editing} className="fpt-ask" />
+                <Grow id="fp-define" label={copy.say("defineAsk")} value={answers.define} readOnly={readOnly} onChange={v => set("define", v)} rows={4} max={2000} />
+              </div>
+              <div className={"fpt-f fpt-f-source" + (needs && blank(answers, "defineSource") ? " need" : "")}>
+                <Words k="sourceAsk" copy={copy} editing={editing} className="fpt-ask" />
+                <Grow id="fp-define-source" label={copy.say("sourceAsk")} value={answers.defineSource} readOnly={readOnly} onChange={v => set("defineSource", v.replace(/\n/g, " "))} rows={2} max={600} />
+              </div>
             </div>
-            <label className="field">
-              <Words k="sourceAsk" copy={copy} editing={editing} className="ask" />
-              <Line id="fp-define-source" label={copy.say("sourceAsk")} value={answers.defineSource} readOnly={readOnly} onChange={v => set("defineSource", v)} max={600} />
-            </label>
           </section>
         ) : null}
 
-        {topics118 || (<section className="part">
-          <div className="phead"><Words k="topicHead" copy={copy} editing={editing} className="n" /><span className="sub">{M.SLOTS.filter(ideaDone).length} of 3</span></div>
-          <Words k="topicHint" copy={copy} editing={editing} as="p" className="hint" />
-          {past.length || editing ? (
-            <div className="fpp-past">
-              <Words k="pastSay" copy={copy} editing={editing} as="p" className="fpp-pastsay" />
-              {past.length ? <ul>{past.map(x => <li key={x.what}><span>{x.what}</span>{x.say}</li>)}</ul> : null}
-            </div>
-          ) : null}
-          <div className="ideas">
-            {M.SLOTS.map((s, i) => (
-              <div key={s} className="box">
-                {approved.has(s) ? <span className="mark ok">{copy.say("approvedSay")}</span> : null}
-                {mine?.says?.[s]?.length ? <ul className="reasons close">{mine.says[s].map(r => <li key={r}>{r}</li>)}</ul> : null}
-                <label className="field">
-                  <Words k="topicAsk" copy={copy} editing={editing} className="ask" />
-                  <Line id={"fp-topic-" + s} label={copy.say("topicAsk") + " " + (i + 1)} value={answers["topic:" + s]} readOnly={readOnly} onChange={v => set("topic:" + s, v)} />
-                </label>
-                {M.IDEA_PARTS.map(part => (
-                  <div className="field" key={part}>
-                    <Words k={part + "Ask"} copy={copy} editing={editing} className="ask" />
-                    <Para id={"fp-" + part + "-" + s} label={copy.say(part + "Ask") + " Topic " + (i + 1)} value={answers[part + ":" + s]} readOnly={readOnly} onChange={v => set(part + ":" + s, v)} rows={3} max={2000} />
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        </section>)}
+        {topics}
 
         <section className="part">
           {band("sitesHead", M.SLOTS.filter(s => ["site:", "like:", "build:"].every(f => !blank(answers, f + s))).length + " of 3", "sitesIntro", "fps-b1")}
-          {sites118 || <div className="ideas">
-            {M.SLOTS.map((s, i) => (
-              <div key={s} className="box">
-                <label className="field">
-                  <Words k="siteAsk" copy={copy} editing={editing} className="ask" />
-                  <Line id={"fp-site-" + s} label={copy.say("siteAsk") + " " + (i + 1)} value={answers["site:" + s]} readOnly={readOnly} onChange={v => set("site:" + s, v)} />
-                </label>
-                <label className="field">
-                  <Words k="likeAsk" copy={copy} editing={editing} className="ask" />
-                  <Line id={"fp-like-" + s} label={copy.say("likeAsk") + " Site " + (i + 1)} value={answers["like:" + s]} readOnly={readOnly} onChange={v => set("like:" + s, v)} max={600} />
-                </label>
-                <label className="field">
-                  <Words k="buildAsk" copy={copy} editing={editing} className="ask" />
-                  <Line id={"fp-build-" + s} label={copy.say("buildAsk") + " Site " + (i + 1)} value={answers["build:" + s]} readOnly={readOnly} onChange={v => set("build:" + s, v)} max={600} />
-                </label>
-              </div>
-            ))}
-          </div>}
+          {sites}
         </section>
 
         <section className="part">
@@ -537,12 +519,12 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
               <button key={w.id} type="button" role="radio" aria-checked={answers.work === w.id} disabled={readOnly} className={"fpp-opt focusable fpp-" + w.id + (answers.work === w.id ? " on" : "")} onClick={() => setWork(w.id)}>{w.say}</button>
             ))}
           </div>
-          {answers.work && M.picksPartner(answers.work) ? (justice ? faces : <div className="fps-team">{faces}</div>) : null}
+          {answers.work && M.picksPartner(answers.work) ? <div className="fps-team">{faces}</div> : null}
         </section>
 
         {!readOnly ? (
           <div className="foot">
-            {justice ? null : <div className="fps-meter" role="img" aria-label={(need - left.length) + " of " + need}><i style={{ width: ((need - left.length) / need) * 100 + "%" }} /></div>}
+            <div className="fps-meter" role="img" aria-label={(need - left.length) + " of " + need}><i style={{ width: ((need - left.length) / need) * 100 + "%" }} /></div>
             <div className="say" aria-live="polite">{say}</div>
             <span className={"status" + (status === "retrying" || status === "failed-load" ? " bad" : "")} aria-live="polite">{STATUS[status]}</span>
             <button type="button" className="btn primary focusable" disabled={handing === "sending"} onClick={submit}>
@@ -574,22 +556,28 @@ const EXTRA = `
 .fpp .fpp-face.on .fpp-pic{box-shadow:0 0 0 3px var(--accent)}
 .fpp .fpp-name{font-size:14px;font-weight:500;line-height:1.2;text-align:center;overflow-wrap:anywhere}
 .fpp .fpp-result{background:var(--accent-light)}
-.fpp .fpp-past{background:var(--accent-light);border-radius:18px 18px 18px 6px;padding:18px 20px;display:grid;gap:12px;max-width:820px}
-.fpp .fpp-pastsay{margin:0;font-size:17px;font-weight:500;line-height:1.45;color:var(--ink);max-width:60ch}
 .fpp .fpp-past ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
 .fpp .fpp-past li{display:grid;grid-template-columns:190px 1fr;gap:12px;font-size:17px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
 .fpp .fpp-past li span{font-size:14px;font-weight:600;color:var(--secondary);padding-top:2px}
 @media (max-width:560px){.fpp .fpp-past li{grid-template-columns:1fr;gap:2px}}
 .fpp .fpp-place{margin:0;font-size:22px;font-weight:500;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .fpp .fpp-place .fpp-pic{width:44px;height:44px}
-.fpp .box .mark{justify-self:start}
-/* COMM 118's sheet (.fps). COMM 3's keeps the rules above and nothing below. */
-.fps{--pitch:#0c4a42;--deep:#072e29;--volt:#d8f75c;--chalk:#e6f3ee;--on-volt:#0a2b26}
+/* The one sheet (.fps), in two covers. --deep is the masthead and the foot,
+   --pitch the bands, --volt the mark on them, --chalk the words on them. COMM
+   118 (.fps-sport) is a pitch: green, volt, stripes, the halfway line and the
+   centre circle. COMM 3 (.fps-story) is ink and gold with a soft light and no
+   field markings. */
+.fps-sport{--pitch:#0c4a42;--deep:#072e29;--volt:#d8f75c;--chalk:#e6f3ee;--on-volt:#0a2b26}
+.fps-story{--pitch:#3a2b78;--deep:#241a4e;--volt:#f6c453;--chalk:#ece7fb;--on-volt:#2a1c06}
 .fps .sheet{max-width:1120px;gap:0;border-radius:26px;overflow:clip;padding-bottom:0;border-color:var(--line-strong)}
 /* The masthead: a pitch from above, the halfway line and the centre circle. */
-.fps .head{position:relative;isolation:isolate;display:block;overflow:hidden;padding:46px 40px 44px;color:#fff;background:var(--deep) repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 88px,transparent 88px 176px)}
-.fps .head::before{content:"";position:absolute;z-index:-1;right:-150px;top:50%;width:540px;height:540px;border-radius:50%;border:3px solid rgba(255,255,255,.16);background:radial-gradient(circle,rgba(255,255,255,.3) 0 8px,transparent 9px);transform:translateY(-50%)}
-.fps .head::after{content:"";position:absolute;z-index:-1;right:119px;top:0;bottom:0;width:3px;background:rgba(255,255,255,.16)}
+.fps .head{position:relative;isolation:isolate;display:block;overflow:hidden;padding:46px 40px 44px;color:#fff;background:var(--deep)}
+.fps-sport .head{background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 88px,transparent 88px 176px)}
+.fps-sport .head::before{content:"";position:absolute;z-index:-1;right:-150px;top:50%;width:540px;height:540px;border-radius:50%;border:3px solid rgba(255,255,255,.16);background:radial-gradient(circle,rgba(255,255,255,.3) 0 8px,transparent 9px);transform:translateY(-50%)}
+.fps-sport .head::after{content:"";position:absolute;z-index:-1;right:119px;top:0;bottom:0;width:3px;background:rgba(255,255,255,.16)}
+/* The story cover: one soft light from the top right, and a thin gold rule. */
+.fps-story .head::before{content:"";position:absolute;z-index:-1;right:-180px;top:-260px;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--volt) 30%,transparent) 0,transparent 68%)}
+.fps-story .head::after{content:"";position:absolute;z-index:-1;left:40px;right:40px;bottom:0;height:4px;background:var(--volt)}
 .fps .title{gap:16px;max-width:780px}
 .fps .credit{order:-1;justify-self:start;font-size:14px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;line-height:1.3;color:var(--on-volt);background:var(--volt);border-radius:999px;padding:7px 15px}
 .fps .name{font-size:clamp(42px,8vw,80px);font-weight:700;line-height:.96;letter-spacing:-.04em;color:#fff;text-wrap:balance}
@@ -600,12 +588,16 @@ const EXTRA = `
 .fps .part{padding:28px 40px 0;gap:14px;border-top:0}
 .fps .part:last-of-type{padding-bottom:36px}
 /* A section opens on a band: his heading on the left, his sentence beside it. */
-.fps .fps-band{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:320px minmax(0,1fr);gap:10px 40px;align-items:center;color:#fff;border-radius:22px;padding:26px 150px 28px 30px;background:var(--pitch) repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 88px,transparent 88px 176px)}
-.fps .fps-band::after{content:"";position:absolute;z-index:-1;pointer-events:none;border:3px solid rgba(255,255,255,.17)}
-.fps .fps-band.hero::after{right:-130px;top:-130px;width:260px;height:260px;border-radius:50%}
-.fps .fps-b1::after{right:-3px;top:22px;bottom:22px;width:104px;border-right:0}
-.fps .fps-b2.hero::after{right:-110px;top:auto;bottom:-110px;width:220px;height:220px}
-.fps .fps-b3::after{right:-104px;top:50%;width:208px;height:208px;margin-top:-104px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.3) 0 6px,transparent 7px)}
+.fps .fps-band{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:320px minmax(0,1fr);gap:10px 40px;align-items:center;color:#fff;border-radius:22px;padding:26px 150px 28px 30px;background:var(--pitch)}
+.fps-sport .fps-band{background-image:repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 88px,transparent 88px 176px)}
+.fps .fps-band::after{content:"";position:absolute;z-index:-1;pointer-events:none}
+.fps-sport .fps-band::after{border:3px solid rgba(255,255,255,.17)}
+.fps-sport .fps-band.hero::after{right:-130px;top:-130px;width:260px;height:260px;border-radius:50%}
+.fps-sport .fps-b1::after{right:-3px;top:22px;bottom:22px;width:104px;border-right:0}
+.fps-sport .fps-b2.hero::after{right:-110px;top:auto;bottom:-110px;width:220px;height:220px}
+.fps-sport .fps-b3::after{right:-104px;top:50%;width:208px;height:208px;margin-top:-104px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.3) 0 6px,transparent 7px)}
+.fps-story .fps-band::after,.fps-story .fps-b0::after{right:-120px;top:50%;width:320px;height:320px;margin-top:-160px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--volt) 26%,transparent) 0,transparent 68%)}
+.fps-story .fps-band.hero::after{right:-60px;top:-200px;margin-top:0;width:440px;height:440px}
 .fps .fps-band .phead{display:grid;gap:12px;justify-items:start;align-content:center}
 .fps .fps-band:not(.hero) .phead::before{content:"";width:46px;height:6px;border-radius:999px;background:var(--volt)}
 .fps .fps-band .phead .n{font-size:29px;font-weight:600;line-height:1.08;letter-spacing:-.025em;color:#fff;max-width:none;text-wrap:balance}
@@ -705,7 +697,13 @@ const EXTRA = `
 .fps .fpt-phn{font-size:17px;font-weight:600;width:100%}
 .fps .fpt-fields{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-content:start;gap:20px 20px}
 .fps .fpt-f{display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:8px;min-width:0;align-content:start}
-.fps .fpt-f-topic{grid-column:1/-1}
+.fps .fpt-f-topic,.fps .fpt-f-justice{grid-column:1/-1}
+/* COMM 3's definition: the words wide, the source beside them. */
+.fps .fps-define{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;background:color-mix(in srgb,var(--pitch) 6%,var(--card));border:3px solid var(--pitch);border-radius:20px;padding:24px 26px 22px;margin:0}
+.fps .fps-define .fpt-f{grid-row:auto;grid-template-rows:auto 1fr}
+.fps .fps-define .fpt-f-define .para{font-size:19px;line-height:1.45;min-height:120px}
+.fps .fps-define .fpt-f-source .para{font-size:16.5px}
+.fps .fps-define .para:focus{border-color:var(--pitch)}
 .fps .fpt-ask{font-size:16.5px;font-weight:600;line-height:1.3;color:var(--ink);align-self:end}
 .fps .fpt-f .para{max-width:none;display:block;background:var(--card);border:2px solid var(--line-strong);border-radius:14px;padding:12px 14px;font-size:16.5px;resize:none;overflow:hidden;align-self:start}
 .fps .fpt-f .para:focus,.fps .fpt-f .lines .row input:focus,.fps .fps-sc .para:focus,.fps .fps-sc .row input:focus{border-color:var(--w,var(--accent))}
@@ -719,6 +717,10 @@ const EXTRA = `
 .fps .fpt-go{font:inherit;font-family:var(--font);font-size:15px;font-weight:600;color:#fff;background:var(--w);border:0;border-radius:999px;padding:0 20px;min-height:44px;cursor:pointer;transition:transform .12s}
 .fps .fpt-go:hover{transform:translateY(-1px)}
 .fps .fpt-paper{display:none}
+/* COMM 3's earlier work, in the note's place: the three things they made. */
+.fps .fpp-mine.fpp-past{border-radius:22px;padding:22px 28px}
+.fps .fpp-past ul{gap:10px}
+.fps .fpp-past li{grid-template-columns:170px 1fr;font-size:16.5px}
 /* The sites: the three questions across the top, a row a site. */
 .fps .fps-sites{display:grid;grid-template-columns:54px minmax(0,.8fr) minmax(0,1.2fr) minmax(0,1.2fr);gap:8px 14px;margin:0}
 .fps .fps-row{grid-column:1/-1;display:grid;grid-template-columns:subgrid;align-items:start;background:var(--sunk);border-radius:18px;padding:12px 14px 12px 6px}
@@ -771,6 +773,7 @@ const EXTRA = `
 .fps .foot .btn.primary{order:4;min-height:50px;padding:0 28px;font-size:17px;font-weight:700;border-radius:999px;background:var(--volt);border-color:var(--volt);color:var(--on-volt)}
 @media (max-width:900px){
 .fps .fps-band,.fps .fpp-mine{grid-template-columns:1fr}
+.fps .fps-define{grid-template-columns:1fr}
 .fps .fps-band,.fps .fps-b2.hero{padding-right:30px}
 .fps .fpt-tab:not(.on) .fpt-rc{display:none}
 .fps .fpt{grid-template-columns:1fr}
@@ -795,13 +798,14 @@ const EXTRA = `
 }
 @media (max-width:860px){
 .fps .head{padding:32px 20px 30px}
-.fps .head::before{right:-330px;opacity:.7}
-.fps .head::after{right:-61px}
+.fps-sport .head::before{right:-330px;opacity:.7}
+.fps-sport .head::after{right:-61px}
+.fps-story .head::after{left:20px;right:20px}
 .fps .part{padding:16px 16px 0}
 .fps .part:last-of-type{padding-bottom:22px}
 .fps .fps-band,.fps .fps-b2.hero{padding:20px 20px 22px}
 .fps .fps-band.hero{padding:24px 20px 26px}
-.fps .fps-b1::after{width:56px}
+.fps-sport .fps-b1::after{width:56px}
 .fps .fps-band .phead .n{font-size:24px}
 .fps .fps-band .hint{font-size:17px}
 .fps .fpp-mine{padding:18px 18px 20px}
@@ -837,7 +841,8 @@ const EXTRA = `
 .fps .fpp-ega{font-size:14.5px}
 .fps .fpp-egt{font-size:14px;line-height:1.2}
 .fps .fpt-fields{grid-template-columns:1fr;gap:18px}
-.fps .fpt-panel{padding:18px 14px 16px;border-radius:18px}
+.fps .fpt-panel,.fps .fps-define{padding:18px 14px 16px;border-radius:18px}
+.fps .fpp-mine.fpp-past{padding:18px 16px 20px}
 .fps .fpt-f-topic .para{font-size:21px;padding:13px 14px}
 .fps .fpp-opt{min-height:112px;font-size:17px;padding:20px 14px 14px}
 .fps .foot{gap:6px 8px;padding:8px 12px 9px;border-radius:18px 18px 0 0}
