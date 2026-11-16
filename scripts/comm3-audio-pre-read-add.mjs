@@ -48,7 +48,13 @@ const stop = [], unplaced = [], added = [];
 for (const id of slugs) {
   const s = data.students.find(x => x.id === id);
   if (!s) { stop.push(id + ": not in the pull"); continue; }
-  if (!s.clip) { stop.push(s.name + ": no clip"); continue; }
+  // A student with no pre-production clip can be read off the audio story
+  // they submitted: the read says story: { seconds }, and the transcript is
+  // in story-transcripts/. Andrew, 2026-11-16, on David Castillo and Sidi
+  // Gueye: "you rated opening, thesis, closing, and more."
+  const fromStory = !s.clip && !!mine.students[id]?.story;
+  if (!s.clip && !fromStory) { stop.push(s.name + ": no clip"); continue; }
+  const length = fromStory ? mine.students[id].story.seconds : s.clip.seconds;
   if (file.students[s.email] && !over) { console.log(`${s.name}: already has a read, left alone`); continue; }
   const r = mine.students[id];
   if (!r) { stop.push(s.name + ": no read in claude-read.json"); continue; }
@@ -59,7 +65,7 @@ for (const id of slugs) {
   for (const k of ["interview", "structure", "news"]) if (!r[k]?.say) stop.push(`${s.name}: ${k} is empty`);
   r.read = r.read || (mine.reads || {})[id] || "";
   if (!r.read) stop.push(`${s.name}: no summary`);
-  const tf = `${BASE}/transcripts/${id}.json`;
+  const tf = `${BASE}/${fromStory ? "story-transcripts" : "transcripts"}/${id}.json`;
   if (!existsSync(tf)) { stop.push(s.name + ": no transcript"); continue; }
   const segs = (JSON.parse(readFileSync(tf, "utf8")).segments || []).filter(x => String(x.text || "").trim());
   // Turns: segments joined until a pause of two seconds.
@@ -75,7 +81,7 @@ for (const id of slugs) {
   const quiet = [];
   let at = 0;
   for (const [a, b] of spans) { if (a - at >= GAP) quiet.push([at, a]); at = Math.max(at, b); }
-  const total = s.clip.seconds || at;
+  const total = length || at;
   if (total - at >= GAP) quiet.push([at, total]);
   const quietSay = quiet.length
     ? "No speech at " + quiet.map(([a, b]) => mmss(a) + " to " + mmss(b)).join(", ") + ", which is likely music or field audio."
@@ -92,8 +98,43 @@ for (const id of slugs) {
   const meets = ["opener", "thesis", "closer"].filter(k => r[k]?.verdict === "meets").length;
   const score = ["opener", "thesis", "closer"].reduce((n, k) => n + (PTS[r[k]?.verdict] || 0), 0) * 10
     + (r.interview?.has ? 3 : 0) + ({ reported: 3, some: 1 }[r.news?.level] || 0) + (r.structure?.level === "clear" ? 2 : 0);
-  const entry = { ...r, meets, score, gaps: { say: [r.heard, quietSay].filter(Boolean).join(" ") }, seconds: s.clip.seconds, transcript: turns.map(x => ({ at: mmss(x.start), text: x.text })) };
-  delete entry.heard;
+  // The clip by voice, the way comm3-audio-pre-timeline.mjs draws one: the
+  // read's `voices` is [[first words or seconds, kind], ..] where the voice
+  // changes; a clip starts as the student, and 2.5 seconds with no speech is
+  // music and field audio.
+  const QUIET = 2.5, r1 = (n) => Math.round(n * 10) / 10;
+  const changes = [];
+  let from = 0;
+  for (const [phrase, kind] of r.voices || []) {
+    if (!["you", "broadcast", "interview", "music"].includes(kind)) { stop.push(`${s.name}: voice kind "${kind}"`); continue; }
+    if (typeof phrase === "number") { changes.push({ at: phrase, kind }); while (from < words.length && words[from].start < phrase) from++; continue; }
+    const q = norm(phrase).slice(0, 5);
+    let hit = -1;
+    for (let i = from; i + q.length <= said.length; i++) if (q.every((w, j) => said[i + j] === w)) { hit = i; break; }
+    if (hit < 0) { stop.push(`${s.name}: voice change not found: "${phrase}"`); continue; }
+    changes.push({ at: hit === 0 ? 0 : words[hit].start, kind });
+    from = hit + 1;
+  }
+  const speech = [];
+  for (const x of segs) { const last = speech[speech.length - 1]; if (last && x.start - last[1] < QUIET) last[1] = x.end; else speech.push([x.start, x.end]); }
+  if (speech.length && speech[0][0] < QUIET) speech[0][0] = 0;
+  if (speech.length && total - speech[speech.length - 1][1] < QUIET) speech[speech.length - 1][1] = total;
+  const kindAt = (time) => { let k = "you"; for (const c of changes) if (c.at <= time + 0.001) k = c.kind; return k; };
+  const parts = [];
+  const put = (a, b, k) => { if (b - a < 0.05) return; const last = parts[parts.length - 1]; if (last && last[2] === k && a - last[1] < 0.05) last[1] = b; else parts.push([a, b, k]); };
+  const still = (a, b) => { const cuts = [a, ...changes.map(c => c.at).filter(c => c > a && c < b), b]; for (let i = 0; i + 1 < cuts.length; i++) put(cuts[i], cuts[i + 1], kindAt(cuts[i]) === "broadcast" ? "broadcast" : "music"); };
+  let upTo = 0;
+  for (const [a, b] of speech) {
+    if (a > upTo) still(upTo, a);
+    const cuts = [a, ...changes.map(c => c.at).filter(c => c > a && c < b), b];
+    for (let i = 0; i + 1 < cuts.length; i++) put(cuts[i], cuts[i + 1], kindAt(cuts[i]));
+    upTo = b;
+  }
+  if (total > upTo) still(upTo, total);
+  const timeline = { seconds: r1(total), parts: parts.map(([a, b, k]) => [r1(a), r1(b), k]) };
+  const entry = { ...r, meets, score, gaps: { say: [r.heard, quietSay].filter(Boolean).join(" ") }, seconds: length, transcript: turns.map(x => ({ at: mmss(x.start), text: x.text })), timeline };
+  delete entry.heard; delete entry.voices; delete entry.story;
+  console.log(`  ${s.name} by voice: ` + ["you", "broadcast", "interview", "music"].map(k => k + " " + mmss(timeline.parts.filter(p => p[2] === k).reduce((n, p) => n + p[1] - p[0], 0))).join(", "));
   file.students[s.email] = entry;
   added.push(`${s.name}: opener ${r.opener.verdict} (${r.opener.at || "no time"}), thesis ${r.thesis.verdict} (${r.thesis.at || "no time"}), closer ${r.closer.verdict} (${r.closer.at || "no time"}), score ${score}`);
 }
