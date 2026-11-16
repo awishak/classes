@@ -43,7 +43,9 @@ export default async function handler(req, res) {
   if (String(q.sheet) === "audio-pre-feedback") {
     if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
     const teaches = await callerAllowed(req, { pin: q.pin });
-    const me = teaches ? String(q.as || "").trim().toLowerCase() : await callerEmail(req);
+    // The student comes in the address (&as=) or, from the View as a student
+    // menu, in the x-view-as header. Either way only an instructor is believed.
+    const me = teaches ? String(q.as || req.headers["x-view-as"] || "").trim().toLowerCase() : await callerEmail(req);
     if (!me) return res.status(200).json({ ok: true, note: "" });
     const f = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${objectFor(q.class || "comm3", "audio-pre-notes")}`, { headers: serviceHeaders() });
     const file = (f.ok ? await f.json().catch(() => null) : null) || {};

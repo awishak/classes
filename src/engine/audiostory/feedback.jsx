@@ -48,7 +48,10 @@ async function preOf({ classId, who, preview }) {
   return { sources: join("sources").trim(), story: join("story").trim(), url: clip ? urls[clip.path] || "" : "" };
 }
 
-export function StoryFeedback({ classId, viewer, onPre, onLinks }) {
+// `as` is the student an instructor is viewing as, picked on the worksheet
+// page's View as a student menu. It goes to the server in a header, so no
+// student's email sits in an address.
+export function StoryFeedback({ classId, viewer, onPre, onLinks, as: picked = "" }) {
   const [got, setGot] = useState(null);
   const [pre, setPre] = useState({ sources: "", story: "", url: "" });
   const [open, setOpen] = useState(() => { try { return localStorage.getItem("audio-story-feedback") !== "hidden"; } catch { return true; } });
@@ -59,9 +62,11 @@ export function StoryFeedback({ classId, viewer, onPre, onLinks }) {
     let alive = true;
     (async () => {
       try {
-        const as = (new URLSearchParams(window.location.search).get("as") || "").trim().toLowerCase();
+        const inAddress = (new URLSearchParams(window.location.search).get("as") || "").trim().toLowerCase();
+        const chosen = String(picked || "").trim().toLowerCase();
+        const as = chosen || inAddress;
         const pin = as ? savedPin() : "";
-        const r = await fetch("/api/sitdown-sheet?sheet=audio-pre-feedback&class=" + encodeURIComponent(classId || "") + (as ? "&as=" + encodeURIComponent(as) : "") + (pin ? "&pin=" + encodeURIComponent(pin) : ""), { headers: await authHeaders() });
+        const r = await fetch("/api/sitdown-sheet?sheet=audio-pre-feedback&class=" + encodeURIComponent(classId || "") + (!chosen && as ? "&as=" + encodeURIComponent(as) : "") + (pin ? "&pin=" + encodeURIComponent(pin) : ""), { headers: { ...(await authHeaders()), ...(chosen ? { "x-view-as": chosen } : {}) } });
         const out = r.ok ? await r.json() : null;
         if (!alive || !out || !(out.note || out.read)) return;
         setGot(out);
@@ -71,7 +76,7 @@ export function StoryFeedback({ classId, viewer, onPre, onLinks }) {
       } catch { /* no feedback to show */ }
     })();
     return () => { alive = false; };
-  }, [classId, me]);
+  }, [classId, me, picked]);
   const read = got?.read || null;
   // What he said about a part outranks the read's mark: his.ok is his call,
   // his.say is one sentence of his. Andrew, 2026-11-12: "a single complete

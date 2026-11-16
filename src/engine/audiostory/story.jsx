@@ -152,7 +152,7 @@ async function lockOf({ classId, viewerId }) {
 }
 const lockedNow = (lock, now = Date.now()) => !!(lock && lock.due && now > Date.parse(lock.due) && !(lock.until && Date.parse(lock.until) > now));
 
-export function AudioStorySheet({ store, viewer, classId, readOnly = false, editor = false }) {
+export function AudioStorySheet({ store, viewer, classId, readOnly = false, editor = false, peek = false }) {
   const [answers, setAnswers] = useState(null);
   const [submitted, setSubmitted] = useState(null);
   const [status, setStatus] = useState("loading");
@@ -303,7 +303,9 @@ export function AudioStorySheet({ store, viewer, classId, readOnly = false, edit
   const by = [viewer?.name, ...partners].filter(Boolean).join(" and ");
 
   if (!answers) return <div className="ass"><style>{CSS}</style><p className="ass-p">{STATUS[status] || "Loading"}</p></div>;
-  if (readOnly) return <div className="ass"><style>{CSS}</style><div className="ass-solo"><AudioStoryView story={story} urls={urls} showPrivate by={by} /></div></div>;
+  // peek: the instructor viewing as this student from the worksheet page's
+  // menu, so the feedback the student has at the top of the page is here too.
+  if (readOnly) return <div className="ass"><style>{CSS}</style>{peek ? <div className="ass-solo"><StoryFeedback classId={classId} viewer={viewer} as={viewer?.id || ""} /></div> : null}<div className="ass-solo"><AudioStoryView story={story} urls={urls} showPrivate by={by} /></div></div>;
 
   const problems = problemsOf(story);
   const listenWords = wordsIn(story.listen);
@@ -552,9 +554,9 @@ function ReportProblem({ classId, saver, status, errors }) {
   );
 }
 
-export function mountAudioStory(root, { store, viewer, readOnly = false, classId, editor = false } = {}) {
+export function mountAudioStory(root, { store, viewer, readOnly = false, classId, editor = false, peek = false } = {}) {
   const r = createRoot(root);
-  r.render(<AudioStorySheet store={store} viewer={viewer} readOnly={readOnly} classId={classId} editor={editor && !readOnly} />);
+  r.render(<AudioStorySheet store={store} viewer={viewer} readOnly={readOnly} classId={classId} editor={editor && !readOnly} peek={peek && readOnly} />);
   return { destroy() { r.unmount(); } };
 }
 

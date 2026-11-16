@@ -34,6 +34,10 @@ import { PORTAL_CSS } from "./portal/style.js";
 // leaves it to follow the machine, which is what the page does. A theme with
 // no night (Snapchat, Crashing Out) keeps the sheet light rather than putting
 // a dark sheet on a yellow page.
+// Where the View as a student pick is kept for the tab, by class. ClassApp
+// writes the same key from the More page.
+export const VIEW_AS = "view-as:";
+
 const sheetThemeOf = (theme, mode) => !hasNight(theme) ? "light" : mode === "night" ? "dark" : mode === "day" ? "light" : undefined;
 
 // One student's sheet, read only, for the instructor: /<class>/worksheets/<key>?s=<roster id>.
@@ -62,7 +66,9 @@ function TheirSheet({ config, worksheetKey, student, theme, photo, photos = {}, 
         if (local) {
           // The same week 1 read the terminal showed them (onfile.js).
           const onFile = loadOnFile({ supabase: gameClient, storageKey: config.storageKey, viewerId: student.email });
-          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, photos, classmates, readOnly: true, onFile, theme, classId: config.id, storageKey: config.storageKey });
+          // peek tells a sheet the instructor is looking as this student, so a
+          // sheet with feedback at the top (the audio story) shows theirs.
+          sheet = local.mount(ref.current, { store: readStore(out.answers, out.sheet.submitted_at), viewer: { id: student.email, name: student.name }, photo, photos, classmates, readOnly: true, peek: true, onFile, theme, classId: config.id, storageKey: config.storageKey });
           return;
         }
         const own = (WORKSHEETS.find(w => w.key === worksheetKey) || {}).theme || {};
@@ -223,8 +229,22 @@ export default function WorksheetPage({ config, worksheetKey }) {
 
   // A student named in the address: that student's sheet, for the instructor.
   const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams();
-  const want = search.get("s") || "";
+  // Or picked from the View as a student menu on this page, or on the More
+  // page before coming here. Andrew, 2026-11-16: "can you build a viewer for
+  // me directly into this? i thought we had that on the more page," and of
+  // that one, "it doesn't work for assignments." The pick is kept for the tab
+  // under the same key the class page writes (ClassApp), and only the
+  // instructor's pick is believed.
+  const [picked, setPicked] = useState(() => { try { return sessionStorage.getItem(VIEW_AS + config.id) || ""; } catch { return ""; } });
+  const teaches = !!(session && instructor);
+  const want = search.get("s") || (teaches ? picked : "");
   const them = want ? findStudent(roster, want) : null;
+  const viewAs = (name) => {
+    try { if (name) sessionStorage.setItem(VIEW_AS + config.id, name); else sessionStorage.removeItem(VIEW_AS + config.id); } catch { /* the pick lasts for this page */ }
+    // A student named in the address would outrank the menu, so the address lets go of them.
+    if (search.has("s")) window.history.replaceState({}, "", window.location.pathname);
+    setPicked(name);
+  };
   const wantIndex = local && search.has("index");
   // A sheet's own page for the instructor, like pre-production's topic review.
   const wantReview = local && local.review && search.has("review");
@@ -290,6 +310,17 @@ export default function WorksheetPage({ config, worksheetKey }) {
         <div className="pt-root" style={{ maxWidth: 1600, margin: "0 auto", padding: "14px 16px 0" }}>
           <style>{PORTAL_CSS}</style>
           <PagesStrip config={config} asg={assignmentsOf(config, data || {}).find(x => sheetOfAssignment(config, x)?.key === worksheetKey) || null} data={data} here={body === "review" ? "review" : body === "board" ? "board" : "sheet-control"} />
+        </div>
+      ) : null}
+      {teaches && sheet && roster.length && (body === null || body === "theirs" || (want && typeof body === "object")) ? (
+        <div style={{ maxWidth: 1352, margin: "0 auto", padding: "14px 16px 0", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <select className="ca-focus" value={them ? them.name : ""} aria-label="View as a student" onChange={e => viewAs(e.target.value)}
+            style={{ fontFamily: TOKENS.FONT.body, fontSize: 16, fontWeight: 600, minHeight: 44, padding: "0 12px", maxWidth: 280, borderRadius: 999, border: "1px solid " + TOKENS.LINE.strong, background: TOKENS.SURFACE.card, color: TOKENS.TEXT.primary, cursor: "pointer" }}>
+            <option value="">View as a student</option>
+            {roster.filter(s => s.name).slice().sort((x, y) => x.name.localeCompare(y.name)).map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+          </select>
+          {them ? <span style={{ fontSize: 15, color: TOKENS.TEXT.secondary }}>This is a look at {them.name}'s page. Nothing here can be changed.</span> : null}
+          {them ? <button type="button" className="ca-focus" onClick={() => viewAs("")} style={{ fontFamily: TOKENS.FONT.body, fontSize: 15, fontWeight: 600, minHeight: 44, padding: "0 14px", borderRadius: 999, border: "1px solid " + TOKENS.LINE.strong, background: "transparent", color: TOKENS.TEXT.primary, cursor: "pointer" }}>Back to my own</button> : null}
         </div>
       ) : null}
       {body === "review"

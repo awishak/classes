@@ -565,7 +565,19 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // student for anyone who is not Andrew: a look that writes nothing and asks
   // for no sign-in. Andrew, 2026-10-07: "a class called COMM 222 that people
   // can look at whenever they want."
-  const [preview, setPreview] = useState(() => (config.demo && !isInstructorEmail(getSession()?.user?.email) ? config.demo : ""));
+  // The instructor's pick is kept for the tab, so it follows him onto an
+  // assignment's page and back (WorksheetPage reads the same key, VIEW_AS).
+  // Andrew, 2026-11-16, of View as a student: "it doesn't work for assignments."
+  const [preview, setPreview] = useState(() => {
+    const teaches = isInstructorEmail(getSession()?.user?.email);
+    if (config.demo && !teaches) return config.demo;
+    if (!teaches) return "";
+    try { return sessionStorage.getItem("view-as:" + config.id) || ""; } catch { return ""; }
+  });
+  useEffect(() => {
+    if (!isInstructorEmail(getSession()?.user?.email)) return;
+    try { if (preview) sessionStorage.setItem("view-as:" + config.id, preview); else sessionStorage.removeItem("view-as:" + config.id); } catch { /* the pick lasts for this page */ }
+  }, [preview, config.id]);
   // Whether a preview writes. Andrew, 2026-09-20: "i need to be able to test
   // the messaging with dr ishak. let me post a fake message as [a fake
   // student]." A look that writes nothing cannot test a conversation, and a
