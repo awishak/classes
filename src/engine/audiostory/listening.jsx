@@ -38,7 +38,7 @@ export const LISTENING_COPY_ROW = "worksheet-audio-stories-plan";
 // Andrew's lines from the visual stories, with this round's numbers and dates.
 export const LISTENING_COPY = {
   title: "Classmates' audio stories",
-  building: "The stories open on Tuesday, November 17. Come back then!",
+  building: "The stories open on Monday, November 16. Come back then!",
   reading: "You've completed your story. Now it's your turn to review your classmates' work. Please review at least 5 stories. You must review the 3 stories outlined in red. Then choose at least 2 other stories to review. You can review as many as you want.",
   due: "Comments are due Wednesday, November 18, at 11:59 PM. Each student will receive their comments, with names attached, on Thursday. Check back then to see what people think of your work.",
   closed: "Comments are closed. The comments on your story, with names attached, come out on Thursday, November 19.",
