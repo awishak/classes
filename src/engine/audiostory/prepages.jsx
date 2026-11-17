@@ -152,7 +152,7 @@ function Ticks({ total }) {
 // Every clip's timeline on one screen, on one scale. Andrew, 2026-11-12: "can
 // we get a screen that compares all the music and field audio charts for all
 // students so we can see the colors."
-function Compare({ rows }) {
+export function Compare({ rows }) {
   // Andrew, 2026-11-12: "let me sort." By name, by the clip's length, or by
   // how much of one kind a clip holds, most first.
   const [by, setBy] = useState("name");
@@ -391,12 +391,12 @@ function VerdictTable({ reads }) {
   );
 }
 
-export function ReadSummary({ reads, notes }) {
+export function ReadSummary({ reads, notes, what = "clips" }) {
   if (!reads.length) return null;
   const talk = reads.filter(r => r.interview?.has).length;
   return (
     <section className="apr-sum" aria-label="Claude's read of the class">
-      <h2 className="apr-rt">Claude's read, {reads.length} clips in this section</h2>
+      <h2 className="apr-rt">Claude's read, {reads.length} {what} in this section</h2>
       <VerdictTable reads={reads} />
       <div className="apr-pair">
         <Bars label="Openers by kind" rows={tally(reads.map(r => r.opener?.kind))} />

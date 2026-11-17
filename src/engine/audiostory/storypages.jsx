@@ -20,9 +20,9 @@ import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { Shell as PageShell, StudentPicker, pickedStudent, pickStudent, useInstructorRead } from "./control.jsx";
-import { ReadPanel, Bars, Timeline, REVIEW_CSS } from "./prepages.jsx";
-import { Face, Gm, Sec } from "../portal/bits.jsx";
-import { audioStoryOf, problemsOf, clock, MAX_STORY_SECONDS, MAX_LISTEN_WORDS } from "./storymodel.js";
+import { ReadPanel, ReadSummary, Compare, Bars, Timeline, REVIEW_CSS } from "./prepages.jsx";
+import { Face, Gm, Sec, Chip } from "../portal/bits.jsx";
+import { audioStoryOf, problemsOf, sourceListOf, clock, MAX_STORY_SECONDS, MAX_LISTEN_WORDS } from "./storymodel.js";
 import { AUDIO_STORY_KEY, AUDIO_STORY_COPY_ROW, STEPS } from "./story.jsx";
 import { AUDIO_RESEARCH_KEY } from "./research.jsx";
 import { WINDOW, NEED_ASSIGNED, NEED_TOTAL, MIN_CHARS, HEARD_FULL, HEARD_LITTLE } from "./reviewmodel.js";
@@ -165,7 +165,7 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
             <StudentPicker people={menu} value={chosen.id} onPick={pick} />
           </div>
           <div className="pt-stack aic-cards">
-            <Row key={chosen.student.email} config={config} data={data} student={chosen.student} email={lower(chosen.student.email)} link={idOf(chosen.student)} sheet={byEmail.get(lower(chosen.student.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} mine={read?.students?.[lower(chosen.student.email)] || null} readAt={read?.at} />
+            <Row key={chosen.student.email} config={config} data={data} student={chosen.student} email={lower(chosen.student.email)} link={idOf(chosen.student)} sheet={byEmail.get(lower(chosen.student.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} mine={read?.students?.[lower(chosen.student.email)] || null} readAt={read?.at} links={read?.links} />
           </div>
         </>
       ) : (
@@ -200,6 +200,9 @@ function StoryList({ config, data, people, byEmail, read, onPick }) {
   const rank = (r) => { const i = LETTERS.indexOf(r.mine?.letter || ""); return i < 0 ? LETTERS.length : i; };
   const withRead = rows.filter(r => r.mine).sort((x, y) => rank(x) - rank(y) || x.name.localeCompare(y.name));
   const without = rows.filter(r => !r.mine);
+  // Each student, or every timeline on one scale, the pre-production review's two views.
+  const [view, setView] = useState("each");
+  const lines = withRead.map(r => ({ student: r.student, line: r.mine.timeline })).filter(r => r.line?.parts?.length).sort((x, y) => x.student.name.localeCompare(y.student.name));
   const row = (r) => {
     const tint = TINT[r.status] || "off";
     const flags = r.flags.filter(f => !/^Story (submitted late|not submitted)/.test(f));
@@ -222,8 +225,14 @@ function StoryList({ config, data, people, byEmail, read, onPick }) {
         <div className="pt-day">
           <Sec name="Claude's read" sub={withRead.length + " read, strongest first"} />
           <p className="pt-quiet">Read from the transcripts. The letter is where Claude would put the story; the grade is yours.</p>
-          {(read.notes || []).length ? <div className="apr-sum">{read.notes.map((n, i) => <p key={i} className="apr-say">{n}</p>)}</div> : null}
-          <div className="pt-stack">{withRead.map(row)}</div>
+          <ReadSummary reads={withRead.map(r => r.mine)} notes={read.notes} what="stories" />
+          {lines.length ? (
+            <div className="pt-chips" role="tablist" aria-label="View">
+              <Chip on={view === "each"} onClick={() => setView("each")}>Each student</Chip>
+              <Chip on={view === "lines"} onClick={() => setView("lines")}>All timelines</Chip>
+            </div>
+          ) : null}
+          {view === "lines" && lines.length ? <Compare rows={lines} /> : <div className="pt-stack">{withRead.map(row)}</div>}
         </div>
       ) : null}
       {without.length ? (
@@ -239,7 +248,7 @@ function StoryList({ config, data, people, byEmail, read, onPick }) {
 // One student's card, the pre-production review's: who and where they stand,
 // the story to play with its timeline, Claude's letter and flags, the read,
 // and the unlock folded under one line.
-function Row({ config, data = null, student, email, link, sheet, urls, due, past, onUnlock, mine = null, readAt = null }) {
+function Row({ config, data = null, student, email, link, sheet, urls, due, past, onUnlock, mine = null, readAt = null, links = null }) {
   const [busy, setBusy] = useState("");
   const player = useRef(null);
   const seek = useCallback((t) => { const el = player.current; if (!el) return; try { el.currentTime = t; el.play(); } catch { /* the player says so itself */ } }, []);
@@ -258,6 +267,11 @@ function Row({ config, data = null, student, email, link, sheet, urls, due, past
   const cover = story.cover && urls[story.cover.path];
   const clip = story.audio && urls[story.audio.path];
   const flags = (mine?.flags || []).filter(f => !/^Story (submitted late|not submitted)/.test(f));
+  // The story keeps its sources as a list with the student's own title and
+  // outlet; the read panel wants lines and a map of names.
+  const cited = sourceListOf(sheet?.answers?.sources, links || {});
+  const named = { ...(links || {}), ...Object.fromEntries(cited.filter(x => x.link && (x.title || x.source)).map(x => [x.link, { site: x.source || (links || {})[x.link]?.site || "", title: x.title || (links || {})[x.link]?.title || "" }])) };
+  const forPanel = sheet ? { ...sheet, answers: { ...(sheet.answers || {}), sources: cited.map(x => x.link || x.title).filter(Boolean).join("\n") } } : sheet;
   return (
     <article className={"pt-row aic-card" + (sheet?.submitted_at ? "" : " due")}>
       <div className="aic-head">
@@ -292,7 +306,7 @@ function Row({ config, data = null, student, email, link, sheet, urls, due, past
           {mine.why ? <p className="apr-say">{mine.why}</p> : null}
         </div>
       ) : null}
-      {mine ? <ReadPanel read={mine} sheet={sheet} at={readAt} title={story.headline.trim()} name={student ? student.name : email} url={clip || ""} onSeek={clip ? seek : undefined} lineUp /> : null}
+      {mine ? <ReadPanel read={mine} sheet={forPanel} at={readAt} links={named} title={story.headline.trim()} name={student ? student.name : email} url={clip || ""} onSeek={clip ? seek : undefined} lineUp /> : null}
       {/* The unlock buttons sit folded under one line, so a card is not a row
           of buttons; the line itself says whether the story is open. */}
       {past && sheet && onUnlock ? (
