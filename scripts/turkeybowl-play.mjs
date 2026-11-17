@@ -17,7 +17,7 @@ import os from "node:os";
 import path from "node:path";
 
 const out = process.argv[2] || path.join(os.tmpdir(), "turkeybowl-play");
-const seconds = Number(process.argv[3] || 150), best = process.argv[4] === "best", answer = best ? 1 : Number(process.argv[4] || 1), url = process.env.TB_URL || "http://localhost:5199/turkeybowl.html";
+const seconds = Number(process.argv[3] || 150), best = process.argv[4] === "best", answer = best ? 1 : Number(process.argv[4] || 1), url = process.env.TB_URL || "http://localhost:5199/turkeybowl.html" + (process.env.TB_JUMP ? "?admin" : "");
 const size = process.env.TB_SIZE || "1280,720";
 fs.mkdirSync(out, { recursive: true });
 const profile = fs.mkdtempSync(path.join(os.tmpdir(), "tb-chrome-"));
@@ -37,12 +37,16 @@ try {
   let n = 0; const shot = async (label) => { const r = await send("Page.captureScreenshot", { format: "png" }); const f = String(++n).padStart(2, "0") + "-" + label.replace(/[^a-z0-9]+/gi, "-").slice(0, 40) + ".png"; fs.writeFileSync(path.join(out, f), Buffer.from(r.data, "base64")); console.log(f); };
   await send("Runtime.enable"); await send("Page.enable");
   await send("Page.navigate", { url }); await sleep(2500);
-  await shot("press-start"); await run("document.querySelector('.go')?.click()"); await sleep(1200); await shot("title-sequence");
-  // TB_WATCH=<seconds>: do not skip the opening; photograph it every second and a half for that long, then stop.
-  if (process.env.TB_WATCH) { for (let i = 0; i < Number(process.env.TB_WATCH) / 1.5; i++) { await sleep(1500); await shot("opening"); } ws.close(); throw new Error("watched the opening"); }
-  await key("Enter"); await sleep(2500); await key("Enter"); await sleep(6000);
-  await run("(() => { const i = document.getElementById('coach'); if (i) i.value = 'Robot R'; })()"); await shot("title-card");
-  await run("[...document.querySelectorAll('.go')].find(b => /Kick off|New game/.test(b.textContent))?.click()");
+  // TB_JUMP=<words>: open the admin page and jump to the part whose button has those words, in place of the opening.
+  if (process.env.TB_JUMP) { await shot("admin"); await run(`[...document.querySelectorAll('#ui .opt')].find(b => b.textContent.includes(${JSON.stringify(process.env.TB_JUMP)}))?.click()`); }
+  else {
+    await shot("press-start"); await run("document.querySelector('.go')?.click()"); await sleep(1200); await shot("title-sequence");
+    // TB_WATCH=<seconds>: do not skip the opening; photograph it every second and a half for that long, then stop.
+    if (process.env.TB_WATCH) { for (let i = 0; i < Number(process.env.TB_WATCH) / 1.5; i++) { await sleep(1500); await shot("opening"); } ws.close(); throw new Error("watched the opening"); }
+    await key("Enter"); await sleep(2500); await key("Enter"); await sleep(6000);
+    await run("(() => { const i = document.getElementById('coach'); if (i) i.value = 'Robot R'; })()"); await shot("title-card");
+    await run("[...document.querySelectorAll('.go')].find(b => /Kick off|New game/.test(b.textContent))?.click()");
+  }
   // What is on the screen, in one word and a few of its own.
   const SEE = `(() => { const q = (s) => document.querySelector('#ui ' + s); const b = document.getElementById('banner').textContent;
     if (q('.opt:not([disabled])')) return 'question|' + (q('.who')?.textContent || '');

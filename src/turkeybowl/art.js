@@ -74,6 +74,7 @@ export function person(c, x, y, s, o) {
   // arms
   const hang = (i) => { r(i, 11, 2, long ? 7 : 3, shirt); if (!long) r(i, 14, 2, 4, skin); if (suit) r(i, 17, 2, 1, "#ffffff"); if (o.glove) r(i < 8 ? i - 1 : i, 17, 3, 3, o.glove); else r(i, 18, 2, 2, skin); };
   hang(1);
+  if (o.phone) { r(0, 15, 3, 5, "#16121f"); r(1, 16, 1, 3, "#58bdf5"); }
   if (o.book) { r(0, 15, 4, 5, o.book); r(0, 15, 1, 5, darken(o.book, 0.3)); r(1, 19, 3, 1, WHITE); }
   if (o.mic) { r(13, 11, 2, 2, shirt); r(14, 12, 1, 5, long ? shirt : skin); r(13, 10, 2, 2, skin); r(13, 8, 1, 2, "#16121f"); r(12, 6, 3, 2, "#9aa0aa"); }
   else if (o.armUp) { const wv = o.wave ? Math.floor(o.wave * 6) % 2 : 0; r(13, 11, 2, 2, shirt); r(14, 6, 2, 6, long ? shirt : skin); if (!long) r(14, 9, 2, 3, shirt); r(14 + wv, 3, 2, 3, skin); r(13 + wv * 3, 2, 1, 2, skin);
@@ -131,7 +132,7 @@ const JERRY = { skin: "#e8b98a", hair: "#f4f1e6", shirt: "#27325c", pants: "#273
 export const jerry = (c, x, y, s = 1, extra = {}) => person(c, x, y, s, { ...JERRY, ...extra });
 export const CAST = {
   uncle: { skin: "#c98a5a", hair: "#3a2a1e", shirt: "#a8551c", mustache: true, cap: "#27325c", armUp: true, plaid: true, jaw: true },
-  brother: { skin: "#e8b98a", hair: "#5a3a1e", shirt: "#e2622a", angry: true, number: "7", armUp: true },
+  brother: { skin: "#e8b98a", hair: "#5a3a1e", shirt: "#e2622a", angry: true, number: "7", armUp: true, phone: true },
   sister: { skin: "#e8b98a", hair: "#5a3a1e", shirt: "#e2622a", pony: true, armUp: true, number: "12", lash: true },
   cousin: { skin: "#c98a5a", hair: "#1c1626", shirt: "#f0a030", long: true, sad: true },
   niece: { skin: "#c98a5a", hair: "#3a2a1e", shirt: "#2f6fc4", pony: true, armUp: true, lash: true, book: "#2f8a3a" },
@@ -151,6 +152,7 @@ export const CAST = {
   ali: { skin: "#8a5a3a", hair: "#1c1626", shirt: "#8a5a3a", pants: "#f4f1e6", glove: "#d9291c", jaw: true },
   robinson: { skin: "#8a5a3a", hair: "#1c1626", shirt: "#f4f1e6", pants: "#f4f1e6", cap: "#1d3c8f", number: "42", numCol: "#1d3c8f", sleeves: true },
   king: { skin: "#f0c8a0", hair: "#3a2a1e", shirt: "#2f6fc4", pants: "#2f6fc4", glasses: true, lash: true, racket: "#f4f1e6" },
+  mcconaughey: { skin: "#e8b98a", hair: "#96602e", shirt: "#bf5700", swept: true, grin: true, tan: true, jaw: true, sleeves: true },
   grandma: { skin: "#f0c8a0", hair: "#c9d3e6", shirt: "#6a4bb0", pants: "#3a3a4a", glasses: true, bun: true, sleeves: true, pearls: true, old: true, lash: true },
 };
 export function cast(c, who, x, y, s = 1, extra = {}) { if (who === "jerry") jerry(c, x, y, s, extra); else if (CAST[who]) person(c, x, y, s, { ...CAST[who], ...extra }); }

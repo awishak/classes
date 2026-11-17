@@ -8,7 +8,7 @@
 // A place is flat colour in bands, with a checker of two colours where a
 // shade between them is wanted. Nothing fades.
 
-import { LW, LH, LEAF, DIGITS, rnd, lighten, darken, lo, P, spr, blob, dither, star, lay } from "./draw.js";
+import { LW, LH, LEAF, DIGITS, INK, rnd, lighten, darken, lo, P, pen, spr, blob, dither, star, lay } from "./draw.js";
 
 const WHITE = "#f4f1e6";
 const AUTUMN = ["#d9291c", "#e2622a", "#f0a030", "#f6c945", "#bf5700", "#a8551c", "#8a1c1c", "#ffb347"];
@@ -279,4 +279,76 @@ export function leafBall(c) {
     P(x, 230, 112, 5, 40, WHITE); P(x, 124, 113, 5, 38, WHITE); P(x, 164, 105, 32, 3, WHITE); for (let i = -3; i <= 3; i++) P(x, 179 + i * 5, 101, 2, 11, WHITE);
     for (let i = 0; i < 30; i++) { const col = LEAF[i % 6], lx = Math.floor(rnd(i + 60) * LW), y = 150 + Math.floor(rnd(i + 3) * 28); P(x, lx, y, 6, 4, col); P(x, lx + 1, y - 1, 4, 1, col); P(x, lx + 3, y, 1, 4, darken(col, 0.25)); }
   });
+}
+
+// ─── Austin, on the way to the stadium ───
+// Andrew, 2026-11-16: "when they go to Austin, I wanna cut scene with Austin ... have some longhorns ... some breakfast tacos
+// or some barbecue. the capitol. and then the bats, like driving down Congress Avenue with the bats." Four shots.
+function longhorn(c, X, Y, t, flip, col) {
+  const f = Math.floor(t * 1.5 + X) % 2, r = pen(c, X, Y, 2, 30, 16, flip), w = "#f4f1e6", hn = "#fff3c0", dk = darken(col, 0.3);
+  P(c, X - 20, Y, 40, 2, "rgba(0,0,0,.3)");
+  r(4, 6, 1, 6, "#3a2a1e"); r(6, 12, 2, 3, dk); r(15, 12, 2, 3, dk); r(9, 12, 2, 3, col); r(18, 12, 2, 3, col); for (const i of [6, 9, 15, 18]) r(i, 15, 2, 1, "#3a2a1e");
+  r(5, 6, 15, 6, col); r(5, 6, 15, 1, lighten(col, 0.2)); r(8, 7, 4, 3, w); r(15, 9, 3, 2, w); r(6, 11, 13, 1, dk);
+  r(19, 5 + f, 3, 4, col); r(21, 4 + f, 5, 5, col); r(24, 7 + f, 3, 2, "#f0c8a0"); r(23, 5 + f, 1, 1, INK); r(22, 4 + f, 1, 1, w);
+  r(17, 3 + f, 5, 1, hn); r(14, 2 + f, 4, 1, hn); r(13, 1 + f, 2, 1, hn); r(25, 3 + f, 3, 1, hn); r(27, 2 + f, 3, 1, hn); r(29, 1 + f, 1, 1, hn);
+}
+function taco(x, cx, cy) {
+  blob(x, cx, cy, 30, 15, "#f0c8a0"); blob(x, cx, cy - 3, 26, 11, "#ffd75e");
+  for (let i = 0; i < 9; i++) { const fx = cx - 22 + i * 5; P(x, fx, cy - 9 + (i % 3), 5, 5, ["#ffd75e", "#8a1c1c", "#f0a030", "#fff3c0"][i % 4]); if (i % 3 === 1) P(x, fx + 1, cy - 11, 2, 2, "#4f9c36"); }
+  blob(x, cx, cy + 5, 30, 10, "#f0c8a0"); blob(x, cx - 4, cy + 3, 22, 5, "#fff3c0"); for (let i = 0; i < 7; i++) P(x, cx - 20 + i * 7, cy + 7 + (i % 2), 2, 1, "#c98a5a");
+}
+const AUSTIN = {
+  cattle: (x) => {
+    bands(x, 0, 86, SKIES.day); blob(x, 70, 104, 130, 30, "#a8d070"); blob(x, 260, 108, 150, 34, "#6aa544"); P(x, 0, 104, LW, 76, "#6aa544");
+    tree(x, 286, 104, 17, "#2f8a3a"); tree(x, 24, 100, 12, "#1f6b3a");
+    for (let i = 0; i < LW; i += 26) { P(x, i + 4, 96, 2, 14, "#7a4a22"); } P(x, 0, 99, LW, 1, "#96602e"); P(x, 0, 104, LW, 1, "#96602e");
+    for (let i = 0; i < 120; i++) { const y = 108 + Math.floor(Math.pow(rnd(i + 3), 0.8) * 70); P(x, Math.floor(rnd(i) * LW), y, 2, 1, i % 4 === 0 ? "#2f6fc4" : i % 4 === 1 ? "#f6c945" : "#4f9c36"); if (i % 4 === 0) P(x, Math.floor(rnd(i) * LW), y - 1, 1, 1, "#8ecbff"); }
+  },
+  tacos: (x) => {
+    P(x, 0, 0, LW, LH, "#96602e"); for (let j = 0; j < LH; j += 30) { P(x, 0, j, LW, 1, "#5a3a1e"); for (let i = 0; i < 6; i++) P(x, Math.floor(rnd(j + i) * LW), j + 6 + Math.floor(rnd(j + i + 9) * 20), 14 + Math.floor(rnd(i + j) * 30), 1, "#7a4a22"); }
+    blob(x, 92, 96, 78, 50, "#c9d3e6"); blob(x, 92, 94, 76, 48, "#f4f1e6"); blob(x, 92, 94, 60, 36, "#ffffff");
+    taco(x, 70, 84); taco(x, 112, 110); blob(x, 138, 62, 14, 10, "#f4f1e6"); blob(x, 138, 62, 11, 7, "#d9291c"); P(x, 132, 59, 4, 2, "#ff7b72"); P(x, 140, 63, 2, 2, "#4f9c36");
+    P(x, 186, 34, 124, 122, "#fff3c0"); P(x, 186, 34, 124, 2, "#d9c48a"); dither(x, 186, 150, 124, 6, "#d9c48a");
+    for (let i = 0; i < 4; i++) { const by = 44 + i * 15; P(x, 194 + i * 3, by, 60, 12, "#5a3a1e"); P(x, 194 + i * 3, by, 60, 2, "#1c1626"); P(x, 194 + i * 3, by + 2, 60, 2, "#e0707a"); P(x, 198 + i * 3, by + 6, 40, 1, "#7a4a22"); }
+    blob(x, 282, 62, 20, 7, "#8a3f00"); blob(x, 278, 60, 12, 2, "#bf5700"); blob(x, 284, 82, 20, 7, "#8a3f00"); blob(x, 280, 80, 12, 2, "#bf5700");
+    for (let i = 0; i < 5; i++) { blob(x, 204 + i * 13, 118, 6, 5, "#4f9c36"); blob(x, 204 + i * 13, 118, 3, 2, "#a8d070"); }
+    P(x, 262, 104, 38, 30, "#f4f1e6"); P(x, 262, 104, 38, 2, "#d9c48a"); P(x, 258, 110, 38, 30, "#ffffff"); P(x, 258, 110, 38, 2, "#d9c48a");
+    for (let i = 0; i < 3; i++) { blob(x, 208 + i * 16, 140, 7, 4, "#f4f1e6"); blob(x, 208 + i * 16, 140, 4, 2, "#fff3c0"); }
+  },
+  capitol: (x) => {
+    const g = "#e0707a", sh = "#b01e3a", lit = "#ffd75e";
+    bands(x, 0, 132, SKIES.dusk); for (let i = 0; i < 40; i++) P(x, Math.floor(rnd(i) * LW), Math.floor(rnd(i + 5) * 44), 1, 1, "#ffffff");
+    P(x, 0, 132, LW, 48, "#1f6b3a"); for (let j = 0; j < 12; j++) P(x, 150 - j * 2, 132 + j * 4, 20 + j * 4, 4, "#d9c48a");
+    P(x, 34, 100, 252, 34, g); P(x, 30, 96, 260, 5, sh); P(x, 34, 130, 252, 4, sh);
+    for (let i = 0; i < 20; i++) { if (i > 7 && i < 12) continue; P(x, 42 + i * 12, 106, 5, 9, lit); P(x, 42 + i * 12, 119, 5, 8, i % 3 ? lit : "#3a2a66"); }
+    P(x, 126, 88, 68, 46, g); for (let j = 0; j < 10; j++) P(x, 126 + j * 3, 88 - j - 1, 68 - j * 6, 1, sh); for (let i = 0; i < 6; i++) P(x, 131 + i * 11, 92, 4, 38, "#fff3c0"); P(x, 152, 112, 16, 22, "#3a2a66");
+    blob(x, 160, 62, 26, 24, g); blob(x, 152, 54, 10, 12, lighten(g, 0.3)); P(x, 132, 62, 56, 18, g); P(x, 130, 60, 60, 3, sh); for (let i = 0; i < 9; i++) P(x, 135 + i * 6, 64, 3, 14, "#fff3c0");
+    P(x, 153, 28, 14, 12, g); P(x, 151, 27, 18, 2, sh); for (let i = 0; i < 3; i++) P(x, 155 + i * 4, 30, 2, 8, lit); P(x, 157, 22, 6, 6, g); P(x, 159, 14, 2, 8, "#c9d3e6"); P(x, 158, 12, 4, 1, "#ffffff"); P(x, 160, 10, 1, 5, "#ffffff");
+    for (const [tx, r] of [[16, 15], [60, 11], [262, 12], [306, 16]]) tree(x, tx, 140, r, "#123a1c");
+  },
+  bats: (x) => {
+    bands(x, 0, 104, SKIES.gold); blob(x, 64, 88, 16, 16, "#fff3c0"); blob(x, 64, 88, 12, 12, "#ffffff");
+    [[0, 30, 62], [32, 22, 74], [56, 18, 50], [98, 26, 66], [126, 14, 80], [176, 14, 82], [192, 30, 58], [224, 20, 70], [246, 34, 46], [282, 22, 72], [304, 16, 60]].forEach(([bx, w, top], i) => { P(x, bx, top, w, 104 - top, i % 2 ? "#3a2a66" : "#27325c"); for (let j = top + 4; j < 100; j += 6) for (let k = bx + 3; k < bx + w - 2; k += 5) if (rnd(k * j) > 0.45) P(x, k, j, 2, 2, "#ffd75e"); });
+    blob(x, 160, 86, 9, 9, "#6a4bb0"); P(x, 146, 90, 28, 14, "#6a4bb0"); P(x, 159, 72, 2, 6, "#6a4bb0");
+    P(x, 0, 128, LW, 52, "#2f6fc4"); for (let j = 130; j < LH; j += 4) for (let i = (j % 8) * 3; i < LW; i += 22) P(x, i, j, 10, 1, j < 150 && i > 30 && i < 110 ? "#ffd75e" : "#58bdf5");
+    P(x, 0, 112, LW, 12, "#3a3a4a"); for (let i = 0; i < 5; i++) { P(x, i * 72 + 2, 112, 12, 40, "#3a3a4a"); blob(x, i * 72 + 44, 126, 30, 12, "#2f6fc4"); P(x, i * 72 + 14, 126, 60, 2, "#2f6fc4"); }
+    P(x, 0, 104, LW, 8, "#6a6a7a"); P(x, 0, 104, LW, 1, "#9aa0aa"); P(x, 0, 99, LW, 1, "#9aa0aa"); for (let i = 0; i < LW; i += 10) P(x, i, 99, 1, 5, "#9aa0aa");
+    for (let i = 20; i < LW; i += 64) { P(x, i, 82, 1, 22, "#3a3a4a"); P(x, i - 2, 81, 5, 2, "#fff3c0"); }
+  },
+};
+/** One shot of Austin. shot is "cattle", "tacos", "capitol" or "bats"; e is how long the shot has been up, in seconds. */
+export function austin(c, t, shot, e = 0) {
+  lay(c, "austin-" + shot, AUSTIN[shot]);
+  if (shot === "cattle") { longhorn(c, 84, 142, t, false, "#bf5700"); longhorn(c, 264, 134, t, false, "#8a3f00"); longhorn(c, 180, 158, t, true, "#bf5700"); for (let i = 0; i < 2; i++) cloud(c, Math.floor((t * (3 + i) + i * 170) % 400) - 50, 10 + i * 14, 2 - i, "#ffffff", "#cfeaff"); }
+  else if (shot === "tacos") for (let k = 0; k < 9; k++) { const up = Math.floor((t * 9 + k * 5) % 22); P(c, (k < 4 ? 60 + k * 18 : 200 + (k - 4) * 14) + (Math.floor(t * 3 + k + up / 5) % 2), (k < 4 ? 70 : 40) - up, 1, 3, up > 15 ? "#d9c48a" : "#f4f1e6"); }
+  else if (shot === "capitol") { const k = Math.floor(t * 3); for (let i = 0; i < 5; i++) P(c, 42 + Math.floor(rnd(k + i) * 20) * 12, 106, 5, 9, "#fff3c0"); P(c, 161, 11 + (k % 2), 5, 3, k % 2 ? "#d9291c" : "#f4f1e6"); }
+  else {
+    const cx = Math.floor((e * 46) % 400) - 50;
+    P(c, cx, 97, 30, 7, "#bf5700"); P(c, cx + 14, 91, 12, 6, "#bf5700"); P(c, cx + 16, 92, 8, 4, "#cfeaff"); P(c, cx + 29, 99, 2, 2, "#fff3c0"); P(c, cx, 99, 1, 2, "#d9291c"); P(c, cx + 4, 103, 5, 3, INK); P(c, cx + 21, 103, 5, 3, INK);
+    for (let i = 0; i < 300; i++) {
+      const p = (e * (0.12 + rnd(i + 2) * 0.1) + rnd(i)) % 1, x0 = 70 + rnd(i + 1) * 150, grow = Math.min(1, e / 2.5); if (rnd(i + 7) > grow) continue;
+      const bx = Math.floor(x0 + p * (150 + rnd(i + 4) * 130)), by = Math.floor(112 - Math.pow(p, 0.7) * (96 + rnd(i + 5) * 20) + Math.sin(p * 9 + i) * 7), f = Math.floor(t * 9 + i) % 2;
+      P(c, bx, by, 2, 1, INK); if (f) { P(c, bx - 1, by - 1, 1, 1, INK); P(c, bx + 2, by - 1, 1, 1, INK); } else { P(c, bx - 1, by + 1, 1, 1, INK); P(c, bx + 2, by + 1, 1, 1, INK); }
+    }
+  }
 }

@@ -16,6 +16,7 @@ export const NAMES = {
   you: "YOU", uncle: "YOUR UNCLE", brother: "YOUR BROTHER", sister: "YOUR SISTER", cousin: "YOUR COUSIN", niece: "YOUR NIECE", grandma: "GRANDMA",
   jerry: "JERRY JONES", reporter: "A REPORTER", receiver: "NUMBER 88", kicker: "YOUR KICKER", backup: "YOUR BACKUP QUARTERBACK", returner: "YOUR KICK RETURNER",
   coachA: "YOUR DEFENSIVE COACH", coachB: "YOUR OTHER DEFENSIVE COACH",
+  mcconaughey: "MATTHEW McCONAUGHEY",
   andrew: "ANDREW ISHAK", kaepernick: "COLIN KAEPERNICK", ali: "MUHAMMAD ALI", robinson: "JACKIE ROBINSON", king: "BILLIE JEAN KING",
 };
 
@@ -125,25 +126,62 @@ export function clearRead(ranks) { return !ranks.length || ranks.filter(r => r =
 // or "text:<who>" for a text message. The reading is named beside each line.
 // The niece, since 2026-11-16 (Andrew: "make the niece a very lisa simpson character"): the one in the family who has read
 // the handbook, asks in writing, and wants the part the plaque leaves out. Her look is her own.
+// Who everybody is, since 2026-11-16. Andrew: "my brother is a degenerate gambler who uses polymarket and kalshi to bet on
+// everything, including things that happen in all the games ... my sister is a feminist ... we want the characters to all have
+// different roles." And: "building some information in here about gambling statistics, like we read stuff in class." So:
+//   brother   bets on everything, on his phone, all day
+//   sister    the feminist
+//   niece     has read the handbook and made a chart
+//   uncle     did it the old way and liked it
+//   cousin    the sociology student
+//   nephew    the travel-team kid
+//   grandma   keeps score of everything
+// The lines are Claude's drafts for him to edit. Every number is from the class's Week 1 gambling readings and is named beside
+// its line: the NCAA's release of January 2026, and "Legalizing Sports Gambling Was a Huge Mistake" (The Atlantic, 2024).
+// A "p:" key is said just before the last drive in that place.
+// Thanksgiving's own numbers, his ask the same day ("the ratings for Thanksgiving Day games, about how big they are ... how many
+// people watch football on Thanksgiving, but also how many people play"): the NFL's release on the 2025 games (57.2 million for
+// the game in Dallas, the most for a regular-season game on record; 44.7 million across the three), and Pew's survey of
+// November 2024 (35 percent expected to watch sports on Thanksgiving, 4 percent to play; Pew asked about sports, not football).
 export const ASIDES = {
   "q:stars": [
+    ["brother", "\"I have forty dollars on us this morning. Kalshi had no market on the family game, so I bet Uncle Rick in the group chat.\"", { angry: false, grin: true, armUp: false }],
     ["cousin", "\"Park rules. Two-hand touch, five Mississippi before you rush, and we call our own penalties.\"", { sad: false }],                                           // "The Rules of Pickup Basketball" (SB Nation), said in football's words. Andrew, 2026-11-16: fouls and "keeps the field" "are not football terms."
     ["sister", "\"And none of that co-ed league stuff where a girl's touchdown counts double. I'll score regular ones.\"", { armUp: false }],        // "Why Co-Ed Sports Leagues Are Never Really Co-Ed" (Deadspin)
   ],
-  "s:kickoff": [["nephew", "\"My travel team costs more than this whole park. Dad says kids' sports is a fifteen-billion-dollar business now.\""]],   // "How Kids Sports Became a $15 Billion Industry" (Time)
-  "s:half1": [["niece", "\"At school the boys get handed a baseball and the girls get handed a softball. I asked why, in writing. Nobody has answered.\"", { armUp: false }]],   // "Is Softball Sexist?" (NYT)
+  "s:kickoff": [["ann", "A Pew survey asked Americans about Thanksgiving. Thirty-five percent expected to watch sports. Four percent expected to play. This family is in the four."],
+    ["niece", "\"Thirty-nine states and Washington, D.C. have legal sports betting now. Your brother is trying to visit all of them from his phone.\"", { armUp: false }],   // NCAA release, January 2026
+    ["nephew", "\"My travel team costs more than this whole park. Dad says kids' sports is a fifteen-billion-dollar business now.\""]],   // "How Kids Sports Became a $15 Billion Industry" (Time)
+  "s:half1": [["brother", "\"Polymarket has Grandma scoring again at even money. I took it. Sorry.\"", { angry: false, armUp: false, look: -2 }],
+    ["uncle", "\"In my day we ran one play, and we ran it until somebody cried.\"", { armUp: false }],
+    ["sister", "\"Put me at quarterback in the second half. In this family the women get handed the snacks.\"", { armUp: false }],
+    ["niece", "\"At school the boys get handed a baseball and the girls get handed a softball. I asked why, in writing. Nobody has answered.\"", { armUp: false }]],   // "Is Softball Sexist?" (NYT)
   "q:culture": [["jerry", "\"Before we start. Congress let the league sell its television rights as one package back in 1961. The same law keeps us off Fridays and Saturdays in the fall, for the high schools and the colleges. Thursday, though? Thursday is mine.\""]],   // Sports Broadcasting Act of 1961
   "q:jet": [["jerry", "\"A coach once sent his four best players home before a big television game. The league fined the team a quarter of a million dollars. So tell me. Do you owe the people a show?\""]],   // "Are You Not Entertained?" (Klosterman, Grantland)
+  "p:park": [["brother", "\"I put twenty dollars on your next play call. Don't ask which way. Just call a good one.\"", { angry: false, armUp: false, sweat: true }]],
   "s:dallas": [
+    ["ann", "Last Thanksgiving, the game in Dallas averaged fifty-seven million viewers. That is the most for any regular-season game on record."],
+    ["text:brother", "\"You're coaching the COWBOYS? I took the other team an hour ago. Nothing personal.\""],
+    ["ann", "Americans were expected to bet thirty-five billion dollars on the NFL in 2024. The coach's brother is doing his part."],   // American Gaming Association projection, in the Atlantic piece
     ["jerry", "\"Look up. Every new stadium has fewer cheap seats and more clubs and suites. That's where the money is.\"", { armUp: true }],       // "How the Sports Stadium Went Luxe" (New Yorker)
     ["ann", "That flyover was lovely. For years, the military paid teams for moments like that one."],                                             // "Veterans Affairs: The Uneasy Marriage of Military Money and the NFL" (Grantland)
   ],
   "q:receiver": [["ann", "A network once ordered its football theme by asking for Batman on steroids. Ours was written by a turkey."]],             // "Batman on Steroids" (Deadspin)
-  "q:commercial": [["jerry", "\"Helmets were plain until television came along. Then somebody worked out that you could sell the picture on the side.\""]],   // "How TV and Roy Rogers Helped Put Logos on NFL Helmets" (Radom)
+  "q:commercial": [["jerry", "\"The three Thanksgiving games last year averaged close to forty-five million people apiece. You can sell a lot of trucks to forty-five million people.\"", { armUp: true }],
+    ["jerry", "\"Helmets were plain until television came along. Then somebody worked out that you could sell the picture on the side.\""]],   // "How TV and Roy Rogers Helped Put Logos on NFL Helmets" (Radom)
   "q:returner": [["text:brother", "\"I put ten dollars on your kicker missing his first field goal. Nothing personal.\""]],                         // NCAA on prop bets
+  "a:receiver": [["text:sister", "\"Count the women on that sideline who are not holding a microphone. Text me the number.\""]],
+  "p:dallas": [
+    ["text:brother", "\"There is a market on your next play call. I bought RUN. Please call a run.\""],
+    ["text:niece", "\"One study found that for every dollar a household bets on sports, two fewer dollars go into its investments. I made him a chart. He bet on whether I would.\""],   // the July 2024 study in the Atlantic piece
+  ],
+  "p:texas": [
+    ["text:brother", "\"My parlay: Texas wins, the turkey dances, Grandma falls asleep. Two of three so far.\""],
+    ["ann", "More than one in three Americans bets on sports, according to a Seton Hall poll. One of them keeps texting this sideline."],   // in the Atlantic piece
+  ],
   "a:kicker": [
     ["text:brother", "\"He missed! I won! Tell him thanks from me.\""],
-    ["ann", "The NCAA has asked states to stop taking bets on single players. The players hear from the people who make them."],                  // "NCAA Urges Gambling Commissions to Eliminate Prop Bets"
+    ["ann", "The NCAA says thirty-six percent of Division I men's basketball players have been harassed by somebody with a bet on them. It has asked states to stop taking bets on single players."],                  // "NCAA Urges Gambling Commissions to Eliminate Prop Bets"
   ],
   "q:backup": [["returner", "\"They call us student-athletes, coach. The NCAA made that word up so it would not have to pay for players who got hurt.\"", { sad: true }]],   // "The Shame of College Sports" (Branch, The Atlantic)
   "q:twominute": [["kicker", "\"Coach, I've got a brand deal riding on this drive. Name, image and likeness. Mostly image.\"", { grin: true }]],      // the Livvy Dunne NIL piece (ESPN)

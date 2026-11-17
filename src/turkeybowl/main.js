@@ -244,7 +244,8 @@ let FACE = null;   // the player's own pixel face, when they have a photograph
 let G = null, started = false;
 const SAVE = "turkeybowl-run";
 const fresh = () => ({ seed: Array.from({ length: 12 }, () => "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 36)]).join(""), picks: {}, calls: [], step: 0, us: 0, them: 0, q: "Q1", where: "park", yard: 25, window: 0, half: 1, jerry: false, log: [] });
-const save = () => { if (G) store.set(SAVE, JSON.stringify(G)); };
+const save = () => { if (G && !G.jump) store.set(SAVE, JSON.stringify(G)); };
+const unsave = () => { if (!G || !G.jump) store.set(SAVE, null); };
 const saved = () => { try { const g = JSON.parse(store.get(SAVE) || "null"); return g && g.seed && g.step > 0 ? g : null; } catch { return null; } };
 const tally = () => scoreRun({ seed: G.seed, picks: G.picks, calls: G.calls });
 function showHud() {
@@ -776,6 +777,12 @@ async function scene(name) {
     await talk("ONE MORE CALL", "They watched you win in Dallas. They want you in Austin by kickoff.");
     G.where = "texas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1;
     await eyecatch("AUSTIN", "#bf5700", "#ffffff", false);
+    // Austin on the way in: longhorns, breakfast tacos and barbecue, the Capitol, the bats over Congress Avenue, and one man in burnt orange.
+    for (const [shot, word, ms] of [["cattle", "LONGHORNS", 2400], ["tacos", "BREAKFAST TACOS. THEN BARBECUE.", 2600], ["capitol", "THE CAPITOL", 2400], ["bats", "CONGRESS AVENUE AT DUSK. THE BATS ARE OUT.", 4200]]) {
+      if (skipping) break; const a0 = now(); paint = (t) => { A.austin(c, t, shot, t - a0); A.letterbox(c); }; say(word, "line low"); sfx.blip(); if (shot === "cattle") sfx.thud(); await beat(ms);
+    }
+    if (!skipping) { const m0 = now(); paint = (t) => { A.burst(c, t, 320, 150, "#bf5700", "#ffd75e"); A.bust(c, "mcconaughey", 320, 2.1, { grin: true, armUp: true, wave: t - m0 }); A.letterbox(c); }; say(NAMES.mcconaughey, "line low"); sfx.sting(); await beat(2200); }
+    say("");
     const s2 = now(); music.start("band");
     paint = (t) => { A.turf(c, t, { where: "texas" }); A.band(c, t, t - s2); A.beams(c, t); A.fireworks(c, t, 3); };
     ui.textContent = ""; say("TEXAS vs TEXAS A&M", "slam"); announce("texas"); sfx.cheer(); flash(120); showHud();
@@ -798,6 +805,7 @@ async function scene(name) {
 }
 
 async function post() {
+  if (G.jump) return null;
   try { return await api({ action: "post", name: me.name, log: { seed: G.seed, picks: G.picks, calls: G.calls } }); } catch { return null; }
 }
 function boardCard(k, rows) {
@@ -835,7 +843,7 @@ async function checkpoint(who, textLines, label) {
   const strip = el("div", "strip"); flowFor(G.seed).forEach(f => { if (!f.d || !Object.prototype.hasOwnProperty.call(G.picks, f.d)) return; const got = judge(decisionOf(f.d), G.picks[f.d]); if (got) { const sq = el("i", "r-" + got.rank); sq.title = RANK_SAY[got.rank]; strip.append(sq); } }); k.append(strip);
   G.log.push({ who, lines: textLines }); showBack();
   const out = await post();
-  if (out && out.ok) boardCard(k, out.rows); else k.append(el("p", "small", "The leaderboard did not answer. Your score is still on this screen."));
+  if (out && out.ok) boardCard(k, out.rows); else k.append(el("p", "small", G.jump ? "You jumped here from the admin page, so this run is not on the leaderboard." : "The leaderboard did not answer. Your score is still on this screen."));
   if (label === "Play again") { const see = el("button", "tool", "See every answer"); see.type = "button"; see.onclick = () => { see.remove(); answers(k); k.querySelector(".answers").scrollIntoView({ block: "start" }); }; k.append(see); }
   await next(k, label);
 }
@@ -923,14 +931,63 @@ async function run() {
       const got = await decide(step.d); step = { ...step, d: slotOf };
       ui.textContent = "";   // the answered card comes down before anything else is drawn
       if (!got.over) await aside("a:" + slotOf);
-      if (got.over) { await ending(slotOf); store.set(SAVE, null); return; }
+      if (got.over) { await ending(slotOf); unsave(); return; }
       if (step.d === "kicker" && (got.rank === "best" || got.rank === "good")) { G.us += 3; paint = idle("texas"); say("YOUR KICKER MAKES THE NEXT ONE FROM 47"); sfx.good(); showHud(); await wait(2200); say(""); }
-    } else if (step.p) { if (G.where === "texas") await family(); await plays(); }
-    else if (step.gate) { const ok = await gate(step.gate); if (!ok || step.gate === 4) { store.set(SAVE, null); return; } }
+    } else if (step.p) { if (G.where === "texas") await family(); await aside("p:" + G.where); await plays(); }
+    else if (step.gate) { const ok = await gate(step.gate); if (!ok || step.gate === 4) { unsave(); return; } }
     G.step = i + 1; save();
   }
-  store.set(SAVE, null);
+  unsave();
 }
+// ─── the admin page: jump to any part of the game ───
+// Andrew, 2026-11-16: "give me the admin option to jump to diff parts of the game. make me an admin page." It is the game's
+// own address with ?admin on the end, and a button on the title card, for the instructor only. Every part of a run is listed
+// in order. Jumping to one starts the game there as if everything before it had gone well: the best answer to every earlier
+// question and the right call on every earlier drive. A jumped run is not saved and is not sent to the leaderboard.
+const ADMIN_URL = new URLSearchParams(location.search).has("admin");
+const LOCAL = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+const canAdmin = () => me.instructor || LOCAL;
+const PART = { kickoff: "Kickoff at the park", half1: "Halftime at the park", jerry: "Jerry Jones walks up", jet: "The jet", dallas: "Arriving in Dallas", texas: "The call from Texas, and Austin", band: "Halftime in Austin, with the band" };
+const PLACE = { park: "The park", dallas: "Dallas", texas: "Austin" };
+/** The run as it stands just before step i of a seed's flow, everything before it done well. */
+function jumpTo(i, seed) {
+  const flow = flowFor(seed); G = { ...fresh(), seed, jump: true }; let drives = 0;
+  for (let n = 0; n < i; n++) {
+    const st = flow[n];
+    if (st.d) { const dec = decisionOf(st.d); G.picks[st.d] = dec.pick ? POWER.filter(p => p.w >= 1).slice(0, dec.pick).map(p => p.k) : (dec.opts.find(o => o.rank === "best") || dec.opts[0]).k; }
+    else if (st.p) for (let k = 0; k < st.p; k++) G.calls.push(lookFor(seed, drives++).beat);
+    else if (st.s === "half1") { G.us = 14; G.them = 21; G.q = "Q4"; G.half = 2; }
+    else if (st.s === "jerry") { G.jerry = true; G.q = "FINAL"; }
+    else if (st.s === "dallas") { G.where = "dallas"; G.jerry = false; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1; }
+    else if (st.s === "texas") { G.where = "texas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1; }
+    else if (st.s === "band") { G.us = 10; G.them = 14; G.q = "Q4"; G.half = 2; }
+  }
+  G.step = i;
+}
+/** The list of parts. pick(i, seed) is called with the part chosen. */
+function adminCard(pick, back) {
+  const seed = fresh().seed, flow = flowFor(seed), k = card("ADMIN");
+  k.style.maxHeight = "100%";
+  k.append(el("p", "say", "Jump to any part of the game. Everything before it counts as done well. A jumped run is not saved and is not on the leaderboard."));
+  const top = el("div", "row"); k.append(top);
+  if (back) { const b = el("button", "tool", "Back to the title"); b.type = "button"; b.onclick = back; top.append(b); }
+  const lst = el("button", "tool", "Level 3 list and avatars"); lst.type = "button"; lst.onclick = admin; top.append(lst);
+  const sng = el("a", "tool", "Songs"); sng.href = location.pathname + "?songs"; sng.style.textDecoration = "none"; top.append(sng);
+  const again = el("button", "tool", "Different questions"); again.type = "button"; again.title = "Three questions have a second version, and the three side questions move around. This deals them again."; again.onclick = () => adminCard(pick, back); top.append(again);
+  const list = el("div", "board"); list.style.cssText = "display:grid;grid-template-columns:repeat(auto-fill,minmax(30cqw,1fr));gap:0.6cqw;max-height:none"; k.append(list);
+  let where = "park", level = 1, head = "";
+  flow.forEach((st, i) => {
+    if (st.s === "title") return;
+    if (st.s === "dallas") where = "dallas"; if (st.s === "texas") where = "texas";
+    const dec = st.d ? decisionOf(st.d) : null;
+    const h = "LEVEL " + level + "   " + (level === 2 ? "THE INTERVIEW" : PLACE[where].toUpperCase());
+    if (h !== head) { head = h; const hd = el("div", "who", h); hd.style.gridColumn = "1 / -1"; hd.style.marginTop = "0.6cqw"; list.append(hd); }
+    const label = st.s ? PART[st.s] || st.s : dec ? "Question: " + (dec.topic || st.d) : st.p ? "The last drive" : "The end of Level " + st.gate;
+    const b = el("button", "opt", label); b.type = "button"; b.style.fontSize = "2cqw"; b.onclick = () => pick(i, seed); list.append(b);
+    if (st.gate) level = st.gate + 1;
+  });
+}
+
 // ─── the opening ───
 async function titleSequence() {
   // Before the name: a leaf in the dark, the park at dawn, feet, a face, and a catch that stops in the air.
@@ -988,6 +1045,14 @@ async function title() {
   try { me = { ...me, ...(await api({ action: "me" })) }; } catch { /* the title still draws */ }
   if (me.photo && !FACE) { const img = await loadImage(me.photo); if (img) FACE = A.faceFrom(img); }
   try { await document.fonts.load("44px 'Press Start 2P'"); } catch { /* the fallback font draws */ }
+  // The way back: an Admin button beside Back and Sound, on every screen, for the instructor only. Andrew, 2026-11-16: "how do i get back to the admin page".
+  if (canAdmin()) { const b = $("toadmin"); b.hidden = false; b.onclick = () => { location.href = location.pathname + "?admin"; }; }
+  if (ADMIN_URL && canAdmin() && !started) {
+    paint = (t) => { A.park(c, t, { field: false }); A.leaves(c, t, 40); };
+    const at = await new Promise(res => adminCard((i, seed) => res([i, seed]), () => res(null)));
+    started = true; ui.textContent = ""; const a = ac(); if (a && a.state === "suspended") a.resume().catch(() => {});
+    if (at) { jumpTo(at[0], at[1]); sfx.whistle(); return true; }
+  }
   if (!started) {
     paint = (t) => { A.park(c, t, { time: "dawn", field: false }); A.leaves(c, t, 60); };
     const s0 = card(""); const b0 = el("button", "go", "Press start"); b0.type = "button"; b0.style.alignSelf = "center"; s0.append(b0);
@@ -1009,13 +1074,16 @@ async function title() {
   const old = saved();
   const cont = old ? el("button", "go", "Continue your game") : null; if (cont) { cont.type = "button"; row.append(cont); }
   const start = el("button", "go", old ? "New game" : "Kick off"); start.type = "button"; row.append(start);
-  if (me.instructor) { const adm = el("button", "tool", "Level 3 list and avatars"); adm.type = "button"; adm.onclick = admin; row.append(adm); }
+  let jump = null; const adminBtn = canAdmin() ? el("button", "tool", "Admin") : null; if (adminBtn) { adminBtn.type = "button"; row.append(adminBtn); }
+  if (ADMIN_URL && !canAdmin()) { const p = el("p", "say", "The admin page is for the instructor. "); const a = el("a", "", "Sign in"); a.href = "/login?next=" + encodeURIComponent(location.pathname + location.search); p.append(a); k.append(p); }
   try { const b = await api({ action: "board" }); if (b.ok && b.rows.length) boardCard(k, b.rows); } catch { /* no board yet */ }
   const choice = await new Promise(res => {
+    if (adminBtn) adminBtn.onclick = () => adminCard((i, seed) => { jump = [i, seed]; music.stop(); sfx.whistle(); res("jump"); }, () => location.reload());
     const ok = () => { if (input) { const n = shortName(input.value); if (n.length < 2) { input.focus(); return false; } me.name = n; store.set("turkeybowl-name", input.value.trim()); } music.stop(); sfx.whistle(); return true; };
     start.onclick = () => { if (ok()) res("new"); };
     if (cont) cont.onclick = () => { if (ok()) res("continue"); };
   });
+  if (choice === "jump") { ui.textContent = ""; jumpTo(jump[0], jump[1]); return true; }
   G = choice === "continue" ? { ...fresh(), ...old, busy: false } : fresh();
   if (choice === "new") store.set(SAVE, null);
   return true;
