@@ -59,7 +59,8 @@ export function sheetLinks(config, sheet, data) {
   links.push({ say: "Student view", href: student });
   if (hasReadout(config.id, sheet.key)) links.push({ say: "Readout", href: student + "/readout" });
   if (local && local.board) links.push({ say: "Board", href: student + "?board" });
-  if (local && local.control) links.push({ say: "Control", href: student + "?control" });
+  // "Sheet control", since the strip already opens on the challenge's own Control. Andrew, 2026-11-16: "why are there so many buttons? this is not clear at all."
+  if (local && local.control) links.push({ say: "Sheet control", href: student + "?control" });
   if (sheet.key === WORKTOPIA_KEY) links.push({ say: "Answers by question", href: student + "/answers" });
   return links;
 }

@@ -21,6 +21,7 @@ import { useClassState } from "../store.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { StudentPicker, pickedStudent, pickStudent, useInstructorRead } from "./control.jsx";
 import { ReadPanel, REVIEW_CSS } from "./prepages.jsx";
+import { PORTAL_CSS } from "../portal/style.js";
 import { audioStoryOf, problemsOf, clock, MAX_STORY_SECONDS, MAX_LISTEN_WORDS } from "./storymodel.js";
 import { AUDIO_STORY_KEY, AUDIO_STORY_COPY_ROW, STEPS } from "./story.jsx";
 import { AUDIO_RESEARCH_KEY } from "./research.jsx";
@@ -59,7 +60,12 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
   const [due, setDue] = useState(null);
   const [error, setError] = useState("");
   const sections = sectionsOf(config);
-  const [section, setSection] = useState(sections[0] || "");
+  // A link to one student opens on that student's section.
+  const [section, setSection] = useState(() => {
+    const id = typeof window !== "undefined" ? pickedStudent() : "";
+    const them = id ? (roster || []).find(s => idOf(s) === id) : null;
+    return (them && sections.includes(sectionOf(them)) ? sectionOf(them) : "") || sections[0] || "";
+  });
   const urls = useUrls(config, sheets);
   // One story at a time, picked from the menu; the page opens on the count.
   // Andrew, 2026-11-13, on the review pages: "okay yeah get it done."
@@ -97,6 +103,10 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
     setSheets(list => list.map(s => (s.viewer_id === email ? { ...s, unlockedUntil: out.until } : s)));
   };
   const submittedCount = people.filter(p => byEmail.get(lower(p.email))?.submitted_at).length;
+  // Who is open again past the due date, and until when, said once at the top.
+  const openAgain = people.map(p => byEmail.get(lower(p.email))?.unlockedUntil).filter(u => u && Date.parse(u) > Date.now());
+  const unlockedCount = past ? openAgain.length : 0;
+  const unlockedTill = openAgain.slice().sort().pop() || null;
   const base = "/" + config.id + "/worksheets/" + worksheetKey;
   // The menu, by name, with the word each row's chip says.
   const standing = (sheet) => {
@@ -108,12 +118,24 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
 
   return (
     <Shell>
-      <h1 className="asv-title">Audio stories</h1>
-      <p className="asv-p">{due ? (past ? "Locked since " : "Locks ") + when(due) + "." : "No due date is set in the database, so nothing locks."} Students' work saves as they go; a story counts as submitted once they press Submit. This page asks again every half minute. <a className="asv-link" href={base + "?control"}>How the sheet works</a>.</p>
+      {/* Andrew, 2026-11-16, of this page: "make the review pages prettier.
+          why are there so many buttons? this is not clear at all." So the
+          page opens on everybody, one card a student, and a card is the way
+          in; the menu and Previous and Next show only once a student is
+          open; and a section with nothing to say does not draw. */}
+      <div className="asv-top">
+        <h1 className="asv-title">Audio stories</h1>
+        {sections.length > 1 ? (
+          <div className="asv-tabs" role="tablist" aria-label="Section">
+            {sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className="asv-tab" onClick={() => { setSection(s); pick(""); }}>{s}</button>)}
+          </div>
+        ) : null}
+      </div>
+      <p className="asv-p"><b className="asv-count">{submittedCount} of {people.length} submitted.</b> {due ? (past ? "Due " : "Locks ") + when(due) + "." : "No due date is set, so nothing locks."}{unlockedCount ? " Open again for " + (unlockedCount === people.length ? "everyone" : unlockedCount) + " until " + when(unlockedTill) + "." : ""}</p>
 
-      <section className="asv-reports">
-        <h2 className="asv-h2">Problem reports {reports.length ? <span className="asv-badge">{reports.length}</span> : null}</h2>
-        {!reports.length ? <p className="asv-muted">No student has reported a problem.</p> : reports.map(r => (
+      {reports.length ? <section className="asv-reports">
+        <h2 className="asv-h2">Problem reports <span className="asv-badge">{reports.length}</span></h2>
+        {reports.map(r => (
           <article key={r.id} className="asv-report">
             <div className="asv-row"><b>{nameOf.get(r.viewer_id) || r.viewer_id}</b><span className="asv-muted">{when(r.created_at)}</span></div>
             {r.message ? <p className="asv-msg">{r.message}</p> : <p className="asv-muted">No note.</p>}
@@ -127,61 +149,65 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
             </details>
           </article>
         ))}
-      </section>
+      </section> : null}
 
-      {sections.length > 1 ? (
-        <div className="asv-tabs" role="tablist">
-          {sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className="asv-tab" onClick={() => setSection(s)}>{s}</button>)}
-        </div>
-      ) : null}
-      <h2 className="asv-h2">Stories{section ? ", " + section : ""}</h2>
-      <p className="asv-p">{submittedCount} of {people.length} submitted.</p>
-      <StudentPicker people={menu} value={chosen ? chosen.id : ""} onPick={pick} />
-      {(chosen ? [chosen.student] : []).map(p => <Row key={p.email} config={config} student={p} email={lower(p.email)} link={idOf(p)} sheet={byEmail.get(lower(p.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} mine={read?.students?.[lower(p.email)] || null} readAt={read?.at} />)}
-      {!chosen && read?.students ? <ReadList people={menu} read={read} onPick={pick} /> : null}
-      {others.length ? <h2 className="asv-h2">Not on the roster</h2> : null}
-      {others.map(s => <Row key={s.viewer_id} config={config} student={null} email={s.viewer_id} link={null} sheet={s} urls={urls} due={due} past={past} onUnlock={setUnlock} />)}
+      {chosen ? (
+        <>
+          <div className="asv-bar">
+            <button type="button" className="asv-back" onClick={() => pick("")}>All stories</button>
+            <StudentPicker people={menu} value={chosen.id} onPick={pick} />
+          </div>
+          <Row key={chosen.student.email} config={config} student={chosen.student} email={lower(chosen.student.email)} link={idOf(chosen.student)} sheet={byEmail.get(lower(chosen.student.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} mine={read?.students?.[lower(chosen.student.email)] || null} readAt={read?.at} />
+        </>
+      ) : <StoryList people={menu} byEmail={byEmail} read={read} onPick={pick} />}
+      {!chosen && others.length ? <h2 className="asv-h2">Not on the roster</h2> : null}
+      {!chosen ? others.map(s => <Row key={s.viewer_id} config={config} student={null} email={s.viewer_id} link={null} sheet={s} urls={urls} due={due} past={past} onUnlock={setUnlock} />) : null}
     </Shell>
   );
 }
 
-// Every read in the section on one page, running down: the class notes, then
-// each student's letter, what stands out about lateness and the
-// pre-production, and the read in a sentence or two. A name opens the story.
+// Everybody in the section on one page, one card a student, and a card is
+// the way in to that student's story. With Claude's read in the bucket the
+// cards run strongest first and carry the letter, the read in a sentence or
+// two, and what he asked to be told: late, or no pre-production. Without a
+// read the cards run by name and say where each student stands.
 const LETTERS = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"];
-function ReadList({ people, read, onPick }) {
-  const rows = people.map(p => ({ ...p, mine: read.students[lower(p.student.email)] || null }));
+const TONE = { Submitted: "done", "Submitted late": "late", Working: "working", "Not started": "none" };
+function StoryList({ people, byEmail, read, onPick }) {
+  const reads = read?.students || {};
+  const rows = people.map(p => {
+    const email = lower(p.student.email);
+    const sheet = byEmail.get(email);
+    const story = audioStoryOf(sheet?.answers || {});
+    return { ...p, mine: reads[email] || null, flags: (reads[email]?.flags || read?.absent?.[email] || []), headline: story.headline.trim(), seconds: story.audio ? story.audio.seconds : null };
+  });
   const rank = (r) => { const i = LETTERS.indexOf(r.mine?.letter || ""); return i < 0 ? LETTERS.length : i; };
   const withRead = rows.filter(r => r.mine).sort((x, y) => rank(x) - rank(y) || x.name.localeCompare(y.name));
   const without = rows.filter(r => !r.mine);
+  const card = (r) => (
+    <button key={r.id} type="button" className="asv-card" onClick={() => onPick(r.id)}>
+      <span className="asv-card-top">
+        <span className="asv-card-name">{r.name}</span>
+        {r.mine?.letter ? <span className="asv-letter">{r.mine.letter}</span> : null}
+        <span className={"asv-chip asv-" + (TONE[r.status] || "none")}>{r.status}</span>
+        {r.flags.filter(f => !/^Story submitted late/.test(f) || r.status !== "Submitted late").map(f => <span key={f} className="asv-chip asv-late">{f}</span>)}
+      </span>
+      {r.headline ? <span className="asv-card-head">{r.headline}{r.seconds ? <span className="asv-card-len">{clock(r.seconds)}</span> : null}</span> : null}
+      {r.mine?.read ? <span className="asv-card-say">{r.mine.read}</span> : null}
+    </button>
+  );
   return (
-    <section className="asv-reads">
-      <style>{REVIEW_CSS}</style>
-      <h2 className="asv-h2">Claude's read</h2>
-      <p className="asv-p">{withRead.length} stories read from their transcripts, strongest first. The letter is where Claude would put the story; the grade is yours.</p>
-      {(read.notes || []).length ? <ul className="asv-notes">{read.notes.map((n, i) => <li key={i}>{n}</li>)}</ul> : null}
-      {withRead.map(r => (
-        <article key={r.id} className="asv-read">
-          <div className="asv-row">
-            <button type="button" className="asv-read-name" onClick={() => onPick(r.id)}>{r.name}</button>
-            {r.mine.letter ? <span className="asv-letter">{r.mine.letter}</span> : null}
-            {(r.mine.flags || []).map(f => <span key={f} className="asv-chip asv-late">{f}</span>)}
-          </div>
-          {r.mine.headline ? <p className="asv-head">{r.mine.headline}</p> : null}
-          <p className="asv-read-say">{r.mine.read}</p>
-          {r.mine.why ? <p className="asv-muted">{r.mine.why}</p> : null}
-        </article>
-      ))}
-      {without.length ? <h3 className="asv-h3">No read</h3> : null}
-      {without.map(r => (
-        <article key={r.id} className="asv-read">
-          <div className="asv-row">
-            <button type="button" className="asv-read-name" onClick={() => onPick(r.id)}>{r.name}</button>
-            <span className="asv-chip">{r.status}</span>
-            {(read.absent?.[lower(r.student.email)] || []).map(f => <span key={f} className="asv-chip asv-late">{f}</span>)}
-          </div>
-        </article>
-      ))}
+    <section className="asv-list-all">
+      {withRead.length ? (
+        <>
+          <h2 className="asv-h2">Claude's read</h2>
+          <p className="asv-p">{withRead.length} {withRead.length === 1 ? "story" : "stories"} read from the transcript, strongest first. The letter is where Claude would put the story; the grade is yours.</p>
+          {(read.notes || []).length ? <ul className="asv-notes">{read.notes.map((n, i) => <li key={i}>{n}</li>)}</ul> : null}
+          {withRead.map(card)}
+        </>
+      ) : null}
+      {withRead.length && without.length ? <h2 className="asv-h2">No read</h2> : null}
+      {without.map(card)}
     </section>
   );
 }
@@ -224,8 +250,8 @@ function Row({ config, student, email, link, sheet, urls, due, past, onUnlock, m
         </div>
       ) : null}
       {mine ? (
-        <div className="asv-mine">
-          <style>{REVIEW_CSS}</style>
+        <div className="asv-mine pt-root aic">
+          <style>{PORTAL_CSS + REVIEW_CSS}</style>
           <div className="asv-row">
             {mine.letter ? <span className="asv-letter">{mine.letter}</span> : null}
             {(mine.flags || []).map(f => <span key={f} className="asv-chip asv-late">{f}</span>)}
@@ -234,14 +260,18 @@ function Row({ config, student, email, link, sheet, urls, due, past, onUnlock, m
           <ReadPanel read={mine} sheet={sheet} at={readAt} title={story.headline.trim()} name={student ? student.name : email} url={clip || ""} onSeek={clip ? seek : undefined} />
         </div>
       ) : null}
+      {/* The unlock buttons sit folded under one line, so a card is not a row
+          of buttons; the line itself says whether the story is open. */}
       {past && sheet ? (
-        <div className="asv-row">
-          {unlocked ? <span className="asv-muted">Unlocked until {when(sheet.unlockedUntil)}.</span> : null}
-          <button type="button" className="asv-btn" disabled={busy === "saving"} onClick={() => act(new Date(Date.now() + 24 * 3600e3).toISOString())}>Unlock for 24 hours</button>
-          <button type="button" className="asv-btn" disabled={busy === "saving"} onClick={() => act(new Date(Date.now() + 72 * 3600e3).toISOString())}>Unlock for 3 days</button>
-          {unlocked ? <button type="button" className="asv-btn" disabled={busy === "saving"} onClick={() => act(null)}>Lock again</button> : null}
-          {busy && busy !== "saving" ? <span className="asv-bad">{busy}</span> : null}
-        </div>
+        <details className="asv-late-work">
+          <summary>{unlocked ? "Open for late work until " + when(sheet.unlockedUntil) : "Locked. Open for late work"}</summary>
+          <div className="asv-row">
+            <button type="button" className="asv-btn" disabled={busy === "saving"} onClick={() => act(new Date(Date.now() + 24 * 3600e3).toISOString())}>Unlock for 24 hours</button>
+            <button type="button" className="asv-btn" disabled={busy === "saving"} onClick={() => act(new Date(Date.now() + 72 * 3600e3).toISOString())}>Unlock for 3 days</button>
+            {unlocked ? <button type="button" className="asv-btn" disabled={busy === "saving"} onClick={() => act(null)}>Lock again</button> : null}
+            {busy && busy !== "saving" ? <span className="asv-bad">{busy}</span> : null}
+          </div>
+        </details>
       ) : null}
     </article>
   );
@@ -335,28 +365,45 @@ function Shell({ children }) {
 const T = TOKENS.TEXT, S = TOKENS.SURFACE, L = TOKENS.LINE, ST = TOKENS.STATE;
 const CSS = `
 .asv{padding:20px 16px 80px;color:${T.primary}}
-.asv-in{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
-.asv-title{margin:0;font-size:28px;font-weight:700;letter-spacing:-.02em}
+.asv-in{max-width:920px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.asv-top{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap}
+.asv-title{margin:0;font-size:32px;font-weight:700;letter-spacing:-.02em}
+.asv-count{color:${T.primary};font-weight:700}
+.asv-bar{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.asv-back{font:inherit;font-size:15px;font-weight:600;min-height:40px;padding:0 14px;border-radius:12px;border:0;background:${T.primary};color:${S.page};cursor:pointer}
+.asv-list-all{display:flex;flex-direction:column;gap:12px}
+.asv-card{font:inherit;text-align:left;display:flex;flex-direction:column;gap:8px;width:100%;padding:16px 20px;border-radius:16px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
+.asv-card:hover{border-color:${T.primary}}
+.asv-card:focus-visible,.asv-back:focus-visible,.asv-tab:focus-visible,.asv-btn:focus-visible{outline:2px solid ${T.primary};outline-offset:2px}
+.asv-card-top{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap}
+.asv-card-name{font-size:19px;font-weight:700;margin-right:4px}
+.asv-card-head{display:block;font-size:16px;font-weight:600;line-height:1.35;color:${T.secondary}}
+.asv-card-len{margin-left:10px;font-weight:500;font-variant-numeric:tabular-nums;color:${T.muted}}
+.asv-card-say{display:block;font-size:17px;line-height:1.55;max-width:820px}
+.asv-none{border-color:${L.strong};color:${T.muted}}
+.asv-late-work{font-size:15px;color:${T.secondary}}
+.asv-late-work summary{cursor:pointer;min-height:32px;display:flex;align-items:center;gap:6px}
+.asv-late-work .asv-row{padding-top:8px}
 .asv-h2{margin:12px 0 0;font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
 .asv-badge{font-size:13px;font-weight:700;border-radius:999px;padding:2px 9px;background:${ST.late};color:#fff}
-.asv-p{margin:0;font-size:16px;line-height:1.5;color:${T.secondary}}
+.asv-p{margin:0;font-size:17px;line-height:1.5;color:${T.secondary}}
 .asv-p code,.asv-list code{font-size:14px;background:${S.sunk};padding:1px 6px;border-radius:6px;color:${T.primary}}
-.asv-muted{margin:0;font-size:14.5px;line-height:1.5;color:${T.muted}}
+.asv-muted{margin:0;font-size:15px;line-height:1.5;color:${T.muted}}
 .asv-bad{color:${ST.late};font-size:14px}
 .asv-link{color:${T.primary};font-weight:600}
 .asv-list{margin:0;padding-left:20px;font-size:15.5px;line-height:1.6;color:${T.secondary}}
 .asv-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .asv-grow{flex:1}
 .asv-tabs{display:flex;gap:8px;flex-wrap:wrap}
-.asv-tab{font:inherit;font-size:15px;padding:6px 16px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer;min-height:34px}
+.asv-tab{font:inherit;font-size:15px;font-weight:600;padding:6px 18px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.secondary};cursor:pointer;min-height:40px}
 .asv-tab[aria-selected="true"]{background:${T.primary};border-color:${T.primary};color:${S.page}}
 .asv-reports{display:flex;flex-direction:column;gap:10px}
 .asv-report{padding:10px 12px;border-radius:10px;background:${S.sunk};display:flex;flex-direction:column;gap:6px}
 .asv-msg{margin:0;font-size:15.5px;white-space:pre-wrap}
 .asv-details summary{font-size:14px;color:${T.muted};cursor:pointer}
-.asv-item{border-top:1px solid ${L.soft};padding:14px 0 6px;display:flex;flex-direction:column;gap:10px}
-.asv-name{font-size:18px}
-.asv-chip{font-size:13px;font-weight:600;border-radius:999px;padding:3px 10px;border:1px solid ${L.strong};color:${T.secondary}}
+.asv-item{border:1px solid ${L.strong};border-radius:16px;background:${S.card};padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.asv-name{font-size:22px}
+.asv-chip{font-size:14px;font-weight:600;border-radius:999px;padding:3px 11px;border:1px solid ${L.strong};color:${T.secondary};white-space:nowrap}
 .asv-done{border-color:${ST.ok};color:${ST.ok}}
 .asv-late{border-color:${ST.late};color:${ST.late}}
 .asv-working{border-color:${ST.warn};color:${ST.warn}}
@@ -366,13 +413,9 @@ const CSS = `
 .asv-cover{display:block;width:96px;height:96px;object-fit:cover;border-radius:10px;background:${S.card}}
 .asv-cover-none{display:flex;align-items:center;justify-content:center;font-size:12px;color:${T.muted};border:1px dashed ${L.strong};box-sizing:border-box}
 .asv-head{margin:0;font-size:17px;font-weight:600;line-height:1.3}
-.asv-reads{display:flex;flex-direction:column;gap:14px;margin-top:8px}
 .asv-notes{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:17px;line-height:1.55;max-width:860px}
-.asv-h3{margin:10px 0 0;font-size:18px;font-weight:700}
-.asv-read{border-top:1px solid ${L.soft};padding:14px 0 4px;display:flex;flex-direction:column;gap:8px}
-.asv-read-name{font:inherit;font-size:19px;font-weight:700;padding:0;border:0;background:none;color:${T.primary};cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:44px}
 .asv-read-say{margin:0;font-size:17px;line-height:1.55;max-width:860px;color:${T.primary}}
-.asv-letter{font-size:17px;font-weight:700;border-radius:8px;padding:2px 12px;border:2px solid ${T.primary};color:${T.primary}}
+.asv-letter{font-size:16px;font-weight:700;border-radius:8px;padding:1px 10px;background:${T.primary};color:${S.page}}
 .asv-mine{display:flex;flex-direction:column;gap:10px;padding-top:6px}
 .asv-btn{font:inherit;font-size:14px;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .asv-btn:disabled{opacity:.45;cursor:default}
