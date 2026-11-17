@@ -62,8 +62,10 @@ const stop = [], unplaced = [];
 for (const s of data.students) {
   const r = mine.students[s.id];
   if (!s.audio || !r) {
-    if (s.audio && !partial) stop.push(s.name + ": has audio and no read");
-    const f = flagsOf(s);
+    // claude-read.json's skip is { [slug]: why } for audio there is no reading, said as a flag.
+    const why = (mine.skip || {})[s.id];
+    if (s.audio && !why && !partial) stop.push(s.name + ": has audio and no read");
+    const f = [...flagsOf(s), ...(why ? [why] : [])];
     if (f.length) absent[s.email] = f;
     continue;
   }
