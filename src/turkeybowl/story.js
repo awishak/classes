@@ -16,7 +16,12 @@ export const NAMES = {
   you: "YOU", uncle: "YOUR UNCLE", brother: "YOUR BROTHER", sister: "YOUR SISTER", cousin: "YOUR COUSIN", niece: "YOUR NIECE", grandma: "GRANDMA",
   jerry: "JERRY JONES", reporter: "A REPORTER", receiver: "NUMBER 88", kicker: "YOUR KICKER", backup: "YOUR BACKUP QUARTERBACK", returner: "YOUR KICK RETURNER",
   coachA: "YOUR DEFENSIVE COACH", coachB: "YOUR OTHER DEFENSIVE COACH",
+  andrew: "ANDREW ISHAK", kaepernick: "COLIN KAEPERNICK", ali: "MUHAMMAD ALI", robinson: "JACKIE ROBINSON", king: "BILLIE JEAN KING",
 };
+
+// Andrew, 2026-11-16: "put me in the game, as well as colin kaepernick, muhammad ali, jackie robinson, billie jean king."
+// They walk on by name after the title. None of them says anything yet: what each one says, and where, is his to write.
+export const ROLL = [["andrew", { armUp: true }], ["kaepernick", { kneel: true }], ["ali", { armUp: true }], ["robinson", {}], ["king", { armUp: true }]];
 
 // A question on screen: `wide` is said over the place, each shot is one person
 // up close saying one thing ([who, line, mood]), and `ask` is the one line left
@@ -44,8 +49,8 @@ export const SHOW = {
   backup: W(["It's the fourth quarter. Your quarterback is hurt."], [["backup", "\"Me? Coach, I haven't played all season.\"", { shock: true }]], "He is putting on his helmet. What do you tell him?"),
   twominute: W(["You are losing to Texas A&M by four points. There are two minutes left, and you have one time-out."], [["backup", "\"What's the call, coach?\"", { sweat: true }]], "What do you do?"),
   "pop-stacking": W([], [["cousin", "\"I'm taking a sociology of sport class. What does 'stacking' mean in sports?\"", { sad: false }]], "What do you tell her?"),
-  "pop-titleix": W([], [["niece", "\"I play three sports. What does Title IX actually say?\"", { armUp: false }]], "What do you tell her?"),
-  "pop-1968": W([], [["niece", "\"I go to San Jose State. There's a statue on campus of Tommie Smith and John Carlos. What should I know about them?\"", { armUp: false }]], "What do you tell her?"),
+  "pop-titleix": W([], [["niece", "\"I play three sports, and I have read the school handbook twice. Title IX is in there once, with no explanation. What does it actually say?\"", { armUp: false }]], "What do you tell her?"),
+  "pop-1968": W([], [["niece", "\"I go to San Jose State. I walk past the statue of Tommie Smith and John Carlos every day, and I have read the plaque. What should I know that the plaque leaves out?\"", { armUp: false }]], "What do you tell her?"),
 };
 
 // What the announcer says. A line is spoken by the browser's voice and shown
@@ -118,13 +123,15 @@ export function clearRead(ranks) { return !ranks.length || ranks.filter(r => r =
 // day where it fits. The key says when: "q:" before a question's slot, "a:"
 // after it, "s:" after a cut scene. who is a person, "ann" for the announcer,
 // or "text:<who>" for a text message. The reading is named beside each line.
+// The niece, since 2026-11-16 (Andrew: "make the niece a very lisa simpson character"): the one in the family who has read
+// the handbook, asks in writing, and wants the part the plaque leaves out. Her look is her own.
 export const ASIDES = {
   "q:stars": [
-    ["cousin", "\"Park rules. We call our own fouls, and the winners keep the field.\"", { sad: false }],                                           // "The Rules of Pickup Basketball" (SB Nation)
+    ["cousin", "\"Park rules. Two-hand touch, five Mississippi before you rush, and we call our own penalties.\"", { sad: false }],                                           // "The Rules of Pickup Basketball" (SB Nation), said in football's words. Andrew, 2026-11-16: fouls and "keeps the field" "are not football terms."
     ["sister", "\"And none of that co-ed league stuff where a girl's touchdown counts double. I'll score regular ones.\"", { armUp: false }],        // "Why Co-Ed Sports Leagues Are Never Really Co-Ed" (Deadspin)
   ],
   "s:kickoff": [["nephew", "\"My travel team costs more than this whole park. Dad says kids' sports is a fifteen-billion-dollar business now.\""]],   // "How Kids Sports Became a $15 Billion Industry" (Time)
-  "s:half1": [["niece", "\"At school the boys get handed a baseball and the girls get handed a softball. Nobody has ever told me why.\"", { armUp: false }]],   // "Is Softball Sexist?" (NYT)
+  "s:half1": [["niece", "\"At school the boys get handed a baseball and the girls get handed a softball. I asked why, in writing. Nobody has answered.\"", { armUp: false }]],   // "Is Softball Sexist?" (NYT)
   "q:culture": [["jerry", "\"Before we start. Congress let the league sell its television rights as one package back in 1961. The same law keeps us off Fridays and Saturdays in the fall, for the high schools and the colleges. Thursday, though? Thursday is mine.\""]],   // Sports Broadcasting Act of 1961
   "q:jet": [["jerry", "\"A coach once sent his four best players home before a big television game. The league fined the team a quarter of a million dollars. So tell me. Do you owe the people a show?\""]],   // "Are You Not Entertained?" (Klosterman, Grantland)
   "s:dallas": [

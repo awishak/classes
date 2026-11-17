@@ -115,6 +115,23 @@
         #pad { top: 34cqw; bottom: auto; } #pad button { width: 16cqw; height: 16cqw; font-size: 5cqw; } #pad.throw button { width: 34cqw; }
         #hint { top: 50cqw; bottom: auto; font-size: 2.6cqw; } .board { max-height: none; }
       }
+      /* The 8-bit pass, 2026-11-16. The picture is 320 by 180 hard squares, so the words sit in hard boxes: no round corners,
+         no gradients, and anything that moves moves in steps. */
+      #screen, #hud canvas, .opt canvas, .faces canvas { image-rendering: crisp-edges; image-rendering: pixelated; }
+      #stage *, #stage *::after { border-radius: 0 !important; }
+      #hud .box, .card { background: #0a1238; }
+      .card { animation: rise .2s steps(3) both; }
+      .opt { background: #1b2a6b; transition: none; } .opt:hover, .opt:focus-visible { background: #1d3c8f; transform: none; }
+      .go { background: #ffd75e; } .call.run { background: #ffb347; } .call.pass { background: #58bdf5; }
+      #pad button { background: #ffd75e; } #pad.throw button { background: #58bdf5; }
+      #banner.slam { animation: slam .28s steps(4) both; } #booth { transition: none; }
+      /* The play call: one row of four across the top, over the stands, so both teams can be seen lined up under it. The announcer moves to the bottom while it is up. */
+      @media (min-aspect-ratio: 1/1) {
+        #ui.top { top: 12.5%; left: 3%; right: 3%; } #ui.top .card { padding: 1cqw 1.4cqw; gap: 0.7cqw; }
+        #ui.top .calls { grid-template-columns: repeat(4, 1fr); gap: 1cqw; } #ui.top .call { font-size: 1.35cqw; padding: 0.8cqw 0.4cqw; } #ui.top .call small { font-size: 1.7cqw; margin-bottom: 0.3cqw; }
+        #stage:has(#ui.top .card) #booth { top: auto; bottom: 3%; }
+        #banner:not(.low) { top: 19%; }
+      }
       @media (prefers-reduced-motion: reduce) { #banner.flash, #banner.slam, .card, .opt.lock { animation: none; } }
     </style>
     <script type="module" src="/src/turkeybowl/main.js"></script>
@@ -122,7 +139,7 @@
   <body>
     <div id="app">
       <div id="stage">
-        <canvas id="screen" width="1280" height="720"></canvas>
+        <canvas id="screen" width="320" height="180" role="img" aria-label="Turkey Bowl, the picture. Everything said is also in the boxes on the page."></canvas>
         <div id="hud"></div>
         <div id="tools">
           <button id="back" class="tool" type="button" disabled>Back</button>

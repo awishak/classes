@@ -19,6 +19,11 @@
 // sideline." "If somebody from COMM 118 is playing, please pull what they
 // look like and make an avatar for each of them."
 //
+// 2026-11-16, after two passes at smoother pictures: "the graphics are not
+// good enough. so maybe we go back down to 8 bit, and make it fun that way."
+// So the picture is 320 by 180 squares in one palette of 56 colours, drawn
+// by art.js and venues.js square by square, and a play is seen from the side.
+//
 // So: a run is saved in the browser after every step and picked up on
 // reload. Back pages through what has already happened, read only. A play
 // is called and then played: a run is three lanes and defenders to dodge, a
@@ -28,13 +33,13 @@
 // coach.
 
 import { flowFor, decisionOf, judge, scoreRun, lookFor, orderFor, popScene, POWER, RANK_SAY, VERDICT, LINKS, MAX_SCORE, shortName, ALTS } from "./script.js";
-import { SHOW, NAMES, ANN, RECORDED, took, parkTarget, dallasTarget, jerryRemembers, couch, clearRead, ASIDES, NICE_HIT } from "./story.js";
+import { ROLL, SHOW, NAMES, ANN, RECORDED, took, parkTarget, dallasTarget, jerryRemembers, couch, clearRead, ASIDES, NICE_HIT } from "./story.js";
 import * as A from "./art.js";
 import { accessToken } from "../engine/session.js";
 
 const $ = (id) => document.getElementById(id);
-const canvas = $("screen"), c = canvas.getContext("2d"), ui = $("ui"), hud = $("hud"), banner = $("banner"), hint = $("hint"), pad = $("pad"), backBtn = $("back");
-c.imageSmoothingEnabled = true; c.imageSmoothingQuality = "high";
+const canvas = $("screen"), c = canvas.getContext("2d", { willReadFrequently: true }), ui = $("ui"), hud = $("hud"), banner = $("banner"), hint = $("hint"), pad = $("pad"), backBtn = $("back");
+c.imageSmoothingEnabled = false;
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
 const store = { get(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }, set(k, v) { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* private mode */ } } };
@@ -194,7 +199,7 @@ function drawFx(t) {
   } else if (fx.kind === "silly") {
     for (let i = 0; i < 6; i++) A.turkey(c, ((e * (190 + i * 40) + i * 150) % 800) - 80, 200 + i * 28, t + i, 1);
     const p = clamp(e / 0.5, 0, 1), x = fx.x || 500, y = fx.y || 120;
-    if (p < 1) { c.save(); c.translate(-80 + (x + 80) * p, 300 - (300 - y) * p - Math.sin(p * Math.PI) * 90); c.rotate(e * 14); c.scale(1.6, 1.6); A.food(c, "pie"); c.restore(); }
+    if (p < 1) { c.save(); c.translate(-80 + (x + 80) * p, 300 - (300 - y) * p - Math.sin(p * Math.PI) * 90); c.rotate(e * 14); c.scale(2, 2); A.food(c, "pie"); c.restore(); }
     else { c.fillStyle = "#d9772a"; for (let i = 0; i < 9; i++) { c.beginPath(); c.arc(x + Math.cos(i) * (10 + i * 3), y + Math.sin(i * 2) * (8 + i * 2) + Math.min(30, (e - 0.5) * 12), 9 - i * 0.5, 0, 7); c.fill(); } c.fillStyle = "#fff"; c.beginPath(); c.arc(x, y - 4, 9, 0, 7); c.fill(); }
   } else if (fx.kind === "over") { c.fillStyle = `rgba(200,30,30,${0.35 + Math.sin(e * 16) * 0.2})`; c.fillRect(0, 0, A.W, A.H); }
 }
@@ -205,17 +210,19 @@ const shake = (ms = 280) => { shakeUntil = performance.now() + ms; };
 const flash = (ms = 90) => { flashUntil = performance.now() + ms; };
 (function frame() {
   const t = performance.now() < stopUntil ? stopAt : now();
-  // The picture is drawn at 1280 by 720, smooth. Every drawing still thinks in 640 by 360.
-  c.save(); c.scale(2, 2);
+  // The picture is 320 by 180 squares. Every drawing still thinks in 640 by 360, so the numbers are halved on the way in,
+  // and when the frame is done every square is moved to the nearest colour on the palette.
+  c.save(); c.scale(0.5, 0.5);
   try {
     const shaking = fx && ((fx.kind === "over") || (fx.kind === "shake" && t - fx.start < 0.4));
     const left = shakeUntil - performance.now();
-    if (shaking) c.translate(Math.sin(t * 70) * 4, Math.cos(t * 55) * 3);
-    else if (left > 0) c.translate(Math.round(Math.sin(left * 0.9) * left / 40), Math.round(Math.cos(left * 0.7) * left / 60));
+    if (shaking) c.translate(Math.round(Math.sin(t * 70) * 2) * 2, Math.round(Math.cos(t * 55) * 1.5) * 2);
+    else if (left > 0) c.translate(Math.round(Math.sin(left * 0.9) * left / 80) * 2, Math.round(Math.cos(left * 0.7) * left / 120) * 2);
     paint(t); drawFx(t);
     if (performance.now() < flashUntil) { c.fillStyle = "#fff"; c.fillRect(-10, -10, A.W + 20, A.H + 20); }
   } catch { /* one bad frame is not worth a dead game */ }
   c.restore();
+  A.snap(c);
   requestAnimationFrame(frame);
 })();
 function say(text, cls = "") { banner.textContent = text || ""; banner.className = cls; }
@@ -389,7 +396,7 @@ function backdrop(id) {
 // yours, a fumble, a sack, a kick going wide, somebody walking off, a bench under rain, or Jerry fuming.
 const BAD = { breakfast: "sick", jet: "sick", stars: { bad: "gain", silly: "grandma" }, blowup: "walk", shout: "gain", push: "bench", open: "bench", culture: "jerry", dissent: "jerry", power: "jerry",
   receiver: "sack", commercial: "gain", conflict: "bench", speech: "bench", points: "bench", returner: "fumble", cohesion: "bench", kicker: "wide", backup: "sack", twominute: "sack",
-  "pop-stacking": "walk", "pop-titleix": "walk", "pop-1968": "walk" };
+  "pop-stacking": "walk", "pop-titleix": "walk", "pop-1968": { bad: "kaep", silly: "walk" } };
 const rainCloud = (x, y, e) => { c.fillStyle = "rgba(60,64,90,.92)"; [[0, 0, 26], [26, 6, 20], [-24, 8, 18]].forEach(([dx, dy, r]) => { c.beginPath(); c.arc(x + dx, y + dy, r, 0, 7); c.fill(); }); c.fillStyle = "#7fd3ff"; for (let i = 0; i < 10; i++) c.fillRect(x - 40 + (i * 17) % 80, y + 22 + ((e * 180 + i * 37) % 90), 2, 9); };
 async function consequence(id, got, who, phone, base) {
   let kind = BAD[id]; if (kind && typeof kind === "object") kind = kind[got.rank] || kind.bad;
@@ -399,7 +406,8 @@ async function consequence(id, got, who, phone, base) {
   if (kind === "sick") paint = (t) => { A.speedLines(c, t, "#3f6a2a", "#a8d070"); A.bust(c, "you", 320 + Math.sin(t * 30) * 3, 2.1, { face: FACE, sad: true, sweat: true, shirt: where === "park" ? "#e2622a" : "#1b2440", number: "" }); A.letterbox(c); };
   else if (kind === "jerry") { shake(420); paint = (t) => { const e = t - s0; A.burst(c, t, 320, 150, "#7a1212", "#ff8a80"); A.bust(c, "jerry", 320 + Math.sin(t * 40) * 2, 2.1, { angry: true, grin: false }); c.fillStyle = "rgba(255,255,255,.85)"; [[-1, 0], [1, 0.4]].forEach(([d, o]) => { const p = ((e + o) * 1.4) % 1; c.beginPath(); c.arc(320 + d * (120 + p * 30), 120 - p * 90, 10 + p * 14, 0, 7); c.fill(); }); A.letterbox(c); }; }
   else if (kind === "bench") paint = (t) => { const e = t - s0; A.sideline(c, t, where, FACE); for (let i = 0; i < 5; i++) rainCloud(72 + i * 92, 96 + Math.sin(e * 2 + i) * 4, e + i * 0.3); };
-  else if (kind === "walk") paint = (t) => { const e = t - s0; base(t); A.cast(c, who, 500 + Math.max(0, e - 0.6) * 170, 250, 1.3, { angry: true, grin: false, armUp: false, look: 3, ...(G.where === "texas" ? TX : {}) }); };
+  else if (kind === "kaep") paint = (t) => { base(t); A.cast(c, "kaepernick", 320, 250, 1.3, { kneel: true }); };   // the answer that mixes him up with Smith and Carlos: he is the one who knelt
+  else if (kind === "walk") paint = (t) => { const e = t - s0; base(t); A.cast(c, who, 440 + Math.max(0, e - 0.6) * 170, 250, 1.3, { angry: true, grin: false, armUp: false, look: 3, ...(G.where === "texas" ? TX : {}) }); };
   else if (kind === "gain" || kind === "grandma") paint = (t) => {
     const e = t - s0, x = Math.max(44, 610 - e * 210), in_ = x <= 44, hop = in_ ? Math.abs(Math.sin(e * 7)) * 22 : 0; field(t, where, 0, false, TEAM[where].them.jersey + "bb");
     for (let i = 0; i < 5; i++) { const px = 140 + i * 84, passed = x < px; fp(px, 228 + i * 25, { ...kin(where, "us", i), down: passed }, passed ? 0 : Math.floor(t * 8) + i); }
@@ -433,7 +441,7 @@ async function decide(id) {
   const start = now();
   paint = (t) => {
     base(t);
-    if (who && !phone) A.cast(c, who, 500, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}) });
+    if (who && !phone) A.cast(c, who, 440, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}) });
     if (phone) { c.save(); c.translate(500, 30 + (t - start < 1 ? Math.sin(t * 60) * 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 84, 150); c.fillStyle = "#dff3ff"; c.fillRect(6, 14, 72, 118); c.fillStyle = "#2f6fc4"; c.fillRect(12, 24, 56, 16); c.fillRect(12, 46, 44, 12); c.fillRect(12, 64, 50, 12); c.restore(); }
   };
   say("");
@@ -486,8 +494,8 @@ async function decide(id) {
   await beat(1500); say("");
   if (got.rank === "bad" || got.rank === "silly") await consequence(sid, got, who, phone, base);
   cine(false);
-  paint = (t) => { base(t); if (who && !phone) A.cast(c, who, 500, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}), ...(got.rank === "best" ? { grin: true } : got.rank === "bad" ? { sad: true, angry: false } : {}) }); };
-  fx = got.rank === "good" ? null : { kind: got.rank, start: now(), x: who && !phone ? 530 : 320, y: who && !phone ? 84 : 110 };
+  paint = (t) => { base(t); if (who && !phone) A.cast(c, who, 440, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}), ...(got.rank === "best" ? { grin: true } : got.rank === "bad" ? { sad: true, angry: false } : {}) }); };
+  fx = got.rank === "good" ? null : { kind: got.rank, start: now(), x: who && !phone ? 470 : 320, y: who && !phone ? 84 : 110 };
   const chose = Array.isArray(pick) ? pick.map(x => POWER.find(p => p.k === x).text).join(" and ") : dec.opts.find(o => o.k === pick).text;
   const r = card(label);
   r.append(el("div", "rank r-" + got.rank, RANK_SAY[got.rank] + "   +" + got.points));
@@ -521,13 +529,14 @@ const TEAM = {
 const THEM = { park: "UNCLE RICK'S TEAM", dallas: "THE VISITORS", texas: "TEXAS A&M" };
 const HAIRS = ["#5a3a1e", "#1e1410", "#f3d67a", "#a8551c", "#e3e6ea"], SKINS = ["#e8b98a", "#c98a5a", "#8a5a3a", "#f0c8a0"];
 const kin = (where, side, i) => ({ ...TEAM[where][side], hair: HAIRS[(i + (side === "us" ? 0 : 2)) % 5], skin: SKINS[(i + (side === "us" ? 0 : 1)) % 4], long: where === "park" && i % 3 === 1, dir: side === "us" ? 1 : -1 });
-// Andrew, 2026-11-15, with two pictures of a 1998 console football game: the field during a play is seen from above and
-// behind the offense, filling the screen. A spot is still (x, y): x is how far downfield and y is across. Players and the
-// ball are queued with how high off the ground they are, then drawn far to near, so whoever is nearer the camera is in front.
+// Andrew, 2026-11-16: "go back down to 8 bit." The field during a play is seen from the side, the way a football cartridge
+// showed it: your team runs left to right, and the stands are across the top. A spot is still (x, y): x is how far downfield
+// and y is across. Players and the ball are queued with how high off the ground they are, then drawn from the far sideline
+// to the near one, so whoever is nearer the bottom of the screen is in front.
 const fq = [];
-const fp = (x, y, o = {}, frame = 0, h = 0) => fq.push([x, () => { const p = A.proj(x, y, h); A.player(c, p.x, p.y, { ...o, s: (o.s || 1) * p.s, lift: h * p.s }, frame); }]);
-const fb = (x, y, h = 0, tilt = 0) => fq.push([x - 1, () => { const p = A.proj(x, y, h); A.ball(c, p.x, p.y, tilt, p.s * 1.3, h * p.s); }]);
-const flush = () => { fq.sort((a, b) => b[0] - a[0]).forEach(([, f]) => f()); fq.length = 0; };
+const fp = (x, y, o = {}, frame = 0, h = 0) => fq.push([y, () => { const p = A.proj(x, y, h); A.player(c, p.x, p.y, { ...o, s: (o.s || 1) * p.s, lift: h * p.s }, frame); }]);
+const fb = (x, y, h = 0, tilt = 0) => fq.push([y + 1, () => { const p = A.proj(x, y, h); A.ball(c, p.x, p.y, tilt, p.s * 1.3, h * p.s); }]);
+const flush = () => { fq.sort((a, b) => a[0] - b[0]).forEach(([, f]) => f()); fq.length = 0; };
 const field = (t, where, scroll, endzone, near = "") => A.turf(c, t, { where, scroll, endzone, near });
 const ease = (p) => p * p * (3 - 2 * p);
 /** Where the other team stands for a look: [x, y] for each of five. */
@@ -536,7 +545,7 @@ const setOf = (look) => [0, 1, 2, 3, 4].map(i => look === "deep" ? [470 + (i % 2
 const lineup = (where, look0) => (t) => {
   const look = look0 === "mystery" ? ["deep", "stack", "blitz", "spread"][Math.floor(t * 1.4) % 4] : look0;   // a defense nobody can read keeps shifting
   field(t, where, 0, false);
-  for (let i = 0; i < 5; i++) fp(200, 226 + i * 26, kin(where, "us", i), 0);
+  for (let i = 0; i < 5; i++) fp(200 + (i % 2) * 14, 226 + i * 26, kin(where, "us", i), 0);
   setOf(look).forEach(([x, y], i) => fp(x + (look === "blitz" ? Math.sin(t * 9 + i) * 3 : 0), y, kin(where, "them", i), look === "blitz" ? Math.floor(t * 8) + i : 0));
   fp(150, 290, { ...kin(where, "us", 6), ring: true }, 0);
   fb(216, 278, 0);   // on the ground at the line, where a football sits before the snap
@@ -564,7 +573,7 @@ function playOut(call, good, where, look, which) {
     paint = (t) => {
       const p = clamp((t - start) / dur, 0, 1), go = ease(clamp((p - 0.1) / 0.82, 0, 1)), fr = p > 0.08 && p < 0.96 ? Math.floor(t * 8) : 0;
       field(t, where, 0, good);
-      for (let i = 0; i < 5; i++) fp(200 + go * 14, 226 + i * 26, kin(where, "us", i), fr + i);
+      for (let i = 0; i < 5; i++) fp(200 + (i % 2) * 14 + go * 14, 226 + i * 26, kin(where, "us", i), fr + i);
       const qb = kin(where, "us", 6);
       let dust = null;
       if (call === "run") {
@@ -606,7 +615,7 @@ const PIE_FOR = { park: "uncle", dallas: "jerry", texas: "reporter" };
 async function touchdown(where, text = "TOUCHDOWN!") {
   const was = inCine; cine(true); ui.textContent = "";
   const cols = TEAM[where].us; let start = now();
-  paint = (t) => { const e = t - start; A.burst(c, t, 320, 200, A.darken(cols.jersey, 0.2), "#ffd75e"); c.save(); c.translate(320, 330 - Math.abs(Math.sin(Math.min(e, 0.5) * Math.PI * 2)) * 30); c.scale(5, 5); A.player(c, 0, 0, { ...kin(where, "us", 3), arms: 1, front: true, face: where === "park" ? FACE : null }, 0); c.restore(); A.ball(c, 430, 60 + Math.min(1, e * 4) * 250, e * 20, 4); A.letterbox(c); };
+  paint = (t) => { const e = t - start; A.burst(c, t, 320, 200, A.darken(cols.jersey, 0.2), "#ffd75e"); c.save(); c.translate(320, 328 - Math.round(Math.abs(Math.sin(Math.min(e, 0.5) * Math.PI * 2)) * 15) * 2); c.scale(4, 4); A.player(c, 0, 0, { ...kin(where, "us", 3), arms: 1, front: true, face: where === "park" ? FACE : null }, 0); c.restore(); A.ball(c, 430, 60 + Math.min(1, e * 4) * 250, e * 20, 4); A.letterbox(c); };
   say(text, "slam"); sfx.slam(); hitStop(140); shake(380); flash(90); sfx.td(); showHud(); announce("td");
   if (where === "texas") music.start("fight");
   await beat(1300);
@@ -628,7 +637,7 @@ async function touchdown(where, text = "TOUCHDOWN!") {
   paint = (t) => {
     const e = t - start, p = clamp((e - 0.9) / 0.22, 0, 1);
     A.speedLines(c, e > 0.9 ? t : 0, "#3a3358", "#8a80c0"); A.bust(c, who, 320, 2.2, { armUp: false, grin: e < 0.9, shock: e >= 0.9 && p < 1, look: e > 0.6 ? 3 : 0, ...(where === "texas" && who !== "reporter" ? TX : {}) }, 26);
-    if (p > 0 && p < 1) { c.save(); c.translate(760 - p * 440, 150); c.scale(3 + p, 3); c.rotate(e * 20); A.food(c, "pie"); c.restore(); }
+    if (p > 0 && p < 1) { c.save(); c.translate(760 - p * 440, 150); c.scale(3, 3); c.rotate(e * 20); A.food(c, "pie"); c.restore(); }
     if (p >= 1) { c.fillStyle = "#d9772a"; for (let i = 0; i < 12; i++) { c.beginPath(); c.arc(320 + Math.cos(i * 1.7) * (20 + i * 5), 126 + Math.sin(i * 2.3) * (18 + i * 3) + Math.min(40, (e - 1.12) * 22) * (i % 3 === 0 ? 1 : 0.2), 26 - i, 0, 7); c.fill(); } c.fillStyle = "#fff"; c.beginPath(); c.arc(316, 112, 24, 0, 7); c.fill(); c.beginPath(); c.arc(340, 138, 14, 0, 7); c.fill(); }
     A.letterbox(c);
     if (p >= 1 && !hit) { hit = true; sfx.splat(); hitStop(150); shake(420); flash(60); say("PIE.", "slam low"); announce("pie"); sfx.gobble(0.5, 2); }
@@ -740,7 +749,7 @@ async function scene(name) {
     await talk("JERRY'S JET", "Jerry: \"You're hired. For today. Wheels up.\"");
     // The cabin goes on, and somebody else is flying first class.
     s0 = now(); let gob = false;
-    paint = (t) => { const e = t - s0, sc = Math.min(1, e / 1.6) * 520; A.cabin(c, t, sc); A.seat(c, 440 - sc, 300); A.seat(c, 200 - sc, 300); A.seat(c, 840 - sc, 300); c.save(); c.translate(838 - sc, 266); c.scale(2.2, 2.2); A.turkey(c, 0, 0, e > 1.6 ? 0 : t); if (e > 1.6) { c.fillStyle = "#16121f"; c.fillRect(8, -38, 12, 5); } c.restore(); c.save(); c.translate(900 - sc, 200); c.scale(1.6, 1.6); A.food(c, "sparkling"); c.restore(); A.letterbox(c); if (e > 2.3 && !gob) { gob = true; sfx.gobble(0, 1); } };
+    paint = (t) => { const e = t - s0, sc = Math.min(1, e / 1.6) * 520; A.cabin(c, t, sc); A.seat(c, 440 - sc, 300); A.seat(c, 200 - sc, 300); A.seat(c, 840 - sc, 300); c.save(); c.translate(838 - sc, 266); c.scale(2, 2); A.turkey(c, 0, 0, e > 1.6 ? 0 : t); if (e > 1.6) { c.fillStyle = "#16121f"; c.fillRect(8, -38, 12, 5); } c.restore(); c.save(); c.translate(900 - sc, 200); c.scale(2, 2); A.food(c, "sparkling"); c.restore(); A.letterbox(c); if (e > 2.3 && !gob) { gob = true; sfx.gobble(0, 1); } };
     await beat(3300);
   } else if (name === "dallas") {
     G.where = "dallas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1; G.jerry = false;
@@ -948,7 +957,7 @@ async function titleSequence() {
       const at = 2.4 + i * 0.16, p = clamp((e - at) / 0.28, 0, 1); if (p <= 0) return;
       if (p >= 1 && thuds <= i && !skip) { thuds = i + 1; sfx.thud(); shake(120); }
       const bounce = p >= 1 ? Math.max(0, Math.sin((e - at - 0.28) * 14) * 10 * Math.exp(-(e - at) * 2.4)) : 0;
-      const y = -40 + 190 * (p < 1 ? p * p : 1) - bounce, x = 80 + i * 48;
+      const y = Math.round((-40 + 190 * (p < 1 ? p * p : 1) - bounce) / 2) * 2, x = 80 + i * 48;
       c.fillStyle = "#1c1626"; c.fillText(ch, x + 4, y + 4); c.fillStyle = i < 6 ? "#ffd75e" : "#ff9d2e"; c.fillText(ch, x, y);
     });
     c.textAlign = "left";
@@ -959,7 +968,19 @@ async function titleSequence() {
     if (e > 5 && Math.floor(t * 2) % 2) { c.textAlign = "center"; c.font = "16px 'Press Start 2P', monospace"; c.fillStyle = "#1c1626"; c.fillText("THANKSGIVING MORNING", 322, 214); c.fillStyle = "#fff"; c.fillText("THANKSGIVING MORNING", 320, 212); c.textAlign = "left"; }
   };
   for (let i = 0; i < 74 && !skip && !skipping; i++) await wait(100);
-  skip = true; onKey = null; canvas.removeEventListener("pointerdown", stop); cine(false);
+  const cut = skip || skipping; skip = true; onKey = null; canvas.removeEventListener("pointerdown", stop); cine(false);
+  return cut;
+}
+/** After the title: the people in the game besides the family walk on, one at a time, each under their name. A press skips it. */
+async function roll() {
+  cine(true); const s0 = now(), GAP = 1.15;
+  paint = (t) => {
+    const e = t - s0; A.park(c, t, { field: false });
+    ROLL.forEach(([who, pose], i) => { const p = clamp((e - i * GAP) / 0.7, 0, 1); if (e < i * GAP) return; const x = 700 - (700 - (88 + i * 116)) * p; A.cast(c, who, Math.round(x / 2) * 2, 300, 0.95, p < 1 ? { armUp: false, kneel: false } : { ...pose, wave: t }); });
+    A.leaves(c, t, 50);
+  };
+  for (let i = 0; i < ROLL.length && !skipping; i++) { await beat(700); if (skipping) break; say(NAMES[ROLL[i][0]], "line"); sfx.good(); await beat(GAP * 1000 - 700); }
+  await beat(1400); say(""); cine(false);
 }
 
 async function title() {
@@ -974,7 +995,7 @@ async function title() {
     onKey = null; started = true; ui.textContent = ""; const a = ac(); if (a && a.state === "suspended") a.resume().catch(() => {});   // not awaited: a browser that will not start the sound must not stop the game
   }
   music.start("title");
-  await titleSequence();
+  if (!(await titleSequence())) await roll();
   const k = card("TURKEY BOWL");
   k.append(el("p", "scene", "It's Thanksgiving morning. Your family is playing their annual football game at 8 AM at the park, and you are the coach."));
   k.append(el("p", "scene", "If you're lucky, the day will end with you coaching the Dallas Cowboys to victory."));

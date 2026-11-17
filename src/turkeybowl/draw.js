@@ -1,94 +1,121 @@
-// Turkey Bowl's drawing kit: the canvas size, the ink line, shapes, colour
-// mixing, pictures that are drawn once and kept, and the two cameras that
-// put the ground in perspective. Everything in art.js and venues.js is built
-// from these. Nothing here is an image file.
+// Turkey Bowl's drawing kit, the 8-bit one: the screen, the palette, squares,
+// sprites, pictures that are drawn once and kept, and where a spot on the
+// field lands on the screen. Everything in art.js and venues.js is built from
+// these. Nothing here is an image file.
+//
+// Andrew, 2026-11-16: "the graphics are not good enough. so maybe we go back
+// down to 8 bit, and make it fun that way." So the screen is 320 by 180
+// squares, every colour on it comes from one list of 56, and every figure is
+// placed square by square. main.js still thinks in 640 by 360, so every
+// function that takes a place takes it in those numbers and halves it.
 
-export const W = 640, H = 360, TAU = Math.PI * 2;
+export const W = 640, H = 360, LW = 320, LH = 180, U = 2, TAU = Math.PI * 2;
 export const INK = "#1c1626";
-export const LEAF = ["#e2622a", "#f0a030", "#c9402a", "#f6c945", "#a8551c", "#d98324"];
+export const LEAF = ["#e2622a", "#f0a030", "#d9291c", "#f6c945", "#a8551c", "#ffb347"];
+
+// ─── the palette ───
+export const PAL = [
+  "#000000", "#1c1626", "#3a3a4a", "#6a6a7a", "#9aa0aa", "#c9d3e6", "#f4f1e6", "#ffffff",
+  "#500000", "#8a1c1c", "#d9291c", "#ff7b72", "#b01e3a", "#e0707a",
+  "#8a3f00", "#bf5700", "#e2622a", "#f0a030", "#ffb347",
+  "#a8820f", "#f6c945", "#ffd75e", "#fff3c0",
+  "#123a1c", "#1f6b3a", "#2f8a3a", "#4f9c36", "#6aa544", "#a8d070", "#6ee7a0",
+  "#0a1238", "#1b2a6b", "#1d3c8f", "#2f6fc4", "#58bdf5", "#8ecbff", "#cfeaff",
+  "#3a2a66", "#6a4bb0", "#8a80c0", "#e0b0ff",
+  "#3a2a1e", "#5a3a1e", "#8a5a3a", "#a8551c", "#c98a5a", "#e8b98a", "#f0c8a0",
+  "#7a4a22", "#96602e", "#d9c48a", "#e3b877", "#27325c", "#16121f", "#7fd3ff", "#f6a528",
+];
+const hexRgb = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const PAL_RGB = PAL.map(hexRgb);
+const LUT = new Uint8Array(32768).fill(255);
+function nearest(r, g, b) {
+  let best = 0, bd = Infinity;
+  for (let i = 0; i < PAL_RGB.length; i++) { const p = PAL_RGB[i], d = (r - p[0]) * (r - p[0]) * 0.9 + (g - p[1]) * (g - p[1]) * 1.2 + (b - p[2]) * (b - p[2]) * 0.8; if (d < bd) { bd = d; best = i; } }
+  return best;
+}
+/** Every square on the screen is moved to the nearest colour on the list, so nothing is ever blended or soft. */
+export function snap(c) {
+  let img; try { img = c.getImageData(0, 0, LW, LH); } catch { return; }
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const k = ((d[i] >> 3) << 10) | ((d[i + 1] >> 3) << 5) | (d[i + 2] >> 3);
+    let p = LUT[k]; if (p === 255) { p = nearest(d[i], d[i + 1], d[i + 2]); LUT[k] = p; }
+    const q = PAL_RGB[p]; d[i] = q[0]; d[i + 1] = q[1]; d[i + 2] = q[2]; d[i + 3] = 255;
+  }
+  c.putImageData(img, 0, 0);
+}
 
 export const rnd = (n) => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
 export const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 export const clock = () => (typeof performance !== "undefined" ? performance.now() : 0) / 1000;
-const rgb = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-export const mix = (a, b, t) => { const [x, y] = [rgb(a), rgb(b)]; return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join(""); };
+export const mix = (a, b, t) => { const [x, y] = [hexRgb(a), hexRgb(b)]; return "#" + x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, "0")).join(""); };
 export const lighten = (col, t = 0.25) => mix(col, "#ffffff", t), darken = (col, t = 0.25) => mix(col, "#000000", t);
-export const alpha = (col, a) => { const [r, g, b] = rgb(col); return `rgba(${r},${g},${b},${a})`; };
+export const pale = (col) => { const v = hexRgb(col); return v[0] + v[1] + v[2] > 560; };
+/** Numbers three cells wide and five tall, for a shirt or a yard line. */
+export const DIGITS = { 0: "111101101101111", 1: "010110010010111", 2: "111001111100111", 3: "111001111001111", 4: "101101111001001", 5: "111100111001111", 6: "111100111101111", 7: "111001001001001", 8: "111101111101111", 9: "111101111001111" };
+/** Half of a 640 by 360 number, on a whole square. */
+export const lo = (v) => Math.round(v / 2);
 
-// ─── shapes ───
-/** The ink line's weight. People set it from their size, so a face that fills the screen is not drawn with a rope. */
-export const pen = { w: 2 };
-export const R = (c, x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
-export const disc = (c, x, y, r, col) => { c.fillStyle = col; c.beginPath(); c.arc(x, y, Math.max(0, r), 0, TAU); c.fill(); };
-export const ell = (c, x, y, rx, ry, col, rot = 0) => { c.fillStyle = col; c.beginPath(); c.ellipse(x, y, Math.max(0, rx), Math.max(0, ry), rot, 0, TAU); c.fill(); };
-/** Fill a path and ink its edge. build(c) lays the path down. */
-export function shape(c, col, build, lw = pen.w) {
-  c.beginPath(); build(c);
-  if (lw) { c.strokeStyle = INK; c.lineWidth = lw * 2; c.lineJoin = "round"; c.stroke(); }
-  if (col) { c.fillStyle = col; c.fill(); }
+// ─── squares ───
+/** A block of squares: x, y, w and h are counted in squares of the 320 by 180 screen. */
+export const P = (c, x, y, w, h, col) => { if (!col || w <= 0 || h <= 0) return; c.fillStyle = col; c.fillRect(x * U, y * U, w * U, h * U); };
+/**
+ * A pen for one figure. Its cells are n squares a side, and the figure is gw
+ * cells wide and gh tall with the middle of its feet at (X, Y). flip turns it
+ * to face the other way. The pen takes a cell, a size in cells, and a colour.
+ */
+export const pen = (c, X, Y, n, gw, gh, flip = false) => (i, j, w, h, col) => P(c, X + ((flip ? gw - i - w : i) - gw / 2) * n, Y + (j - gh) * n, w * n, h * n, col);
+/** A picture written as rows of letters. key says which colour each letter is; a space or a dot is nothing. */
+export function spr(c, rows, x, y, n, key, flip = false) {
+  for (let j = 0; j < rows.length; j++) {
+    const row = rows[j], len = row.length;
+    for (let i = 0; i < len;) {
+      const ch = row[i]; let k = i + 1; while (k < len && row[k] === ch) k++;
+      const col = key[ch]; if (col) P(c, x + (flip ? len - k : i) * n, y + j * n, (k - i) * n, n, col);
+      i = k;
+    }
+  }
 }
-export const poly = (pts) => (c) => { pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); };
-export const oval = (x, y, rx, ry, rot = 0) => (c) => c.ellipse(x, y, rx, ry, rot, 0, TAU);
-export const box = (x, y, w, h, r = 0) => (c) => { if (c.roundRect) c.roundRect(x, y, w, h, r); else c.rect(x, y, w, h); };
-/** An inked box with a lit top and a shaded foot. */
-export function B(c, x, y, w, h, col, lit, dark, r = 0) {
-  shape(c, col, box(x, y, w, h, r));
-  if (lit || dark) { c.save(); c.beginPath(); box(x, y, w, h, r)(c); c.clip(); if (lit) R(c, x, y, w, Math.max(1, h * 0.22), lit); if (dark) R(c, x, y + h * 0.76, w, h * 0.24 + 1, dark); c.restore(); }
+/** A filled circle made of rows of squares, middle at (x, y) in squares. */
+export function blob(c, x, y, rx, ry, col) {
+  for (let j = -ry; j <= ry; j++) { const w = Math.round(rx * Math.sqrt(Math.max(0, 1 - (j * j) / (ry * ry + 0.5)))); if (w > 0) P(c, x - w, y + j, w * 2, 1, col); }
 }
-/** A limb: a thick round line through the points, inked. */
-export function limb(c, pts, w, col, lw = pen.w) {
-  c.lineCap = "round"; c.lineJoin = "round";
-  const go = () => { c.beginPath(); pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.stroke(); };
-  if (lw) { c.strokeStyle = INK; c.lineWidth = w + lw * 2; go(); }
-  c.strokeStyle = col; c.lineWidth = w; go();
+/** Every other square of a block, for a shade between two colours. */
+export function dither(c, x, y, w, h, col, odd = 0) {
+  c.fillStyle = col;
+  for (let j = 0; j < h; j++) for (let i = (j + odd + x + y) & 1; i < w; i += 2) c.fillRect((x + i) * U, (y + j) * U, U, U);
 }
-export const line = (c, pts, w, col) => limb(c, pts, w, col, 0);
-/** Paint only inside a path: shade(c, build, (c) => ...). */
-export function inside(c, build, paint) { c.save(); c.beginPath(); build(c); c.clip(); paint(c); c.restore(); }
-export const vgrad = (c, y0, y1, stops) => { const g = c.createLinearGradient(0, y0, 0, y1); stops.forEach(([p, col]) => g.addColorStop(p, col)); return g; };
-export const glow = (c, x, y, r, col, a = 1) => { const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, alpha(col, a)); g.addColorStop(1, alpha(col, 0)); c.fillStyle = g; c.fillRect(x - r, y - r, r * 2, r * 2); };
+/** A star with its middle at (cx, cy) in 640 by 360 numbers. A small one is a plus sign. */
 export function star(c, cx, cy, r, col, edge) {
+  if (r < 9) { const x = lo(cx), y = lo(cy), k = Math.max(1, Math.round(r / 4)); if (edge) { P(c, x - k * 2, y - k, k * 4 + 1, k * 2 + 1, edge); P(c, x - k, y - k * 2, k * 2 + 1, k * 4 + 1, edge); } P(c, x - k, y, k * 2 + 1, 1, col); P(c, x, y - k, 1, k * 2 + 1, col); return; }
   const path = (rr0) => { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? rr0 * 0.42 : rr0; c.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } c.closePath(); };
-  if (edge) { c.fillStyle = edge; path(r + Math.max(1.5, r * 0.14)); c.fill(); }
+  if (edge) { c.fillStyle = edge; path(r + 6); c.fill(); }
   c.fillStyle = col; path(r); c.fill();
-}
-/** A maple leaf, about 2r across, lying at an angle. squash flattens it for a leaf on the ground. */
-export function leaf(c, x, y, r, col, rot = 0, squash = 1) {
-  c.save(); c.translate(x, y); c.scale(1, squash); c.rotate(rot); c.fillStyle = col; c.beginPath();
-  const tip = [[0, -1], [0.34, -0.42], [0.95, -0.5], [0.6, 0.02], [0.82, 0.5], [0.24, 0.42], [0, 0.95], [-0.24, 0.42], [-0.82, 0.5], [-0.6, 0.02], [-0.95, -0.5], [-0.34, -0.42]];
-  tip.forEach(([px, py], i) => (i ? c.lineTo(px * r, py * r) : c.moveTo(px * r, py * r))); c.closePath(); c.fill();
-  c.strokeStyle = darken(col, 0.3); c.lineWidth = Math.max(0.5, r * 0.1); c.beginPath(); c.moveTo(0, -r * 0.7); c.lineTo(0, r * 1.25); c.stroke();
-  c.restore();
 }
 
 // ─── pictures drawn once and kept ───
-// The picture is drawn at twice the size of its 640 by 360 coordinates, so a
-// kept layer has to be made at that size too.
-let SCALE = 2;
 const KEPT = new Map();
-export function setScale(s) { if (s !== SCALE) { SCALE = s; KEPT.clear(); } }
-/** A picture w by h, drawn once by draw(ctx) and kept under key. */
-export function kept(key, w, h, draw) {
+/** A whole-screen picture drawn once by draw(ctx) and kept under key. w is how many squares wide it is. */
+export function kept(key, draw, w = LW) {
   let cv = KEPT.get(key);
-  if (!cv) { cv = document.createElement("canvas"); cv.width = Math.ceil(w * SCALE); cv.height = Math.ceil(h * SCALE); const x = cv.getContext("2d"); x.scale(SCALE, SCALE); draw(x); KEPT.set(key, cv); }
+  if (!cv) { cv = document.createElement("canvas"); cv.width = w; cv.height = LH; const x = cv.getContext("2d"); x.scale(1 / U, 1 / U); draw(x); KEPT.set(key, cv); }
   return cv;
 }
-/** Lay a kept picture down with its corner at (x, y). */
-export const lay = (c, key, w, h, draw, x = 0, y = 0) => c.drawImage(kept(key, w, h, draw), x, y, w, h);
-
-// ─── the ground in perspective ───
-// A spot in a game is still (x, y): x is how far downfield, 0 to 640, and y
-// is across the field, about 183 to 353. A camera turns that into a place on
-// the screen and a size. PLAY looks down on the field from behind the
-// offense, the way a football game on a 1998 console did, so the field fills
-// the screen. VENUE stands on the field and looks at the far end, for the
-// scenes where people talk.
-export const PLAY = { hz: -600, A: 1271000, z0: 1277, k: 1920, L: 5400 };
-export const VENUE = { hz: 122, A: 30000, z0: 110, k: 300, L: 660 };
-export function proj(x, y, h = 0, cam = PLAY) {
-  const d = Math.max(40, x + cam.z0), s = cam.k / d;
-  return { x: 320 + (y - 268) * cam.L / d, y: cam.hz + cam.A / d - h * s, s, gy: cam.hz + cam.A / d };
+/** Lay a kept picture down, moved dx squares to the left and wrapped round. */
+export function lay(c, key, draw, dx = 0, w = LW) {
+  const cv = kept(key, draw, w); c.imageSmoothingEnabled = false;
+  if (!dx) { c.drawImage(cv, 0, 0, w * U, H); return; }
+  const off = ((Math.round(dx) % w) + w) % w;
+  c.drawImage(cv, -off * U, 0, w * U, H); c.drawImage(cv, (w - off) * U, 0, w * U, H);
 }
-/** The four corners, on the screen, of a strip of ground from x0 to x1 downfield and y0 to y1 across. */
-export const quad = (x0, x1, y0, y1, cam = PLAY) => [proj(x0, y0, 0, cam), proj(x0, y1, 0, cam), proj(x1, y1, 0, cam), proj(x1, y0, 0, cam)].map(p => [p.x, p.y]);
-export function ground(c, x0, x1, y0, y1, col, cam = PLAY) { c.fillStyle = col; c.beginPath(); quad(x0, x1, y0, y1, cam).forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y))); c.closePath(); c.fill(); }
+
+// ─── the field, seen from the side ───
+// A spot in a game is (x, y): x is how far downfield, 0 to 640, left to right
+// across the screen, and y is across the field, about 183 to 353, which runs
+// down the screen from the far sideline to the near one. Nobody gets smaller
+// with distance. That is how a football cartridge showed a field.
+export const PLAY = { top: 158, k: 1.1 }, VENUE = PLAY;
+export function proj(x, y, h = 0) {
+  const gy = PLAY.top + (y - 183) * PLAY.k;
+  return { x, y: gy - h, s: 1, gy };
+}

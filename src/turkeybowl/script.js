@@ -235,7 +235,7 @@ export const POPS = [
     ["bad", "Television showing athletes of color mostly in highlight clips.", "That is about media coverage. Stacking is about who gets put where."],
     ["silly", "Three linebackers standing on each other's shoulders at the snap.", "Illegal formation."],
   ], "Stacking: athletes of a certain race are disproportionately represented in specific sports or funneled into specific positions within a sport."),
-  d("pop-titleix", 0, 300, "niece", "Your niece plays three sports in high school. She asks you what Title IX actually says. What do you tell her?", [
+  d("pop-titleix", 0, 300, "niece", "Your niece plays three sports. She asks you what Title IX actually says. What do you tell her?", [
     ["best", "\"No school program taking federal money can discriminate by sex.\"", "That is the law, and it never uses the word sports."],
     ["good", "\"Schools must give girls and boys an equal chance to play sports.\"", "That is what it means for sports. The law covers every part of a school, not only teams."],
     ["bad", "\"Every boys' team at a school must have a matching girls' team.\"", "Common mistake. The law is about equal opportunity overall, not a matching team for every team."],
