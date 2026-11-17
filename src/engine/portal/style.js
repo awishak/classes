@@ -151,6 +151,9 @@ textarea.pt-field{resize:vertical;min-height:64px;line-height:1.5}
 .pt-gpill{min-height:32px;padding:0 10px;font-size:13px;font-weight:600;border-radius:10px;display:inline-flex;align-items:center}
 .pt-gpill.done{background:var(--pt-done);color:var(--pt-done-ink)}
 .pt-gpill.off{background:var(--surface-sunk);color:var(--text-muted)}
+.pt-gpill.late{background:var(--pt-late);color:var(--pt-late-ink)}
+.pt-gpill.due{background:var(--pt-due);color:var(--pt-due-ink)}
+.pt-row.late .pt-gpill.late{background:var(--surface-card)}
 
 .pt-titles{display:flex;gap:20px;align-items:baseline;flex-wrap:wrap}
 .pt-titles button{font-family:var(--pt-serif);font-size:26px;font-weight:500;background:none;border:0;padding:0;min-height:44px;color:var(--text-muted);border-bottom:3px solid transparent}

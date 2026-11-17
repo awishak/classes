@@ -354,7 +354,7 @@ const tally = (list) => {
 };
 
 // Class counts as bars, one row a count. rows is [[label, n, tone], ..].
-function Bars({ label, rows, of }) {
+export function Bars({ label, rows, of }) {
   const top = of || Math.max(1, ...rows.map(r => r[1]));
   return (
     <table className="apr-bars">
