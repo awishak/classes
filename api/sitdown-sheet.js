@@ -26,6 +26,11 @@ const objectFor = (id, n) => {
   // Andrew, 2026-11-12: "don't push anything to students until i say so. i
   // will have notes for them." POST { email, note } writes one student's note.
   if (String(n) === "audio-pre-notes") return `${cls}-audio-pre-notes.json`;
+  // ?sheet=audio-story is Claude's read of each submitted audio story, for
+  // the instructor's review page only; no student route reads this file.
+  // Andrew, 2026-11-16: "let's now grade audio stories ... make me a page to
+  // read all this."
+  if (String(n) === "audio-story") return `${cls}-audio-story-read.json`;
   return String(n) === "audio-pre" ? `${cls}-audio-pre-read.json` : `${cls}-sitdown-${String(n) === "2" ? 2 : 1}.json`;
 };
 

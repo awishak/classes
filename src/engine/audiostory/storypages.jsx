@@ -10,7 +10,7 @@
 // happening"). Reads and writes go through /api/worksheet-submits, which
 // checks the PIN or an instructor session and holds the service key.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { authHeaders } from "../session.js";
 import { savedPin } from "../../InstructorGate.jsx";
 import { sectionsOf, sectionOf, isLurker } from "../sections.js";
@@ -19,7 +19,8 @@ import { gameClient } from "../gameClient.js";
 import { localWorksheet, openTo } from "../localWorksheets.js";
 import { useClassState } from "../store.js";
 import { StudentLink } from "../StudentPage.jsx";
-import { StudentPicker, pickedStudent, pickStudent } from "./control.jsx";
+import { StudentPicker, pickedStudent, pickStudent, useInstructorRead } from "./control.jsx";
+import { ReadPanel, REVIEW_CSS } from "./prepages.jsx";
 import { audioStoryOf, problemsOf, clock, MAX_STORY_SECONDS, MAX_LISTEN_WORDS } from "./storymodel.js";
 import { AUDIO_STORY_KEY, AUDIO_STORY_COPY_ROW, STEPS } from "./story.jsx";
 import { AUDIO_RESEARCH_KEY } from "./research.jsx";
@@ -64,6 +65,12 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
   // Andrew, 2026-11-13, on the review pages: "okay yeah get it done."
   const [who, setWho] = useState(() => (typeof window !== "undefined" ? pickedStudent() : ""));
   const pick = (id) => { setWho(id); pickStudent(id); };
+  // Claude's read of each submitted story, from the private instructor
+  // bucket (scripts/comm3-audio-story-read-push.mjs). Andrew, 2026-11-16:
+  // "you do a quick read and go through the transcripts of each audio story
+  // and you tell me what your read is. make me a page to read all this. and
+  // let me know if a student was late or did not submit the pre-production."
+  const read = useInstructorRead(config, "audio-story");
 
   useEffect(() => {
     let alive = true;
@@ -130,15 +137,59 @@ export function AudioStoryReview({ config, worksheetKey = AUDIO_STORY_KEY, roste
       <h2 className="asv-h2">Stories{section ? ", " + section : ""}</h2>
       <p className="asv-p">{submittedCount} of {people.length} submitted.</p>
       <StudentPicker people={menu} value={chosen ? chosen.id : ""} onPick={pick} />
-      {(chosen ? [chosen.student] : []).map(p => <Row key={p.email} config={config} student={p} email={lower(p.email)} link={idOf(p)} sheet={byEmail.get(lower(p.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} />)}
+      {(chosen ? [chosen.student] : []).map(p => <Row key={p.email} config={config} student={p} email={lower(p.email)} link={idOf(p)} sheet={byEmail.get(lower(p.email))} urls={urls} due={due} past={past} onUnlock={setUnlock} mine={read?.students?.[lower(p.email)] || null} readAt={read?.at} />)}
+      {!chosen && read?.students ? <ReadList people={menu} read={read} onPick={pick} /> : null}
       {others.length ? <h2 className="asv-h2">Not on the roster</h2> : null}
       {others.map(s => <Row key={s.viewer_id} config={config} student={null} email={s.viewer_id} link={null} sheet={s} urls={urls} due={due} past={past} onUnlock={setUnlock} />)}
     </Shell>
   );
 }
 
-function Row({ config, student, email, link, sheet, urls, due, past, onUnlock }) {
+// Every read in the section on one page, running down: the class notes, then
+// each student's letter, what stands out about lateness and the
+// pre-production, and the read in a sentence or two. A name opens the story.
+const LETTERS = ["A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"];
+function ReadList({ people, read, onPick }) {
+  const rows = people.map(p => ({ ...p, mine: read.students[lower(p.student.email)] || null }));
+  const rank = (r) => { const i = LETTERS.indexOf(r.mine?.letter || ""); return i < 0 ? LETTERS.length : i; };
+  const withRead = rows.filter(r => r.mine).sort((x, y) => rank(x) - rank(y) || x.name.localeCompare(y.name));
+  const without = rows.filter(r => !r.mine);
+  return (
+    <section className="asv-reads">
+      <style>{REVIEW_CSS}</style>
+      <h2 className="asv-h2">Claude's read</h2>
+      <p className="asv-p">{withRead.length} stories read from their transcripts, strongest first. The letter is where Claude would put the story; the grade is yours.</p>
+      {(read.notes || []).length ? <ul className="asv-notes">{read.notes.map((n, i) => <li key={i}>{n}</li>)}</ul> : null}
+      {withRead.map(r => (
+        <article key={r.id} className="asv-read">
+          <div className="asv-row">
+            <button type="button" className="asv-read-name" onClick={() => onPick(r.id)}>{r.name}</button>
+            {r.mine.letter ? <span className="asv-letter">{r.mine.letter}</span> : null}
+            {(r.mine.flags || []).map(f => <span key={f} className="asv-chip asv-late">{f}</span>)}
+          </div>
+          {r.mine.headline ? <p className="asv-head">{r.mine.headline}</p> : null}
+          <p className="asv-read-say">{r.mine.read}</p>
+          {r.mine.why ? <p className="asv-muted">{r.mine.why}</p> : null}
+        </article>
+      ))}
+      {without.length ? <h3 className="asv-h3">No read</h3> : null}
+      {without.map(r => (
+        <article key={r.id} className="asv-read">
+          <div className="asv-row">
+            <button type="button" className="asv-read-name" onClick={() => onPick(r.id)}>{r.name}</button>
+            <span className="asv-chip">{r.status}</span>
+            {(read.absent?.[lower(r.student.email)] || []).map(f => <span key={f} className="asv-chip asv-late">{f}</span>)}
+          </div>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function Row({ config, student, email, link, sheet, urls, due, past, onUnlock, mine = null, readAt = null }) {
   const [busy, setBusy] = useState("");
+  const player = useRef(null);
+  const seek = useCallback((t) => { const el = player.current; if (!el) return; try { el.currentTime = t; el.play(); } catch { /* the player says so itself */ } }, []);
   const story = audioStoryOf(sheet?.answers || {});
   const started = !!sheet && Object.keys(sheet.answers || {}).length > 0;
   const late = sheet?.submitted_at && due && Date.parse(sheet.submitted_at) > Date.parse(due);
@@ -167,9 +218,20 @@ function Row({ config, student, email, link, sheet, urls, due, past, onUnlock })
           <div className="asv-story-body">
             <p className="asv-head">{story.headline.trim() || "No headline yet"}</p>
             {story.listen.trim() ? <p className="asv-muted">{story.listen}</p> : null}
-            {story.audio ? (clip ? <audio controls preload="metadata" src={clip} /> : <span className="asv-muted">Signing the link.</span>) : <span className="asv-muted">No file yet.</span>}
+            {story.audio ? (clip ? <audio ref={player} controls preload="metadata" src={clip} /> : <span className="asv-muted">Signing the link.</span>) : <span className="asv-muted">No file yet.</span>}
             <p className="asv-muted">{story.audio ? clock(story.audio.seconds) + ", " : ""}{story.voices.length} voice{story.voices.length === 1 ? "" : "s"}{story.voices.some(v => v.knew === false) ? " (" + story.voices.filter(v => v.knew === false).map(v => v.name.trim() || "unnamed").join(", ") + " did not know)" : ""}, {story.sounds.length} sound{story.sounds.length === 1 ? "" : "s"}{left.length ? ", " + left.length + " thing" + (left.length === 1 ? "" : "s") + " left before Submit" : ""}.</p>
           </div>
+        </div>
+      ) : null}
+      {mine ? (
+        <div className="asv-mine">
+          <style>{REVIEW_CSS}</style>
+          <div className="asv-row">
+            {mine.letter ? <span className="asv-letter">{mine.letter}</span> : null}
+            {(mine.flags || []).map(f => <span key={f} className="asv-chip asv-late">{f}</span>)}
+          </div>
+          {mine.why ? <p className="asv-read-say">{mine.why}</p> : null}
+          <ReadPanel read={mine} sheet={sheet} at={readAt} title={story.headline.trim()} name={student ? student.name : email} url={clip || ""} onSeek={clip ? seek : undefined} />
         </div>
       ) : null}
       {past && sheet ? (
@@ -304,6 +366,14 @@ const CSS = `
 .asv-cover{display:block;width:96px;height:96px;object-fit:cover;border-radius:10px;background:${S.card}}
 .asv-cover-none{display:flex;align-items:center;justify-content:center;font-size:12px;color:${T.muted};border:1px dashed ${L.strong};box-sizing:border-box}
 .asv-head{margin:0;font-size:17px;font-weight:600;line-height:1.3}
+.asv-reads{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.asv-notes{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:17px;line-height:1.55;max-width:860px}
+.asv-h3{margin:10px 0 0;font-size:18px;font-weight:700}
+.asv-read{border-top:1px solid ${L.soft};padding:14px 0 4px;display:flex;flex-direction:column;gap:8px}
+.asv-read-name{font:inherit;font-size:19px;font-weight:700;padding:0;border:0;background:none;color:${T.primary};cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:44px}
+.asv-read-say{margin:0;font-size:17px;line-height:1.55;max-width:860px;color:${T.primary}}
+.asv-letter{font-size:17px;font-weight:700;border-radius:8px;padding:2px 12px;border:2px solid ${T.primary};color:${T.primary}}
+.asv-mine{display:flex;flex-direction:column;gap:10px;padding-top:6px}
 .asv-btn{font:inherit;font-size:14px;font-weight:600;padding:6px 14px;border-radius:999px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};cursor:pointer}
 .asv-btn:disabled{opacity:.45;cursor:default}
 .asv-select{font:inherit;font-size:16px;padding:8px 12px;border-radius:10px;border:1px solid ${L.strong};background:${S.card};color:${T.primary};max-width:360px}
