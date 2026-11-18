@@ -30,7 +30,8 @@ if (!key) { console.error("No SUPABASE_SERVICE_ROLE_KEY in .env.local."); proces
 const H = { apikey: key, Authorization: "Bearer " + key, "Content-Type": "application/json" };
 const write = process.argv.includes("--write");
 const DUE = "2026-11-21T07:59:00Z";
-const CARD = "Hey, sorry, audio story comments were closed, but now they're open. I'll give you until Friday night to do them. Thank you.";
+// His words for the card, the same day: "say this instead".
+const CARD = "Class, the assignments didn’t open today. My fault. I’ll give you until the end of the work week (Friday at 11:59 pm) to finish both assignments.  Thank you, and happy Thanksgiving.\n\n-awi";
 const OLD_TEXT = "Audio story reviews due Thursday, November 19. Final project preferences due Thursday, November 19.";
 const NEW_TEXT = "Audio story reviews due Friday, November 20. Final project preferences due Friday, November 20.";
 const CLASSES = [
