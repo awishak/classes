@@ -623,7 +623,7 @@ const idle = (where) => (t) => {
   flush();
   if (where === "park") A.leaves(c, t, 30);
 };
-/** A touchdown in three shots: the spike up close, everybody dancing, and a pie for somebody new each time. */
+/** A touchdown in three shots: the spike up close, everybody dancing, and, once a run, a pie. */
 const PIE_FOR = { park: "uncle", dallas: "jerry", texas: "reporter" };
 async function touchdown(where, text = "TOUCHDOWN!", ann = "td") {
   const was = inCine; cine(true); ui.textContent = "";
@@ -649,8 +649,8 @@ async function touchdown(where, text = "TOUCHDOWN!", ann = "td") {
     await talk("", "This was the equivalent of the turkey's Macarena. It is a very sacred dance in the turkey world.");
     await talk("", "It is only done when celebrating major life events. And imminent death.");
   }
-  G.pied = G.pied || {}; if (G.pied[where]) { cine(was); return; } G.pied[where] = 1;
-  // Silence, a face, and then the pie. One pie a game.
+  if (G.pied) { cine(was); return; } G.pied = 1;   // Andrew, 2026-11-17: "cut the pie in the face the second time." It was one pie a game.
+  // Silence, a face, and then the pie. One pie a run.
   const who = PIE_FOR[where]; start = now(); let hit = false; music.stop();
   paint = (t) => {
     const e = t - start, p = clamp((e - 0.9) / 0.22, 0, 1);
