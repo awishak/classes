@@ -6436,9 +6436,9 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   // Thursday 12:05 AM the comments are out.
   if (audioWindowStage("comm3", at("2026-11-16T15:29:59Z")) !== "building") say("audio review: open before Monday morning");
   if (audioWindowStage("comm3", at("2026-11-16T15:30:00Z")) !== "reading") say("audio review: not open Monday at 7:30 AM");
-  if (audioWindowStage("comm3", at("2026-11-16T17:59:30Z")) !== "reading") say("audio review: closed before Monday 10:00 AM");
-  if (audioWindowStage("comm3", at("2026-11-16T18:00:00Z")) !== "closed") say("audio review: still open Monday at 10:00 AM");
-  if (audioWindowStage("comm3", at("2026-11-19T08:05:00Z")) !== "released") say("audio review: comments not out Thursday 12:05 AM");
+  if (audioWindowStage("comm3", at("2026-11-20T07:58:30Z")) !== "reading") say("audio review: closed before Thursday 11:59 PM");
+  if (audioWindowStage("comm3", at("2026-11-20T07:59:00Z")) !== "closed") say("audio review: still open Thursday at 11:59 PM");
+  if (audioWindowStage("comm3", at("2026-11-20T08:05:00Z")) !== "released") say("audio review: comments not out Friday 12:05 AM");
   if (audioWindowStage("comm999", at("2026-11-18T08:00:00Z")) !== "building") say("audio review: a class with no window is open");
 
   // 25 on a roster, 20 with a story in: everyone gets three, none their own,

@@ -54,12 +54,12 @@ export function doorWords(config, st) {
     const done = total >= NEED_TOTAL && (st.requiredDone || 0) >= (st.required || 0);
     return {
       name: "Review your classmates' audio stories",
-      say: `You are assigned ${NEED_ASSIGNED} stories, and you choose at least ${NEED_TOTAL - NEED_ASSIGNED} more. Comments are due Wednesday, November 18, at 11:59 PM.`,
-      line: done ? `You have reviewed ${total} stories.` : `You have reviewed ${total} of ${NEED_TOTAL}. ${left ? left + " to go" : "Finish the stories outlined in red"}, due Wednesday at 11:59 PM.`,
+      say: `You are assigned ${NEED_ASSIGNED} stories, and you choose at least ${NEED_TOTAL - NEED_ASSIGNED} more. Comments are due Thursday, November 19, at 11:59 PM.`,
+      line: done ? `You have reviewed ${total} stories.` : `You have reviewed ${total} of ${NEED_TOTAL}. ${left ? left + " to go" : "Finish the stories outlined in red"}, due Thursday at 11:59 PM.`,
       tint: done ? "done" : "due", href, done,
     };
   }
-  if (stage === "closed") return { name: "Your classmates' audio stories", say: "Comments are closed. The comments on your story, with names attached, come out on Thursday.", line: "Comments are closed.", tint: "done", href };
+  if (stage === "closed") return { name: "Your classmates' audio stories", say: "Comments are closed. The comments on your story, with names attached, come out on Friday.", line: "Comments are closed.", tint: "done", href };
   if (stage === "released") {
     const own = st.mine ? href + "?s=" + st.mine : href;
     return { name: "Your classmates' comments are in", say: "Open your audio story to read what your classmates said.", line: "Open your story to read the comments.", tint: "done", href: own };
