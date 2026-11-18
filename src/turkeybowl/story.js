@@ -14,7 +14,7 @@
 
 export const NAMES = {
   you: "YOU", uncle: "YOUR UNCLE", brother: "YOUR BROTHER", sister: "YOUR SISTER", cousin: "YOUR COUSIN", niece: "YOUR NIECE", grandma: "GRANDMA",
-  jerry: "JERRY JONES", reporter: "A REPORTER", receiver: "NUMBER 88", kicker: "YOUR KICKER", backup: "YOUR BACKUP QUARTERBACK", returner: "YOUR KICK RETURNER",
+  jerry: "JERRY JONES", reporter: "A REPORTER", receiver: "AB SHEEP, NUMBER 88",   // Andrew, 2026-11-17: "number 88 is the best player: AB Sheep" kicker: "YOUR KICKER", backup: "YOUR BACKUP QUARTERBACK", returner: "YOUR KICK RETURNER",
   coachA: "YOUR DEFENSIVE COACH", coachB: "YOUR OTHER DEFENSIVE COACH",
   mcconaughey: "MATTHEW McCONAUGHEY",
   andrew: "ANDREW ISHAK", kaepernick: "COLIN KAEPERNICK", ali: "MUHAMMAD ALI", robinson: "JACKIE ROBINSON", king: "BILLIE JEAN KING",
@@ -43,7 +43,7 @@ export const SHOW = {
   dissent: W(["Jerry Jones starts the interview. He has a plan of his own."], [["jerry", "\"One thing first. I call the first play of the game myself, from my box.\""]], "You think it is a bad idea. What do you say?"),
   power: W([], [["jerry", "\"Look, these guys are rich, and if there's one thing I know about rich guys, they don't like to listen to anybody.\""], ["voice:JERRY'S WIFE", "\"Jerry, as your wife, I wanted to tell you something...\""], ["jerry", "\"So as I was saying, rich men don't listen to anyone. How are they gonna listen to you?\""]], "Pick two."),
   jet: W(["You got the job.", "This is Jerry Jones's jet. Jerry has taken it all over the world, including to numerous Super Bowls.", "Not that the Cowboys have played in the Super Bowl since this jet was built. He just went to watch the game.", "The flight attendant comes by with drinks."], [], "What do you take?"),
-  receiver: W(["You are coaching the Cowboys. First quarter.", "Your best receiver (your Grandpa) has no catches."], [["receiver", "\"I'm open! Every play! Throw me the ball!\"", { angry: true }]], "He is screaming at your quarterback. Every camera is on them. What do you do?"),
+  receiver: W(["You are coaching the Cowboys. First quarter.", "Your best player, AB Sheep (your Grandpa), has no catches."], [["receiver", "\"I'm open! Every play! Throw me the ball!\"", { angry: true }]], "He is screaming at your quarterback. Every camera is on them. What do you do?"),
   commercial: W(["Halftime in Dallas.", "Jerry wants you to do a commercial for Ford Trucks. It'll be quick and painless.", "All you have to do is look at the camera and say you love Ford Trucks so much you wish you could marry one."], [["jerry", "\"Coach! I need you for two minutes.\"", { armUp: true }]], "Your players are waiting in the locker room. What do you do?"),
   conflict: W(["Halftime in Dallas."], [["coachA", "\"I call the defense. I have called it all year.\"", { angry: true }], ["coachB", "\"And look at the scoreboard.\"", { angry: true }]], "Both of them turn to you. What do you do?"),
   speech: W(["Halftime. The locker room. You're losing by ten.", "Fifty-three players are waiting."], [["kicker", "\"Coach?\""]], "What kind of speech do you give?"),
@@ -99,7 +99,7 @@ export function parkTarget(t) {
 /** Number 88 before the last drive in Dallas. */
 export function dallasTarget(t) {
   const r = t("receiver");
-  return !r ? "" : r.rank === "best" ? "Number 88 is back in this game. Whatever the coach said to him, it was said in private." : "Number 88 has cooled off. It took most of the first quarter.";
+  return !r ? "" : r.rank === "best" ? "AB Sheep is back in this game. Whatever the coach said to him, it was said in private." : "AB Sheep has cooled off. It took most of the first quarter.";
 }
 /** Jerry at halftime, remembering the interview: a line to say before he asks for anything. */
 export function jerryRemembers(picks) {

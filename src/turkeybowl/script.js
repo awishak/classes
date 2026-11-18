@@ -133,7 +133,7 @@ export const DECISIONS = [
   ], "Drink water to hydrate.", { drink: true }),
 
   // ─── Level 3: Dallas ───
-  d("receiver", 3, 800, "receiver", "You are coaching the Cowboys. First quarter. Your best receiver (your Grandpa) has no catches. He is screaming at your quarterback. Every camera is on them. What do you do?", [
+  d("receiver", 3, 800, "receiver", "You are coaching the Cowboys. First quarter. Your best player, AB Sheep (your Grandpa), has no catches. He is screaming at your quarterback. Every camera is on them. What do you do?", [
     ["best", "Pull him aside, off camera, and talk with him alone.", "He comes back and blocks on the next play. Then he gets his catch."],
     ["good", "Stay out of it for now, and let it cool off.", "It cools off. It takes most of the quarter."],
     ["silly", "Hand him your headset and let him call the plays.", "He calls eleven straight passes to himself."],
