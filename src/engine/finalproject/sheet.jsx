@@ -217,6 +217,17 @@ function useLocked(classId, viewerId, skip) {
   return !!(lock && now > Date.parse(lock.due) && !(lock.until && Date.parse(lock.until) > now));
 }
 
+/** Move one field of a browser draft to a new name. The newer name's words win. */
+export function moveDraft(storage, draftKey, from, to) {
+  try {
+    const d = JSON.parse(storage?.getItem(draftKey) || "{}") || {};
+    if (!(from in d)) return;
+    if (!String(d[to] || "").trim()) d[to] = d[from];
+    delete d[from];
+    if (Object.keys(d).length) storage.setItem(draftKey, JSON.stringify(d)); else storage.removeItem(draftKey);
+  } catch { /* no draft to move */ }
+}
+
 export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given = false, storage, editor = false, theme, classmates = [], photos = {} }) {
   const copy = useCopy(editor, copyRow(classId), defaultCopy(classId));
   const [editing, setEditing] = useState(false);
@@ -228,6 +239,9 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
   const composer = useRef(null);
   const [data] = useClassState(storageKey || "");
   const draftKey = M.FINAL_PREFS_KEY + ":" + (classId || "") + ":" + (viewer?.id || "");
+  // Before the saver reads this computer's unsaved words: a source typed while
+  // the field was `defineSource` moves to `source`, so it is sent, not lost.
+  useState(() => moveDraft(storage ?? (typeof localStorage !== "undefined" ? localStorage : null), draftKey, "defineSource", "source"));
   const { answers, set, submitted, setSubmitted, status, saver } = useSheet({ store, draftKey, readOnly: given, storage });
   const mine = useMine(classId, viewer?.id, given);
   const locked = useLocked(classId, viewer?.id, given);
@@ -493,9 +507,9 @@ export function PrefsSheet({ store, viewer, classId, storageKey, readOnly: given
                 <Words k="defineAsk" copy={copy} editing={editing} className="fpt-ask" />
                 <Grow id="fp-define" label={copy.say("defineAsk")} value={answers.define} readOnly={readOnly} onChange={v => set("define", v)} rows={4} max={2000} />
               </div>
-              <div className={"fpt-f fpt-f-source" + (needs && blank(answers, "defineSource") ? " need" : "")}>
+              <div className={"fpt-f fpt-f-source" + (needs && blank(answers, "source") ? " need" : "")}>
                 <Words k="sourceAsk" copy={copy} editing={editing} className="fpt-ask" />
-                <Grow id="fp-define-source" label={copy.say("sourceAsk")} value={answers.defineSource} readOnly={readOnly} onChange={v => set("defineSource", v.replace(/\n/g, " "))} rows={2} max={600} />
+                <Grow id="fp-define-source" label={copy.say("sourceAsk")} value={answers.source} readOnly={readOnly} onChange={v => set("source", v.replace(/\n/g, " "))} rows={2} max={600} />
               </div>
             </div>
           </section>

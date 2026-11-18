@@ -110,7 +110,12 @@ export const FIELDS = ["work", "top", "also", "strengths", "liked", ...TOPIC_FIE
 // questions the topic raises. COMM 118's sheet is as it was.
 export const JUSTICE_CLASSES = ["comm3"];
 export const isJustice = (classId) => JUSTICE_CLASSES.includes(classId);
-export const DEFINE_FIELDS = ["define", "defineSource"];
+// The source's field is `source`, all lowercase: worksheet_answers takes a
+// field only in the shape ^[a-z]+(:[a-z]+(>[a-z]+)?)?$. It was `defineSource`
+// until 2026-11-18, which the table refused, so no COMM 3 sheet could save it
+// or be handed in.
+export const DEFINE_FIELDS = ["define", "source"];
+export const FIELD_SHAPE = /^[a-z]+(:[a-z]+(>[a-z]+)?)?$/;
 // The communication field's standing definition, shown on the review beside a
 // student's own. Andrew approved it 2026-11-14. Quote seen in search excerpts
 // of the article, not in the article itself.
@@ -120,7 +125,7 @@ export const JUSTICE_REF = {
 };
 export const IDEA_PARTS = ["why", "angle", "justice"];
 export const topicFieldsFor = (classId) => (isJustice(classId) ? SLOTS.flatMap(s => ["topic:" + s, ...IDEA_PARTS.map(part => part + ":" + s)]) : TOPIC_FIELDS);
-const neededFor = (classId) => [...(isJustice(classId) ? DEFINE_FIELDS : []), "work", "strengths", ...topicFieldsFor(classId), ...SITE_FIELDS];
+export const neededFor = (classId) => [...(isJustice(classId) ? DEFINE_FIELDS : []), "work", "strengths", ...topicFieldsFor(classId), ...SITE_FIELDS];
 
 const lines = (v) => String(v || "").split("\n").map(l => l.trim()).filter(Boolean);
 const filled = (a, f) => !!String((a || {})[f] || "").trim();
@@ -144,7 +149,7 @@ export function readAnswers(answers) {
     strengths: lines(a.strengths),
     liked: lines(a.liked),
     define: String(a.define || "").trim(),
-    defineSource: String(a.defineSource || "").trim(),
+    defineSource: String(a.source || "").trim(),
     topics: SLOTS.map(s => ({ slot: s, topic: String(a["topic:" + s] || "").trim(), asks: lines(a["ask:" + s]), worth: String(a["worth:" + s] || "").trim(), audience: String(a["audience:" + s] || "").trim(), concepts: String(a["concepts:" + s] || "").trim(), why: String(a["why:" + s] || "").trim(), angle: String(a["angle:" + s] || "").trim(), justice: String(a["justice:" + s] || "").trim() })),
     sites: SLOTS.map(s => ({ slot: s, site: String(a["site:" + s] || "").trim(), like: String(a["like:" + s] || "").trim(), build: String(a["build:" + s] || "").trim() })),
   };

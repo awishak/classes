@@ -6519,8 +6519,13 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (FP.interestsOf({ finalInterests: { "Ada Lovelace": ["One", " ", "Two"] } }, "Ada Lovelace").join() !== "One,Two" || FP.interestsOf({}, "Ada Lovelace").length || FP.interestsOf({ finalInterests: { "Ada Lovelace": ["One"] } }, "Someone Else").length) say("a student's interest list is not their own approved topics");
   if (FP.EXAMPLES_118.length !== 5 || FP.EXAMPLES_118.some(g => !g.area || g.topics.length < 2 || g.topics.some(t => t.by))) say("COMM 118's example topics are not five areas with topics in each and no student named");
   const need3 = FP.missingOf(full118, "comm3");
-  if (!["define", "defineSource", "why:a", "angle:b", "justice:c"].every(f => need3.includes(f)) || need3.includes("ask:a")) say("COMM 3 does not ask for the definition and the three explanations: " + need3);
-  const full3 = { ...full118, define: "d", defineSource: "s" };
+  if (!["define", "source", "why:a", "angle:b", "justice:c"].every(f => need3.includes(f)) || need3.includes("ask:a")) say("COMM 3 does not ask for the definition and the three explanations: " + need3);
+  const full3 = { ...full118, define: "d", source: "s" };
+  // worksheet_answers refuses a field outside this shape, and a refused field can never be saved or handed in.
+  for (const c of ["comm3", "comm118"]) { const off = [...FP.FIELDS, ...FP.neededFor(c), "top"].filter(f => !FP.FIELD_SHAPE.test(f)); if (off.length) say("the table refuses these " + c + " final project fields: " + off); }
+  if (FP.readAnswers(full3).defineSource !== "s") say("the review does not read the definition's source");
+  const { moveDraft } = await import("../src/engine/finalproject/sheet.jsx");
+  { const box = { v: JSON.stringify({ defineSource: "Frey", work: "solo" }) }; const st = { getItem: () => box.v, setItem: (k, v) => { box.v = v; }, removeItem: () => { box.v = null; } }; moveDraft(st, "k", "defineSource", "source"); const d = JSON.parse(box.v); if (d.source !== "Frey" || "defineSource" in d || d.work !== "solo") say("a source typed under the old field name is not carried to the new one"); }
   FP.SLOTS.forEach(s => FP.IDEA_PARTS.forEach(part => { full3[part + ":" + s] = "x"; }));
   if (FP.missingOf(full3, "comm3").length) say("a full COMM 3 sheet still needs " + FP.missingOf(full3, "comm3"));
   if (FP.requiredCount(full3, "comm3") !== FP.requiredCount(full118, "comm118") + 2 - 3) say("COMM 3's count of answers is wrong");
