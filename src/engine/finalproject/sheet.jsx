@@ -1,6 +1,7 @@
 // Final project preferences: the sheet a student fills in, in COMM 3 and
-// COMM 118, at /<class>/worksheets/final-prefs. Both are due Thursday,
-// November 19 (Andrew, 2026-11-14); COMM 3's opened Monday, November 16.
+// COMM 118, at /<class>/worksheets/final-prefs. Both are due Friday,
+// November 20 (Andrew, 2026-11-17; Thursday before that); COMM 3's opened
+// Monday, November 16.
 //
 // One design for both classes. Andrew, 2026-11-16: "redo the comm 3 final
 // project preferences to make it look more like comm 118 assignment, but with
@@ -75,7 +76,7 @@ const SHARED = {
 // 3's example topics are Claude's, offered for him to edit; COMM 118's are his.
 const BY_CLASS = {
   comm3: {
-    credit: "COMM 3. Due Thursday, November 19, at 11:59 PM.",
+    credit: "COMM 3. Due Friday, November 20, at 11:59 PM.",
     intro: "Your final project is a multimedia story about social justice.",
     // Andrew, 2026-11-14, his words with the joins written in.
     defineHead: "Define social justice.",
@@ -91,7 +92,7 @@ const BY_CLASS = {
     justiceAsk: "How does this idea qualify as a social justice topic?",
   },
   comm118: {
-    credit: "COMM 118. Due Thursday, November 19, at 11:59 PM.",
+    credit: "COMM 118. Due Friday, November 20, at 11:59 PM.",
     intro: "Your final project is an exploration of a topic in communication and sport.",
     topicHead: "What do you want to work on in this class?",
     topicAsk: "Your question",
