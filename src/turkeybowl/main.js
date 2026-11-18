@@ -803,12 +803,12 @@ async function scene(name) {
     await talk("ONE MORE CALL", "They watched you win in Dallas. They want you in Austin by kickoff.");
     G.where = "texas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1;
     await eyecatch("AUSTIN", "#bf5700", "#ffffff", false);
-    if (!skipping) await shot("you", "\"Wow. I've never been to Austin before. I can't wait to see the bats, but first, off to DKR Memorial Stadium.\"", { ...YOU(), grin: true }, ["#bf5700", "#ffd9a8"]);
+    if (!skipping) await shot("you", "\"I've never been to Austin. Time to do some sightseeing.\"", { ...YOU(), grin: true }, ["#bf5700", "#ffd9a8"]);
     // Austin on the way in: longhorns, breakfast tacos and barbecue, the Capitol, the bats over Congress Avenue, and one man in burnt orange.
     for (const [shot, word, ms] of [["cattle", "LONGHORNS", 2400], ["tacos", "BREAKFAST TACOS. THEN BARBECUE.", 2600], ["capitol", "THE CAPITOL", 2400], ["bats", "CONGRESS AVENUE AT DUSK. THE BATS ARE OUT.", 4200]]) {
       if (skipping) break; const a0 = now(); paint = (t) => { A.austin(c, t, shot, t - a0); A.letterbox(c); }; say(word, "line low"); sfx.blip(); if (shot === "cattle") sfx.thud(); await beat(ms);
     }
-    if (!skipping) { const m0 = now(); paint = (t) => { A.burst(c, t, 320, 150, "#bf5700", "#ffd75e"); A.bust(c, "mcconaughey", 320, 2.1, { grin: true, armUp: true, wave: t - m0 }); A.letterbox(c); }; say(NAMES.mcconaughey, "line low"); sfx.sting(); await beat(2200); }
+    if (!skipping) { const m0 = now(); paint = (t) => { A.burst(c, t, 320, 150, "#bf5700", "#ffd75e"); A.bust(c, "mcconaughey", 320, 2.1, { grin: true, armUp: true, wave: t - m0 }); A.letterbox(c); }; say(NAMES.mcconaughey, "line low"); sfx.sting(); await beat(2200); say(""); await talk("", "He is totally bogarting UT football's vibe."); }   // his line, 2026-11-17
     say("");
     const s2 = now(); music.start("band");
     paint = (t) => { A.turf(c, t, { where: "texas" }); A.band(c, t, t - s2); A.beams(c, t); A.fireworks(c, t, 3); };
