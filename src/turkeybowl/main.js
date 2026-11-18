@@ -167,8 +167,11 @@ const music = { timer: null, at: 0, step: 0, name: "",
 const booth = $("booth"); let boothTimer = 0, VOICE = null;
 const pickVoice = () => { try { const vs = speechSynthesis.getVoices(), want = ["Alex", "Aaron", "Microsoft Guy Online (Natural) - English (United States)", "Microsoft David - English (United States)", "Google UK English Male", "Daniel", "Fred"]; VOICE = want.map(n => vs.find(v => v.name === n)).find(Boolean) || vs.find(v => /^en[-_]US/.test(v.lang)) || vs.find(v => /^en/.test(v.lang)) || null; } catch { VOICE = null; } };
 if ("speechSynthesis" in window) { pickVoice(); try { speechSynthesis.addEventListener("voiceschanged", pickVoice); } catch { /* an old browser keeps the first pick */ } }
+// Andrew, 2026-11-17: "the announcer lines are not good. remove all of them." Nothing is shown or
+// spoken now. The calls and the lines are left where they were, so a new set of lines can go back in.
+const ANNOUNCER_ON = false;
 function announce(id, text = ANN[id]) {
-  if (!text) return;
+  if (!ANNOUNCER_ON || !text) return;
   booth.textContent = ""; booth.append(el("b", "", "ANNOUNCER"), document.createTextNode(text)); booth.className = "on";
   clearTimeout(boothTimer); boothTimer = setTimeout(() => { booth.className = ""; }, 2200 + text.length * 60);
   if (muted) return;
@@ -365,7 +368,7 @@ async function aside(key) {
   cine(true); ui.textContent = ""; say("");
   const wide = paint, boxed = (t) => { wide(t); A.letterbox(c); };
   for (const [who, line, mood] of list) {
-    if (who === "ann") { paint = boxed; announce("", line); await beat(1500 + line.length * 55); }
+    if (who === "ann") { if (!ANNOUNCER_ON) continue; paint = boxed; announce("", line); await beat(1500 + line.length * 55); }
     else if (who.startsWith("text:")) {
       const s0 = now();
       paint = (t) => { boxed(t); c.save(); c.translate(270, 50 + (t - s0 < 0.8 ? Math.sin(t * 60) * 3 : 0)); c.fillStyle = "#16121f"; c.fillRect(0, 0, 100, 170); c.fillStyle = "#dff3ff"; c.fillRect(7, 16, 86, 134); c.fillStyle = "#2f6fc4"; c.fillRect(14, 28, 66, 18); c.fillRect(14, 52, 52, 14); c.fillRect(14, 72, 60, 14); c.restore(); };
