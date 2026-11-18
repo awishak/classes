@@ -786,6 +786,8 @@ async function scene(name) {
     await talk("THANKSGIVING AFTERNOON", "You are the head coach of the Dallas Cowboys.");
     await shot("reporter", "\"Wow, this stadium is huge. It's bigger than Jerry Jones's heart\u2122.\"", {}, ["#b01e3a", "#f6b8d0"]);
     paint = (t) => { A.stadium(c, t, { midfield: true }); A.letterbox(c); }; await talk("", "(Disclaimer: Jerry Jones Enterprises is affiliated with Jerry Jones Corporate.)");
+    await shot("reporter", "\"Hey, how do you feel going into today's game and trying to coach?\"", {}, ["#b01e3a", "#f6b8d0"]);
+    await shot("you", "\"I'm ready for any challenge (except cats, I am allergic to cats).\"", { ...YOU(), grin: true }, ["#1d3c8f", "#c9d3e6"]);
     // Sport as a show, in the mouths of the two people who sell it.
     await shot("reporter", "\"Coach, people call this a television show with a football game attached. Are you here to win, or to entertain?\"", {}, ["#b01e3a", "#f6b8d0"]);
     await shot("jerry", "\"Both. The entertaining pays for the winning. Now go win.\"", { grin: true }, ["#1d3c8f", "#c9d3e6"]);

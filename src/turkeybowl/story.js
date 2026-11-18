@@ -157,7 +157,8 @@ export const ASIDES = {
   "s:kickoff": [["ann", "A Pew survey asked Americans about Thanksgiving. Thirty-five percent expected to watch sports. Four percent expected to play. This family is in the four."],
     ["niece", "\"Thirty-nine states and Washington, D.C. have legal sports betting now. Your brother is trying to visit all of them from his phone.\"", { armUp: false }],   // NCAA release, January 2026
     ["nephew", "\"My travel team costs more than this whole park. Dad says kids' sports is a fifteen-billion-dollar business now.\""]],   // "How Kids Sports Became a $15 Billion Industry" (Time)
-  "s:half1": [["brother", "\"Polymarket has Grandma scoring again at even money. I took it. Sorry.\"", { angry: false, armUp: false, look: -2 }],
+  "s:half1": [["you", "\"Hey, screenager!\""],   // the player, to the brother on his phone; Andrew, 2026-11-17
+    ["brother", "\"Polymarket has Grandma scoring again at even money. I took it. Sorry.\"", { angry: false, armUp: false, look: -2 }],
     ["uncle", "\"In my day we ran one play, and we ran it until somebody cried.\"", { armUp: false }],
     ["nephew", "\"I wear two left shoes because I have weird feet.\""],
     ["sister", "\"Put me at quarterback in the second half. In this family the women get handed the snacks.\"", { armUp: false }],
