@@ -2502,7 +2502,7 @@ cases.push(["Theme picker, in the header", <ThemePicker theme="snapchat" onPick=
   warmClassData(cfg.storageKey, again);
   try {
     const html = renderToString(<GradeView config={cfg} />);
-    ["Not sorted yet", "Cy Twombly", "Hide grades", "Open their file", "Exceptional", "Incomplete"].forEach(t => { if (!html.includes(t)) say("the page never showed " + JSON.stringify(t)); });
+    ["Not sorted yet", "Cy Twombly", "Hide grades", "Open Cy Twombly", "Exceptional", "Incomplete"].forEach(t => { if (!html.includes(t)) say("the page never showed " + JSON.stringify(t)); });
   } catch (err) { say("the page threw: " + err.message); }
   try {
     const deckCard = unseenGrades(cfg, again, "Ada Lovelace")[0];

@@ -11,13 +11,13 @@ import { usePhotos, useWithPhotos } from "./photos.js";
 import { useWithWorksheetSubmits } from "./worksheetSubmits.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { ThemeStyle } from "./ThemeShell.jsx";
-import { withIds } from "./roster.js";
+import { withIds, nameShown } from "./roster.js";
 import { sectionOf } from "./sections.js";
 import { checkinTasksOf, isCheckin, answersOf, CHECKIN_QUESTIONS } from "./checkins.js";
 import { schedulingLinkOf } from "../instructors.js";
 import { unanswered, appreciatePatch, deletePatch } from "./AssignmentsCard.jsx";
 import { latenessOf } from "./lateness.js";
-import { signOf, regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml } from "./grades.js";
+import { signOf, regradeOf, regradePending, alive, bucketsFor, bucketOf, boardOf, placeCard, writeCard, releasePatch, hidePatch, changedSinceRelease, releaseCounts, sortedCount, gradeText, htmlToText, toHtml, standingOf } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import * as TOKENS from "./tokens.js";
 import { StudentLink } from "./StudentPage.jsx";
@@ -59,6 +59,18 @@ const CSS = `
 textarea.gv-box{width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--line-strong);font-family:var(--font-body);font-size:16px;line-height:1.45;color:var(--text-primary);background:var(--surface-card);resize:vertical;min-height:64px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 `;
+
+// A box's colour is how the student has been doing so far, a step per letter
+// from green down to red, and white when there is nothing to go on yet.
+const mix = (c, pct) => "color-mix(in srgb, " + c + " " + pct + "%, " + WHITE + ")";
+const TINT = {
+  A: mix("#2e9e4f", 38),
+  B: mix("#a3cc2e", 38),
+  C: mix("#f2c230", 42),
+  D: mix("#f08c2e", 42),
+  F: mix("#e0483e", 40),
+};
+const tintOf = (standing) => (standing && TINT[standing.letter]) || WHITE;
 
 const hostOf = (url) => { try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return "link"; } };
 
@@ -159,12 +171,15 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
   const [picked, setPicked] = useState("");
   const [editing, setEditing] = useState("");
   const [confirm, setConfirm] = useState("");
+  // The one box opened to its full card. Andrew, 2026-11-17: "make the boxes
+  // half the size and length, and make them compact together."
+  const [open, setOpen] = useState("");
   // The walk: the names in the order they are walked, fixed when the walk
   // opens, or null when the board is up. See Walk below.
   const [walk, setWalk] = useState(null);
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") { setPicked(""); setEditing(""); setConfirm(""); setWalk(null); } };
+    const onKey = (e) => { if (e.key === "Escape") { setPicked(""); setEditing(""); setConfirm(""); setWalk(null); setOpen(""); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -196,9 +211,18 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
     onDrop: (e) => { e.preventDefault(); const name = e.dataTransfer.getData("text/plain") || dragging; move(name, bucket); },
   });
 
+  const standings = useMemo(() => Object.fromEntries(roster.map(s => [s.name, standingOf(data, assignments, s.name, aid)])), [roster, data, assignments, aid]);
+  // The name on a small box: the first name they go by, with the last
+  // initial when two in the room share it.
+  const labelOf = (s) => {
+    const f = first(nameShown(data, s.name) || s.name);
+    const twins = roster.filter(o => first(nameShown(data, o.name) || o.name) === f).length > 1;
+    return twins ? f + " " + String(s.name).trim().split(" ").pop()[0] + "." : f;
+  };
   const cardOf = (s) => {
     const card = board.cards?.[s.name] || {};
-    return <Card key={s.name} config={config} student={s} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name, asg)} accent={a}
+    return <Card key={s.name} config={config} student={s} shown={labelOf(s)} standing={standings[s.name]}
+      open={open === s.name} onOpen={() => setOpen(s.name)} onClose={() => { setOpen(""); setEditing(""); }} profile={profileOf(data, s.name)} due={asg?.due} card={card} work={workOf(data, aid, s.name, asg)} accent={a}
       checkin={isCheckin(asg) ? { answers: answersOf(data, aid, s.name), href: config.path + "/checkins?w=" + asg.week + "&s=" + encodeURIComponent(s.name) } : null}
       columns={columns}
       dragging={dragging === s.name} picked={picked === s.name} editing={editing === s.name}
@@ -224,7 +248,11 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
     .map((s, i) => ({ s, i, ts: firstIn(s) }))
     .sort((x, y) => (x.ts - y.ts) || (x.i - y.i))
     .map(x => x.s);
-  const inBucket = (id) => roster.filter(s => board.cards?.[s.name]?.bucket === id);
+  // Inside a column the boxes run from the strongest standing down, so the
+  // colours sit together. No standing yet goes last; ties keep roster order.
+  const rank = (s) => (standings[s.name] ? standings[s.name].score : -1);
+  const inBucket = (id) => roster.filter(s => board.cards?.[s.name]?.bucket === id)
+    .map((s, i) => ({ s, i })).sort((x, y) => (rank(y.s) - rank(x.s)) || (x.i - y.i)).map(x => x.s);
   const sorted = sortedCount(board);
   const released = !!board.released;
   const stale = changedSinceRelease(board, data, aid);
@@ -345,18 +373,18 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
                 : null}
               {!pile.length ? <span style={{ fontSize: 15, color: OK, fontWeight: 600 }}>Everyone is sorted.</span> : null}
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))", gap: 4 }}>
               {pile.map(cardOf)}
             </div>
           </section>
 
           {/* the columns */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8, alignItems: "stretch" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 8, alignItems: "stretch" }}>
             {columns.map(b => {
               const here = inBucket(b.id);
               return (
                 <section key={b.id} {...zoneProps(b.id)} aria-label={b.label}
-                  style={{ border: "1px solid " + LINE, borderRadius: 12, padding: 10, minHeight: 320, display: "flex", flexDirection: "column", gap: 8, background: WHITE }}>
+                  style={{ border: "1px solid " + LINE, borderRadius: 12, padding: 10, minHeight: 160, display: "flex", flexDirection: "column", gap: 8, background: WHITE }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                     <span style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.02em" }}>{b.label}</span>
                     <span style={{ fontSize: 13, color: TEXT_MUTED }}>{here.length}</span>
@@ -365,7 +393,9 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
                   {picked && board.cards?.[picked]?.bucket !== b.id
                     ? <button className="gv-focus" onClick={() => move(picked, b.id)} style={{ ...btn(false), color: a, borderColor: a }}>Put {first(picked)} here</button>
                     : null}
-                  {here.map(cardOf)}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(68px, 1fr))", gap: 4, alignContent: "start" }}>
+                    {here.map(cardOf)}
+                  </div>
                 </section>
               );
             })}
@@ -499,7 +529,7 @@ function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, 
   );
 }
 
-function Card({ config, student, profile, due, card, work, accent, checkin, columns, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
+function Card({ config, student, shown, standing, open, onOpen, onClose, profile, due, card, work, accent, checkin, columns, dragging, picked, editing, onDragStart, onDragEnd, onPick, onEdit, onCancel, onSave, onAppreciate, onDelete }) {
   const [comment, setComment] = useState(card.comment || "");
   // The grade, chosen in the same box as the comment. Starts on the column
   // the card is in; tapping the lit one again puts the card back on the pile.
@@ -514,10 +544,32 @@ function Card({ config, student, profile, due, card, work, accent, checkin, colu
   const link = work.link;
   const grade = card.bucket ? bucketOf(card.bucket) : null;
 
+  const tint = tintOf(standing);
+  const soFar = standing ? "so far " + standing.letter + ", " + standing.score : "no grades yet";
+  // The small box: a face, a first name, the colour. A press opens the card.
+  if (!open && !editing) {
+    const flag = work.regrade || work.waiting;
+    return (
+      <button type="button" className="gv-card gv-focus" draggable data-dragging={dragging ? "1" : "0"}
+        onDragStart={onDragStart} onDragEnd={onDragEnd} onClick={onOpen}
+        aria-label={"Open " + student.name} title={student.name + ", " + soFar}
+        style={{ position: "relative", border: "1px solid " + (picked ? accent : LINE_STRONG), boxShadow: picked ? "0 0 0 2px " + accent : "none",
+          borderRadius: 8, padding: "5px 2px 4px", background: tint, display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+          fontFamily: F, minWidth: 0 }}>
+        <Avatar profile={profile} name={student.name} accent={accent} size={30} />
+        <span style={{ maxWidth: "100%", fontSize: 12, fontWeight: 600, lineHeight: 1.2, color: TEXT_PRIMARY, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {shown || first(student.name)}{grade && /^[A-D]$/.test(grade.letter) && signOf(card) ? " " + signOf(card).replace("-", "−") : ""}
+        </span>
+        {flag ? <span aria-hidden="true" style={{ position: "absolute", top: 3, right: 3, width: 8, height: 8, borderRadius: 999, background: accent }} /> : null}
+      </button>
+    );
+  }
+
   return (
     <div className="gv-card" draggable={!editing} data-dragging={dragging ? "1" : "0"}
       onDragStart={onDragStart} onDragEnd={onDragEnd}
-      style={{ border: "1px solid " + (picked ? accent : LINE_STRONG), boxShadow: picked ? "0 0 0 2px " + accent : "none",
+      style={{ gridColumn: "1 / -1", border: "1px solid " + (picked ? accent : LINE_STRONG), boxShadow: picked ? "0 0 0 2px " + accent : "none",
+        borderLeft: "6px solid " + (standing ? tint : LINE_STRONG),
         borderRadius: 12, padding: "10px 12px", background: WHITE, display: "flex", flexDirection: "column", gap: 6, fontSize: 15 }}>
       {/* Wraps, so a long grade like Completed with Revisions drops under the
           name rather than squeezing the name to nothing. */}
@@ -671,6 +723,10 @@ function Card({ config, student, profile, due, card, work, accent, checkin, colu
           <button className="gv-focus" onClick={onEdit}
             style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 15, fontWeight: 600, color: accent, cursor: "pointer", minHeight: HIT }}>
             {card.comment || card.note ? "Edit the comment" : "Add a comment"}
+          </button>
+          <button className="gv-focus" onClick={onClose} aria-label={"Close " + student.name}
+            style={{ alignSelf: "flex-start", background: "none", border: "none", padding: 0, fontFamily: F, fontSize: 15, fontWeight: 600, color: TEXT_SECONDARY, cursor: "pointer", minHeight: HIT }}>
+            Close
           </button>
         </>
       )}

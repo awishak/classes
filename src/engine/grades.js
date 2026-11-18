@@ -364,3 +364,25 @@ export const letterOf = (score) => {
 // Andrew, 2026-10-06: "please remove scores from the classes. only need
 // grades at the moment." A number from the older flow reads as its letter.
 export const gradeText = (g) => (g ? (g.letter || letterOf(g.score) || "") : "");
+
+// How a student has been doing so far: the weighted average of every grade
+// they have been sent, leaving one challenge out (the one on the board, so a
+// box's colour says how they came in, not how they did here). A grade with no
+// number behind it, Completed with Revisions or Late but complete, is left
+// out. With no weights on anything graded, every challenge counts the same.
+// Null when there is nothing to go on. Andrew, 2026-11-17: "make the boxes
+// colored by how they have been doing so far in class."
+export const standingOf = (data, assignments, name, skipAid) => {
+  let sum = 0, w = 0, flat = 0, n = 0;
+  (assignments || []).forEach(asg => {
+    if (asg.id === skipAid) return;
+    const g = alive(data?.assignmentLog?.[asg.id]?.[name]).filter(e => e.type === "grade").pop();
+    const s = g && g.score != null && g.score !== "" ? Number(g.score) : null;
+    if (s == null || !Number.isFinite(s)) return;
+    const wt = Number(asg.weight) || 0;
+    sum += s * wt; w += wt; flat += s; n++;
+  });
+  if (!n) return null;
+  const score = Math.round(w ? sum / w : flat / n);
+  return { score, letter: letterOf(score) };
+};
