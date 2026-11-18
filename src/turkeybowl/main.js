@@ -348,6 +348,7 @@ async function situation(id, dec, base, phone) {
     paint = (t) => { const p = clamp((t - s0) / 1.3, 0, 1); field(t, "texas", 0, true); fp(170, 268, kin("texas", "us", 4), 0); fb(190 + p * 470, 268 + p * 70, 4 + Math.sin(p * Math.PI * 0.8) * 250, p * 9); flush(); A.beams(c, t); A.letterbox(c); };
     sfx.snap(); await beat(1300); say("NO GOOD!", "slam low"); sfx.boo(); shake(260); announce("miss"); await beat(1300); say("");
   }
+  if (!phone) for (const line of S.post) { paint = (t) => { wide(t); A.letterbox(c); }; await talk("", line); }
   const sid = dec.slot || id, back = sid === "commercial" ? jerryRemembers(G.picks) : "";
   if (back) await shot("jerry", back, {}, bg);
   for (const [who, line, mood] of S.shots) { if (phone) { paint = wide; await talk("A TEXT FROM HOME", line); } else await shot(who, line, mood, bg); }
@@ -401,7 +402,7 @@ const BAD = { breakfast: "sick", jet: "sick", stars: { bad: "gain", silly: "gran
 const rainCloud = (x, y, e) => { c.fillStyle = "rgba(60,64,90,.92)"; [[0, 0, 26], [26, 6, 20], [-24, 8, 18]].forEach(([dx, dy, r]) => { c.beginPath(); c.arc(x + dx, y + dy, r, 0, 7); c.fill(); }); c.fillStyle = "#7fd3ff"; for (let i = 0; i < 10; i++) c.fillRect(x - 40 + (i * 17) % 80, y + 22 + ((e * 180 + i * 37) % 90), 2, 9); };
 async function consequence(id, got, who, phone, base) {
   let kind = BAD[id]; if (kind && typeof kind === "object") kind = kind[got.rank] || kind.bad;
-  if (!kind || (kind === "walk" && (phone || !who))) return;
+  if (!kind || (kind === "walk" && (phone || !who))) return false;
   const where = G.where, s0 = now(), leaf = (t) => { if (where === "park") A.leaves(c, t, 30); else if (where === "texas") A.beams(c, t); };
   let hit = false; const bang = () => { if (!hit) { hit = true; sfx.thud(); hitStop(140); shake(380); } };
   if (kind === "sick") paint = (t) => { A.speedLines(c, t, "#3f6a2a", "#a8d070"); A.bust(c, "you", 320 + Math.sin(t * 30) * 3, 2.1, { face: FACE, sad: true, sweat: true, shirt: where === "park" ? "#e2622a" : "#1b2440", number: "" }); A.letterbox(c); };
@@ -434,6 +435,7 @@ async function consequence(id, got, who, phone, base) {
   else if (kind === "wide") { sfx.snap(); paint = (t) => { const p = clamp((t - s0) / 1.3, 0, 1); field(t, "texas", 0, true); fp(170, 268, kin("texas", "us", 4), 0); fb(190 + p * 470, 268 + p * 70, 4 + Math.sin(p * Math.PI * 0.8) * 250, p * 9); flush(); A.beams(c, t); }; }
   say(got.then, "line low"); if (kind !== "sack" && kind !== "fumble" && kind !== "jerry") sfx.bad(); if (kind === "gain" || kind === "grandma" || kind === "wide") sfx.boo();
   await beat(3600); say("");
+  return true;
 }
 async function decide(id) {
   const dec = decisionOf(id), sid = dec.slot || id, pop = !dec.level, dallas = G.where !== "park", base = backdrop(sid);
@@ -493,7 +495,6 @@ async function decide(id) {
   say(G.streak >= 3 ? G.streak + " BEST CALLS IN A ROW" : RANK_SAY[got.rank].toUpperCase(), "slam low r-" + got.rank); showHud();
   if (got.rank === "silly" || got.rank === "over") announce(got.rank); else if (G.streak === 3) announce("streak");
   await beat(1500); say("");
-  if (got.rank === "bad" || got.rank === "silly") await consequence(sid, got, who, phone, base);
   cine(false);
   paint = (t) => { base(t); if (who && !phone) A.cast(c, who, 440, 250, 1.3, { wave: t - start, ...(dec.level === 4 ? TX : {}), ...(got.rank === "best" ? { grin: true } : got.rank === "bad" ? { sad: true, angry: false } : {}) }); };
   fx = got.rank === "good" ? null : { kind: got.rank, start: now(), x: who && !phone ? 470 : 320, y: who && !phone ? 84 : 110 };
@@ -501,15 +502,20 @@ async function decide(id) {
   const r = card(label);
   r.append(el("div", "rank r-" + got.rank, RANK_SAY[got.rank] + "   +" + got.points));
   r.append(el("p", "say", "You chose: " + chose));
-  const bests = dec.pick ? 1 : dec.opts.filter(o => o.rank === "best").length;
-  r.append(el("p", "scene", got.rank === "best" && bests > 1 ? "That works. It was one of the best things you could have done." : VERDICT[got.rank]));
-  r.append(el("p", "say", got.then));
+  if (VERDICT[got.rank]) r.append(el("p", "scene", VERDICT[got.rank]));
   r.append(el("p", "why", dec.after));
   const link = LINKS[id];
   if (link) { const a = el("a", "more", link.say + " ↗"); a.href = link.url; a.target = "_blank"; a.rel = "noopener noreferrer"; r.append(a); }
   G.log.push({ who: label, scene, rank: got.rank, pick: chose, lines: [got.then], why: dec.after }); showBack();
   await next(r, got.over ? "Uh oh" : "Continue");
   fx = null;
+  // Andrew, 2026-11-17: "give the information first. Then you press continue, then we see what
+  // happens." So the rank and the reason are read on the card, and what the choice led to comes
+  // after: played out for a bad or ludicrous answer, and said over the picture otherwise.
+  cine(true); ui.textContent = "";
+  const played = got.rank === "bad" || got.rank === "silly" ? await consequence(sid, got, who, phone, base) : false;
+  if (!played && got.then) { const seen = paint; paint = (t) => { seen(t); A.letterbox(c); }; await talk("", got.then); G.log.pop(); paint = seen; }   // the line is already in the log with its question
+  cine(false);
   return got;
 }
 

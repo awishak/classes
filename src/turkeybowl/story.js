@@ -27,28 +27,32 @@ export const ROLL = [["andrew", { armUp: true }], ["kaepernick", { kneel: true }
 // A question on screen: `wide` is said over the place, each shot is one person
 // up close saying one thing ([who, line, mood]), and `ask` is the one line left
 // on the card beside the answers. `act` names a moment the page draws first.
-const W = (wide, shots, ask, act) => ({ wide, shots, ask, act });
+// Andrew, 2026-11-17, on the writing: "redo all the writing to be a NES style", short lines, and the
+// jokes are his, dictated the same day (the squishies, Joe Rogan, Grandma's tackles, Jerry's jet, Grandpa at
+// receiver, the Ford commercial, the kicker, the backup's dream, the last two minutes). `post` is said
+// after the moment the page draws, so a line about a drop comes after the drop.
+const W = (wide, shots, ask, act, post) => ({ wide, shots, ask, act, post: post || [] });
 export const SHOW = {
-  breakfast: W(["It's 6:30 on Thanksgiving morning. Your family's annual football game kicks off at the park at 8."], [["grandma", "\"You are not coaching on an empty stomach. Pick something.\""]], "You need breakfast first. What do you eat?"),
-  stars: W(["You're at the park, warming up with your family before the game."], [["uncle", "\"Only throw to our two best players. Everybody else can watch.\""]], "What do you do?"),
-  blowup: W(["The game has started. Your brother is wide open."], [["brother", "\"I'm done! Who throws a ball like that?\"", { angry: true }]], "He has thrown the ball into the leaves, and everyone is looking at you. What do you do?", "drop"),
-  shout: W(["The game has started. Your cousin is on defense, and she keeps ending up in the wrong spot."], [["cousin", "\"Where do you want me? Just tell me!\"", { sad: false, sweat: true }]], "The other team is about to snap the ball, and you can yell one thing to her. What do you yell?"),
-  push: W(["It's halftime. Your team is losing 21 to 14."], [["uncle", "\"We're getting killed out there.\"", { sad: true, armUp: false }]], "Everyone is on the bench looking at you. You want to push them to play harder. What do you say?"),
-  open: W(["It's halftime. Your team is losing 21 to 14."], [["sister", "\"Okay, coach. What have you got for us?\"", { armUp: false }]], "You have three things to tell them. What do you open with?"),
+  breakfast: W(["It's 6:30. Thanksgiving morning.", "The family football game kicks off at 8. At the park."], [["grandma", "\"You are not coaching on an empty stomach. Pick something.\""]], "Breakfast first. What do you eat?"),
+  stars: W(["You're at the park. Warm-ups.", "Your uncle has a plan that he heard on the Joe Rogan Experience podcast."], [["uncle", "\"Only throw to our two best players. Everybody else can watch.\""]], "What do you do?"),
+  blowup: W(["The game is on. Your brother is wide open."], [["brother", "\"I'm done! Who throws a ball like that?\"", { angry: true }]], "The ball is in the leaves. Everyone is looking at you. What do you do?", "drop", ["Your brother dropped it. Another thing he's not good at (he is a very disappointing child in general)."]),
+  shout: W(["The game is on. Your cousin ends up in the wrong spot. Whoops.", "Maybe she's bad at football. Or maybe it's because she spends all day watching TikToks about squishies."], [["cousin", "\"Where do you want me? Just tell me!\"", { sad: false, sweat: true }]], "Uncle Rick's team is about to snap the ball. You can yell one thing. What do you yell?"),
+  push: W(["Halftime.", "You're losing 21-14. Your Grandma has three tackles for loss and a blocked punt."], [["uncle", "\"We're getting killed out there.\"", { sad: true, armUp: false }]], "Everyone is on the bench. They are looking at you. You want them to play harder. What do you say?"),
+  open: W(["Halftime.", "You're losing 21-14. Your Grandma has three tackles for loss and a blocked punt."], [["sister", "\"Okay, coach. What have you got for us?\"", { armUp: false }]], "You have three things to tell them. What do you open with?"),
   culture: W(["Jerry Jones starts the interview."], [["jerry", "\"First question, and it's a simple one. What is culture?\""]], "What do you say?"),
-  dissent: W(["Jerry Jones starts the interview with a plan of his own."], [["jerry", "\"One thing first. I call the first play of the game myself, from my box.\""]], "You think it is a bad idea. What do you say?"),
+  dissent: W(["Jerry Jones starts the interview. He has a plan of his own."], [["jerry", "\"One thing first. I call the first play of the game myself, from my box.\""]], "You think it is a bad idea. What do you say?"),
   power: W([], [["jerry", "\"My players are grown men, and they make more money than you do. How will you get them to do what you ask?\""]], "Pick two."),
-  jet: W(["You got the job, and now you are on Jerry's jet to Dallas.", "The flight attendant comes by with drinks."], [], "What do you take?"),
-  receiver: W(["You are coaching the Cowboys. It's the first quarter, and your best receiver has no catches."], [["receiver", "\"I'm open! Every play! Throw me the ball!\"", { angry: true }]], "He is screaming at your quarterback, and every camera in the stadium is on them. What do you do?"),
-  commercial: W(["It's halftime in Dallas."], [["jerry", "\"Coach! I need you for two minutes. We're filming a truck commercial, right now.\"", { armUp: true }]], "Your players are waiting for you in the locker room. What do you do?"),
-  conflict: W(["It's halftime in Dallas."], [["coachA", "\"I call the defense. I have called it all year.\"", { angry: true }], ["coachB", "\"And look at the scoreboard.\"", { angry: true }]], "Both of them turn to you. What do you do?"),
-  speech: W(["You are in the locker room at halftime, losing by ten.", "Fifty-three players are waiting for you to say something."], [["kicker", "\"Coach?\""]], "What kind of speech do you give?"),
-  points: W(["You are in the locker room at halftime, losing by ten."], [["coachA", "\"Nine adjustments, coach. You have four minutes with the offense.\""]], "What do you do with the list?"),
-  returner: W(["You are coaching Texas against Texas A&M, at night, in front of a hundred thousand people."], [["returner", "\"Coach. It's my first college kickoff. What do I do?\"", { sweat: true }]], "What do you tell him?"),
-  cohesion: W(["You are coaching Texas against Texas A&M, at night, in front of a hundred thousand people.", "Kickoff is in ten minutes."], [["backup", "\"It feels quiet in here, coach.\""]], "You want this team closer before it runs out. What do you do?"),
-  kicker: W(["It's the second quarter in Austin. Your kicker lines up a field goal."], [["kicker", "\"I had it. I had it, and I pulled it.\"", { sad: true }]], "He walks to the bench staring at the ground. What do you do?", "miss"),
-  backup: W(["It's the fourth quarter. Your quarterback is hurt."], [["backup", "\"Me? Coach, I haven't played all season.\"", { shock: true }]], "He is putting on his helmet. What do you tell him?"),
-  twominute: W(["You are losing to Texas A&M by four points. There are two minutes left, and you have one time-out."], [["backup", "\"What's the call, coach?\"", { sweat: true }]], "What do you do?"),
+  jet: W(["You got the job.", "This is Jerry Jones's jet. Jerry has taken it all over the world, including to numerous Super Bowls.", "Not that the Cowboys have played in the Super Bowl since this jet was built. He just went to watch the game.", "The flight attendant comes by with drinks."], [], "What do you take?"),
+  receiver: W(["You are coaching the Cowboys. First quarter.", "Your best receiver (your Grandpa) has no catches."], [["receiver", "\"I'm open! Every play! Throw me the ball!\"", { angry: true }]], "He is screaming at your quarterback. Every camera is on them. What do you do?"),
+  commercial: W(["Halftime in Dallas.", "Jerry wants you to do a commercial for Ford Trucks. It'll be quick and painless.", "All you have to do is look at the camera and say you love Ford Trucks so much you wish you could marry one."], [["jerry", "\"Coach! I need you for two minutes.\"", { armUp: true }]], "Your players are waiting in the locker room. What do you do?"),
+  conflict: W(["Halftime in Dallas."], [["coachA", "\"I call the defense. I have called it all year.\"", { angry: true }], ["coachB", "\"And look at the scoreboard.\"", { angry: true }]], "Both of them turn to you. What do you do?"),
+  speech: W(["Halftime. The locker room. You're losing by ten.", "Fifty-three players are waiting."], [["kicker", "\"Coach?\""]], "What kind of speech do you give?"),
+  points: W(["Halftime. The locker room. You're losing by ten."], [["coachA", "\"Nine adjustments, coach. You have four minutes with the offense.\""]], "What do you do with the list?"),
+  returner: W(["Texas against Texas A&M. At night. A hundred thousand people."], [["returner", "\"Coach. It's my first college kickoff. What do I do?\"", { sweat: true }]], "What do you tell him?"),
+  cohesion: W(["Texas against Texas A&M. At night. A hundred thousand people.", "Kickoff is in ten minutes."], [["backup", "\"It feels quiet in here, coach.\""]], "You want this team closer before it runs out. What do you do?"),
+  kicker: W(["Second quarter in Austin. Your kicker lines up a field goal."], [["kicker", "\"I had it. I had it, and I pulled it.\"", { sad: true }]], "He walks to the bench. He stares at the ground. What do you do?", "miss", ["Your kicker misses. He is killing your team and he's not even a real football player. He's a kicker!"]),
+  backup: W(["Fourth quarter. Your quarterback is hurt.", "Your backup QB has not played all season but don't worry: he has dreamt about this moment in his sleep.", "(Of course, he then threw an interception to a clown who turned out to be his 8th grade science teacher who asked him for his homework but he didn't turn it in on time. Dreams are weird sometimes.)"], [["backup", "\"Me? Coach, I haven't played all season.\"", { shock: true }]], "He is putting on his helmet. What do you tell him?"),
+  twominute: W(["You're losing to Texas A&M by four.", "Two minutes. 100,000 people watching. 10,000,000 watching on TV. 100,000,000 dollar contract at stake.", "You have one time-out."], [["backup", "\"What's the call, coach?\"", { sweat: true }]], "What do you do?"),
   "pop-stacking": W([], [["cousin", "\"I'm taking a sociology of sport class. What does 'stacking' mean in sports?\"", { sad: false }]], "What do you tell her?"),
   "pop-titleix": W([], [["niece", "\"I play three sports, and I have read the school handbook twice. Title IX is in there once, with no explanation. What does it actually say?\"", { armUp: false }]], "What do you tell her?"),
   "pop-1968": W([], [["niece", "\"I go to San Jose State. I walk past the statue of Tommie Smith and John Carlos every day, and I have read the plaque. What should I know that the plaque leaves out?\"", { armUp: false }]], "What do you tell her?"),
@@ -66,7 +70,7 @@ export const ANN = {
   pie: "Oh no. Nobody saw the pie coming.",
   silly: "I have never seen a coach do that.",
   over: "And that is the end of that coaching career.",
-  streak: "This coach has not missed in a while.",
+  streak: "This coach is on firrrrrre!",   // his line, 2026-11-17
   jerry: "And who is that walking through the park? That is Jerry Jones.",
   dallas: "Welcome to Dallas. The Cowboys' new coach was at a public park this morning.",
   texas: "Good evening from Austin. The new Texas coach got here during warm-ups.",
@@ -147,6 +151,7 @@ export const ASIDES = {
   "q:stars": [
     ["brother", "\"I have forty dollars on us this morning. Kalshi had no market on the family game, so I bet Uncle Rick in the group chat.\"", { angry: false, grin: true, armUp: false }],
     ["cousin", "\"Park rules. Two-hand touch, five Mississippi before you rush, and we call our own penalties.\"", { sad: false }],                                           // "The Rules of Pickup Basketball" (SB Nation), said in football's words. Andrew, 2026-11-16: fouls and "keeps the field" "are not football terms."
+    ["nephew", "\"My mom says I'm the quarterback of my own life.\""],   // the nephew talks like Ralph Wiggum; his three lines are Andrew's, 2026-11-17
     ["sister", "\"And none of that co-ed league stuff where a girl's touchdown counts double. I'll score regular ones.\"", { armUp: false }],        // "Why Co-Ed Sports Leagues Are Never Really Co-Ed" (Deadspin)
   ],
   "s:kickoff": [["ann", "A Pew survey asked Americans about Thanksgiving. Thirty-five percent expected to watch sports. Four percent expected to play. This family is in the four."],
@@ -154,11 +159,13 @@ export const ASIDES = {
     ["nephew", "\"My travel team costs more than this whole park. Dad says kids' sports is a fifteen-billion-dollar business now.\""]],   // "How Kids Sports Became a $15 Billion Industry" (Time)
   "s:half1": [["brother", "\"Polymarket has Grandma scoring again at even money. I took it. Sorry.\"", { angry: false, armUp: false, look: -2 }],
     ["uncle", "\"In my day we ran one play, and we ran it until somebody cried.\"", { armUp: false }],
+    ["nephew", "\"I wear two left shoes because I have weird feet.\""],
     ["sister", "\"Put me at quarterback in the second half. In this family the women get handed the snacks.\"", { armUp: false }],
     ["niece", "\"At school the boys get handed a baseball and the girls get handed a softball. I asked why, in writing. Nobody has answered.\"", { armUp: false }]],   // "Is Softball Sexist?" (NYT)
   "q:culture": [["jerry", "\"Before we start. Congress let the league sell its television rights as one package back in 1961. The same law keeps us off Fridays and Saturdays in the fall, for the high schools and the colleges. Thursday, though? Thursday is mine.\""]],   // Sports Broadcasting Act of 1961
   "q:jet": [["jerry", "\"A coach once sent his four best players home before a big television game. The league fined the team a quarter of a million dollars. So tell me. Do you owe the people a show?\""]],   // "Are You Not Entertained?" (Klosterman, Grantland)
-  "p:park": [["brother", "\"I put twenty dollars on your next play call. Don't ask which way. Just call a good one.\"", { angry: false, armUp: false, sweat: true }]],
+  "p:park": [["brother", "\"I put twenty dollars on your next play call. Don't ask which way. Just call a good one.\"", { angry: false, armUp: false, sweat: true }],
+    ["nephew", "\"Sometimes I play football with my dog. I beat him 35-31.\""]],
   "s:dallas": [
     ["ann", "Last Thanksgiving, the game in Dallas averaged fifty-seven million viewers. That is the most for any regular-season game on record."],
     ["text:brother", "\"You're coaching the COWBOYS? I took the other team an hour ago. Nothing personal.\""],

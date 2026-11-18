@@ -54,7 +54,7 @@ export const RANK_SAY = { best: "Best call", good: "Good call", bad: "Not good",
 // probably wouldn't work that well ... don't tell them what they should have
 // chosen. Tell them you probably could have chosen something else."
 export const VERDICT = {
-  best: "That was the best thing you could have done.",
+  best: "",   // Andrew, 2026-11-17: "That was the best thing you could have done. Don't say that." The card says Best call and nothing more.
   good: "That works. There was a stronger choice.",
   bad: "That probably would not work very well. You could have chosen something else.",
   silly: "That would not work at all. You could have chosen something else.",
@@ -97,19 +97,19 @@ export const DECISIONS = [
     ["bad", "Cranberry sauce, straight from the can", "A sugar high. Fast for three plays, then you crash."],
     ["silly", "Pumpkin pie with gravy on top", "You play badly the whole first half."],
   ], "You've got to choose the right food. Don't be silly and choose something that's not good for you. Always eat a good breakfast.", { food: true }),
-  d("stars", 1, 500, "uncle", "You're at the park, warming up with your family before the game. Your uncle walks over and says the team should only practice throwing to its two best players. Everyone else can watch. What do you do?", [
+  d("stars", 1, 500, "uncle", "You're at the park. Warm-ups. Your uncle has a plan that he heard on the Joe Rogan Experience podcast. Only throw to the two best players. Everyone else can watch. What do you do?", [
     ["best", "Rotate everyone through, and say the goal today is to improve.", "Everyone is warm, and everyone knows why."],
     ["good", "Rotate everyone through, and say nothing about why.", "Everybody practices. Nobody knows what the team is about."],
     ["bad", "Start with the two best, and work the others in after.", "There is no time after. Half your team starts the game cold."],
     ["silly", "Trade Grandma to Uncle Rick's team for a player to be named later.", "Grandma scores on you. Twice."],
   ], "A mastery climate values every player and defines success as getting better. A performance climate ignores less-skilled players to focus on stars (Horn et al., 2012). The climate has to be both communicated and implemented."),
-  d("blowup", 1, 500, "brother", "The game has started. Your brother drops an easy pass, throws the ball into the leaves and starts yelling. Everyone is looking at you. What do you do?", [
+  d("blowup", 1, 500, "brother", "The game is on. Your brother dropped it. Another thing he's not good at (he is a very disappointing child in general). The ball is in the leaves. Everyone is looking at you. What do you do?", [
     ["best", "Ask him what he's feeling right now.", "He tells you. Then he catches the next one."],
     ["best", "Make a joke to break the tension.", "He laughs, and he catches the next one."],
     ["best", "Tell him one thing to fix on the next catch.", "He fixes it, and he catches the next one."],
     ["bad", "Tell him, loudly, that he is costing the team.", "He stops trying for the rest of the half."],
   ], "Teammates regulate each other's emotion with positive or technical feedback, with humor, and by asking about the emotion (Tamminen & Crocker, 2013). Verbal aggressiveness lowers an athlete's motivation (Mazer et al., 2013)."),
-  d("push", 1, 500, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You want to push them to play harder. What do you say?", [
+  d("push", 1, 500, "", "Halftime. You're losing 21-14. Your Grandma has three tackles for loss and a blocked punt. Everyone is on the bench. They are looking at you. You want them to play harder. What do you say?", [
     ["best", "\"Play like we practiced, and you'll tell this story at dinner.\"", "They come out flying."],
     ["best", "\"If you coast through this half, you'll regret it all year.\"", "They come out flying."],
     ["bad", "\"That half was embarrassing, and every one of you knows it.\"", "Heads drop. Your uncle agrees with you, which is worse."],
@@ -125,7 +125,7 @@ export const DECISIONS = [
   ], "Culture in sports teams is broadly defined as the way things are done (Wagstaff & Burton-Wylie, 2018). The class definition is the shared beliefs, values, customs, behaviors and artifacts a group learns, shares and passes down."),
   d("power", 2, 500, "jerry", "Jerry points out that his players are grown men who make more money than you do. He asks how you will get them to do what you ask. Pick two.", [],
     "Legitimate and expert power were most effective at gaining compliance (Rylander, 2015). Athletes are more satisfied under reward, referent and expert power, and coercive power makes them more sensitive to feedback (Cranmer & Goodboy, 2015).", { pick: 2 }),
-  d("jet", 2, 500, "", "You got the job, and now you are on Jerry's jet to Dallas. The flight attendant comes by with drinks. What do you take?", [
+  d("jet", 2, 500, "", "You got the job. This is Jerry Jones's jet. The flight attendant comes by with drinks. What do you take?", [
     ["best", "A tall glass of water", "Hydrated. You land sharp."],
     ["good", "Sparkling water with lime", "Same thing, fancier."],
     ["bad", "Three cups of black coffee", "Jittery at kickoff. Your first play call comes out too fast."],
@@ -133,13 +133,13 @@ export const DECISIONS = [
   ], "Drink water to hydrate.", { drink: true }),
 
   // ─── Level 3: Dallas ───
-  d("receiver", 3, 800, "receiver", "You are coaching the Cowboys. It's the first quarter, and your best receiver has no catches. He is on the sideline screaming at your quarterback, and every camera in the stadium is on them. What do you do?", [
+  d("receiver", 3, 800, "receiver", "You are coaching the Cowboys. First quarter. Your best receiver (your Grandpa) has no catches. He is screaming at your quarterback. Every camera is on them. What do you do?", [
     ["best", "Pull him aside, off camera, and talk with him alone.", "He comes back and blocks on the next play. Then he gets his catch."],
     ["good", "Stay out of it for now, and let it cool off.", "It cools off. It takes most of the quarter."],
     ["silly", "Hand him your headset and let him call the plays.", "He calls eleven straight passes to himself."],
     ["over", "Correct him right there, so the whole team sees where you stand.", "You lose the team's trust and everything falls apart."],
   ], "Talented but disruptive players are a named source of conflict in teams (Leggat et al., 2018). Take them aside. Avoiding was among the effective ways to handle a conflict (Laios & Tsetzis, 2005), and embarrassment and ridicule lower a team's cohesion (Turman, 2003)."),
-  d("commercial", 3, 800, "jerry", "It's halftime in Dallas. Jerry wants you to film a two-minute truck commercial right now. Your players are waiting for you in the locker room. What do you do?", [
+  d("commercial", 3, 800, "jerry", "Halftime in Dallas. Jerry wants you to do a commercial for Ford Trucks. It'll be quick and painless. Your players are waiting in the locker room. What do you do?", [
     ["best", "Tell Jerry you'll film two after the final whistle.", "You make your halftime adjustments. Jerry gets his money later."],
     ["good", "Tell Jerry no, and walk straight to the locker room.", "The team gets its halftime. Jerry sulks in the owner's box."],
     ["bad", "Film it fast, and give the team whatever time is left over.", "Nobody made adjustments. Your first drive of the half goes nowhere."],
@@ -159,19 +159,19 @@ export const DECISIONS = [
     ["bad", "\"Get this one out past the thirty-yard line, at least.\"", "He knows where to go, not how. He gets to the twenty."],
     ["bad", "\"Whatever happens out there, do not fumble.\"", "He thinks about fumbling the whole way. Guess what happens."],
   ], "Process goals beat outcome goals (Burton & Weiss, 2008), and goals about what to do beat goals about what to avoid (Van Mierlo & Van Hooft, 2020)."),
-  d("kicker", 4, 575, "kicker", "It's the second quarter in Austin. Your kicker misses a field goal and walks to the bench staring at the ground. What do you do?", [
+  d("kicker", 4, 575, "kicker", "Second quarter in Austin. Your kicker misses. He is killing your team and he's not even a real football player. He's a kicker! He walks to the bench. He stares at the ground. What do you do?", [
     ["best", "Walk over and put a hand on his shoulder.", "He makes the next one from 47."],
     ["best", "Walk over and ask how he feels about the miss.", "He tells you. He makes the next one from 47."],
     ["bad", "Tell him what the next kick means for the season.", "He thinks about the season. All quarter."],
     ["bad", "Tell him he has to be perfect from here on.", "He lines up the next one shaking."],
   ], "Asking about the emotion helps a teammate regulate it (Tamminen & Crocker, 2013), and so does touch (Kraus et al., 2010). An outcome-focused climate encourages choking (Hill et al., 2011), and perfectionism predicts anxiety (Hall et al., 1998)."),
-  d("backup", 4, 575, "backup", "It's the fourth quarter. Your quarterback is hurt. The backup has not played all season, and he is putting on his helmet. What do you tell him?", [
+  d("backup", 4, 575, "backup", "Fourth quarter. Your quarterback is hurt. Your backup QB has not played all season but don't worry: he has dreamt about this moment in his sleep. He is putting on his helmet. What do you tell him?", [
     ["best", "Tell him his job, and ask which plays he likes.", "He knows the job and he chose two of the plays. First down."],
     ["best", "Tell him exactly what his job is on this drive.", "He knows the job. First down."],
     ["bad", "Tell him to trust his talent and go make plays.", "He tries to make all of them at once. Sack."],
     ["bad", "Tell him nothing, so he does not overthink it.", "He is not sure what he is supposed to do. Neither is the huddle."],
   ], "The coach names the role and the expectations, and the player accepts or negotiates (Eys et al., 2005). Poor communication leads to role ambiguity and tension (Kang & Seibold, 2017)."),
-  d("twominute", 4, 575, "", "You are losing to Texas A&M by four points. There are two minutes left, and you have one time-out. What do you do?", [
+  d("twominute", 4, 575, "", "You're losing to Texas A&M by four. Two minutes. 100,000 people watching. 10,000,000 watching on TV. 100,000,000 dollar contract at stake. You have one time-out. What do you do?", [
     ["best", "Call time-out and point everyone back to the plan.", "Everyone already knows where to be."],
     ["bad", "Call time-out and draw up a new play for this moment.", "Four players run four different plays."],
     ["bad", "Call time-out and cover six things they need to fix.", "They remember the first one."],
@@ -180,13 +180,13 @@ export const DECISIONS = [
 ];
 
 export const ALTS = [
-  d("shout", 1, 500, "cousin", "The game has started. Your cousin is on defense, and she keeps ending up in the wrong spot. The other team is about to snap the ball, and you can yell one thing to her. What do you yell?", [
+  d("shout", 1, 500, "cousin", "The game is on. Your cousin ends up in the wrong spot. Whoops. Maybe she's bad at football. Or maybe it's because she spends all day watching TikToks about squishies. Uncle Rick's team is about to snap the ball. You can yell one thing. What do you yell?", [
     ["best", "\"Stay on Rick until he crosses the cone!\"", "She stays on Rick. He does not get the ball."],
     ["bad", "\"Go left!\"", "She goes left. So does the entire defense."],
     ["bad", "\"Cover him!\"", "She covers somebody. It is not Rick."],
-    ["silly", "\"Remember everything we said in the car today!\"", "Nobody remembers the car."],
+    ["silly", "\"Stop thinking about squishies!\"", "She keeps thinking about squishies."],
   ], "Two-word directives like \"Go left!\" coordinated players less well than more specific instructions (LeCouteur & Feo, 2011).", { slot: "blowup" }),
-  d("open", 1, 500, "", "It's halftime. Your team is losing 21 to 14, and everyone is sitting on the bench looking at you. You have three things to tell them. What do you open with?", [
+  d("open", 1, 500, "", "Halftime. You're losing 21-14. Your Grandma has three tackles for loss and a blocked punt. You have three things to tell them. What do you open with?", [
     ["best", "Something the team did well in the first half.", "They are still listening when you get to the two fixes."],
     ["bad", "The two fixes, and then something they did well.", "A few heads are down before you reach the good part."],
     ["bad", "The biggest mistake, while it is still fresh.", "Your brother knows it was him. He hears nothing after that."],
