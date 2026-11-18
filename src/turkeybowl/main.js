@@ -352,8 +352,7 @@ async function situation(id, dec, base, phone) {
     sfx.snap(); await beat(1300); say("NO GOOD!", "slam low"); sfx.boo(); shake(260); announce("miss"); await beat(1300); say("");
   }
   if (!phone) for (const line of S.post) { paint = (t) => { wide(t); A.letterbox(c); }; await talk("", line); }
-  const sid = dec.slot || id, back = sid === "commercial" ? jerryRemembers(G.picks) : "";
-  if (back) await shot("jerry", back, {}, bg);
+  // Jerry used to open the commercial scene by recalling the interview (jerryRemembers). Andrew, 2026-11-17: "cut the line before i need you for two minutes."
   for (const [who, line, mood] of S.shots) {
     if (phone) { paint = wide; await talk("A TEXT FROM HOME", line); }
     else if (who.startsWith("voice:")) { paint = (t) => { A.speedLines(c, t, bg[0], bg[1]); A.letterbox(c); }; await talk(who.slice(6), line); }   // heard, not seen

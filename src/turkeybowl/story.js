@@ -44,7 +44,7 @@ export const SHOW = {
   power: W([], [["jerry", "\"Look, these guys are rich, and if there's one thing I know about rich guys, they don't like to listen to anybody.\""], ["voice:JERRY'S WIFE", "\"Jerry, as your wife, I wanted to tell you something...\""], ["jerry", "\"So as I was saying, rich men don't listen to anyone. How are they gonna listen to you?\""]], "Pick two."),
   jet: W(["You got the job.", "This is Jerry Jones's jet. Jerry has taken it all over the world, including to numerous Super Bowls.", "Not that the Cowboys have played in the Super Bowl since this jet was built. He just went to watch the game.", "The flight attendant comes by with drinks."], [], "What do you take?"),
   receiver: W(["You are coaching the Cowboys. First quarter.", "Your best player, AB Sheep (your Grandpa), has no catches."], [["receiver", "\"I'm open! Every play! Throw me the ball!\"", { angry: true }]], "He is screaming at your quarterback. Every camera is on them. What do you do?"),
-  commercial: W(["Halftime in Dallas.", "Jerry wants you to do a commercial for Ford Trucks. It'll be quick and painless.", "All you have to do is look at the camera and say you love Ford Trucks so much you wish you could marry one."], [["jerry", "\"Coach! I need you for two minutes.\"", { armUp: true }]], "Your players are waiting in the locker room. What do you do?"),
+  commercial: W(["Halftime in Dallas.", "Jerry wants you to do a commercial for Ford Trucks. It'll be quick and painless.", "All you have to do is look at the camera and say you love Ford Trucks so much you wish you could marry one."], [["jerry", "\"Coach! I need you for two minutes. We're filming the Ford Trucks commercial, right now.\"", { armUp: true }]], "Your players are waiting in the locker room. What do you do?"),
   conflict: W(["Halftime in Dallas."], [["coachA", "\"I call the defense. I have called it all year.\"", { angry: true }], ["coachB", "\"And look at the scoreboard.\"", { angry: true }]], "Both of them turn to you. What do you do?"),
   speech: W(["Halftime. The locker room. You're losing by ten.", "Fifty-three players are waiting."], [["kicker", "\"Coach?\""]], "What kind of speech do you give?"),
   points: W(["Halftime. The locker room. You're losing by ten."], [["coachA", "\"Nine adjustments, coach. You have four minutes with the offense.\""]], "What do you do with the list?"),
@@ -174,10 +174,9 @@ export const ASIDES = {
     ["ann", "That flyover was lovely. For years, the military paid teams for moments like that one."],                                             // "Veterans Affairs: The Uneasy Marriage of Military Money and the NFL" (Grantland)
   ],
   "q:receiver": [["ann", "A network once ordered its football theme by asking for Batman on steroids. Ours was written by a turkey."]],             // "Batman on Steroids" (Deadspin)
-  "q:commercial": [["jerry", "\"The three Thanksgiving games last year averaged close to forty-five million people apiece. You can sell a lot of trucks to forty-five million people.\"", { armUp: true }],
-    ["jerry", "\"Helmets were plain until television came along. Then somebody worked out that you could sell the picture on the side.\""]],   // "How TV and Roy Rogers Helped Put Logos on NFL Helmets" (Radom)
+  "q:commercial": [["jerry", "\"The three Thanksgiving games last year averaged close to forty-five million people apiece. You can sell a lot of trucks to forty-five million people.\"", { armUp: true }]],
   "q:returner": [["text:brother", "\"I put ten dollars on your kicker missing his first field goal. Nothing personal.\""]],                         // NCAA on prop bets
-  "a:receiver": [["text:sister", "\"Count the women on that sideline who are not holding a microphone. Text me the number.\""]],
+  "a:receiver": [["text:sister", "\"Notice where they put the women in sports? Look around.\""]],
   "p:dallas": [
     ["text:brother", "\"There is a market on your next play call. I bought RUN. Please call a run.\""],
     ["text:niece", "\"One study found that for every dollar a household bets on sports, two fewer dollars go into its investments. I made him a chart. He bet on whether I would.\""],   // the July 2024 study in the Atlantic piece
