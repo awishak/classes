@@ -195,4 +195,4 @@ export const ASIDES = {
 /** After a stopped play in a stadium: the quarterback who compliments the man who hit him. "Andrew Luck: The NFL's Most Perplexing Trash Talker" (WSJ). */
 export const NICE_HIT = "The quarterback just told the man who tackled him, nice hit. He meant it.";
 /** Grandma, scoring the turkey. "The Quandary of Subjective Sports" (NPR). */
-export const JUDGE = ["grandma", "\"And Grandpa ate all his liver and beans and now the whole house smells like his farts.\"", {}];   // his line, 2026-11-17; the judging line it replaced was from "The Quandary of Subjective Sports" (NPR)
+export const JUDGE = ["grandma", "\"And Grandpa ate all his liver and beans and now the whole house smells like his farts (sorry but it's true).\"", {}];   // his line, 2026-11-17; the judging line it replaced was from "The Quandary of Subjective Sports" (NPR)
