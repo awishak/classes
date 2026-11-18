@@ -230,7 +230,7 @@ export const ALTS = [
 // stacking answer is the class's own, from the weekly game.
 export const POPS = [
   d("pop-stacking", 0, 300, "cousin", "Your cousin is taking a sociology of sport class. She asks you what \"stacking\" means in sports. What do you tell her?", [
-    ["best", "One race being steered into certain sports or positions.", "Right. Both halves: whole sports, and positions inside a sport."],
+    ["best", "One race funneled into certain sports or positions.", "Right. Both halves: whole sports, and positions inside a sport."],
     ["good", "Coaches choosing their quarterbacks by stereotypes about race.", "That is one example. Stacking is the wider pattern, across positions and whole sports."],
     ["bad", "Television showing athletes of color mostly in highlight clips.", "That is about media coverage. Stacking is about who gets put where."],
     ["silly", "Three linebackers standing on each other's shoulders at the snap.", "Illegal formation."],

@@ -623,11 +623,11 @@ const idle = (where) => (t) => {
 };
 /** A touchdown in three shots: the spike up close, everybody dancing, and a pie for somebody new each time. */
 const PIE_FOR = { park: "uncle", dallas: "jerry", texas: "reporter" };
-async function touchdown(where, text = "TOUCHDOWN!") {
+async function touchdown(where, text = "TOUCHDOWN!", ann = "td") {
   const was = inCine; cine(true); ui.textContent = "";
   const cols = TEAM[where].us; let start = now();
   paint = (t) => { const e = t - start; A.burst(c, t, 320, 200, A.darken(cols.jersey, 0.2), "#ffd75e"); c.save(); c.translate(320, 328 - Math.round(Math.abs(Math.sin(Math.min(e, 0.5) * Math.PI * 2)) * 15) * 2); c.scale(4, 4); A.player(c, 0, 0, { ...kin(where, "us", 3), arms: 1, front: true, face: where === "park" ? FACE : null }, 0); c.restore(); A.ball(c, 430, 60 + Math.min(1, e * 4) * 250, e * 20, 4); A.letterbox(c); };
-  say(text, "slam"); sfx.slam(); hitStop(140); shake(380); flash(90); sfx.td(); showHud(); announce("td");
+  say(text, "slam"); sfx.slam(); hitStop(140); shake(380); flash(90); sfx.td(); showHud(); announce(ann);
   if (where === "texas") music.start("fight");
   await beat(1300);
   start = now();
@@ -879,7 +879,10 @@ async function finish(where, won) {
   const name = THEM[where], scored = G.us > (where === "park" ? 14 : where === "dallas" ? 7 : 10);
   if (won) {
     if (!scored) { say("YOUR DEFENSE GETS THE BALL BACK"); await wait(1700); G.us += 7; await touchdown(where, "TOUCHDOWN ANYWAY!"); }
-    if (G.us <= G.them) { say("ONE MORE STOP, ONE MORE SCORE"); await wait(1700); while (G.us <= G.them) G.us += 7; await touchdown(where); }
+    // Andrew, 2026-11-17: "second touchdown should be a 2 pt conversion for a win." A touchdown that
+    // would only tie the game is six points, and the win comes on the two-point try.
+    if (G.us === G.them) { G.us -= 1; showHud(); say(G.us + " - " + G.them + ". YOU GO FOR TWO, FOR THE WIN"); await wait(2400); G.us += 2; await touchdown(where, "TWO-POINT CONVERSION!", "two"); }
+    else if (G.us < G.them) { say("ONE MORE STOP, ONE MORE SCORE"); await wait(1700); while (G.us <= G.them) G.us += 7; await touchdown(where); }
   } else if (G.us >= G.them || scored) {
     await theirDrive(where, true, name.charAt(0) + name.slice(1).toLowerCase().replace("a&m", "A&M").replace("rick", "Rick") + " scores in the last minute.");
     G.them = Math.max(G.them, G.us) + 7;

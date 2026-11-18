@@ -65,6 +65,7 @@ export const RECORDED = new Set([]);
 export const ANN = {
   kickoff: "Good morning from the park. Uncle Rick's team will kick off.",
   td: "Touchdown! And here comes the turkey.",
+  two: "They went for two, and they got it!",
   stop: "Stopped at the line. That brings out the punt team.",
   inc: "Incomplete. That brings out the punt team.",
   pie: "Oh no. Nobody saw the pie coming.",
