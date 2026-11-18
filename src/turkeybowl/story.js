@@ -160,8 +160,7 @@ export const ASIDES = {
   "s:half1": [["you", "\"Hey, screenager!\""],   // the player, to the brother on his phone; Andrew, 2026-11-17
     ["brother", "\"Polymarket has Grandma scoring again at even money. I took it. Sorry.\"", { angry: false, armUp: false, look: -2 }],
     ["uncle", "\"In my day we ran one play, and we ran it until somebody cried.\"", { armUp: false }],
-    ["nephew", "\"I wear two left shoes because I have weird feet.\""],
-    ["niece", "\"At school the boys get handed a baseball and the girls get handed a softball. I asked why, in writing. Nobody has answered.\"", { armUp: false }]],   // "Is Softball Sexist?" (NYT)
+    ["nephew", "\"I wear two left shoes because I have weird feet.\""]],
   "q:culture": [["jerry", "\"Before we start. Congress let the league sell its television rights as one package back in 1961. The same law keeps us off Fridays and Saturdays in the fall, for the high schools and the colleges. Thursday, though? Thursday is mine.\""]],   // Sports Broadcasting Act of 1961
   "q:jet": [["jerry", "\"A coach once sent his four best players home before a big television game. The league fined the team a quarter of a million dollars. So tell me. Do you owe the people a show?\""]],   // "Are You Not Entertained?" (Klosterman, Grantland)
   "p:park": [["brother", "\"I put twenty dollars on your next play call. Don't ask which way. Just call a good one.\"", { angry: false, armUp: false, sweat: true }],
