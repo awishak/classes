@@ -351,7 +351,11 @@ async function situation(id, dec, base, phone) {
   if (!phone) for (const line of S.post) { paint = (t) => { wide(t); A.letterbox(c); }; await talk("", line); }
   const sid = dec.slot || id, back = sid === "commercial" ? jerryRemembers(G.picks) : "";
   if (back) await shot("jerry", back, {}, bg);
-  for (const [who, line, mood] of S.shots) { if (phone) { paint = wide; await talk("A TEXT FROM HOME", line); } else await shot(who, line, mood, bg); }
+  for (const [who, line, mood] of S.shots) {
+    if (phone) { paint = wide; await talk("A TEXT FROM HOME", line); }
+    else if (who.startsWith("voice:")) { paint = (t) => { A.speedLines(c, t, bg[0], bg[1]); A.letterbox(c); }; await talk(who.slice(6), line); }   // heard, not seen
+    else await shot(who, line, mood, bg);
+  }
   cine(false);
 }
 const sceneBg = () => (G.jerry ? ["#b9763a", "#ffe9b0"] : G.where === "park" ? ["#a8551c", "#f6c945"] : G.where === "dallas" ? ["#1d3c8f", "#c9d3e6"] : ["#8a3f00", "#ffd9a8"]);
@@ -453,7 +457,7 @@ async function decide(id) {
   const qPaint = paint; await situation(id, dec, base, phone); paint = qPaint;
   const k = card(""); k.classList.add("split"); k.dataset.id = id;
   // What was just said stays on the card in small type, so nobody has to remember it while choosing.
-  const S = SHOW[id], said = S && S.shots.length ? S.shots[S.shots.length - 1] : null;
+  const S = SHOW[id], seenShots = S ? S.shots.filter(x => !x[0].startsWith("voice:")) : [], said = seenShots.length ? seenShots[seenShots.length - 1] : null;
   const left = el("div", "ask"); left.append(el("div", "who", label));
   if (said) left.append(el("p", "say", (phone ? "A text from home" : NAMES[said[0]].charAt(0) + NAMES[said[0]].slice(1).toLowerCase().replace("jerry jones", "Jerry Jones")) + ": " + said[1]));
   left.append(el("p", "scene", (S && S.ask) || scene)); k.append(left);
@@ -638,6 +642,11 @@ async function touchdown(where, text = "TOUCHDOWN!") {
   };
   fx = { kind: "td", start }; say(text, "flash big");
   await beat(where === "texas" ? 4200 : 3000); fx = null; say("");
+  if (!G.sacred) {   // his lines, 2026-11-17, said the first time the turkey dances in a run
+    G.sacred = 1;
+    await talk("", "This was the equivalent of the turkey's Macarena. It is a very sacred dance in the turkey world.");
+    await talk("", "It is only done when celebrating major life events. And imminent death.");
+  }
   G.pied = G.pied || {}; if (G.pied[where]) { cine(was); return; } G.pied[where] = 1;
   // Silence, a face, and then the pie. One pie a game.
   const who = PIE_FOR[where]; start = now(); let hit = false; music.stop();
@@ -647,7 +656,7 @@ async function touchdown(where, text = "TOUCHDOWN!") {
     if (p > 0 && p < 1) { c.save(); c.translate(760 - p * 440, 150); c.scale(3, 3); c.rotate(e * 20); A.food(c, "pie"); c.restore(); }
     if (p >= 1) { c.fillStyle = "#d9772a"; for (let i = 0; i < 12; i++) { c.beginPath(); c.arc(320 + Math.cos(i * 1.7) * (20 + i * 5), 126 + Math.sin(i * 2.3) * (18 + i * 3) + Math.min(40, (e - 1.12) * 22) * (i % 3 === 0 ? 1 : 0.2), 26 - i, 0, 7); c.fill(); } c.fillStyle = "#fff"; c.beginPath(); c.arc(316, 112, 24, 0, 7); c.fill(); c.beginPath(); c.arc(340, 138, 14, 0, 7); c.fill(); }
     A.letterbox(c);
-    if (p >= 1 && !hit) { hit = true; sfx.splat(); hitStop(150); shake(420); flash(60); say("PIE.", "slam low"); announce("pie"); sfx.gobble(0.5, 2); }
+    if (p >= 1 && !hit) { hit = true; sfx.splat(); hitStop(150); shake(420); flash(60); say("OUCH. (AND YUM.)", "slam low"); announce("pie"); sfx.gobble(0.5, 2); }
   };
   await beat(2700); say(""); cine(was);
 }
@@ -724,6 +733,10 @@ async function scene(name) {
     };
     say("KICKOFF", "slam"); sfx.slam(); shake(220); announce("kickoff"); await beat(1500); say("");
     await talk("THE GAME STARTS", "It's 8 AM. The leaves are coming down, and Uncle Rick's team kicks off to yours.");
+    // His lines from here to the end of the scene, 2026-11-17.
+    await talk("THE GAME STARTS", "Just to be clear, you and Uncle Rick hate each other. And it's because of this game.");
+    await talk("THE GAME STARTS", "Your family dynamic completely depends on who wins this game every year.");
+    await talk("THE GAME STARTS", "So this isn't just a regular football game. In fact, your entire year of happiness is on the line.");
   } else if (name === "half1") {
     G.q = "HALF"; G.half = 2; G.us = 14; G.them = 21;
     paint = (t) => A.sideline(c, t, "park", FACE);
@@ -739,6 +752,7 @@ async function scene(name) {
     s0 = now(); announce("jerry");
     paint = (t) => { const e = t - s0; A.park(c, t, { time: "gold", field: false }); A.jerry(c, Math.min(200, -80 + e * 130), 226, 0.95, {}); A.leaves(c, t, 90); A.letterbox(c); };
     await beat(2300);
+    { const walk = paint; await shot("cousin", "\"Wow. Is that...? The Jerry Jones? The most fascinating man in all of sports\u2122?\"", { sad: false, shock: true }, ["#a8551c", "#f6c945"]); paint = walk; await talk("", "(Disclaimer: this video game has been funded by Jerry Jones Enterprises.)"); }
     // Up close: Jerry Jones, looking the park over.
     s0 = now(); sfx.sting(); flash(60);
     const jerryUp = (extra) => (t) => { const e = t - s0; A.burst(c, t, 320, 160, "#1d3c8f", "#c9d3e6"); A.bust(c, "jerry", 320, 2.2, { look: e < 0.5 ? -3 : e < 1 ? 3 : 0, blink: Math.floor(t * 2.5) % 6 === 0, ...extra(t) }, 26); A.letterbox(c); };
@@ -770,6 +784,8 @@ async function scene(name) {
     await talk("THANKSGIVING AFTERNOON", "The stadium, the big screen, a blue star on silver at midfield, a full crowd, cameras everywhere.");
     paint = (t) => { A.burst(c, t, 320, 160, "#1d3c8f", "#c9d3e6"); A.bust(c, "you", 320, 2.1, { ...YOU(), grin: true }, 30); A.letterbox(c); }; sfx.sting();
     await talk("THANKSGIVING AFTERNOON", "You are the head coach of the Dallas Cowboys.");
+    await shot("reporter", "\"Wow, this stadium is huge. It's bigger than Jerry Jones's heart\u2122.\"", {}, ["#b01e3a", "#f6b8d0"]);
+    paint = (t) => { A.stadium(c, t, { midfield: true }); A.letterbox(c); }; await talk("", "(Disclaimer: Jerry Jones Enterprises is affiliated with Jerry Jones Corporate.)");
     // Sport as a show, in the mouths of the two people who sell it.
     await shot("reporter", "\"Coach, people call this a television show with a football game attached. Are you here to win, or to entertain?\"", {}, ["#b01e3a", "#f6b8d0"]);
     await shot("jerry", "\"Both. The entertaining pays for the winning. Now go win.\"", { grin: true }, ["#1d3c8f", "#c9d3e6"]);
@@ -783,6 +799,7 @@ async function scene(name) {
     await talk("ONE MORE CALL", "They watched you win in Dallas. They want you in Austin by kickoff.");
     G.where = "texas"; G.us = 0; G.them = 0; G.q = "Q1"; G.half = 1;
     await eyecatch("AUSTIN", "#bf5700", "#ffffff", false);
+    if (!skipping) await shot("you", "\"Wow. I've never been to Austin before. I can't wait to see the bats, but first, off to DKR Memorial Stadium.\"", { ...YOU(), grin: true }, ["#bf5700", "#ffd9a8"]);
     // Austin on the way in: longhorns, breakfast tacos and barbecue, the Capitol, the bats over Congress Avenue, and one man in burnt orange.
     for (const [shot, word, ms] of [["cattle", "LONGHORNS", 2400], ["tacos", "BREAKFAST TACOS. THEN BARBECUE.", 2600], ["capitol", "THE CAPITOL", 2400], ["bats", "CONGRESS AVENUE AT DUSK. THE BATS ARE OUT.", 4200]]) {
       if (skipping) break; const a0 = now(); paint = (t) => { A.austin(c, t, shot, t - a0); A.letterbox(c); }; say(word, "line low"); sfx.blip(); if (shot === "cattle") sfx.thud(); await beat(ms);
@@ -872,7 +889,7 @@ async function gate(n) {
   if (n === 1) {
     await finish("park", passed);
     paint = (t) => { A.sideline(c, t, "park", FACE); if (passed) A.turkeyDance(c, 300, 346, t, "macarena", 2.2); };
-    if (passed) { fx = { kind: "td", start: now() }; say("YOU WIN  " + G.us + " - " + G.them, "big"); await checkpoint("LEVEL 1 COMPLETE", ["Your family wins the Turkey Bowl."], "Go home?"); fx = null; }
+    if (passed) { fx = { kind: "td", start: now() }; say("YOU WIN  " + G.us + " - " + G.them, "big"); await checkpoint("LEVEL 1 COMPLETE", ["Your family wins the Turkey Bowl.", "You: \"Ha ha, this proves that I am better than Uncle Rick once and for all.\""], "Go home?"); fx = null; }
     else { say("FINAL  " + G.us + " - " + G.them); sfx.over(); await checkpoint("YOU LOSE THE TURKEY BOWL", ["The team stopped listening to you somewhere in the second quarter. Your uncle will bring this up at dinner."], "Play again"); }
   } else if (n === 2) {
     paint = (t) => { A.park(c, t, { time: "gold", field: false }); A.jerry(c, 320, 226, 0.95, { armUp: passed, wave: t }); A.leaves(c, t); };
@@ -891,7 +908,7 @@ async function gate(n) {
       paint = (t) => { A.turf(c, t, { where: "texas" }); A.band(c, t, 10 + (t - start)); A.turkeyDance(c, 320, 350, t, "macarena", 2.8); A.person(c, 560, 226, 0.85, { ...A.CAST.you, face: FACE, shirt: "#bf5700", number: "", armUp: true, wave: t }); A.fireworks(c, t, 8); };
       fx = { kind: "td", start }; say("CHAMPION!", "flash big"); announce("champion"); sfx.cheer(); ui.textContent = "";
       await wait(6500);   // the band and the turkey get the whole screen before the score card comes up
-      await checkpoint("YOU ARE THE CHAMPION", ["Texas beats Texas A&M, " + G.us + " to " + G.them + ". The band plays, the turkey dances, and you won all three games in one day."], "Play again"); fx = null; music.stop();
+      await checkpoint("YOU ARE THE CHAMPION", ["Texas beats Texas A&M, " + G.us + " to " + G.them + ". The band plays, the turkey dances, and you won all three games in one day.", "You: \"I did it. I won the second most important game ever, after beating Uncle Rick this morning.\""], "Play again"); fx = null; music.stop();
     } else {
       paint = (t) => { A.sideline(c, t, "texas", FACE); }; say("FINAL  " + G.us + " - " + G.them); sfx.over();
       await checkpoint("SO CLOSE", ["Texas A&M wins in Austin. You still won two games today, which is two more than most people."], "Play again");
@@ -913,7 +930,23 @@ async function ending(id) {
     paint = (t) => { A.stadium(c, t); A.cast(c, "receiver", 420, 226, 0.95, { wave: t }); A.person(c, 220, 226, 0.95, { ...A.CAST.you, face: FACE, shirt: "#1b2440", number: "", angry: true, armUp: true, wave: t }); };
     say("THE LOCKER ROOM IS GONE"); await wait(2400); fx = null;
   }
-  await checkpoint("GAME OVER", [id === "jet" ? "Jerry fires you for being weird." : "You lose the team's trust and everything falls apart."], "Play again");
+  await checkpoint("GAME OVER", id === "jet" ? ["Jerry fires you for being weird.", "Really? You got this far and decided it was okay to drink champagne while trying to get work done? You can do better."] : ["You lose the team's trust and everything falls apart."], "Play again");
+}
+
+// Andrew, 2026-11-17: "if they do the champagne thing, they should go back to the start of that level,
+// not all the way back to the beginning. So whatever level you get to, you can start at that level next
+// time." A run that ends past the park is kept as a run standing at the start of the level it reached:
+// the same seed, with the answers and play calls from the levels before, so those points stay. The title
+// screen offers it, beside a new game. The server scores it like any run and keeps a player's best.
+const LEVEL_STARTS = { 2: "jerry", 3: "dallas", 4: "texas" };
+function rewind() {
+  if (!G || G.jump) return;
+  const level = tally().level, flow = flowFor(G.seed), at = LEVEL_STARTS[level] ? flow.findIndex(f => f.s === LEVEL_STARTS[level]) : -1;
+  if (at < 1) { unsave(); return; }   // a run that ends at the park starts over
+  const before = flow.slice(0, at), keep = new Set(before.filter(f => f.d).map(f => f.d));
+  const g = { ...fresh(), seed: G.seed, picks: Object.fromEntries(Object.entries(G.picks).filter(([k]) => keep.has(k))), calls: G.calls.slice(0, before.reduce((n, f) => n + (f.p || 0), 0)),
+    step: at, from: level, where: level === 4 ? "dallas" : "park", jerry: level === 3 };
+  store.set(SAVE, JSON.stringify(g));
 }
 
 async function run() {
@@ -937,10 +970,10 @@ async function run() {
       const got = await decide(step.d); step = { ...step, d: slotOf };
       ui.textContent = "";   // the answered card comes down before anything else is drawn
       if (!got.over) await aside("a:" + slotOf);
-      if (got.over) { await ending(slotOf); unsave(); return; }
+      if (got.over) { await ending(slotOf); rewind(); return; }
       if (step.d === "kicker" && (got.rank === "best" || got.rank === "good")) { G.us += 3; paint = idle("texas"); say("YOUR KICKER MAKES THE NEXT ONE FROM 47"); sfx.good(); showHud(); await wait(2200); say(""); }
     } else if (step.p) { if (G.where === "texas") await family(); await aside("p:" + G.where); await plays(); }
-    else if (step.gate) { const ok = await gate(step.gate); if (!ok || step.gate === 4) { unsave(); return; } }
+    else if (step.gate) { const ok = await gate(step.gate); if (!ok) { rewind(); return; } if (step.gate === 4) { unsave(); return; } }
     G.step = i + 1; save();
   }
   unsave();
@@ -1078,7 +1111,7 @@ async function title() {
   if (me.tag) { const p = el("p", "say", "Coach " + me.name); p.append(el("span", "tag", me.tag)); row.append(p); }
   else if (!me.instructor) { input = el("input"); input.type = "text"; input.id = "coach"; input.maxLength = 30; input.autocomplete = "given-name"; input.setAttribute("aria-label", "Your first name and last initial"); input.placeholder = "First name, last initial"; input.value = store.get("turkeybowl-name"); row.append(input); }
   const old = saved();
-  const cont = old ? el("button", "go", "Continue your game") : null; if (cont) { cont.type = "button"; row.append(cont); }
+  const cont = old ? el("button", "go", old.from ? "Start at Level " + old.from : "Continue your game") : null; if (cont) { cont.type = "button"; row.append(cont); }
   const start = el("button", "go", old ? "New game" : "Kick off"); start.type = "button"; row.append(start);
   let jump = null; const adminBtn = canAdmin() ? el("button", "tool", "Admin") : null; if (adminBtn) { adminBtn.type = "button"; row.append(adminBtn); }
   if (ADMIN_URL && !canAdmin()) { const p = el("p", "say", "The admin page is for the instructor. "); const a = el("a", "", "Sign in"); a.href = "/login?next=" + encodeURIComponent(location.pathname + location.search); p.append(a); k.append(p); }
@@ -1090,7 +1123,7 @@ async function title() {
     if (cont) cont.onclick = () => { if (ok()) res("continue"); };
   });
   if (choice === "jump") { ui.textContent = ""; jumpTo(jump[0], jump[1]); return true; }
-  G = choice === "continue" ? { ...fresh(), ...old, busy: false } : fresh();
+  G = choice === "continue" ? { ...fresh(), ...old, busy: false, from: 0 } : fresh();
   if (choice === "new") store.set(SAVE, null);
   return true;
 }
