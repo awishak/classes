@@ -205,7 +205,7 @@ export const ALTS = [
     ["bad", "Decide it yourself, and end the discussion.", "It ends. They argue again in the third quarter."],
   ], "The most effective ways to resolve conflict were collaborating, compromising and avoiding. The least effective were competing and accommodating (Laios & Tsetzis, 2005).", { slot: "commercial" }),
   d("cohesion", 4, 575, "", "You are coaching Texas against Texas A&M, at night, in front of a hundred thousand people. Kickoff is in ten minutes, and you want this team closer before it runs out. What do you do?", [
-    ["best", "Tease a few seniors by name in front of everyone.", "The room laughs, seniors included."],
+    ["best", "Tease a few players in a fun way that they appreciate.", "The room laughs, those players included."],
     ["best", "Tell them how good Texas A&M is.", "They get quiet, and they get closer."],
     ["bad", "Call out the player who was late, in front of everyone.", "He looks at the floor. So does everybody else."],
     ["bad", "Give the starters the good seats on the bench.", "The backups notice."],
