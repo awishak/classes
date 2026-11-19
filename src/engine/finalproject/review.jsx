@@ -224,6 +224,19 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
     const partner = M.partnerOf(file, focus.id);
     if (partner) linked.add(partner);
   }
+  // A label is kept inside the board and moved down off any label it would
+  // sit on, so two picks that run the same way can both be read.
+  {
+    const W = box.current ? box.current.clientWidth : 0;
+    const placed = [];
+    lines.forEach(l => {
+      if (!l.say) return;
+      const half = l.say.length * 3.4 + 8;
+      if (W) l.tx = Math.min(Math.max(l.tx, half), Math.max(half, W - half));
+      for (let n = 0; n < 8 && placed.some(o => Math.abs(o.x - l.tx) < o.half + half && Math.abs(o.y - l.ty) < 17); n++) l.ty += 17;
+      placed.push({ x: l.tx, y: l.ty, half });
+    });
+  }
   const litIds = lit ? lit.split("+") : [];
 
   const start = (e, id) => {
@@ -418,10 +431,11 @@ function Reasons({ all, on, onPress }) {
   );
 }
 
+const linked = (text) => String(text).split(/(https?:\/\/[^\s)]+)/g).map((part, i) => (i % 2 ? <a key={i} className="fp-link" href={part} target="_blank" rel="noreferrer">{part}</a> : part));
 const hostOf = (site) => String(site || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "").split(/[/?#]/)[0];
 const hrefOf = (site) => (/^https?:\/\//i.test(site) ? site : "https://" + site);
 
-function Student({ config, p, people, file, change, onPick, onPair, flash }) {
+function Student({ config, p, people, file, change, onPick, onPair, onAsk, flash }) {
   const [open, setOpen] = useState("");
   const [full, setFull] = useState("");
   const byId = new Map(people.map(x => [x.id, x]));
@@ -442,6 +456,7 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
   if (p.state !== "in" && !draft) return (
     <div className="fp-student">
       <div className="fp-hero"><span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span><div><h2 className="fp-name">{p.shown}</h2><p className="fp-sub">{p.state === "started" ? "Started, not yet submitted" : "Not opened"}</p></div></div>
+      {pickedBy.length ? <div className="fp-chips fp-by"><span className="fp-k">Picked by</span>{pickedBy.map(q => <button key={q.id} type="button" className="fp-person" onClick={() => onPick(q.id)}><Disc p={q} size={24} />{q.first}</button>)}</div> : null}
     </div>
   );
   return (
@@ -470,13 +485,21 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
           const back = M.pickOf(q, p), block = M.blockOf(p, q), theirs = byId.get(M.partnerOf(file, q.id));
           const dback = q.state !== "in" && q.draft ? M.pickOf(q.draft, p) : "";
           return (
-            <div key={q.id} className={"fp-pick" + (back ? " fp-mutual" : "")}>
+            <div key={q.id} className="fp-pickset">
+            <div className={"fp-pick" + (back ? " fp-mutual" : "")}>
               <button type="button" className={"fp-mini" + workClass(q)} onClick={() => onPick(q.id)} aria-label={q.shown}><Disc p={q} size={38} /></button>
               <div className="fp-sugmain">
                 <p className="fp-names">{q.shown}{i === 0 && v.top === q.id ? <span className="fp-star">top choice</span> : null}</p>
                 <p className="fp-why">{q.state !== "in" ? "Not yet submitted" + (dback ? ". Draft picks " + p.first + (dback === "top" ? " as top choice" : "") : "") : back ? (back === "top" ? "Picked " + p.first + " as top choice" : "Picked " + p.first + " back") : "Did not pick " + p.first}{theirs && theirs.id !== p.id ? ". Paired with " + theirs.first : ""}{block && back && !draft ? ". " + block : ""}</p>
               </div>
-              {draft || (partner && partner.id === q.id) ? null : <button type="button" className={"fp-btn" + (block ? "" : " fp-go")} onClick={() => onPair(p.id, q.id)}>{block ? "Pair anyway" : "Pair"}</button>}
+              {draft || (partner && partner.id === q.id) ? null : <button type="button" className={"fp-btn" + (block ? "" : " fp-go")} onClick={() => (q.state !== "in" ? onAsk(p.id, q.id) : onPair(p.id, q.id))}>{block ? "Pair anyway" : "Pair"}</button>}
+            </div>
+            {q.state === "in" && q.topics.some(t => t.topic) ? (
+              <div className="fp-theirs fp-of">
+                <span className="fp-k">{q.first}'s topics</span>
+                {q.topics.filter(t => t.topic).map(t => <p key={t.slot} className="fp-ttl fp-small">{t.topic}</p>)}
+              </div>
+            ) : null}
             </div>
           );
         })}
@@ -488,7 +511,7 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
           <div className="fp-bhead"><h2>Social justice, defined</h2></div>
           <div className="fp-topic">
             <p className="fp-part">{v.define}</p>
-            {v.defineSource ? <p className="fp-part"><span className="fp-k">Source</span>{v.defineSource}</p> : null}
+            {v.defineSource ? <p className="fp-part"><span className="fp-k">Source</span><span>{linked(v.defineSource)}</span></p> : null}
             {/* The field's standing definition, for him to read theirs against.
                 Review only; the sheet makes each student find their own. */}
             <p className="fp-part"><span className="fp-k">{M.JUSTICE_REF.cite}</span>{M.JUSTICE_REF.say}</p>
@@ -660,7 +683,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
           {chosen ? (
             <>
               <button type="button" className="fp-btn fp-back" onClick={() => pick("")}>Whole class</button>
-              <Student config={config} p={chosen} people={people} file={file} change={change} onPick={pick} onPair={(a, b) => pair(a, b)} />
+              <Student config={config} p={chosen} people={people} file={file} change={change} onPick={pick} onPair={(a, b) => pair(a, b)} onAsk={(a, b) => setAsk({ a, b, why: M.blockOf(byId.get(a), byId.get(b)) })} />
             </>
           ) : (
             <Overview people={people} file={file} sug={sug} onLit={setLit} onPair={pair} onPass={(a, b) => { change(f => M.passOn(f, a, b)); setLit(""); }} onSplit={(id) => change(f => M.splitUp(f, id))} onPick={pick} onPairAll={pairAll} />
@@ -741,7 +764,7 @@ const CSS = `
 .fp-two-made{--c:var(--go);border-style:solid;background:color-mix(in srgb,var(--go) 14%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--go) 30%,transparent)}
 .fp-two-lit{background:color-mix(in srgb,var(--c) 26%,transparent);box-shadow:0 0 30px color-mix(in srgb,var(--c) 55%,transparent)}
 .fp-cell{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:76px;transition:opacity .3s}
-.fp-cell.fp-dim{opacity:.22}
+.fp-cell.fp-dim .fp-face{opacity:.22}.fp-cell.fp-dim .fp-cname{opacity:.62}
 .fp-cname{font-size:14px;font-weight:500;color:var(--dim);white-space:nowrap}
 .fp-cell.fp-sel .fp-cname{color:var(--ink);font-weight:600}
 .fp-orbit{fill:none;stroke:var(--line);stroke-width:1;stroke-dasharray:2 7;opacity:.7}
@@ -826,6 +849,7 @@ button.fp-mini{cursor:pointer}
 .fp-topic.fp-on{background:color-mix(in srgb,var(--go) 16%,var(--card));border-color:var(--go)}
 .fp-ttl{margin:0;font-size:18px;font-weight:600;line-height:1.3;overflow-wrap:anywhere;padding-right:96px}
 .fp-ttl.fp-small{font-size:15px;padding:0}
+.fp-pickset{display:flex;flex-direction:column;gap:6px}.fp-theirs.fp-of{border-color:var(--line);margin-left:20px}
 .fp-part{margin:0;font-size:14px;line-height:1.45;color:var(--dim);display:flex;flex-direction:column;gap:2px;white-space:pre-wrap;overflow-wrap:anywhere}
 .fp-asks{margin:0;padding-left:18px;font-size:14px;line-height:1.45;color:var(--dim)}
 .fp-said{margin:0;font-size:13px;color:var(--warn)}
