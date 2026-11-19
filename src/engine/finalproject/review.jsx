@@ -82,7 +82,11 @@ function usePeople(config, worksheetKey, roster, data, photos, demo) {
     return base.map(p => {
       const sheet = demo ? (made[p.id] ? { submitted_at: "2026-11-18T22:10:00Z", answers: made[p.id] } : null) : byEmail.get(p.id) || null;
       const a = M.readAnswers(sheet && sheet.submitted_at ? sheet.answers : {});
-      return { ...p, state: sheet?.submitted_at ? "in" : sheet ? "started" : "none", at: sheet?.submitted_at || "", ...a, top: byName.get(a.top) || "", also: a.also.map(n => byName.get(n)).filter(Boolean) };
+      const ids = (x) => ({ ...x, top: byName.get(x.top) || "", also: x.also.map(n => byName.get(n)).filter(Boolean) });
+      // A sheet started and not handed in is kept apart as a draft: shown on
+      // the page, never read by the pairing, which goes by handed-in sheets.
+      const d = sheet && !sheet.submitted_at ? M.readAnswers(sheet.answers) : null;
+      return { ...p, state: sheet?.submitted_at ? "in" : sheet ? "started" : "none", at: sheet?.submitted_at || "", ...ids(a), draft: d && M.wroteAny(d) ? ids(d) : null };
     });
   }, [roster, data, photos, sheets, demo, config.id]);
   return [people, sheets === null, error];
@@ -214,7 +218,7 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
       // grey and dashed whichever list the pick came from.
       const tie = M.tieOf(focus, q);
       if (out && back) add(focus.id, q.id, "fp-l-t" + tie + " fp-l-strong", false, tie === 3 ? "Each other's top choice" : tie === 2 ? (out === "top" ? q.first + " is " + focus.first + "'s top choice, and picked back" : focus.first + " is " + q.first + "'s top choice, and picked back") : "Picked each other");
-      else if (out) add(focus.id, q.id, "fp-l-out", true, (out === "top" ? focus.first + "'s top choice" : focus.first + " picked " + q.first) + (q.state !== "in" ? ", not yet submitted" : ", not picked back"));
+      else if (out) add(focus.id, q.id, "fp-l-out", true, (out === "top" ? focus.first + "'s top choice" : focus.first + " picked " + q.first) + (q.state !== "in" ? (q.draft && M.pickOf(q.draft, focus) ? ", picked back in a draft" : ", not yet submitted") : ", not picked back"));
       else add(q.id, focus.id, "fp-l-in", true, q.first + " picked " + focus.first);
     });
     const partner = M.partnerOf(file, focus.id);
@@ -425,15 +429,17 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
   const place = M.placeOf(file, p.id);
   const approved = M.approvedOf(file, p.id);
   const reasons = M.reasonsOf(file);
-  const picks = [p.top, ...p.also].map(id => byId.get(id)).filter(Boolean);
+  const draft = p.state !== "in" ? p.draft : null;
+  const v = draft || p;
+  const picks = [v.top, ...v.also].map(id => byId.get(id)).filter(Boolean);
   const pickedBy = people.filter(q => q.id !== p.id && M.pickOf(q, p) && !M.pickOf(p, q));
   const press = (slot) => change(f => {
     const next = M.toggleTopic(f, p.id, slot);
     if (!next) { setFull(slot); setTimeout(() => setFull(""), 1600); return f; }
     return next;
   });
-  const w = M.workOf(p.work);
-  if (p.state !== "in") return (
+  const w = M.workOf(v.work);
+  if (p.state !== "in" && !draft) return (
     <div className="fp-student">
       <div className="fp-hero"><span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span><div><h2 className="fp-name">{p.shown}</h2><p className="fp-sub">{p.state === "started" ? "Started, not yet submitted" : "Not opened"}</p></div></div>
     </div>
@@ -444,7 +450,7 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
         <span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span>
         <div>
           <h2 className="fp-name">{p.student.email ? <StudentLink config={config} student={p.student} /> : p.shown}</h2>
-          <p className="fp-sub">{w ? <span className={"fp-pill fp-w-" + w.id}>{w.short}</span> : null}{p.at ? <span>Submitted {when(p.at)}</span> : null}</p>
+          <p className="fp-sub">{w ? <span className={"fp-pill fp-w-" + w.id}>{w.short}</span> : null}{draft ? <span>Started, not yet submitted</span> : p.at ? <span>Submitted {when(p.at)}</span> : null}</p>
         </div>
       </div>
 
@@ -455,33 +461,34 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
             <div className="fp-sugmain"><p className="fp-names">Paired with <button type="button" className="fp-link" onClick={() => onPick(partner.id)}>{partner.shown}</button></p><p className="fp-why">{M.blockOf(p, partner) || M.whyOf(p, partner)}</p></div>
             <button type="button" className="fp-btn" onClick={() => change(f => M.splitUp(f, p.id))}>Split</button>
           </div>
-        ) : (
+        ) : draft ? null : (
           <div className="fp-placer">
             <button type="button" className={"fp-btn fp-solo" + (place === "solo" ? " fp-set" : "")} aria-pressed={place === "solo"} onClick={() => change(f => M.setSolo(f, p.id, place !== "solo"))}>{place === "solo" ? "Working individually" : "Set to individual"}</button>
           </div>
         )}
         {picks.map((q, i) => {
           const back = M.pickOf(q, p), block = M.blockOf(p, q), theirs = byId.get(M.partnerOf(file, q.id));
+          const dback = q.state !== "in" && q.draft ? M.pickOf(q.draft, p) : "";
           return (
             <div key={q.id} className={"fp-pick" + (back ? " fp-mutual" : "")}>
               <button type="button" className={"fp-mini" + workClass(q)} onClick={() => onPick(q.id)} aria-label={q.shown}><Disc p={q} size={38} /></button>
               <div className="fp-sugmain">
-                <p className="fp-names">{q.shown}{i === 0 && p.top === q.id ? <span className="fp-star">top choice</span> : null}</p>
-                <p className="fp-why">{q.state !== "in" ? "Not yet submitted" : back ? (back === "top" ? "Picked " + p.first + " as top choice" : "Picked " + p.first + " back") : "Did not pick " + p.first}{theirs && theirs.id !== p.id ? ". Paired with " + theirs.first : ""}{block && back ? ". " + block : ""}</p>
+                <p className="fp-names">{q.shown}{i === 0 && v.top === q.id ? <span className="fp-star">top choice</span> : null}</p>
+                <p className="fp-why">{q.state !== "in" ? "Not yet submitted" + (dback ? ". Draft picks " + p.first + (dback === "top" ? " as top choice" : "") : "") : back ? (back === "top" ? "Picked " + p.first + " as top choice" : "Picked " + p.first + " back") : "Did not pick " + p.first}{theirs && theirs.id !== p.id ? ". Paired with " + theirs.first : ""}{block && back && !draft ? ". " + block : ""}</p>
               </div>
-              {partner && partner.id === q.id ? null : <button type="button" className={"fp-btn" + (block ? "" : " fp-go")} onClick={() => onPair(p.id, q.id)}>{block ? "Pair anyway" : "Pair"}</button>}
+              {draft || (partner && partner.id === q.id) ? null : <button type="button" className={"fp-btn" + (block ? "" : " fp-go")} onClick={() => onPair(p.id, q.id)}>{block ? "Pair anyway" : "Pair"}</button>}
             </div>
           );
         })}
         {pickedBy.length ? <div className="fp-chips fp-by"><span className="fp-k">Picked by</span>{pickedBy.map(q => <button key={q.id} type="button" className="fp-person" onClick={() => onPick(q.id)}><Disc p={q} size={24} />{q.first}</button>)}</div> : null}
       </div>
 
-      {p.define ? (
+      {v.define ? (
         <div className="fp-block">
           <div className="fp-bhead"><h2>Social justice, defined</h2></div>
           <div className="fp-topic">
-            <p className="fp-part">{p.define}</p>
-            {p.defineSource ? <p className="fp-part"><span className="fp-k">Source</span>{p.defineSource}</p> : null}
+            <p className="fp-part">{v.define}</p>
+            {v.defineSource ? <p className="fp-part"><span className="fp-k">Source</span>{v.defineSource}</p> : null}
             {/* The field's standing definition, for him to read theirs against.
                 Review only; the sheet makes each student find their own. */}
             <p className="fp-part"><span className="fp-k">{M.JUSTICE_REF.cite}</span>{M.JUSTICE_REF.say}</p>
@@ -490,8 +497,8 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
       ) : null}
 
       <div className="fp-block">
-        <div className="fp-bhead"><h2>Topics</h2><span className={"fp-count" + (full ? " fp-shake" : "")}>{approved.length} of {M.MAX_TOPICS} approved</span></div>
-        {p.topics.map(t => {
+        <div className="fp-bhead"><h2>Topics</h2>{draft ? null : <span className={"fp-count" + (full ? " fp-shake" : "")}>{approved.length} of {M.MAX_TOPICS} approved</span>}</div>
+        {v.topics.map(t => {
           const on = approved.includes(t.slot), says = file.says?.[p.id]?.[t.slot] || [];
           return (
             <div key={t.slot} className={"fp-topic" + (on ? " fp-on" : "") + (full === t.slot ? " fp-shake" : "")}>
@@ -500,10 +507,10 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
               {t.asks.length ? <ul className="fp-asks">{t.asks.map((q, i) => <li key={i}>{q}</li>)}</ul> : null}
               {[["Worthwhile", t.worth], ["Audience", t.audience], ["Concepts", t.concepts], ["Why", t.why], ["Angle", t.angle], ["Social justice", t.justice]].filter(x => x[1]).map(([k, v]) => <p key={k} className="fp-part"><span className="fp-k">{k}</span>{v}</p>)}
               {says.length && open !== t.slot ? <p className="fp-said">{says.join(" · ")}</p> : null}
-              <div className="fp-acts">
+              {draft ? null : <div className="fp-acts">
                 <button type="button" className={"fp-btn" + (on ? "" : " fp-go")} disabled={!t.topic} onClick={() => press(t.slot)}>{on ? "Take back" : "Approve"}</button>
                 <button type="button" className="fp-btn" aria-expanded={open === t.slot} onClick={() => setOpen(o => (o === t.slot ? "" : t.slot))}>Reasons</button>
-              </div>
+              </div>}
               {open === t.slot ? <Reasons all={reasons} on={says} onPress={r => change(f => M.toggleReason(f, p.id, t.slot, r))} /> : null}
             </div>
           );
@@ -516,24 +523,24 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
         ) : null}
       </div>
 
-      {(p.liked || []).length ? (
+      {(v.liked || []).length ? (
         <div className="fp-block">
           <div className="fp-bhead"><h2>{M.LIKED_SAY}</h2></div>
-          <div className="fp-chips">{p.liked.map(s => <span key={s} className="fp-strength" style={{ "--h": 340 }}>{s}</span>)}</div>
+          <div className="fp-chips">{v.liked.map(s => <span key={s} className="fp-strength" style={{ "--h": 340 }}>{s}</span>)}</div>
         </div>
       ) : null}
 
-      {p.strengths.length ? (
+      {v.strengths.length ? (
         <div className="fp-block">
           <div className="fp-bhead"><h2>Strengths</h2></div>
-          <div className="fp-chips">{p.strengths.map(s => <span key={s} className="fp-strength" style={{ "--h": (M.STRENGTHS.indexOf(s) + 1) * 36 }}>{s}</span>)}</div>
+          <div className="fp-chips">{v.strengths.map(s => <span key={s} className="fp-strength" style={{ "--h": (M.STRENGTHS.indexOf(s) + 1) * 36 }}>{s}</span>)}</div>
         </div>
       ) : null}
 
-      {p.sites.some(s => s.site) ? (
+      {v.sites.some(s => s.site) ? (
         <div className="fp-block">
           <div className="fp-bhead"><h2>Sites</h2></div>
-          {p.sites.filter(s => s.site).map(s => (
+          {v.sites.filter(s => s.site).map(s => (
             <div key={s.slot} className="fp-site">
               <span className="fp-sitemark" style={{ "--h": hueOf(hostOf(s.site)) }}>{(hostOf(s.site)[0] || "?").toUpperCase()}</span>
               <div className="fp-sugmain">
@@ -593,7 +600,11 @@ export default function FinalReview({ config, worksheetKey, roster }) {
   const open = people.filter(p => p.state === "in" && !M.placeOf(file, p.id)).length;
   const out = people.length - inPairs - solo - open;
   const decided = people.filter(p => M.decidedOf(file, p.id)).length;
-  const menu = [...people].sort((x, y) => x.shown.localeCompare(y.shown)).map(p => ({ id: p.rid, name: p.shown, status: p.state !== "in" ? "Not yet submitted" : M.decidedOf(file, p.id) ? "Decided" : M.placeOf(file, p.id) ? "No topic yet" : "To place" }));
+  // To place is for a student who can be paired now. One whose picks have no
+  // sheet in, and who is in no suggested pair, is waiting on those picks.
+  const suggestedIds = new Set(sug.pairs.flatMap(s => [s.a, s.b]));
+  const waitSay = (p) => { const on = suggestedIds.has(p.id) ? [] : M.waitingOn(p, byId); return on.length ? "Waiting on " + (on.length > 2 ? on.slice(0, -1).map(q => q.first).join(", ") + " and " + on[on.length - 1].first : on.map(q => q.first).join(" and ")) : ""; };
+  const menu = [...people].sort((x, y) => x.shown.localeCompare(y.shown)).map(p => ({ id: p.rid, name: p.shown, status: p.state !== "in" ? "Not yet submitted" : M.decidedOf(file, p.id) ? "Decided" : M.placeOf(file, p.id) ? "No topic yet" : waitSay(p) || "To place" }));
 
   return (
     <Shell>
@@ -715,8 +726,8 @@ const CSS = `
 .fp-line{width:26px;height:0;border-top:3px solid var(--c);border-radius:2px;flex:none}
 .fp-line.fp-l-t3{--c:var(--t3)}.fp-line.fp-l-t2{--c:var(--t2)}.fp-line.fp-l-t1{--c:var(--t1)}.fp-line.fp-l-oneway{--c:var(--dim);border-top-style:dashed;border-top-width:2px}
 
-.fp-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);gap:22px;align-items:start}
-.fp-left{display:flex;flex-direction:column;gap:14px;position:relative;min-width:0}
+.fp-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(380px,460px);gap:22px;align-items:start;min-height:calc(100vh - 78px)}
+.fp-left{display:flex;flex-direction:column;gap:14px;position:sticky;top:78px;min-width:0}
 .fp-ringbox{display:flex;justify-content:center;min-width:0}
 .fp-stage{position:relative;flex:none;user-select:none;-webkit-user-select:none}
 .fp-lines{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:2}
@@ -774,7 +785,7 @@ const CSS = `
 .fp-ask p{margin:0;font-size:15px}
 @keyframes fp-rise{from{opacity:0;transform:translateY(8px)}}
 
-.fp-panel{background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:14px;backdrop-filter:blur(8px);min-width:0}
+.fp-panel{background:color-mix(in srgb,var(--panel) 88%,transparent);border:1px solid var(--line);border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:14px;backdrop-filter:blur(8px);min-width:0;position:sticky;top:78px;max-height:calc(100vh - 150px);overflow-y:auto}
 .fp-over,.fp-student{display:flex;flex-direction:column;gap:16px;animation:fp-rise .3s ease both}
 .fp-block{display:flex;flex-direction:column;gap:9px}
 .fp-bhead{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:30px}
@@ -831,6 +842,6 @@ button.fp-mini{cursor:pointer}
 .fp-strength{font-size:13.5px;font-weight:600;border-radius:999px;padding:5px 13px;color:hsl(var(--h) 90% 82%);background:hsl(var(--h) 60% 22%);border:1px solid hsl(var(--h) 60% 38%)}
 .fp-site{display:flex;gap:12px;align-items:flex-start;padding:4px 0}
 .fp-sitemark{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:700;font-size:17px;color:#fff;background:linear-gradient(135deg,hsl(var(--h) 70% 52%),hsl(calc(var(--h) + 50) 70% 36%));flex:none}
-@media (max-width:1080px){.fp-main{grid-template-columns:1fr}.fp-left{position:relative;top:0}.fp-top{grid-template-columns:1fr}.fp-tools{justify-content:flex-start}}
+@media (max-width:1080px){.fp-panel{position:static;max-height:none;overflow:visible}.fp-main{grid-template-columns:1fr;min-height:0}.fp-left{position:relative;top:0}.fp-top{grid-template-columns:1fr}.fp-tools{justify-content:flex-start}}
 @media (prefers-reduced-motion:reduce){.fp *{animation:none!important;transition:none!important}}
 `;

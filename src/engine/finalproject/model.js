@@ -155,6 +155,10 @@ export function readAnswers(answers) {
   };
 }
 
+/** Whether a read sheet holds anything a student wrote. */
+export const wroteAny = (a) => !!(a.work || a.top || a.also.length || a.strengths.length || a.liked.length || a.define || a.defineSource
+  || [...a.topics, ...a.sites].some(t => Object.entries(t).some(([k, v]) => k !== "slot" && (Array.isArray(v) ? v.length : v))));
+
 // ─── who picked whom ───
 
 /** How a picked b: "top", "also", or "". A person is { id, top, also }, picks as ids. */
@@ -174,6 +178,10 @@ export function tieOf(a, b) {
 }
 const wantsPair = (p) => !!workOf(p.work)?.pair;
 const first = (p) => p.first || String(p.name || "").split(" ")[0];
+
+/** The picked classmates a student is waiting on: the student asked for a
+ * pair, and these picks have no sheet handed in. `byId` is a Map of people. */
+export const waitingOn = (p, byId) => (wantsPair(p) ? [p.top, ...(p.also || [])].map(id => byId.get(id)).filter(q => q && q.state !== "in") : []);
 
 /** The sentence under a suggested pair, in the shape he gave: "Emmy and Lucy K
  * should work together because they both want to work in pairs and they are
