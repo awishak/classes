@@ -86,7 +86,8 @@ const BY_CLASS = {
     // Andrew, 2026-11-13, his words.
     pastSay: "These are things you've done previously. You're not going to work on any of these topics. Think about something you like as much as these topics.", // voice-ok, his words
     topicHead: "What do you want to work on in this class?",
-    topicHint: "Examples: housing, food access, immigration, disability access, environmental justice, education, health care, voting rights.",
+    // Andrew, 2026-11-19: "it's good to be relatively specific"; he approved the examples.
+    topicHint: "It's good to be relatively specific. Examples: evictions of renters in San Jose, grocery store access in East San Jose, wheelchair access on the SCU campus, translation for immigrant parents at public schools, wildfire smoke and farmworkers in the Central Valley, polling place closures in rural counties.",
     whyAsk: "Why do you think this idea is interesting?",
     angleAsk: "What angle will you take to have a unique and engaging story?",
     justiceAsk: "How does this idea qualify as a social justice topic?",
