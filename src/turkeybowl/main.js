@@ -461,7 +461,7 @@ async function decide(id) {
   // What was just said stays on the card in small type, so nobody has to remember it while choosing.
   const S = SHOW[id], seenShots = S ? S.shots.filter(x => !x[0].startsWith("voice:")) : [], said = seenShots.length ? seenShots[seenShots.length - 1] : null;
   const left = el("div", "ask"); left.append(el("div", "who", label));
-  if (said) left.append(el("p", "say", (phone ? "A text from home" : NAMES[said[0]].charAt(0) + NAMES[said[0]].slice(1).toLowerCase().replace("jerry jones", "Jerry Jones")) + ": " + said[1]));
+  if (said) left.append(el("p", "say", (phone ? "A text from home" : (NAMES[said[0]] || "").charAt(0) + (NAMES[said[0]] || "").slice(1).toLowerCase().replace("jerry jones", "Jerry Jones")) + ": " + said[1]));
   left.append(el("p", "scene", (S && S.ask) || scene)); k.append(left);
   const opts = el("div", "opts"); k.append(opts);
   const pick = await new Promise(res => {

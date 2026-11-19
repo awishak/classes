@@ -14,7 +14,7 @@
 
 export const NAMES = {
   you: "YOU", uncle: "YOUR UNCLE", brother: "YOUR BROTHER", sister: "YOUR SISTER", cousin: "YOUR COUSIN", niece: "YOUR NIECE", grandma: "GRANDMA",
-  jerry: "JERRY JONES", reporter: "A REPORTER", receiver: "AB SHEEP, NUMBER 88",   // Andrew, 2026-11-17: "number 88 is the best player: AB Sheep" kicker: "YOUR KICKER", backup: "YOUR BACKUP QUARTERBACK", returner: "YOUR KICK RETURNER",
+  jerry: "JERRY JONES", reporter: "A REPORTER", receiver: "AB SHEEP, NUMBER 88", kicker: "YOUR KICKER", backup: "YOUR BACKUP QUARTERBACK", returner: "YOUR KICK RETURNER",   // Andrew, 2026-11-17: "number 88 is the best player: AB Sheep"
   coachA: "YOUR DEFENSIVE COACH", coachB: "YOUR OTHER DEFENSIVE COACH",
   mcconaughey: "MATTHEW McCONAUGHEY",
   andrew: "ANDREW ISHAK", kaepernick: "COLIN KAEPERNICK", ali: "MUHAMMAD ALI", robinson: "JACKIE ROBINSON", king: "BILLIE JEAN KING",
