@@ -78,9 +78,14 @@ async function allRows() {
   const list = (await rows(`/rest/v1/app_data?id=like.${encodeURIComponent(PREFIX + "*")}&select=data&limit=5000`)) || [];
   return list.map(r => r.data).filter(d => d && d.key && typeof d.best === "number");
 }
+// Andrew, 2026-11-19, after a student's report of a frozen screen led to a fix: "give sophia 500
+// extra points for finding the bug." A row can carry `bonus`, points he gives by hand. No run can
+// set it: it is written to the row with the service key, kept when a later run is posted, and
+// added to the best score wherever a score is shown.
+const total = (d) => d.best + (Number(d.bonus) || 0);
 const board = (list, myKey) => list
-  .slice().sort((a, b) => b.best - a.best || String(a.bestAt).localeCompare(String(b.bestAt)))
-  .slice(0, 300).map(d => ({ name: d.name, tag: d.tag || "", score: d.best, level: d.level || 1, me: d.key === myKey }));
+  .slice().sort((a, b) => total(b) - total(a) || String(a.bestAt).localeCompare(String(b.bestAt)))
+  .slice(0, 300).map(d => ({ name: d.name, tag: d.tag || "", score: total(d), level: d.level || 1, me: d.key === myKey }));
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
@@ -97,7 +102,7 @@ export default async function handler(req, res) {
     const list = await allRows();
     const [photos, cls] = await Promise.all([photosOf(), rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(CLASS.storage)}&select=data`)]);
     const avatars = Object.keys(photos).filter(n => picture(photos[n])).sort().map(n => ({ name: shortName(shownName((cls?.[0]?.data?.profiles || {})[n], n)), photo: photos[n] }));
-    return res.status(200).json({ ok: true, opens: OPENS, avatars, rows: list.sort((a, b) => b.best - a.best).map(d => ({ name: d.name, tag: d.tag || "", email: d.email || "", score: d.best, level: d.level || 1, runs: d.runs || 0, at: d.at || "" })) });
+    return res.status(200).json({ ok: true, opens: OPENS, avatars, rows: list.sort((a, b) => total(b) - total(a)).map(d => ({ name: d.name, tag: d.tag || "", email: d.email || "", score: total(d), level: d.level || 1, runs: d.runs || 0, at: d.at || "" })) });
   }
 
   const student = instructor ? null : await studentOf(email);
@@ -130,10 +135,11 @@ export default async function handler(req, res) {
       done: !!(was?.done || result.done), hired: !!(was?.hired || result.hired),
       runs: (was?.runs || 0) + (was?.lastSeed === seed ? 0 : 1), lastSeed: seed,
       last: { score: result.score, level: result.level, over: result.over, lost: result.lost, done: result.done }, at: now,
+      ...(was?.bonus ? { bonus: was.bonus, bonusFor: was.bonusFor || "" } : {}),
     };
     if (!(await upsert(id, data))) return res.status(502).json({ ok: false, error: "The score did not save." });
     const list = await allRows();
-    return res.status(200).json({ ok: true, result, best: data.best, rows: board(list, key) });
+    return res.status(200).json({ ok: true, result, best: total(data), rows: board(list, key) });
   }
 
   return res.status(400).json({ ok: false, error: "Unknown action." });
