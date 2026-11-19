@@ -625,6 +625,8 @@ const EXTRA = `
 .fps .fps-b2.hero .hint{font-size:clamp(23px,2.9vw,33px);line-height:1.1;letter-spacing:-.025em;text-wrap:balance}
 .fps .fps-band.hero .phead .n{font-size:23px;line-height:1.2;letter-spacing:-.01em;color:var(--volt)}
 .fps .fps-band.hero .hint{font-size:clamp(27px,3.9vw,44px);font-weight:600;line-height:1.06;letter-spacing:-.03em;color:#fff;text-wrap:pretty}
+/* COMM 3's hint is a sentence and a list of examples, so it reads at body size. */
+.fps.fps-story .fpt-part .fps-band.hero .hint{font-size:18.5px;font-weight:400;line-height:1.45;letter-spacing:0;color:var(--chalk);max-width:62ch}
 .fps .fps-band .phead .vsp-edit.n,.fps .fps-band.hero .vsp-edit.hint,.fps .fps-band .vsp-edit.hint{color:var(--ink)}
 .fps .fps-band .vsp-edit.n{font-size:20px}
 .fps .fps-band .vsp-edit.hint{font-size:17px;font-weight:400;letter-spacing:0;line-height:1.45}
