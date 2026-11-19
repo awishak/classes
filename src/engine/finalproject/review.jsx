@@ -214,7 +214,7 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
       // grey and dashed whichever list the pick came from.
       const tie = M.tieOf(focus, q);
       if (out && back) add(focus.id, q.id, "fp-l-t" + tie + " fp-l-strong", false, tie === 3 ? "Each other's top choice" : tie === 2 ? (out === "top" ? q.first + " is " + focus.first + "'s top choice, and picked back" : focus.first + " is " + q.first + "'s top choice, and picked back") : "Picked each other");
-      else if (out) add(focus.id, q.id, "fp-l-out", true, (out === "top" ? focus.first + "'s top choice" : focus.first + " picked " + q.first) + ", not picked back");
+      else if (out) add(focus.id, q.id, "fp-l-out", true, (out === "top" ? focus.first + "'s top choice" : focus.first + " picked " + q.first) + (q.state !== "in" ? ", not yet submitted" : ", not picked back"));
       else add(q.id, focus.id, "fp-l-in", true, q.first + " picked " + focus.first);
     });
     const partner = M.partnerOf(file, focus.id);
@@ -281,7 +281,7 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
       {zone("Suggested pairs", g.sug.length, g.sug.map(s => <div key={s.two[0].id} className={"fp-two fp-tie" + s.tie + (lit === M.pairKey(s.two[0].id, s.two[1].id) ? " fp-two-lit" : "")}>{s.two.map(cell)}</div>))}
       {zone("To place", g.open.length, g.open.map(cell), "fp-loose")}
       {zone("Individual", g.solo.length, g.solo.map(cell), "fp-loose")}
-      {zone("Not submitted", g.out.length, g.out.map(cell), "fp-loose")}
+      {zone("Not yet submitted", g.out.length, g.out.map(cell), "fp-loose")}
       <svg className="fp-lines" aria-hidden="true">
         <defs>
           <marker id="fp-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="context-stroke" /></marker>
@@ -316,7 +316,7 @@ function Overview({ people, file, sug, onLit, onPair, onPass, onSplit, onPick, o
         </div>
         <ul className="fp-legend">
           {counts.map(w => <li key={w.id}><i className={"fp-dot fp-w-" + w.id} />{w.short}<b>{w.n}</b></li>)}
-          <li><i className="fp-dot fp-w-none" />Not submitted<b>{people.length - inCount}</b></li>
+          <li><i className="fp-dot fp-w-none" />Not yet submitted<b>{people.length - inCount}</b></li>
         </ul>
       </div>
 
@@ -392,7 +392,7 @@ function Overview({ people, file, sug, onLit, onPair, onPass, onSplit, onPick, o
 
       {notIn.length ? (
         <div className="fp-block">
-          <div className="fp-bhead"><h2>Not submitted</h2></div>
+          <div className="fp-bhead"><h2>Not yet submitted</h2></div>
           <div className="fp-chips">{notIn.map(p => <span key={p.id} className="fp-person fp-off"><Disc p={p} size={26} />{p.shown}</span>)}</div>
         </div>
       ) : null}
@@ -435,7 +435,7 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
   const w = M.workOf(p.work);
   if (p.state !== "in") return (
     <div className="fp-student">
-      <div className="fp-hero"><span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span><div><h2 className="fp-name">{p.shown}</h2><p className="fp-sub">{p.state === "started" ? "Started, not submitted" : "Not opened"}</p></div></div>
+      <div className="fp-hero"><span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span><div><h2 className="fp-name">{p.shown}</h2><p className="fp-sub">{p.state === "started" ? "Started, not yet submitted" : "Not opened"}</p></div></div>
     </div>
   );
   return (
@@ -467,7 +467,7 @@ function Student({ config, p, people, file, change, onPick, onPair, flash }) {
               <button type="button" className={"fp-mini" + workClass(q)} onClick={() => onPick(q.id)} aria-label={q.shown}><Disc p={q} size={38} /></button>
               <div className="fp-sugmain">
                 <p className="fp-names">{q.shown}{i === 0 && p.top === q.id ? <span className="fp-star">top choice</span> : null}</p>
-                <p className="fp-why">{back ? (back === "top" ? "Picked " + p.first + " as top choice" : "Picked " + p.first + " back") : "Did not pick " + p.first}{theirs && theirs.id !== p.id ? ". Paired with " + theirs.first : ""}{block && back ? ". " + block : ""}</p>
+                <p className="fp-why">{q.state !== "in" ? "Not yet submitted" : back ? (back === "top" ? "Picked " + p.first + " as top choice" : "Picked " + p.first + " back") : "Did not pick " + p.first}{theirs && theirs.id !== p.id ? ". Paired with " + theirs.first : ""}{block && back ? ". " + block : ""}</p>
               </div>
               {partner && partner.id === q.id ? null : <button type="button" className={"fp-btn" + (block ? "" : " fp-go")} onClick={() => onPair(p.id, q.id)}>{block ? "Pair anyway" : "Pair"}</button>}
             </div>
@@ -593,7 +593,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
   const open = people.filter(p => p.state === "in" && !M.placeOf(file, p.id)).length;
   const out = people.length - inPairs - solo - open;
   const decided = people.filter(p => M.decidedOf(file, p.id)).length;
-  const menu = [...people].sort((x, y) => x.shown.localeCompare(y.shown)).map(p => ({ id: p.rid, name: p.shown, status: p.state !== "in" ? "Not submitted" : M.decidedOf(file, p.id) ? "Decided" : M.placeOf(file, p.id) ? "No topic yet" : "To place" }));
+  const menu = [...people].sort((x, y) => x.shown.localeCompare(y.shown)).map(p => ({ id: p.rid, name: p.shown, status: p.state !== "in" ? "Not yet submitted" : M.decidedOf(file, p.id) ? "Decided" : M.placeOf(file, p.id) ? "No topic yet" : "To place" }));
 
   return (
     <Shell>
@@ -603,7 +603,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
           {sections.length > 1 ? <div className="fp-tabs" role="tablist">{sections.map(s => <button key={s} type="button" role="tab" aria-selected={s === section} className={"fp-tab" + (s === section ? " fp-set" : "")} onClick={() => { setSection(s); pick(""); }}>{s}</button>)}</div> : null}
         </div>
         <div className="fp-progress">
-          <div className="fp-pbar" role="img" aria-label={inPairs + " in pairs, " + solo + " individual, " + open + " to place, " + out + " not submitted"}>
+          <div className="fp-pbar" role="img" aria-label={inPairs + " in pairs, " + solo + " individual, " + open + " to place, " + out + " not yet submitted"}>
             {inPairs ? <span className="fp-p-pair" style={{ flexGrow: inPairs }} /> : null}
             {solo ? <span className="fp-p-solo" style={{ flexGrow: solo }} /> : null}
             {open ? <span className="fp-p-open" style={{ flexGrow: open }} /> : null}
@@ -613,7 +613,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
             <li><i className="fp-dot fp-p-pair" />In pairs<b>{inPairs}</b></li>
             <li><i className="fp-dot fp-p-solo" />Individual<b>{solo}</b></li>
             <li><i className="fp-dot fp-p-open" />To place<b>{open}</b></li>
-            <li><i className="fp-dot fp-p-out" />Not submitted<b>{out}</b></li>
+            <li><i className="fp-dot fp-p-out" />Not yet submitted<b>{out}</b></li>
           </ul>
         </div>
         <div className="fp-tools">

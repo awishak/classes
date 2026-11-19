@@ -191,6 +191,10 @@ export function whyOf(a, b) {
 
 /** Why two people are not a clean pair, or "" when they are. */
 export function blockOf(a, b) {
+  // A sheet not handed in says nothing yet: no pair asked for, no picks. Say
+  // that, and not "did not pick", which reads as an answer.
+  const out = [a, b].filter(p => p.state && p.state !== "in");
+  if (out.length) return out.map(first).join(" and ") + (out.length === 1 ? " has" : " have") + " not yet submitted.";
   if (a.section !== b.section) return first(a) + " and " + first(b) + " are in different sections.";
   const solo = [a, b].filter(p => !wantsPair(p));
   if (solo.length) return solo.map(first).join(" and ") + (solo.length === 1 ? " did not ask" : " did not ask") + " to work in a pair.";
