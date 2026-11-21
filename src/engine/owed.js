@@ -72,7 +72,39 @@ export function threadItem(data, name) {
 /** Whether a thread waits on him. The one rule, for every surface. */
 export const threadWaiting = (data, name) => !!threadItem(data, name);
 
-function challengeItems(data, assignments) {
+// Andrew, 2026-11-21, after a student asked twice on a challenge and he never
+// saw it: "anything a student writes on an assignment, it need to show up on
+// the messages." So what is said on a challenge is part of the conversation
+// with that student, on his Messages and on theirs, and waits the same way.
+
+/** Everything of one student's that waits on him: the thread, and each challenge they wrote on. */
+export const waitingItems = (data, assignments, name) =>
+  [threadItem(data, name), ...challengeItems(data, assignments).filter(i => i.name === name)].filter(Boolean).sort((x, y) => x.ts - y.ts);
+
+/** The names with something waiting, for a list of the whole roster. */
+export const waitingNames = (data, assignments) =>
+  new Set([...Object.keys(data?.threads || {}).filter(n => threadItem(data, n)), ...challengeItems(data, assignments).map(i => i.name)]);
+
+/**
+ * One student's conversation: the thread and what was said on each challenge,
+ * oldest first. A line from a challenge carries `on`, the challenge's title,
+ * and `aid`. `grades` adds his grade comments, which only he may be shown
+ * here, since a grade can be unreleased.
+ */
+export function talkOf(data, assignments, name, { grades = false } = {}) {
+  const out = (data?.threads?.[name] || []).filter(m => !m.deleted).slice();
+  (assignments || []).forEach(asg => {
+    alive(data?.assignmentLog?.[asg.id]?.[name]).forEach(e => {
+      const said = e.type === "comment" || e.type === "regrade" || (grades && e.type === "grade" && e.html);
+      const text = said ? String(e.text || plain(e.html)).trim() : "";
+      if (!text) return;
+      out.push({ id: e.id, ts: e.ts || 0, from: e.type === "regrade" || e.from === "student" ? "student" : "instructor", kind: e.type, text, on: asg.title, aid: asg.id });
+    });
+  });
+  return out.sort((x, y) => (x.ts || 0) - (y.ts || 0));
+}
+
+export function challengeItems(data, assignments) {
   const out = [];
   (assignments || []).forEach(asg => {
     const byStudent = data?.assignmentLog?.[asg.id] || {};

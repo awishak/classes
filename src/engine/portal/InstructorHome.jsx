@@ -22,7 +22,8 @@ import { alive, htmlToText, boardOf } from "../grades.js";
 import { Days } from "./MyWork.jsx";
 import { opensState, opensWords } from "./work.js";
 import { deadlineOf } from "../DueCard.jsx";
-import { waitingOnInstructor } from "../YouCard.jsx";
+import { waitingSet } from "../YouCard.jsx";
+import { talkOf } from "../owed.js";
 import { AudioReviewBar } from "../audiostory/listendoor.jsx";
 import { Hero, StoryPhaseBar, StoryDoor, AudioExerciseDoor, AudioPreDoor, AudioStoryDoor, LockerRoomDoor, DOOR_CSS } from "./StudentHome.jsx";
 import { QuestionsSection } from "./Questions.jsx";
@@ -93,10 +94,12 @@ export function countOf(config, data, asg, people, times) {
 // The inbox as mail: every thread, newest first, a line or two of the last
 // message under the name, bold and New while it waits on him.
 export function Inbox({ config, data, go, limit }) {
+  // A comment on a challenge is a message here. Andrew, 2026-11-21.
+  const asgs = assignmentsOf(config, data), waitingNow = waitingSet(config, data);
   const rows = rosterOf(config, data).map(s => {
-    const t = data?.threads?.[s.name] || [];
+    const t = talkOf(data, asgs, s.name);
     const last = t[t.length - 1];
-    return last ? { s, last, waiting: waitingOnInstructor(data, s.name) } : null;
+    return last ? { s, last, waiting: waitingNow.has(s.name) } : null;
   }).filter(Boolean).sort((x, y) => (y.last.ts || 0) - (x.last.ts || 0));
   const shown = limit ? rows.slice(0, limit) : rows;
   if (!rows.length) return <p className="pt-quiet">Nobody has written yet.</p>;
@@ -108,7 +111,7 @@ export function Inbox({ config, data, go, limit }) {
           <div className="pt-main">
             <div className="pt-head"><p className="pt-title" style={{ fontWeight: waiting ? 700 : 500 }}><StudentLink config={config} student={s}>{nameShown(data, s.name)}</StudentLink></p><span className="pt-meta" style={{ flex: "none" }}>{whenWords(last.ts)}</span></div>
             <p className="pt-text" style={{ color: "var(--text-secondary)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", whiteSpace: "normal" }}>
-              {last.from === "instructor" ? <span style={{ color: "var(--text-muted)" }}>You: </span> : null}{last.text || (last.kind === "got_it" ? "Thumbs up" : last.kind === "meeting" ? "Make a meeting" : "")}
+              {last.from === "instructor" ? <span style={{ color: "var(--text-muted)" }}>You: </span> : null}{last.on ? <b>{last.on + ": "}</b> : null}{last.text || (last.kind === "got_it" ? "Thumbs up" : last.kind === "meeting" ? "Make a meeting" : "")}
             </p>
             <p className="pt-meta">{s.section ? <Gm>{s.section}</Gm> : null}{waiting ? <span style={{ color: "var(--ca-accent-ink)", fontWeight: 600 }}>New</span> : null}</p>
           </div>
@@ -225,7 +228,8 @@ export function InstructorHome({ config, data, update, blockOf, go, saving, onli
   const waiting = waitingOn(data, assignments);
   const toGradeOf = (asg) => (waiting.find(w => w.id === asg.id) || {}).toGrade || 0;
   const graded = assignments.map(asg => ({ asg, n: toGradeOf(asg) })).filter(r => r.n);
-  const inbox = rosterOf(config, data).filter(s => waitingOnInstructor(data, s.name));
+  const waitingNow = waitingSet(config, data);
+  const inbox = rosterOf(config, data).filter(s => waitingNow.has(s.name));
   const q = useQuestions(config.storageKey);
   const askWaiting = q.items === null ? 0 : onThePage(q.items).filter(x => !isAnswered(x)).length;
   const facts = nextClassFacts(config, data, blockOf, "");

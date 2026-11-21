@@ -3,7 +3,8 @@
 // / Make a meeting, and ask a question. Instructor view: an inbox of every
 // student thread. Threads persist via the shared store (Supabase + realtime).
 
-import { threadWaiting, threadItem, donePatch } from "./owed.js";
+import { waitingItems, waitingNames, talkOf, donePatch, replyPatch } from "./owed.js";
+import { assignmentsOf } from "./profileTask.js";
 import { Linked } from "./linkText.jsx";
 import { useState, useEffect } from "react";
 import { genId } from "../utils.jsx";
@@ -40,7 +41,26 @@ export function unreadNotes(data, name) {
     seen = 0;
     for (const m of thread) if (m.from !== "instructor" && (m.ts || 0) > seen) seen = m.ts || 0;
   }
-  return thread.filter(m => m.from === "instructor" && (m.ts || 0) > seen).length;
+  return thread.filter(m => m.from === "instructor" && (m.ts || 0) > seen).length + challengeReplies(data, name, seen);
+}
+
+// His comments on this student's challenges, written since they last opened
+// their messages. Andrew, 2026-11-21: what is said on a challenge is a
+// message, so his answer there lights the envelope like a note does. Only a
+// comment counts, never a grade, which has its own release. A student with no
+// threadSeen yet has none, or every old comment would light up at once.
+//
+// Only comments from the day this began count. He had written on challenges
+// all term, and counting those lit the envelope for 24 COMM 3 students at
+// once over comments they had long since read on the challenge.
+const CHALLENGE_REPLIES_SINCE = Date.UTC(2026, 10, 21);
+function challengeReplies(data, name, seen) {
+  if (data?.threadSeen?.[name] == null) return 0;
+  let n = 0;
+  Object.values(data?.assignmentLog || {}).forEach(by => (by?.[name] || []).forEach(e => {
+    if (e.type === "comment" && e.from !== "student" && !e.deleted && (e.ts || 0) > Math.max(seen, CHALLENGE_REPLIES_SINCE)) n++;
+  }));
+  return n;
 }
 
 // Opening the thread reads it. Written only when something is unread, so an
@@ -82,13 +102,17 @@ const lastMsg = (data, name) => { const t = threadOf(data, name); return t[t.len
 // cracks." Reading no longer clears a thread; a reply, Done or Later on the
 // inbox does (owed.js), and this asks that one rule. inboxSeen is still
 // written when he opens a thread and nothing reads it.
-export const waitingOnInstructor = (data, name) => threadWaiting(data, name);
-export const inboxWaiting = (config, data) => rosterOf(config, data).filter(s => waitingOnInstructor(data, s.name)).length;
+//
+// Andrew, 2026-11-21: "anything a student writes on an assignment, it need to
+// show up on the messages." A comment on a challenge waits here too.
+export const waitingOnInstructor = (config, data, name) => waitingItems(data, assignmentsOf(config, data), name).length > 0;
+export const waitingSet = (config, data) => waitingNames(data, assignmentsOf(config, data));
+export const inboxWaiting = (config, data) => { const w = waitingSet(config, data); return rosterOf(config, data).filter(s => w.has(s.name)).length; };
 
 // Opening a thread reads it. Written only while the thread is waiting, so an
 // open thread does not write on every render.
-function useMarkInboxSeen(update, data, name) {
-  const waiting = name ? waitingOnInstructor(data, name) : false;
+function useMarkInboxSeen(config, update, data, name) {
+  const waiting = name ? waitingOnInstructor(config, data, name) : false;
   useEffect(() => {
     if (!waiting || !update) return;
     update(prev => ({ ...prev, inboxSeen: { ...(prev.inboxSeen || {}), [name]: Date.now() } }));
@@ -156,6 +180,7 @@ function Bubble({ m, accent, config, data, name, instructor }) {
       {mine ? face : null}
       <div style={{ maxWidth: "82%" }}>
         {isQuestion && <div style={{ ...label, color: "#d97706", marginBottom: 4 }}>Question</div>}
+        {m.on ? <div style={{ ...label, marginBottom: 4, textAlign: mine ? "left" : "right" }}>{m.on}</div> : null}
         <div style={{ padding: "10px 14px", borderRadius: 16, fontSize: 15, lineHeight: 1.45,
           background: his ? accent + "12" : "#f3f4f6",
           color: TEXT_PRIMARY, border: isQuestion ? "1px solid #f59e0b55" : "none" }}>
@@ -175,7 +200,7 @@ function Bubble({ m, accent, config, data, name, instructor }) {
 }
 
 function Thread({ config, data, name, accent, instructor }) {
-  const msgs = threadOf(data, name);
+  const msgs = talkOf(data, assignmentsOf(config, data), name, { grades: !!instructor });
   if (!msgs.length) return <Muted>No messages yet.</Muted>;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -525,8 +550,20 @@ const CANNED = ["Hope you're feeling better!", "Thanks for letting me know.", "O
 export function StudentThread({ config, data, update, name }) {
   const a = config.accent;
   const [note, setNote] = useState("");
-  useMarkInboxSeen(update, data, name);
-  const send = () => { if (!note.trim()) return; addMessage(update, name, { from: "instructor", kind: "note", text: note.trim() }); setNote(""); };
+  useMarkInboxSeen(config, update, data, name);
+  // His answer goes where the student asked. When the newest thing waiting is
+  // on a challenge, the reply is a comment on that challenge; otherwise it is
+  // a note in the thread, as it always was.
+  const waiting = waitingItems(data, assignmentsOf(config, data), name);
+  const newest = waiting[waiting.length - 1];
+  const onChallenge = newest && newest.kind === "challenge" ? newest : null;
+  const send = () => {
+    const words = note.trim();
+    if (!words) return;
+    if (onChallenge) update(prev => { const it = waitingItems(prev, assignmentsOf(config, prev), name).find(i => i.key === onChallenge.key); return it ? replyPatch(prev, it, words) : prev; });
+    else addMessage(update, name, { from: "instructor", kind: "note", text: words });
+    setNote("");
+  };
   return (
     <div>
       <Thread config={config} data={data} name={name} accent={a} instructor />
@@ -537,10 +574,10 @@ export function StudentThread({ config, data, update, name }) {
         ))}
       </div>
       <div style={{ marginTop: 10, display: "flex", gap: 8, alignItems: "flex-start" }}>
-        <div style={{ flex: 1 }}><Field value={note} onChange={setNote} placeholder={"Post a note to " + String(name).split(" ")[0] + "..."} /></div>
+        <div style={{ flex: 1 }}><Field value={note} onChange={setNote} placeholder={onChallenge ? "Reply on " + onChallenge.title + "..." : "Post a note to " + String(name).split(" ")[0] + "..."} /></div>
         <SendBtn accent={a} onClick={send} disabled={!note.trim()}>Post</SendBtn>
         {/* Done with nothing sent, the inbox's Done (owed.js), so a thread read here stops waiting here. */}
-        {waitingOnInstructor(data, name) ? <GhostBtn accent={a} label="Done" onClick={() => update(prev => { const it = threadItem(prev, name); return it ? donePatch(prev, it) : prev; })}>Done</GhostBtn> : null}
+        {waiting.length ? <GhostBtn accent={a} label="Done" onClick={() => update(prev => waitingItems(prev, assignmentsOf(config, prev), name).reduce((d, it) => donePatch(d, it), prev))}>Done</GhostBtn> : null}
       </div>
     </div>
   );
@@ -576,9 +613,10 @@ function InstructorYou({ config, data, update }) {
   // Nobody has ever marked a message read here, so "new" is what the thread
   // says: the last thing in it came from the student. Answer it and it stops
   // being bold, which is the same thing the Reply tag meant.
+  const asgs = assignmentsOf(config, data), waitingNow = waitingNames(data, asgs);
   const rows = roster.map(s => {
-    const m = lastMsg(data, s.name);
-    return { name: s.name, m, at: m?.ts || 0, unread: waitingOnInstructor(data, s.name) };
+    const t = talkOf(data, asgs, s.name), m = t[t.length - 1];
+    return { name: s.name, m, at: m?.ts || 0, unread: waitingNow.has(s.name) };
   }).sort((x, y) => y.at - x.at
     || lastNameOf(x.name, config.lastNameOverrides).localeCompare(lastNameOf(y.name, config.lastNameOverrides)));
 
@@ -589,7 +627,7 @@ function InstructorYou({ config, data, update }) {
       <div style={{ marginTop: 14, borderTop: "1px solid " + BORDER }}>
         {rows.map(r => {
           const m = r.m;
-          const preview = m ? (m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : m.text) : "No messages yet";
+          const preview = m ? (m.kind === "got_it" ? "Thumbs up" : m.kind === "confused" ? "I'm confused" : m.kind === "meeting" ? "Requested a meeting" : m.kind === "question" ? "Q: " + m.text : (m.on ? m.on + ": " : "") + m.text) : "No messages yet";
           return (
             <button key={r.name} onClick={() => setSelected(r.name)}
               style={{ width: "100%", textAlign: "left", background: SURFACE_CARD, border: "none", borderBottom: "1px solid " + BORDER,

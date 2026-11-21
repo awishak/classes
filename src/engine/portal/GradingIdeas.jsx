@@ -23,7 +23,7 @@ import { rosterOf, nameShown } from "../roster.js";
 import { realStudents, isHouse, sectionOf } from "../sections.js";
 import { alive, boardOf, bucketsFor, bucketOf } from "../grades.js";
 import { deadlineOf } from "../DueCard.jsx";
-import { waitingOnInstructor } from "../YouCard.jsx";
+import { waitingSet } from "../YouCard.jsx";
 import { ThemeStyle } from "../ThemeShell.jsx";
 import { PORTAL_CSS } from "./style.js";
 import { Sec, Row, Io, Btn, Chip, Gm, Face, dcolOf, dueWords, whenWords, dayWords } from "./bits.jsx";
@@ -263,7 +263,8 @@ export default function GradingIdeas({ config }) {
 
 function ClassIdeas({ config, data, counted, past, coming, students, roster, way, setWay, studentsWay, setStudentsWay, wordsWay, openStudent, openAssignment, picks, save }) {
   const toGrade = past.reduce((n, c) => n + c.toGrade, 0);
-  const inbox = roster.filter(s => waitingOnInstructor(data, s.name));
+  const waitingNow = waitingSet(config, data);
+  const inbox = roster.filter(s => waitingNow.has(s.name));
   const regrades = past.reduce((n, c) => n + c.regrades, 0);
   const nothing = students.filter(r => r.of && r.done === 0);
   const next = coming[0] || null;

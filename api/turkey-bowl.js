@@ -72,6 +72,29 @@ async function studentOf(email) {
 const photosOf = async () => (await rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(CLASS.storage + "-photos")}&select=data`))?.[0]?.data || {};
 const picture = (v) => (typeof v === "string" && v.startsWith("data:image/") ? v : "");
 
+// The game is Weekly Challenge 4, so reaching Level 3 is the hand-in.
+//
+// Andrew, 2026-11-21, after eleven students finished the game and the
+// challenge showed every one of them as having turned in nothing: "yeah make
+// that fix." The first run that lands a student in Dallas adds one
+// submission to their wc4 log on the class row, the same entry
+// scripts/comm118-wc4-turkey-bowl-submits.mjs wrote by hand for those
+// eleven (id "tb-<key>"), and a student who has one is left alone. The class
+// row is read right before it is written. A miss here never fails the score.
+const CHALLENGE = "wc4", CREDIT_LEVEL = 3;
+async function handIn(student, key, level, best) {
+  try {
+    const id = CLASS.storage, entryId = "tb-" + key;
+    const cur = (await rows(`/rest/v1/app_data?id=eq.${encodeURIComponent(id)}&select=data`))?.[0]?.data;
+    if (!cur) return false;
+    const log = cur.assignmentLog?.[CHALLENGE]?.[student.roster] || [];
+    if (log.some(e => e && e.id === entryId)) return true;
+    const entry = { id: entryId, ts: Date.now(), type: "submission", link: "", text: "Turkey Bowl: reached Level " + level + ", " + best + " points." };
+    const next = { ...cur, assignmentLog: { ...(cur.assignmentLog || {}), [CHALLENGE]: { ...(cur.assignmentLog?.[CHALLENGE] || {}), [student.roster]: [...log, entry] } } };
+    return await upsert(id, next);
+  } catch { return false; }
+}
+
 const cleanName = (n) => shortName(String(n || "").replace(/[^\p{L}\p{M}' .-]/gu, "").replace(/\s+/g, " ").trim().slice(0, 40)).slice(0, 24);
 
 async function allRows() {
@@ -136,8 +159,13 @@ export default async function handler(req, res) {
       runs: (was?.runs || 0) + (was?.lastSeed === seed ? 0 : 1), lastSeed: seed,
       last: { score: result.score, level: result.level, over: result.over, lost: result.lost, done: result.done }, at: now,
       ...(was?.bonus ? { bonus: was.bonus, bonusFor: was.bonusFor || "" } : {}),
+      ...(was?.handedIn ? { handedIn: true } : {}),
     };
     if (!(await upsert(id, data))) return res.status(502).json({ ok: false, error: "The score did not save." });
+    if (student && data.level >= CREDIT_LEVEL && !(was && was.handedIn)) {
+      // Marked on the score row once it is in, so later runs do not read the class row again.
+      if (await handIn(student, key, data.level, data.best)) await upsert(id, { ...data, handedIn: true });
+    }
     const list = await allRows();
     return res.status(200).json({ ok: true, result, best: total(data), rows: board(list, key) });
   }

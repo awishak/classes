@@ -76,7 +76,8 @@ export function counts(config, data, name) {
 // has had. Each carries the words the row says and the chips it answers to.
 //
 //   tags  work      submissions, grades, due dates, what was said on a challenge
-//         messages  the thread with Dr. Ishak
+//         messages  the thread with Dr. Ishak, and what either of them said on a
+//                   challenge (Andrew, 2026-11-21: that is a message too)
 //         feedback  grades and what he said on a challenge
 //         notes     his notes to the class
 const dayStart = (s) => { const d = s ? new Date(s + ", 2026") : null; return d && !isNaN(d) ? d.getTime() : 0; };
@@ -98,7 +99,7 @@ export function flowOf(config, data, name, now = Date.now()) {
           say: ["You asked for a regrade on ", asg.title], text: e.text || "", link: e.link || "" });
       } else if (e.type === "comment") {
         const mine = e.from === "student";
-        push({ id: e.id, at: e.ts, who: mine ? "me" : "dr", tint: mine ? "me" : "dr", tags: mine ? ["work"] : ["work", "feedback"], aid: asg.id,
+        push({ id: e.id, at: e.ts, who: mine ? "me" : "dr", tint: mine ? "me" : "dr", tags: mine ? ["work", "messages"] : ["work", "feedback", "messages"], aid: asg.id,
           say: mine ? ["You wrote on ", asg.title] : [null, asg.title, " has a comment"], text: htmlToText(e.html || e.text) });
       } else if (e.type === "grade") {
         const b = e.bucket ? bucketOf(e.bucket) : null;
