@@ -81,7 +81,17 @@ const picture = (v) => (typeof v === "string" && v.startsWith("data:image/") ? v
 // scripts/comm118-wc4-turkey-bowl-submits.mjs wrote by hand for those
 // eleven (id "tb-<key>"), and a student who has one is left alone. The class
 // row is read right before it is written. A miss here never fails the score.
+//
+// And the grade, the same day: "okay can these things run auto? i will
+// forget." His rule was "grade then if they did it", so a hand-in that lands
+// by the deadline is graded Complete in the same write: a card on the wc4
+// board and the released grade in the student's log, the two things a
+// release from the board writes (grades.js releasePatch). A hand-in after
+// the deadline gets no grade here and waits in To Grade, because lateness is
+// his to decide. A student who already has a card is not regraded.
 const CHALLENGE = "wc4", CREDIT_LEVEL = 3;
+// Thursday, November 26, 2026, 11:59 PM Pacific, wc4's due date after he reopened it through Thanksgiving Day.
+export const CREDIT_UNTIL = "2026-11-27T08:00:00.000Z";
 async function handIn(student, key, level, best) {
   try {
     const id = CLASS.storage, entryId = "tb-" + key;
@@ -89,8 +99,15 @@ async function handIn(student, key, level, best) {
     if (!cur) return false;
     const log = cur.assignmentLog?.[CHALLENGE]?.[student.roster] || [];
     if (log.some(e => e && e.id === entryId)) return true;
-    const entry = { id: entryId, ts: Date.now(), type: "submission", link: "", text: "Turkey Bowl: reached Level " + level + ", " + best + " points." };
-    const next = { ...cur, assignmentLog: { ...(cur.assignmentLog || {}), [CHALLENGE]: { ...(cur.assignmentLog?.[CHALLENGE] || {}), [student.roster]: [...log, entry] } } };
+    const now = Date.now();
+    const entry = { id: entryId, ts: now, type: "submission", link: "", text: "Turkey Bowl: reached Level " + level + ", " + best + " points." };
+    const board = cur.gradeBoard?.[CHALLENGE] || { cards: {}, released: null, seen: {} };
+    const grade = now < Date.parse(CREDIT_UNTIL) && !board.cards?.[student.roster]?.bucket && !log.some(e => e && e.type === "grade" && !e.deleted);
+    const mine = grade
+      ? [...log, entry, { id: "gb-" + now.toString(36) + "-tb", ts: now + 1, type: "grade", board: true, score: 100, bucket: "complete", letter: "Complete", html: null }]
+      : [...log, entry];
+    const next = { ...cur, assignmentLog: { ...(cur.assignmentLog || {}), [CHALLENGE]: { ...(cur.assignmentLog?.[CHALLENGE] || {}), [student.roster]: mine } } };
+    if (grade) next.gradeBoard = { ...(cur.gradeBoard || {}), [CHALLENGE]: { ...board, cards: { ...(board.cards || {}), [student.roster]: { bucket: "complete", at: now } }, released: board.released || { at: now } } };
     return await upsert(id, next);
   } catch { return false; }
 }
