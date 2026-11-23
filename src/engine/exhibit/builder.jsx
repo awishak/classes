@@ -174,7 +174,31 @@ const CSS = `
 .xb .hello b{font:600 22px/1.1 "Newsreader",Georgia,serif;display:block;margin-bottom:6px}
 .xb .hello a{display:inline-block;margin-top:10px;font-weight:700;color:#101216}
 .xb .stepfoot{display:flex;justify-content:space-between;gap:10px;margin-top:26px;padding-top:16px;border-top:1px solid #2a2e36}
-@media (prefers-reduced-motion:reduce){ .xb *{animation:none!important;transition:none!important} }
+.xb .looks{display:grid;gap:8px;margin-bottom:14px}
+.xb .lookt{display:block;width:100%;text-align:left;border:2px solid #2a2e36;border-radius:12px;padding:14px 16px 12px;cursor:pointer;background:#f6f3ec;color:#17181b;transition:transform .12s ease, border-color .12s ease}
+.xb .lookt:hover{transform:translateY(-2px)}
+.xb .lookt[aria-pressed="true"]{border-color:#ffd166;box-shadow:0 0 0 3px #ffd166}
+.xb .lookt .h{display:block;font-size:30px;line-height:1;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xb .lookt .n{font:700 11.5px "Libre Franklin",system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;opacity:.6}
+.xb .pals{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.xb .palt{aspect-ratio:3/4;border-radius:10px;border:2px solid #2a2e36;cursor:pointer;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:transform .12s ease}
+.xb .palt:hover{transform:translateY(-3px)}
+.xb .palt[aria-pressed="true"]{border-color:#ffd166;box-shadow:0 0 0 3px #ffd166}
+.xb .palt .a{flex:1.3;display:flex;align-items:flex-end;padding:7px}
+.xb .palt .a i{display:block;width:60%;height:5px;border-radius:2px}
+.xb .palt .p{flex:1;padding:7px;display:flex;flex-direction:column;gap:4px}
+.xb .palt .p i{display:block;height:3px;border-radius:2px;opacity:.55}
+.xb .starts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+.xb .starts button{text-align:left;background:linear-gradient(135deg,#262a32,#1b1e24);border:1.5px solid #343944;border-radius:12px;padding:12px;cursor:pointer;color:#eef0f3;font:inherit;transition:transform .12s ease, border-color .12s ease}
+.xb .starts button:hover{border-color:#ffd166;transform:translateY(-2px)}
+.xb .starts b{display:block;font:600 19px/1.1 "Newsreader",Georgia,serif;margin-bottom:8px}
+.xb .starts .mini{display:flex;flex-direction:column;gap:4px}
+.xb .starts .mini i{display:block;height:7px;border-radius:2px;background:#4a5060}
+.xb .starts .mini i.t{width:86%}.xb .starts .mini i.h{width:48%;height:10px;background:#eef0f3}.xb .starts .mini i.p{height:26px;background:#ffd166;opacity:.85}.xb .starts .mini i.q{height:16px;background:#ff9f5a}.xb .starts .mini i.n{width:30%;height:18px;background:#7ee0a1}.xb .starts .mini i.a{width:70%;height:12px;border-radius:6px;background:#8ab4ff}
+.xb .confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:4}
+.xb .confetti i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:xb-fall linear forwards}
+@keyframes xb-fall{to{transform:translateY(110vh) rotate(720deg);opacity:.9}}
+@media (prefers-reduced-motion:reduce){ .xb *{animation:none!important;transition:none!important} .xb .confetti{display:none} }
 @media (max-width:980px){
   .xb{grid-template-columns:minmax(0,1fr)}
   .xb .flip{display:inline-block}
@@ -185,7 +209,7 @@ const CSS = `
 `;
 
 const now = () => Date.now();
-const PAL_HEX = { orange: ["#d9541e", "#17324d"], green: ["#1c7a41", "#dbe64a"], blue: ["#1560c8", "#ff5d62"], red: ["#b01f2d", "#f3b62f"], violet: ["#5a3ed2", "#17b89f"] };
+const PAL_HEX = { orange: ["#d9541e", "#17324d", "#faf6ee", "#1d1a16"], green: ["#1c7a41", "#dbe64a", "#f5f8f1", "#12231a"], blue: ["#1560c8", "#ff5d62", "#f4f8fc", "#0e2033"], red: ["#b01f2d", "#f3b62f", "#fcf6f3", "#2a1114"], violet: ["#5a3ed2", "#17b89f", "#f7f5fc", "#1e1534"] };
 const TYPE_FACE = { news: { fontFamily: "Newsreader, Georgia, serif", fontWeight: 600 }, museum: { fontFamily: "Archivo, sans-serif", fontWeight: 850, fontStretch: "72%", textTransform: "uppercase" }, magazine: { fontFamily: "'Instrument Serif', Georgia, serif", fontStyle: "italic", fontWeight: 400 } };
 const dateSay = (iso) => new Date(iso).toLocaleString("en-US", { weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Los_Angeles" });
 
@@ -339,6 +363,20 @@ const gist = (b) => String(b.text || b.name || b.title || b.q || b.w || b.cap ||
 const FIX = { headline: "outline", summary: "outline", film: "outline", captions: "outline", html: "outline", sources: "sources", academic: "sources", popular: "sources", ai: "check", interview: "check" };
 const daysLeft = (iso) => { const d = Math.ceil((Date.parse(iso) - Date.now()) / 86400000); return d > 1 ? d + " days left" : d === 1 ? "1 day left" : d === 0 ? "Due today" : ""; };
 
+// A page to start from: a few empty blocks in an order that reads well. The student fills or removes each one.
+const STARTS = [
+  { name: "An opening", blocks: ["text", "photo", "number", "text"] },
+  { name: "A case study", blocks: ["heading", "photo", "text", "quote", "text"] },
+  { name: "By the numbers", blocks: ["number", "text", "timeline", "text"] },
+  { name: "Listen and look", blocks: ["audio", "text", "gallery", "quote"] },
+];
+const MINI = { text: "t", heading: "h", photo: "p", gallery: "p", quote: "q", number: "n", timeline: "t", audio: "a" };
+const BITS = ["#ffd166", "#ff9f5a", "#7ee0a1", "#8ab4ff", "#ff7b93", "#eef0f3"];
+function Confetti({ run }) {
+  if (!run) return null;
+  return <div className="confetti" key={run} aria-hidden="true">{Array.from({ length: 46 }, (_, i) => <i key={i} style={{ left: ((i * 37) % 100) + "%", background: BITS[i % BITS.length], animationDuration: 1.6 + ((i * 13) % 10) / 6 + "s", animationDelay: ((i * 7) % 10) / 22 + "s", transform: `rotate(${(i * 47) % 360}deg)` }} />)}</div>;
+}
+
 function Picker({ classId, onPick }) {
   return <>{[...new Set(BLOCKS.map(b => b.group))].map(g => <div key={g}><div className="grp">{g}</div><div className="picker">
     {BLOCKS.filter(b => b.group === g && (b.t !== "concept" || classId !== "comm3")).map(b => <button type="button" key={b.t} onClick={() => onPick(b.t)}><span className="g">{GLYPH[b.t]}</span><b>{b.name}</b><small>{SAY[b.t]}</small></button>)}
@@ -361,6 +399,8 @@ function Builder({ classId, viewer, as }) {
   const [showView, setShowView] = useState(false);
   const [phone, setPhone] = useState(false);
   const [drag, setDrag] = useState(null), [over, setOver] = useState(null);
+  const [party, setParty] = useState(0);
+  const was = useRef(null);
   const docRef = useRef(null), dirty = useRef(false), timer = useRef(null), busy = useRef(false), view = useRef(null), pane = useRef(null);
   docRef.current = doc;
 
@@ -434,6 +474,13 @@ function Builder({ classId, viewer, as }) {
   const done = list.filter(l => l.ok).length;
   const sources = doc.sources || [];
   const exhibit = doc.way === "exhibit";
+  // Finishing the outline, or the whole checklist, gets a moment.
+  const nowState = { outline: outlineDone(doc), all: list.length > 0 && done === list.length };
+  if (was.current && !locked) {
+    if (nowState.outline && !was.current.outline) setTimeout(() => { setParty(Date.now()); toast("Your outline is done"); }, 0);
+    else if (nowState.all && !was.current.all) setTimeout(() => { setParty(Date.now()); toast("Everything on the checklist is done"); }, 0);
+  }
+  was.current = nowState;
   const blank = !doc.headline && !doc.summary && pages.every(p => !p.blocks.length && !p.plan);
 
   const addBlock = (t, at) => {
@@ -441,6 +488,12 @@ function Builder({ classId, viewer, as }) {
     const b = newBlock(t), i = at == null ? cur.blocks.length : at;
     change(d => ({ ...d, pages: d.pages.map(p => (p.id === cur.id ? { ...p, orderAt: now(), blocks: [...p.blocks.slice(0, i), b, ...p.blocks.slice(i)] } : p)) }));
     setAdding(null); setFresh(b.id); setSel(b.id); toast(blockName(t) + " added");
+  };
+  const startPage = (st) => {
+    if (!cur) return;
+    const made = st.blocks.map((t, k) => ({ ...newBlock(t), ...(t === "photo" && st.name === "A case study" ? { size: "wrap" } : t === "photo" ? { size: "full" } : {}), at: now() + k }));
+    change(d => ({ ...d, pages: d.pages.map(p => (p.id === cur.id ? { ...p, orderAt: now(), blocks: [...p.blocks, ...made] } : p)) }));
+    setFresh(made[0].id); setSel(made[0].id); toast(st.name + " laid out");
   };
   const reorder = (from, to) => { if (from === to || from == null || to == null) return; const bs = [...cur.blocks]; const [m] = bs.splice(from, 1); bs.splice(to > from ? to - 1 : to, 0, m); pagePatch(cur.id, { blocks: bs, orderAt: now() }); };
   const moveBlock = (i, d) => { const bs = [...cur.blocks]; const j = i + d; if (j < 0 || j >= bs.length) return; [bs[i], bs[j]] = [bs[j], bs[i]]; pagePatch(cur.id, { blocks: bs, orderAt: now() }); };
@@ -519,7 +572,8 @@ function Builder({ classId, viewer, as }) {
             </div>
           </div>)}
           {adding === cur.blocks.length || cur.blocks.length === 0
-            ? <><h3>{cur.blocks.length ? "Add to this page" : "Add the first block"}</h3><Picker classId={classId} onPick={t => addBlock(t)} /></>
+            ? <>{cur.blocks.length === 0 && <><h3>Start from a layout</h3><div className="starts">{STARTS.map(st => <button type="button" key={st.name} onClick={() => startPage(st)}><b>{st.name}</b><span className="mini">{st.blocks.map((t, k) => <i key={k} className={MINI[t] || "t"} />)}</span></button>)}</div></>}
+              <h3>{cur.blocks.length ? "Add to this page" : "Or add one block"}</h3><Picker classId={classId} onPick={t => addBlock(t)} /></>
             : <button type="button" className="addhere" onClick={() => { setAdding(cur.blocks.length); setTimeout(() => pane.current?.scrollTo({ top: pane.current.scrollHeight, behavior: "smooth" }), 50); }}>{GLYPH.plus} Add a block</button>}
         </>}
 
@@ -542,9 +596,9 @@ function Builder({ classId, viewer, as }) {
 
         {step === "look" && <>
           <h3>Type</h3>
-          <div className="tiles">{TYPES.map(t => <button type="button" className="tile" key={t.id} aria-pressed={doc.type === t.id} onClick={() => top({ type: t.id })}><span className="aa" style={TYPE_FACE[t.id]}>Aa</span>{t.name}</button>)}</div>
+          <div className="looks">{TYPES.map(t => <button type="button" className="lookt" key={t.id} aria-pressed={doc.type === t.id} onClick={() => top({ type: t.id })}><span className="h" style={TYPE_FACE[t.id]}>{doc.headline || "Your headline"}</span><span className="n">{t.name}</span></button>)}</div>
           <h3>Color</h3>
-          <div className="sws">{PALETTES.map(p => <button type="button" className="sw" key={p} aria-label={p} aria-pressed={doc.pal === p} style={{ background: PAL_HEX[p][0] }} onClick={() => top({ pal: p })}><i style={{ background: PAL_HEX[p][1] }} /></button>)}</div>
+          <div className="pals">{PALETTES.map(p => <button type="button" className="palt" key={p} aria-label={p} aria-pressed={doc.pal === p} onClick={() => top({ pal: p })}><span className="a" style={{ background: PAL_HEX[p][0] }}><i style={{ background: PAL_HEX[p][1] }} /></span><span className="p" style={{ background: PAL_HEX[p][2] }}><i style={{ background: PAL_HEX[p][3], width: "90%" }} /><i style={{ background: PAL_HEX[p][3], width: "70%" }} /><i style={{ background: PAL_HEX[p][0], width: "40%", opacity: 1 }} /></span></button>)}</div>
           {exhibit && <><h3>Layout</h3>
           <div className="tiles" style={{ gridTemplateColumns: "repeat(2,1fr)" }}>{LAYOUTS.map(l => <button type="button" className="tile" key={l.id} aria-pressed={doc.layout === l.id} onClick={() => top({ layout: l.id })}>{l.name}<small>{l.id === "pages" ? "A front page with pages behind" : "One long story"}</small></button>)}</div></>}
         </>}
@@ -573,6 +627,7 @@ function Builder({ classId, viewer, as }) {
           {at < STEPS.length - 1 && <button type="button" className="btn" onClick={() => goStep(STEPS[at + 1][0])}>Next: {STEPS[at + 1][1]}</button>}
         </div>
       </div>
+      <Confetti run={party} />
       <div className="toasts" aria-live="polite">{toasts.map(t => <div className={"toast" + (t.back ? " undo" : "")} key={t.id}>{!t.back && <span className="tk">{GLYPH.check}</span>}{t.say}{t.back && <button type="button" className="btn sm" onClick={() => { t.back(); setToasts(x => x.filter(y => y.id !== t.id)); }}>Undo</button>}</div>)}</div>
     </div>
     <div className="view" ref={view}>
@@ -580,7 +635,7 @@ function Builder({ classId, viewer, as }) {
         <div className="seg"><button type="button" aria-pressed={!phone} onClick={() => setPhone(false)}>{GLYPH.desk} Laptop</button><button type="button" aria-pressed={phone} onClick={() => setPhone(true)}>{GLYPH.phone} Phone</button></div>
         <div><a href={`/${classId}/exhibits/sample`} target="_blank" rel="noopener">The sample</a><a href={previewUrl} target="_blank" rel="noopener">{GLYPH.out} Open as a reader</a></div>
       </div>
-      <div className={"stage" + (phone ? " phone" : "")}><Reader doc={{ ...doc, term: "" }} page={page} onPage={(i) => { setPage(i); setSel(""); }} around={around} scrollEl={view} narrow={phone} /></div>
+      <div className={"stage" + (phone ? " phone" : "")}><Reader doc={{ ...doc, term: "" }} page={page} onPage={(i) => { setPage(i); setSel(""); }} around={around} scrollEl={view} narrow={phone} still /></div>
       <button type="button" className="btn flip flipback" onClick={() => setShowView(false)}>Back to building</button>
     </div>
   </div></Toast.Provider>;

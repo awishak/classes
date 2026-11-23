@@ -13,7 +13,7 @@
 // with the student's note ("not a fan of small numbers"); photos in three
 // sizes and beside text; a line on how AI was used on the public page.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { safeUrl, videoOf, embedOf, citeOf } from "./model.js";
 
 const FONTS = "https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Figtree:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Libre+Franklin:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&display=swap";
@@ -190,6 +190,57 @@ export const CSS = `
 .xr .next:hover .ar{transform:translateX(10px)}
 .xr .next .ar{transition:transform .2s ease;flex:none}
 .xr .end{height:96px}
+.xr .cover.pic > img{animation:xr-zoom 14s ease-out both}
+@keyframes xr-zoom{from{transform:scale(1.12)}to{transform:scale(1)}}
+.xr .cover .tick{animation:xr-tick .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes xr-tick{from{width:0}}
+.xr .cover h1{animation:xr-rise .8s cubic-bezier(.2,.8,.2,1) .1s both}
+.xr .cover .sum{animation:xr-rise .8s cubic-bezier(.2,.8,.2,1) .28s both}
+.xr .cover .by{animation:xr-rise .8s cubic-bezier(.2,.8,.2,1) .42s both}
+@keyframes xr-rise{from{opacity:0;transform:translateY(26px)}}
+.xr .room{background:var(--accent);color:var(--on);position:relative;overflow:hidden}
+.xr .room .phead{padding-block:64px 44px;position:relative;z-index:1}
+.xr .room .phead .lab{color:inherit;opacity:.85;display:flex;align-items:center;gap:12px}
+.xr .room .phead .lab::before{content:"";width:44px;height:6px;background:var(--pop)}
+.xr .room .ghost{position:absolute;right:-.04em;bottom:-.32em;font-family:var(--f-head);font-weight:var(--h-weight);font-style:var(--h-style);font-stretch:var(--h-stretch);font-size:min(46cqi,520px);line-height:1;color:var(--on);opacity:.1;pointer-events:none;user-select:none}
+.xr .rv{opacity:0;transform:translateY(22px);transition:opacity .7s ease, transform .7s cubic-bezier(.2,.8,.2,1)}
+.xr .rv.in{opacity:1;transform:none}
+.xr .zoomable{cursor:zoom-in}
+.xr .frame{position:relative}
+.xr .frame.zoomable img{transition:transform .6s cubic-bezier(.2,.8,.2,1)}
+.xr .frame.zoomable:hover img{transform:scale(1.025)}
+.xr .lb{position:fixed;inset:0;z-index:200;background:rgba(8,8,10,.94);display:grid;grid-template-rows:minmax(0,1fr) auto;place-items:center;padding:28px 20px 20px;cursor:zoom-out;animation:xr-fade .2s ease}
+@keyframes xr-fade{from{opacity:0}}
+.xr .lb img{max-width:100%;max-height:100%;object-fit:contain;border-radius:3px;animation:xr-pop .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes xr-pop{from{transform:scale(.96);opacity:0}}
+.xr .lb p{color:#e9e9ea;font:15px/1.4 var(--f-label);margin:14px 0 0;max-width:900px;text-align:center}
+.xr .lb p b{color:#fff}
+.xr .lb .cl{position:absolute;right:16px;top:14px;width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:#111;font:700 20px system-ui;cursor:pointer}
+.xr .prog{position:absolute;left:0;bottom:-4px;height:4px;background:var(--pop);width:0;transition:width .1s linear}
+.xr .bar{overflow:visible}
+.xr .quote .in{position:relative}
+.xr .quote .mark{position:absolute;left:-.02em;top:-.16em;font-family:Georgia,serif;font-size:min(34cqi,360px);line-height:.8;opacity:.13;pointer-events:none;user-select:none}
+.xr .quote blockquote,.xr .quote .who{position:relative}
+.xr .thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
+.xr .thumbs button{flex:none;width:92px;aspect-ratio:16/10;border-radius:4px;overflow:hidden;border:0;padding:0;cursor:pointer;opacity:.5;transition:opacity .15s ease, transform .15s ease;outline-offset:2px}
+.xr .thumbs button:hover{opacity:.85}
+.xr .thumbs button[aria-current="true"]{opacity:1;outline:3px solid var(--accent)}
+.xr .thumbs img{width:100%;height:100%;object-fit:cover;display:block}
+.xr .gal .frame img{animation:xr-fade .35s ease}
+.xr .next{position:relative;overflow:hidden}
+.xr .next.pic{background:#000;color:#fff}
+.xr .next.pic > img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:.45;transition:transform .8s cubic-bezier(.2,.8,.2,1), opacity .3s ease}
+.xr .next.pic:hover > img{transform:scale(1.05);opacity:.55}
+.xr .next .in{position:relative}
+.xr .next.pic .in{padding-block:74px}
+.xr .tl .row .ln::after{transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.xr .rv:not(.in) .tl .row .ln::after{transform:scale(0)}
+.xr .quiz .os button{transition:transform .12s ease, background .2s ease}
+.xr .fin{background:var(--ink);color:var(--paper);margin-top:64px}
+.xr .fin .in{max-width:1180px;margin:0 auto;padding-block:54px;display:flex;flex-wrap:wrap;gap:20px;align-items:end;justify-content:space-between}
+.xr .fin .hd{font-size:calc(clamp(34px,5.4cqi,72px)*var(--h-scale))}
+.xr .fin .lab{color:var(--popfg);margin-bottom:10px}
+.xr .fin button{font:700 14px var(--f-label);background:var(--paper);color:var(--ink);border:0;border-radius:99px;padding:12px 18px;cursor:pointer}
 .xr section.turn{animation:xr-turn .35s ease}
 @keyframes xr-turn{from{opacity:0;transform:translateY(14px)}}
 
@@ -204,6 +255,7 @@ export const CSS = `
 .xr .own{width:100%;height:calc(100vh - 52px);border:0;display:block;background:#fff}
 
 .xr.narrow .cover h1{font-size:calc(clamp(40px,12cqi,64px)*var(--h-scale))}
+.xr.narrow .room .phead{padding-block:40px 30px}
 .xr.narrow .cover .in{padding-block:40px 30px}
 .xr.narrow .cover.pic .in{padding-block:90px 30px}
 .xr.narrow .cover.pic{min-height:520px;flex-direction:column;justify-content:flex-end;align-items:stretch}
@@ -219,7 +271,7 @@ export const CSS = `
 .xr.narrow .cover .cred{position:relative;right:auto;bottom:auto;max-width:none;text-align:left;margin:0 20px 14px;display:block}
 .xr.narrow .cover.pic .in{padding-block:90px 16px}
 .xr.narrow .cover.pic::after{background:linear-gradient(180deg,rgba(0,0,0,.2) 0%,rgba(0,0,0,.55) 35%,rgba(0,0,0,.9) 100%)}
-@media (prefers-reduced-motion:reduce){ .xr .next .ar{transition:none} .xr section.turn{animation:none} }
+@media (prefers-reduced-motion:reduce){ .xr *{animation:none!important;transition:none!important} .xr .rv{opacity:1;transform:none} }
 `;
 
 const Icon = {
@@ -254,14 +306,49 @@ function SourceLink({ id, onSource, open, children }) {
 }
 const paras = (text) => String(text || "").split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
 
+// Opening a photo full screen, off in the builder where a click picks the block.
+const Zoom = createContext(null);
 function Fig({ url, alt, cap, credit, fix }) {
+  const zoom = useContext(Zoom);
   const u = safeUrl(url) || (String(url || "").startsWith("/") ? url : "");
   return <>
-    <div className={"frame" + (fix ? " fix" : "")}>{u ? <img src={u} alt={alt || ""} loading="lazy" /> : null}</div>
+    <div className={"frame" + (fix ? " fix" : "") + (zoom && u ? " zoomable" : "")} onClick={zoom && u ? () => zoom({ url: u, alt, cap, credit }) : undefined}>{u ? <img src={u} alt={alt || ""} loading="lazy" /> : null}</div>
     {(cap || credit) && <figcaption>{cap} {credit && <b>{credit}</b>}</figcaption>}
   </>;
 }
 const srcUrl = (u) => safeUrl(u) || (String(u || "").startsWith("/") ? u : "");
+
+// A block rises into place the first time the reader reaches the block.
+function useSeen(still) {
+  const ref = useRef(null);
+  const [seen, setSeen] = useState(!!still || typeof IntersectionObserver !== "function");
+  useEffect(() => {
+    if (seen || !ref.current) return;
+    const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { setSeen(true); io.disconnect(); } }, { rootMargin: "0px 0px -8% 0px" });
+    io.observe(ref.current); return () => io.disconnect();
+  }, [seen]);
+  return [ref, seen];
+}
+function Rise({ still, className = "", children }) {
+  const [ref, seen] = useSeen(still);
+  return <div ref={ref} className={className + (still ? "" : " rv" + (seen ? " in" : ""))}>{children}</div>;
+}
+// A big number counts up to its value when the number is plain digits; anything else shows as written.
+function CountUp({ value, still }) {
+  const text = String(value || "");
+  const m = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/.exec(text);
+  const [ref, seen] = useSeen(still);
+  const [shown, setShown] = useState(text);
+  useEffect(() => {
+    if (!m || still || !seen) { setShown(text); return; }
+    const end = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")), dec = m[3] ? m[3].length - 1 : 0, t0 = performance.now();
+    let raf;
+    const tick = (t) => { const k = Math.min(1, (t - t0) / 1100), e = 1 - Math.pow(1 - k, 3); setShown(m[1] + (end * e).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + m[4]); if (k < 1) raf = requestAnimationFrame(tick); else setShown(text); };
+    raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seen, text, still]);
+  return <span ref={ref}>{m && !still && !seen ? m[1] + "0" + m[4] : shown}</span>;
+}
 
 function AudioClip({ b }) {
   const ref = useRef(null);
@@ -283,11 +370,13 @@ function AudioClip({ b }) {
 function Gallery({ b }) {
   const items = (b.items || []).filter(it => srcUrl(it.url));
   const [i, setI] = useState(0);
+  const zoom = useContext(Zoom);
   if (!items.length) return <div className="empty">Photo gallery</div>;
   const it = items[Math.min(i, items.length - 1)];
   const step = (d) => setI(x => (Math.min(x, items.length - 1) + d + items.length) % items.length);
   return <>
-    <div className="frame"><img src={srcUrl(it.url)} alt={it.alt || ""} /></div>
+    <div className={"frame" + (zoom ? " zoomable" : "")} tabIndex={0} onKeyDown={e => { if (e.key === "ArrowRight") step(1); if (e.key === "ArrowLeft") step(-1); }} onClick={zoom ? () => zoom(it) : undefined}><img key={it.url} src={srcUrl(it.url)} alt={it.alt || ""} /></div>
+    {items.length > 1 && <div className="thumbs">{items.map((x, k) => <button type="button" key={k} aria-label={"Photo " + (k + 1)} aria-current={k === Math.min(i, items.length - 1)} onClick={() => setI(k)}><img src={srcUrl(x.url)} alt="" /></button>)}</div>}
     <div className="ctl">
       <button type="button" aria-label="Previous photo" onClick={() => step(-1)}>{Icon.l()}</button>
       <span className="ct">{Math.min(i, items.length - 1) + 1} / {items.length}</span>
@@ -367,7 +456,7 @@ function MapBlock({ b }) {
 function Frame({ kind }) { return <div className="empty">{kind}</div>; }
 
 /** One block. `first` gives the opening text block its drop capital. */
-export function Block({ b, first, sources, onSource, open, wrap }) {
+export function Block({ b, first, sources, onSource, open, wrap, still }) {
   const sl = (id, label) => (id && sources.some(s => s.id === id) ? <SourceLink id={id} onSource={onSource} open={open}>{label}</SourceLink> : null);
   const nameOf = (id) => { const s = sources.find(x => x.id === id); return s ? [s.author, s.year].filter(Boolean).join(", ") || s.title || "Source" : ""; };
   if (b.t === "text") return <div className={"blk col txt" + (first ? " first" : "")}>
@@ -381,9 +470,9 @@ export function Block({ b, first, sources, onSource, open, wrap }) {
     if (b.size === "pair") return <div className="blk wide pair"><figure><Fig url={b.url} alt={b.alt} cap={b.cap} credit={b.credit} /></figure><figure><Fig url={b.url2} alt={b.alt2} cap={b.cap2} credit={b.credit2} /></figure></div>;
     return <figure className={"blk " + (b.size === "full" ? "wide" : "col")}><Fig url={b.url} alt={b.alt} cap={b.cap} credit={b.credit} /></figure>;
   }
-  if (b.t === "number") return <div className="blk col"><div className="num"><div className="n">{b.n}</div><div><div className="w">{b.w}</div>{b.source && <div className="s">{sl(b.source, nameOf(b.source))}</div>}</div></div></div>;
+  if (b.t === "number") return <div className="blk col"><div className="num"><div className="n"><CountUp value={b.n} still={still} /></div><div><div className="w">{b.w}</div>{b.source && <div className="s">{sl(b.source, nameOf(b.source))}</div>}</div></div></div>;
   if (b.t === "concept") return <div className="blk wide"><div className="concept"><div className="lab">Concept</div><div className="hd name">{b.name}</div><div><p className="def">{b.def}</p>{b.source && <div className="from">{sl(b.source, nameOf(b.source))}</div>}</div></div></div>;
-  if (b.t === "quote") return <div className="quote" data-bleed="1"><div className="in gut"><blockquote>{b.text}</blockquote>{b.who && <div className="who lab">{b.who}</div>}</div></div>;
+  if (b.t === "quote") return <div className="quote" data-bleed="1"><div className="in gut"><span className="mark" aria-hidden="true">{"\u201c"}</span><blockquote>{b.text}</blockquote>{b.who && <div className="who lab">{b.who}</div>}</div></div>;
   if (b.t === "audio") return <div className="blk col"><AudioClip b={b} /></div>;
   if (b.t === "video") { const v = videoOf(b.url); return <figure className="blk wide">{v ? <div className="video"><iframe src={v.src} title={b.title || v.kind + " video"} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" /></div> : <Frame kind="Video link" />}{b.title && <figcaption>{b.title}</figcaption>}</figure>; }
   if (b.t === "embed") { const v = embedOf(b.url); return <figure className={"blk " + (v?.shape === "chart" ? "wide" : "col")}>{v ? <div className={"embed " + v.shape}><iframe src={v.src} title={b.title || v.kind} loading="lazy" allowFullScreen /></div> : <Frame kind="Post or chart" />}{b.title && <figcaption>{b.title}</figcaption>}</figure>; }
@@ -436,13 +525,15 @@ function OwnHtml({ url }) {
  * around(block, node) lets a page wrap each block (the builder's click to
  * edit, the preview's notes); narrow forces the phone layout in a small pane.
  */
-export default function Reader({ doc, page, onPage, around, narrow, scrollEl }) {
+export default function Reader({ doc, page, onPage, around, narrow, scrollEl, still }) {
   useExhibitFonts();
   const root = useRef(null);
   // A link can name its page: /exhibits/<slug>#3 opens on the third.
   const [own, setOwn] = useState(() => { const n = parseInt(String(typeof window !== "undefined" ? window.location.hash : "").slice(1), 10); return n > 0 ? n - 1 : 0; });
   const [pop, setPop] = useState(null);
   const [small, setSmall] = useState(false);
+  const [big, setBig] = useState(null);
+  const prog = useRef(null);
   const pages = doc.pages || [];
   const scroll = doc.layout === "scroll";
   const cur = Math.min(page ?? own, Math.max(0, pages.length - 1));
@@ -461,6 +552,15 @@ export default function Reader({ doc, page, onPage, around, narrow, scrollEl }) 
     document.addEventListener("click", off); document.addEventListener("keydown", key);
     return () => { document.removeEventListener("click", off); document.removeEventListener("keydown", key); };
   }, [pop]);
+
+  useEffect(() => { if (!big) return; const key = (e) => { if (e.key === "Escape") setBig(null); }; document.addEventListener("keydown", key); return () => document.removeEventListener("keydown", key); }, [big]);
+  // How far down the page the reader is, drawn under the bar.
+  useEffect(() => {
+    const el = scrollEl?.current || null, src = el || window;
+    const on = () => { if (!prog.current || !root.current) return; const r = root.current.getBoundingClientRect(), h = el ? el.clientHeight : window.innerHeight; const total = r.height - h; prog.current.style.width = (total > 40 ? Math.max(0, Math.min(1, -r.top / total)) * 100 : 0) + "%"; };
+    src.addEventListener("scroll", on, { passive: true }); on();
+    return () => src.removeEventListener("scroll", on);
+  });
 
   const onSource = (id, el) => {
     if (pop?.id === id) return setPop(null);
@@ -484,13 +584,13 @@ export default function Reader({ doc, page, onPage, around, narrow, scrollEl }) 
       const wrap = b.t === "text" && prev && prev.t === "photo" && prev.size === "wrap" ? prev : null;
       if (b.t === "photo" && b.size === "wrap" && blocks[k + 1]?.t === "text") { if (around) out.push(<div key={b.id}>{around(b, null)}</div>); return; }
       const lone = b.t === "photo" && b.size === "wrap" ? { ...b, size: "col" } : b;
-      const node = <Block b={lone} first={b.t === "text" && firstText} sources={sources} onSource={onSource} open={pop?.id} wrap={wrap} />;
+      const node = <Block b={lone} first={b.t === "text" && firstText} sources={sources} onSource={onSource} open={pop?.id} wrap={wrap} still={still} />;
       if (b.t === "text") firstText = false;
       const held = around ? around(b, node) : node;
-      out.push(b.t === "quote" ? <div key={b.id}>{held}</div> : <div className="gut" key={b.id}>{held}</div>);
+      out.push(<Rise key={b.id} still={still} className={b.t === "quote" ? "" : "gut"}>{held}</Rise>);
     });
     return <section key={p.id} data-page={i} className={scroll ? undefined : "turn"}>
-      {head && <>{scroll && <div className="rule" />}<div className="phead gut"><div className="lab">{i + 1} of {pages.length}</div><h2 className="hd">{p.name}</h2></div></>}
+      {head && <div className="room"><span className="ghost" aria-hidden="true">{i + 1}</span><div className="phead gut"><div className="lab">{i + 1} of {pages.length}</div><h2 className="hd">{p.name}</h2></div></div>}
       {out}
       {i === pages.length - 1 && <div className="gut"><Sources doc={doc} /></div>}
     </section>;
@@ -499,11 +599,13 @@ export default function Reader({ doc, page, onPage, around, narrow, scrollEl }) 
   const bar = exhibit && pages.length > 1 ? <nav className="bar" aria-label="Pages"><div className="in gut">
     <div className="ttl">{doc.headline}</div>
     <div className="tabs">{pages.map((p, i) => <button type="button" key={p.id} aria-current={!scroll && i === cur} onClick={() => go(i)}>{p.name || "Page " + (i + 1)}</button>)}</div>
-  </div></nav> : null;
+  </div><i className="prog" ref={prog} /></nav> : null;
+  const firstPic = (p) => { for (const b of p?.blocks || []) { const u = b.t === "photo" ? b.url : b.t === "gallery" ? (b.items || [])[0]?.url : ""; if (srcUrl(u)) return srcUrl(u); } return ""; };
+  const nextPic = !scroll && pages[cur + 1] ? firstPic(pages[cur + 1]) : "";
   const s = pop ? sources.find(x => x.id === pop.id) : null;
   const cite = s ? citeOf(s) : null;
 
-  return <div className={"xr" + (narrow || small ? " narrow" : "")} data-pal={doc.pal} data-type={doc.type} ref={root}>
+  return <Zoom.Provider value={still ? null : setBig}><div className={"xr" + (narrow || small ? " narrow" : "")} data-pal={doc.pal} data-type={doc.type} ref={root}>
     <style>{CSS}</style>
     {!exhibit ? <>
       <Cover doc={doc} />
@@ -515,7 +617,8 @@ export default function Reader({ doc, page, onPage, around, narrow, scrollEl }) 
     </> : <>
       {cur === 0 && <Cover doc={doc} />}{bar}
       {pages[cur] && body(pages[cur], cur, cur > 0)}
-      {pages[cur + 1] && <button type="button" className="next" onClick={() => go(cur + 1)}><div className="in gut"><div><div className="lab">Next</div><div className="hd">{pages[cur + 1].name}</div></div><span className="ar">{Icon.arrow()}</span></div></button>}
+      {!pages[cur + 1] && pages.length > 1 && <div className="fin"><div className="in gut"><div><div className="lab">The end</div><div className="hd">{doc.headline}</div></div><button type="button" onClick={() => go(0)}>Back to the start</button></div></div>}
+      {pages[cur + 1] && <button type="button" className={"next" + (nextPic ? " pic" : "")} onClick={() => go(cur + 1)}>{nextPic && <img src={nextPic} alt="" />}<div className="in gut"><div><div className="lab">Next</div><div className="hd">{pages[cur + 1].name}</div></div><span className="ar">{Icon.arrow()}</span></div></button>}
     </>}
     <div className="end" />
     {s && <div className="pop" role="dialog" aria-label="Source" style={{ left: pop.left, top: pop.top }}>
@@ -524,5 +627,10 @@ export default function Reader({ doc, page, onPage, around, narrow, scrollEl }) 
       {s.note && <p className="note"><b>Why the makers used the source</b>{s.note}</p>}
       {safeUrl(s.url) && <a href={safeUrl(s.url)} target="_blank" rel="noopener noreferrer">Open the source</a>}
     </div>}
-  </div>;
+    {big && <div className="lb" role="dialog" aria-label="Photo" onClick={() => setBig(null)}>
+      <img src={srcUrl(big.url)} alt={big.alt || ""} />
+      {(big.cap || big.credit) && <p>{big.cap} {big.credit && <b>{big.credit}</b>}</p>}
+      <button type="button" className="cl" aria-label="Close">{"\u00d7"}</button>
+    </div>}
+  </div></Zoom.Provider>;
 }
