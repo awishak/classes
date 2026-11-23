@@ -804,9 +804,15 @@ write to the demo's row; the demo's content is all seed, so a reseed restores it
 
 **clarisa.app** is his new domain, bought 2026-10-07, where the real classes
 move in January. Until then `src/main.jsx` sends the root of that host to
-`/comm222`; every other path is the same path as here. The domain still has
-to be added to the Vercel project (classes, Domains) and pointed from the
-registrar; both are his steps, and until then the host check is dormant.
+`/comm222` for a visitor with no session; someone signed in gets the front
+page (since 2026-11-23). Every other path is the same path as here. As of
+2026-11-23 the domain is registered through Vercel with the right
+nameservers but sits on the `andrewishak` project, so it serves drewi.sh.
+Still owed, both his steps: move clarisa.app and www.clarisa.app onto the
+`classes` project (`npx vercel domains add clarisa.app classes --force`),
+and add `https://clarisa.app/**` to the Supabase Auth redirect URLs so an
+emailed sign-in link comes back to that host. Until then the host check is
+dormant.
 `scripts/check-demo.mjs` opens the built site as a visitor and checks the
 demo stays open, a real class still asks for a sign-in, and the front page
 shows COMM 222.

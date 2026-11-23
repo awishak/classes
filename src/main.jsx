@@ -2,12 +2,15 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import './storage-shim.js'
 import App from './App.jsx'
+import { getSession } from './engine/session.js'
 import { baseCSS, CARD_CSS } from './engine/themes.js'
 
 // clarisa.app is this same site under its own name. Until the real classes
-// move there (January), its front door is the class anyone can look at:
-// the root opens COMM 222. Every other path is the same path as here.
-if (/(^|\.)clarisa\.app$/i.test(window.location.hostname) && /^\/?$/.test(window.location.pathname)) {
+// move there (January), its front door for a visitor is the class anyone can
+// look at: the root opens COMM 222. Someone signed in gets the front page,
+// the same as at classes.andrewishak.com. Every other path is the same path
+// as here.
+if (/(^|\.)clarisa\.app$/i.test(window.location.hostname) && /^\/?$/.test(window.location.pathname) && !getSession()) {
   window.history.replaceState({}, '', '/comm222' + window.location.search)
 }
 
