@@ -11,6 +11,7 @@ import BoardPage from "./engine/BoardPage.jsx";
 import GamePage, { RunGamePage } from "./engine/GamePage.jsx";
 import GamesPage from "./engine/GamesPage.jsx";
 import WorksheetPage from "./engine/WorksheetPage.jsx";
+import { GalleryPage, ExhibitPage } from "./engine/exhibit/pages.jsx";
 import ControlPage from "./engine/ControlPage.jsx";
 import { controlHref } from "./engine/portal/Tools.jsx";
 import ReadoutPage from "./engine/ReadoutPage.jsx";
@@ -431,6 +432,13 @@ export default function App() {
   if (wsRead && ENGINE[wsRead[1]]) {
     return <ReadoutPage key={wsRead[1] + "/" + wsRead[2]} config={ENGINE[wsRead[1]]} worksheetKey={wsRead[2]} />;
   }
+  // The final projects: the class gallery at /<class>/exhibits, and one
+  // project, or its draft on a preview link, at /<class>/exhibits/<slug>.
+  // Open to anyone; the server decides what a visitor may read.
+  const exAll = path.match(/^\/(comm\w+)\/exhibits\/?$/);
+  if (exAll && ENGINE[exAll[1]]) return <GalleryPage key={exAll[1]} config={ENGINE[exAll[1]]} />;
+  const exOne = path.match(/^\/(comm\w+)\/exhibits\/([a-z0-9-]+)\/?$/);
+  if (exOne && ENGINE[exOne[1]]) return <ExhibitPage key={exOne[1] + "/" + exOne[2]} config={ENGINE[exOne[1]]} slug={exOne[2]} />;
   const ws = path.match(/^\/(comm\w+)\/worksheets\/([a-z0-9-]+)\/?$/);
   if (ws && ENGINE[ws[1]]) {
     return <WorksheetPage key={ws[1] + "/" + ws[2]} config={ENGINE[ws[1]]} worksheetKey={ws[2]} />;

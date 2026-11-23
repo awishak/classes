@@ -58,6 +58,8 @@ import { FINAL_PREFS_KEY, FINAL_PREFS_TITLE, FINAL_PRE_KEY, FINAL_PRE_TITLE, FIN
 import { mountFinalPrefs, mountSoon } from "./finalproject/sheet.jsx";
 import FinalReview from "./finalproject/review.jsx";
 import FinalControl from "./finalproject/control.jsx";
+import { mountExhibit } from "./exhibit/builder.jsx";
+import { ExhibitReview, ExhibitControl } from "./exhibit/pages.jsx";
 
 export const LOCAL_WORKSHEETS = [
   // Andrew, 2026-10-01: "let's open it now." Weekly Challenge 2, due Oct 7.
@@ -122,7 +124,12 @@ export const LOCAL_WORKSHEETS = [
   // he opens the sheet. Steps three and four are closed stubs.
   { key: FINAL_PREFS_KEY, title: FINAL_PREFS_TITLE, mount: mountFinalPrefs, review: FinalReview, control: FinalControl, open: ["comm999"], classes: ["comm3", "comm118", "comm999"] },
   { key: FINAL_PRE_KEY, title: FINAL_PRE_TITLE, mount: mountSoon(FINAL_PRE_TITLE), open: false, classes: ["comm3", "comm118", "comm999"] },
-  { key: FINAL_PROJECT_KEY, title: FINAL_PROJECT_TITLE, mount: mountSoon(FINAL_PROJECT_TITLE), open: false, classes: ["comm3", "comm118", "comm999"] },
+  // The final project builder, built 2026-11-23 (src/engine/exhibit): an
+  // exhibit, a film or the student's own HTML, with the outline as its first
+  // step. Andrew: "What day do students first need the builder?" Monday,
+  // November 30. COMM 999 only until he opens the sheet. review is every
+  // project with Release, control is how every rule works.
+  { key: FINAL_PROJECT_KEY, title: FINAL_PROJECT_TITLE, mount: mountExhibit, review: ExhibitReview, control: ExhibitControl, open: ["comm999"], classes: ["comm3", "comm118", "comm999"] },
   // The visual story portal itself, planned 2026-10-13. COMM 999 first.
   { key: VISUAL_STORY_KEY, title: VISUAL_STORY_TITLE, mount: mountVisualStory, review: StoryReview, open: ["comm999"], classes: ["comm3", "comm999"] },
 ];

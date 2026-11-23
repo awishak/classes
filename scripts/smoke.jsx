@@ -1322,7 +1322,9 @@ cases.push(["Instructor links", <InstructorLinks />]);
   // Pages that draw TopNav themselves.
   const SELF = { ClassApp: "engine/ClassApp.jsx", Dashboard: "engine/Dashboard.jsx", RepoPage: "engine/RepoPage.jsx", GradesPortal: "engine/GradesPortal.jsx", InboxPage: "engine/InboxPage.jsx", GamesPage: "engine/GamesPage.jsx", WorksheetPage: "engine/WorksheetPage.jsx", ControlPage: "engine/ControlPage.jsx", ReadoutPage: "engine/ReadoutPage.jsx", WorktopiaAnswersPage: "engine/WorktopiaAnswersPage.jsx", SitdownRolesPage: "engine/SitdownRolesPage.jsx", SitdownPage: "engine/SitdownPage.jsx", Sitdown2Page: "engine/sitdown2/page.jsx", AssignPage: "engine/sitdown2/assign.jsx", DecisionsPage: "engine/DecisionsPage.jsx", VisualStoryInstructions: "engine/visualstory/instructions.jsx", VisualStoryPortal: "engine/visualstory/portal.jsx", ClassmatesStories: "engine/visualstory/reading.jsx", ClassmatesAudio: "engine/audiostory/listening.jsx", SampleStory: "engine/visualstory/sample.jsx" };
   // What the projector shows, and the page you sign in on before you are anybody.
-  const EXEMPT = new Set(["Redirect", "ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage"]);
+  const EXEMPT = new Set(["Redirect", "ClassroomView", "EnginePresenter", "TriviaPresenter4", "TriviaPresenter118", "LoginPage", "InstructorGate", "InstructorBar", "RetreatPage",
+    // The final projects as the public reads them: a gallery and one project, with no instructor on the page.
+    "GalleryPage", "ExhibitPage"]);
   const routed = [...app.matchAll(/return\s*\(?\s*<([A-Z]\w*)/g), ...app.matchAll(/<InstructorGate[^>]*>\s*<([A-Z]\w*)/g)].map(m => m[1]);
   [...new Set(routed)].forEach(name => {
     if (EXEMPT.has(name) || SELF[name]) return;
