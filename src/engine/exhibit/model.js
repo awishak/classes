@@ -285,7 +285,7 @@ export function mergeDocs(server, incoming) {
   out.sources = mergeList(c.sources, s.sources, c.sourcesAt, s.sourcesAt, gone);
   out.sourcesAt = Math.max(c.sourcesAt || 0, s.sourcesAt || 0);
   // What only the server sets.
-  for (const k of ["id", "cls", "makers", "names", "created", "preview"]) out[k] = s[k];
+  for (const k of ["id", "cls", "makers", "names", "created", "preview", "staff"]) out[k] = s[k];
   return out;
 }
 

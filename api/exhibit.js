@@ -102,21 +102,23 @@ export default async function handler(req, res) {
     if (q.gallery) {
       if (!released && !instructor) return res.status(200).json({ ok: true, released: false, cards: [] });
       const docs = await listDocs(cls);
-      const shown = instructor && q.all ? docs : docs.filter(d => d.headline);
+      const shown = instructor && q.all ? docs : docs.filter(d => d.headline && !d.staff);
       return res.status(200).json({ ok: true, released, unlocks: instructor ? state.unlocks || {} : undefined, due: FINAL_DUE, cards: shown.map(d => cardOf(d, cls, instructor && !!q.all)) });
     }
     if (q.mine) {
       if (!email) return res.status(401).json({ ok: false, error: "Sign in to open your project." });
       const roster = await rosterOf(cls);
       const as = instructor && q.as ? lower(q.as) : email;
-      if (!roster.some(s => s.email === as)) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
-      const makers = await makersOf(cls, as);
+      // The instructor can build a project of his own to try the builder; the file is marked and never reaches the gallery.
+      const staff = instructor && as === email && !roster.some(s => s.email === as);
+      if (!staff && !roster.some(s => s.email === as)) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
+      const makers = staff ? [as] : await makersOf(cls, as);
       const id = idFor(cls, makers);
       let doc = await readJson(fileFor(cls, id));
       if (doc?.__error) return res.status(502).json({ ok: false, error: `The store said ${doc.__error}.` });
       const nameOf = new Map(roster.map(s => [s.email, s.name]));
       if (!doc) {
-        doc = { ...emptyDoc({ id, cls, makers, names: makers.map(m => nameOf.get(m) || m) }), preview: randomBytes(9).toString("base64url") };
+        doc = { ...emptyDoc({ id, cls, makers, names: makers.map(m => nameOf.get(m) || (staff ? "Dr. Ishak" : m)) }), preview: randomBytes(9).toString("base64url"), ...(staff ? { staff: true } : {}) };
         // A solo file started before he paired two students is carried into the pair's file, the fuller one first.
         if (makers.length > 1) {
           const olds = (await Promise.all(makers.map(m => readJson(fileFor(cls, idFor(cls, [m])))))).filter(d => d && !d.__error && d.id);
@@ -176,8 +178,9 @@ export default async function handler(req, res) {
   if (!email) return res.status(401).json({ ok: false, error: "Sign in to work on your project." });
   const roster = await rosterOf(cls);
   const as = instructor && body.as ? lower(body.as) : email;
-  if (!roster.some(s => s.email === as)) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
-  const makers = await makersOf(cls, as);
+  const staff = instructor && as === email && !roster.some(s => s.email === as);
+  if (!staff && !roster.some(s => s.email === as)) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
+  const makers = staff ? [as] : await makersOf(cls, as);
   const id = idFor(cls, makers);
 
   if (op === "noteGone") {
