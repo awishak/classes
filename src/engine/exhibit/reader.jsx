@@ -219,7 +219,8 @@ export const CSS = `
 .xr .prog{position:absolute;left:0;bottom:-4px;height:4px;background:var(--pop);width:0;transition:width .1s linear}
 .xr .bar{overflow:visible}
 .xr .quote .in{position:relative}
-.xr .quote .mark{position:absolute;left:-.02em;top:-.16em;font-family:Georgia,serif;font-size:min(34cqi,360px);line-height:.8;opacity:.13;pointer-events:none;user-select:none}
+.xr .quote{overflow:hidden;position:relative}
+.xr .quote .mark{position:absolute;right:.02em;left:auto;bottom:-.52em;top:auto;font-family:Georgia,serif;font-size:min(34cqi,360px);line-height:.8;opacity:.13;pointer-events:none;user-select:none}
 .xr .quote blockquote,.xr .quote .who{position:relative}
 .xr .thumbs{display:flex;gap:8px;margin-top:10px;overflow-x:auto;scrollbar-width:none}
 .xr .thumbs button{flex:none;width:92px;aspect-ratio:16/10;border-radius:4px;overflow:hidden;border:0;padding:0;cursor:pointer;opacity:.5;transition:opacity .15s ease, transform .15s ease;outline-offset:2px}
@@ -454,11 +455,15 @@ function MapBlock({ b }) {
 }
 
 function Frame({ kind }) { return <div className="empty">{kind}</div>; }
+const BLANK = { text: "Text, nothing written yet", heading: "Heading, nothing written yet", quote: "Big quote, nothing written yet", number: "Big number, nothing written yet", concept: "Concept, nothing written yet", timeline: "Timeline, nothing written yet" };
 
 /** One block. `first` gives the opening text block its drop capital. */
 export function Block({ b, first, sources, onSource, open, wrap, still }) {
   const sl = (id, label) => (id && sources.some(s => s.id === id) ? <SourceLink id={id} onSource={onSource} open={open}>{label}</SourceLink> : null);
   const nameOf = (id) => { const s = sources.find(x => x.id === id); return s ? [s.author, s.year].filter(Boolean).join(", ") || s.title || "Source" : ""; };
+  // In the builder an empty block still shows where the block sits.
+  const bare = { text: !String(b.text || "").trim(), heading: !String(b.text || "").trim(), quote: !String(b.text || "").trim(), number: !b.n && !b.w, concept: !b.name && !b.def, timeline: !(b.rows || []).some(r => r.when || r.title || r.text) }[b.t];
+  if (bare) return still ? <div className="blk col"><Frame kind={BLANK[b.t]} /></div> : null;
   if (b.t === "text") return <div className={"blk col txt" + (first ? " first" : "")}>
     {wrap && srcUrl(wrap.url) && <figure className="wrap-r"><Fig url={wrap.url} alt={wrap.alt} cap={wrap.cap} credit={wrap.credit} /></figure>}
     {paras(b.text).map((p, i) => <p key={i}>{inline(p, onSource, open)}</p>)}<div className="clear" />

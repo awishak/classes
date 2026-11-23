@@ -377,8 +377,8 @@ function Confetti({ run }) {
   return <div className="confetti" key={run} aria-hidden="true">{Array.from({ length: 46 }, (_, i) => <i key={i} style={{ left: ((i * 37) % 100) + "%", background: BITS[i % BITS.length], animationDuration: 1.6 + ((i * 13) % 10) / 6 + "s", animationDelay: ((i * 7) % 10) / 22 + "s", transform: `rotate(${(i * 47) % 360}deg)` }} />)}</div>;
 }
 
-function Picker({ classId, onPick }) {
-  return <>{[...new Set(BLOCKS.map(b => b.group))].map(g => <div key={g}><div className="grp">{g}</div><div className="picker">
+function Picker({ classId, onPick, onClose }) {
+  return <>{onClose && <button type="button" className="addhere thin" onClick={onClose}>{GLYPH.x} Close, back to your blocks</button>}{[...new Set(BLOCKS.map(b => b.group))].map(g => <div key={g}><div className="grp">{g}</div><div className="picker">
     {BLOCKS.filter(b => b.group === g && (b.t !== "concept" || classId !== "comm3")).map(b => <button type="button" key={b.t} onClick={() => onPick(b.t)}><span className="g">{GLYPH[b.t]}</span><b>{b.name}</b><small>{SAY[b.t]}</small></button>)}
   </div></div>)}</>;
 }
@@ -559,7 +559,7 @@ function Builder({ classId, viewer, as }) {
           <div className="ptabs">{pages.map((p, i) => <button type="button" key={p.id} aria-current={i === page} onClick={() => { setPage(i); setSel(""); setAdding(null); }}>{p.name || "Page " + (i + 1)}</button>)}</div>
           {cur.plan && <p className="say">Your plan for this page: {cur.plan}</p>}
           {cur.blocks.map((b, i) => <div key={b.id}>
-            {adding === i && <div style={{ marginBottom: 12 }}><Picker classId={classId} onPick={t => addBlock(t, i)} /></div>}
+            {adding === i && <div style={{ marginBottom: 12 }}><Picker classId={classId} onPick={t => addBlock(t, i)} onClose={() => setAdding(null)} /></div>}
             <div className={"item" + (sel === b.id ? " on" : "") + (drag === i ? " drag" : "") + (over === i && drag !== i ? " over" : "") + (fresh === b.id ? " new" : "")}
               onDragOver={e => { if (drag != null) { e.preventDefault(); setOver(i); } }} onDrop={e => { e.preventDefault(); reorder(drag, i); setDrag(null); setOver(null); }}>
               <div className="hd" draggable onDragStart={e => { setDrag(i); e.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => { setDrag(null); setOver(null); }} onClick={() => { setFresh(""); setSel(sel === b.id ? "" : b.id); }}>
@@ -572,8 +572,9 @@ function Builder({ classId, viewer, as }) {
             </div>
           </div>)}
           {adding === cur.blocks.length || cur.blocks.length === 0
-            ? <>{cur.blocks.length === 0 && <><h3>Start from a layout</h3><div className="starts">{STARTS.map(st => <button type="button" key={st.name} onClick={() => startPage(st)}><b>{st.name}</b><span className="mini">{st.blocks.map((t, k) => <i key={k} className={MINI[t] || "t"} />)}</span></button>)}</div></>}
-              <h3>{cur.blocks.length ? "Add to this page" : "Or add one block"}</h3><Picker classId={classId} onPick={t => addBlock(t)} /></>
+            ? <>{cur.blocks.length > 0 && <button type="button" className="addhere thin" onClick={() => setAdding(null)}>{GLYPH.x} Close, back to your blocks</button>}
+              <><h3>{cur.blocks.length ? "Add a layout" : "Start from a layout"}</h3><div className="starts">{STARTS.map(st => <button type="button" key={st.name} onClick={() => startPage(st)}><b>{st.name}</b><span className="mini">{st.blocks.map((t, k) => <i key={k} className={MINI[t] || "t"} />)}</span></button>)}</div></>
+              <h3>Or add one block</h3><Picker classId={classId} onPick={t => addBlock(t)} /></>
             : <button type="button" className="addhere" onClick={() => { setAdding(cur.blocks.length); setTimeout(() => pane.current?.scrollTo({ top: pane.current.scrollHeight, behavior: "smooth" }), 50); }}>{GLYPH.plus} Add a block</button>}
         </>}
 
