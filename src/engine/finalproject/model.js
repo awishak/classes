@@ -197,8 +197,20 @@ export function whyOf(a, b) {
   return head + "each is on the other's list.";
 }
 
+// Who is not to be paired. Andrew, 2026-11-22: "i will not pair up a person
+// who is in danger of failing ... under 70 percent is in danger of failing.
+// not having a grade yet for visual story is in danger of failing." The
+// review page reads the grades and sets `risk` on a person: the reason, or
+// "hidden" while he has the grades switched off, so the page can hold the
+// pair without printing the grade.
+export const DANGER_UNDER = 70;
+export const MUST_HAVE_GRADE = ["visual"];
+export const riskOf = (p) => (!p || !p.risk ? "" : p.risk === "hidden" ? "Check " + first(p) + "'s grade before pairing." : first(p) + " is in danger of failing, " + p.risk + ".");
+
 /** Why two people are not a clean pair, or "" when they are. */
 export function blockOf(a, b) {
+  const risky = [a, b].map(riskOf).filter(Boolean);
+  if (risky.length) return risky.join(" ");
   // A sheet not handed in says nothing yet: no pair asked for, no picks. Say
   // that, and not "did not pick", which reads as an answer.
   const out = [a, b].filter(p => p.state && p.state !== "in");
@@ -259,7 +271,8 @@ function bestOf(group, tie) {
  * Returns { pairs: [{ a, b, tie, why }], maybe: [{ a, b, why }] }, a and b ids.
  */
 export function suggest(people, { taken = new Set(), passed = new Set() } = {}) {
-  const open = people.filter(p => wantsPair(p) && !taken.has(p.id));
+  // Nobody in danger of failing is suggested, in a pair or a one-way pick.
+  const open = people.filter(p => wantsPair(p) && !taken.has(p.id) && !p.risk);
   const ok = (a, b) => a.section === b.section && !passed.has(pairKey(a.id, b.id));
   const pairs = [];
   // Each connected group on its own, so the search stays small.

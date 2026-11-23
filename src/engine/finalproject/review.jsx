@@ -31,6 +31,8 @@ import { idOf, nameShown } from "../roster.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { loadFont } from "../audiostory/bits.jsx";
 import { StudentPicker, pickedStudent, pickStudent } from "../audiostory/control.jsx";
+import { assignmentsOf } from "../profileTask.js";
+import { standingOf, alive, boardOf } from "../grades.js";
 import * as M from "./model.js";
 
 const lower = (s) => String(s || "").trim().toLowerCase();
@@ -139,6 +141,29 @@ function Disc({ p, size }) {
     </span>
   );
 }
+// A student's grade so far, the number that colours the boxes on the grade
+// board, and why they are in danger of failing when they are: under 70, or
+// no grade yet on a challenge named in M.MUST_HAVE_GRADE. A card he has
+// sorted and not yet released counts as a grade for that second rule.
+function gradeFor(data, assignments, p, demo) {
+  if (demo) { const score = 58 + (hueOf(p.name) % 42); return { score, letter: score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : "D", missing: [], risk: score < M.DANGER_UNDER ? "at " + score + " percent" : "" }; }
+  const st = standingOf(data, assignments, p.name);
+  const missing = assignments.filter(a => M.MUST_HAVE_GRADE.includes(a.id)
+    && !alive(data?.assignmentLog?.[a.id]?.[p.name]).some(e => e.type === "grade") && !boardOf(data, a.id).cards?.[p.name]?.bucket).map(a => a.title);
+  const risk = [st && st.score < M.DANGER_UNDER ? "at " + st.score + " percent" : "", ...missing.map(t => "with no grade yet for the " + t)].filter(Boolean).join(" ");
+  return { score: st ? st.score : null, letter: st ? st.letter : "", missing, risk };
+}
+function GradeBits({ p, on }) {
+  const g = p.grade;
+  if (!on || !g || (g.score == null && !g.risk)) return null;
+  return (
+    <>
+      {g.score != null ? <span className={"fp-pill fp-gpill" + (g.risk ? " fp-bad" : "")}>{g.letter} {g.score}%</span> : null}
+      {g.missing.map(t => <span key={t} className="fp-badsay">No grade yet for the {t}</span>)}
+    </>
+  );
+}
+
 const workClass = (p) => (p.state === "in" && p.work ? " fp-w-" + p.work : " fp-w-none");
 
 // ─── the board ───
@@ -167,7 +192,7 @@ function groupsOf(people, file, suggested) {
   return { pairs, sug, open, solo, out };
 }
 
-function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
+function Board({ people, file, who, lit, burst, suggested, onPick, onDrop, grades }) {
   const box = useRef(null);
   const els = useRef(new Map());
   const [pos, setPos] = useState(new Map());
@@ -280,6 +305,7 @@ function Board({ people, file, who, lit, burst, suggested, onPick, onDrop }) {
           onPointerDown={e => start(e, p.id)} onClick={e => { if (e.detail === 0) onPick(p.id === who ? "" : p.id); }}>
           <Disc p={p} size={face - 8} />
           {n ? <span className="fp-tick" aria-hidden="true">{n}</span> : null}
+          {grades && p.grade && (p.grade.letter || p.grade.risk) ? <span className={"fp-grade" + (p.grade.risk ? " fp-bad" : "")} aria-label={p.grade.risk ? "In danger of failing" : "Grade " + p.grade.letter}>{p.grade.letter}</span> : null}
         </button>
         <span className="fp-cname">{p.first}</span>
       </div>
@@ -435,7 +461,7 @@ const linked = (text) => String(text).split(/(https?:\/\/[^\s)]+)/g).map((part, 
 const hostOf = (site) => String(site || "").replace(/^https?:\/\//i, "").replace(/^www\./i, "").split(/[/?#]/)[0];
 const hrefOf = (site) => (/^https?:\/\//i.test(site) ? site : "https://" + site);
 
-function Student({ config, p, people, file, change, onPick, onPair, onAsk, flash }) {
+function Student({ config, p, people, file, change, onPick, onPair, onAsk, flash, grades }) {
   const [open, setOpen] = useState("");
   const [full, setFull] = useState("");
   const byId = new Map(people.map(x => [x.id, x]));
@@ -455,7 +481,7 @@ function Student({ config, p, people, file, change, onPick, onPair, onAsk, flash
   const w = M.workOf(v.work);
   if (p.state !== "in" && !draft) return (
     <div className="fp-student">
-      <div className="fp-hero"><span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span><div><h2 className="fp-name">{p.shown}</h2><p className="fp-sub">{p.state === "started" ? "Started, not yet submitted" : "Not opened"}</p></div></div>
+      <div className="fp-hero"><span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span><div><h2 className="fp-name">{p.shown}</h2><p className="fp-sub"><GradeBits p={p} on={grades} /><span>{p.state === "started" ? "Started, not yet submitted" : "Not opened"}</span></p></div></div>
       {pickedBy.length ? <div className="fp-chips fp-by"><span className="fp-k">Picked by</span>{pickedBy.map(q => <button key={q.id} type="button" className="fp-person" onClick={() => onPick(q.id)}><Disc p={q} size={24} />{q.first}</button>)}</div> : null}
     </div>
   );
@@ -465,7 +491,7 @@ function Student({ config, p, people, file, change, onPick, onPair, onAsk, flash
         <span className={"fp-mini fp-big" + workClass(p)}><Disc p={p} size={84} /></span>
         <div>
           <h2 className="fp-name">{p.student.email ? <StudentLink config={config} student={p.student} /> : p.shown}</h2>
-          <p className="fp-sub">{w ? <span className={"fp-pill fp-w-" + w.id}>{w.short}</span> : null}{draft ? <span>Started, not yet submitted</span> : p.at ? <span>Submitted {when(p.at)}</span> : null}</p>
+          <p className="fp-sub">{w ? <span className={"fp-pill fp-w-" + w.id}>{w.short}</span> : null}<GradeBits p={p} on={grades} />{draft ? <span>Started, not yet submitted</span> : p.at ? <span>Submitted {when(p.at)}</span> : null}</p>
         </div>
       </div>
 
@@ -490,9 +516,9 @@ function Student({ config, p, people, file, change, onPick, onPair, onAsk, flash
               <button type="button" className={"fp-mini" + workClass(q)} onClick={() => onPick(q.id)} aria-label={q.shown}><Disc p={q} size={38} /></button>
               <div className="fp-sugmain">
                 <p className="fp-names">{q.shown}{i === 0 && v.top === q.id ? <span className="fp-star">top choice</span> : null}</p>
-                <p className="fp-why">{q.state !== "in" ? "Not yet submitted" + (dback ? ". Draft picks " + p.first + (dback === "top" ? " as top choice" : "") : "") : back ? (back === "top" ? "Picked " + p.first + " as top choice" : "Picked " + p.first + " back") : "Did not pick " + p.first}{theirs && theirs.id !== p.id ? ". Paired with " + theirs.first : ""}{block && back && !draft ? ". " + block : ""}</p>
+                <p className="fp-why">{q.state !== "in" ? "Not yet submitted" + (dback ? ". Draft picks " + p.first + (dback === "top" ? " as top choice" : "") : "") : back ? (back === "top" ? "Picked " + p.first + " as top choice" : "Picked " + p.first + " back") : "Did not pick " + p.first}{theirs && theirs.id !== p.id ? ". Paired with " + theirs.first : ""}{block && (back || p.risk || q.risk) && !draft ? ". " + block : ""}</p>
               </div>
-              {draft || (partner && partner.id === q.id) ? null : <button type="button" className={"fp-btn" + (block ? "" : " fp-go")} onClick={() => (q.state !== "in" ? onAsk(p.id, q.id) : onPair(p.id, q.id))}>{block ? "Pair anyway" : "Pair"}</button>}
+              {draft || (partner && partner.id === q.id) ? null : <button type="button" className={"fp-btn" + (block ? "" : " fp-go")} onClick={() => (q.state !== "in" || p.risk || q.risk ? onAsk(p.id, q.id) : onPair(p.id, q.id))}>{block ? "Pair anyway" : "Pair"}</button>}
             </div>
             {q.state === "in" && q.topics.some(t => t.topic) ? (
               <div className="fp-theirs fp-of">
@@ -595,9 +621,18 @@ export default function FinalReview({ config, worksheetKey, roster }) {
   const [burst, setBurst] = useState([]);
   const [ask, setAsk] = useState(null);
   const [releasing, setReleasing] = useState(false);
+  // Grades show when the page opens, and one button takes them off the page.
+  // Andrew, 2026-11-22: "i want to see grades but yeah let me toggle them off."
+  const [grades, setGrades] = useState(true);
   useEffect(() => { loadFont(); }, []);
 
-  const people = useMemo(() => all.filter(p => sections.length < 2 || !section || p.section === section), [all, section, sections.length]);
+  const people = useMemo(() => {
+    const assignments = assignmentsOf(config, data);
+    return all.filter(p => sections.length < 2 || !section || p.section === section).map(p => {
+      const grade = gradeFor(data, assignments, p, demo);
+      return { ...p, grade, risk: grade.risk ? (grades ? grade.risk : "hidden") : "" };
+    });
+  }, [all, section, sections.length, config, data, demo, grades]);
   const sug = useMemo(() => {
     if (!file) return { pairs: [], maybe: [] };
     const taken = new Set(people.filter(p => M.placeOf(file, p.id)).map(p => p.id));
@@ -652,6 +687,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
         </div>
         <div className="fp-tools">
           <StudentPicker people={menu} value={chosen ? chosen.rid : ""} onPick={(rid) => { setWho(rid); pickStudent(rid); }} />
+          <button type="button" className="fp-btn" aria-pressed={grades} onClick={() => setGrades(g => !g)}>{grades ? "Hide grades" : "Show grades"}</button>
           {file.released
             ? <button type="button" className="fp-btn fp-released" onClick={() => change(f => ({ ...f, released: false }))}>Released. Take back</button>
             : releasing
@@ -663,7 +699,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
 
       <div className="fp-main">
         <div className="fp-left">
-          <Board people={people} file={file} who={chosen ? chosen.id : ""} lit={lit} burst={burst} suggested={sug.pairs} onPick={pick} onDrop={drop} />
+          <Board people={people} file={file} who={chosen ? chosen.id : ""} lit={lit} burst={burst} suggested={sug.pairs} onPick={pick} onDrop={drop} grades={grades} />
           {ask ? (
             <div className="fp-ask" role="alertdialog" aria-label="Pair anyway">
               <Duo a={byId.get(ask.a)} b={byId.get(ask.b)} size={36} />
@@ -683,7 +719,7 @@ export default function FinalReview({ config, worksheetKey, roster }) {
           {chosen ? (
             <>
               <button type="button" className="fp-btn fp-back" onClick={() => pick("")}>Whole class</button>
-              <Student config={config} p={chosen} people={people} file={file} change={change} onPick={pick} onPair={(a, b) => pair(a, b)} onAsk={(a, b) => setAsk({ a, b, why: M.blockOf(byId.get(a), byId.get(b)) })} />
+              <Student config={config} grades={grades} p={chosen} people={people} file={file} change={change} onPick={pick} onPair={(a, b) => pair(a, b)} onAsk={(a, b) => setAsk({ a, b, why: M.blockOf(byId.get(a), byId.get(b)) })} />
             </>
           ) : (
             <Overview people={people} file={file} sug={sug} onLit={setLit} onPair={pair} onPass={(a, b) => { change(f => M.passOn(f, a, b)); setLit(""); }} onSplit={(id) => change(f => M.splitUp(f, id))} onPick={pick} onPairAll={pairAll} />
@@ -703,7 +739,7 @@ function Shell({ children }) {
 const CSS = `
 .fp{--bg:#0a0f1f;--bg2:#141c3a;--panel:#121934;--card:#1a2346;--card2:#222d58;--line:#2c3866;--ink:#f5f7ff;--dim:#b4bee0;--mute:#8793bd;
   --pair2:#34d399;--pair1:#60a5fa;--solo1:#fbbf24;--solo2:#fb7185;--none:#56618c;
-  --t3:#ffd75e;--t2:#c4b5fd;--t1:#7dd3fc;--made:#ffffff;--go:#34d399;--go-ink:#052e1f;--warn:#fb923c;
+  --t3:#ffd75e;--t2:#c4b5fd;--t1:#7dd3fc;--made:#ffffff;--go:#34d399;--go-ink:#052e1f;--warn:#fb923c;--bad:#f87171;
   font-family:'Outfit',-apple-system,BlinkMacSystemFont,sans-serif;color:var(--ink);
   background:radial-gradient(1100px 720px at 28% 18%,var(--bg2) 0%,var(--bg) 62%);min-height:calc(100vh - 60px);padding:18px 20px 60px;box-sizing:border-box}
 .fp *{box-sizing:border-box}
@@ -801,6 +837,10 @@ const CSS = `
 .fp-disc{border-radius:50%;overflow:hidden;display:grid;place-items:center;font-weight:600;color:#fff;flex:none;pointer-events:none}
 .fp-disc img{width:100%;height:100%;object-fit:cover;display:block}
 .fp-tick{position:absolute;right:-3px;bottom:-3px;min-width:20px;height:20px;border-radius:999px;background:var(--go);color:var(--go-ink);font-size:12px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}
+.fp-grade{position:absolute;left:-3px;top:-3px;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:var(--card2);color:var(--ink);font-size:12px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}
+.fp-grade.fp-bad{background:var(--bad);color:#2a0606;box-shadow:0 0 0 2px var(--bg),0 0 14px var(--bad)}
+.fp-pill.fp-gpill{background:var(--card2);color:var(--ink)}.fp-pill.fp-gpill.fp-bad{background:var(--bad);color:#2a0606}
+.fp-badsay{color:var(--bad);font-weight:600}
 .fp-label{position:absolute;transform:translate(-50%,-50%);font-size:12.5px;font-weight:500;color:var(--dim);white-space:nowrap;pointer-events:none;transition:left .75s cubic-bezier(.2,.85,.2,1),top .75s cubic-bezier(.2,.85,.2,1),opacity .3s}
 .fp-label.fp-sel{color:var(--ink);font-weight:600}
 .fp-ghost{position:absolute;display:block;transform:translate(-50%,-50%) scale(1.1);pointer-events:none;z-index:9;border-radius:50%;box-shadow:0 16px 40px rgba(0,0,0,.6);opacity:.95}
