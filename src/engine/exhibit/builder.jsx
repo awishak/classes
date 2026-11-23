@@ -87,6 +87,7 @@ const CSS = `
 .xb .grp{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7b828e;margin:12px 0 6px}
 .xb .tb{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
 .xb .tb select{width:auto;padding:5px 8px;font-size:12.5px}
+.xb .tip{font-size:12.5px;color:#7b828e;margin:6px 0 0}
 .xb .thumb{width:100%;max-height:150px;object-fit:cover;border-radius:8px;display:block;margin-bottom:8px;background:#262a32}
 .xb .drop{display:block;border:1.5px dashed #4a5060;border-radius:8px;padding:14px;text-align:center;color:#c9ced6;font-weight:600;cursor:pointer;margin-bottom:10px}
 .xb .drop:hover{border-color:#ffd166;color:#fff}
@@ -245,7 +246,7 @@ function ImageFields({ classId, as, url, alt, credit, cap, set, keys = ["url", "
   </>;
 }
 
-function TextEditor({ b, set, sources }) {
+function TextEditor({ b, set, sources, onNewSource }) {
   const ref = useRef(null);
   const wrap = (before, after) => {
     const el = ref.current; if (!el) return;
@@ -254,16 +255,20 @@ function TextEditor({ b, set, sources }) {
     set({ text: t.slice(0, a) + before + mid + after + t.slice(z) });
     requestAnimationFrame(() => { el.focus(); el.setSelectionRange(a + before.length, a + before.length + mid.length); });
   };
+  const keys = (e) => { if (!(e.metaKey || e.ctrlKey)) return; const k = e.key.toLowerCase(); if (k === "b") { e.preventDefault(); wrap("**", "**"); } if (k === "i") { e.preventDefault(); wrap("_", "_"); } };
+  const pick = (v) => { if (v === "+") onNewSource(); else if (v) wrap("[[" + v + "|", "]]"); };
   return <>
     <div className="tb">
-      <button type="button" className="btn ghost sm" onClick={() => wrap("**", "**")}><b>Bold</b></button>
-      <button type="button" className="btn ghost sm" onClick={() => wrap("_", "_")}><i>Italic</i></button>
-      <select value="" aria-label="Link the selected words to a source" onChange={e => { if (e.target.value) wrap("[[" + e.target.value + "|", "]]"); }}>
+      <button type="button" className="btn ghost sm" title="Command B" onClick={() => wrap("**", "**")}><b>Bold</b></button>
+      <button type="button" className="btn ghost sm" title="Command I" onClick={() => wrap("_", "_")}><i>Italic</i></button>
+      <select value="" aria-label="Link the selected words to a source" onChange={e => pick(e.target.value)}>
         <option value="">Link words to a source</option>
         {sources.filter(s => s.title || s.author).map(s => <option key={s.id} value={s.id}>{(s.author || s.title).slice(0, 40)}{s.year ? " " + s.year : ""}</option>)}
+        <option value="+">Add a new source</option>
       </select>
     </div>
-    <textarea ref={ref} rows={8} value={b.text || ""} onChange={e => set({ text: e.target.value })} />
+    <textarea ref={ref} rows={8} value={b.text || ""} onKeyDown={keys} onChange={e => set({ text: e.target.value })} />
+    <p className="tip">Select words, then press Bold, Italic or pick a source. Leave a blank line between paragraphs.</p>
   </>;
 }
 
@@ -289,9 +294,9 @@ function MapEditor({ b, set }) {
   </>;
 }
 
-function BlockEditor({ b, set, sources, classId, as }) {
+function BlockEditor({ b, set, sources, classId, as, onNewSource }) {
   const SourcePick = ({ k = "source" }) => <label className="f"><span>Source</span><select value={b[k] || ""} onChange={e => set({ [k]: e.target.value })}><option value="">None</option>{sources.filter(s => s.title || s.author).map(s => <option key={s.id} value={s.id}>{(s.author || s.title).slice(0, 50)}</option>)}</select></label>;
-  if (b.t === "text") return <TextEditor b={b} set={set} sources={sources} />;
+  if (b.t === "text") return <TextEditor b={b} set={set} sources={sources} onNewSource={onNewSource} />;
   if (b.t === "heading") return <F label="Heading" value={b.text} onChange={v => set({ text: v })} />;
   if (b.t === "quote") return <><F label="The quote" area value={b.text} onChange={v => set({ text: v })} /><F label="Who said the quote" value={b.who} onChange={v => set({ who: v })} /></>;
   if (b.t === "concept") return <><F label="Concept" value={b.name} onChange={v => set({ name: v })} /><F label="Definition" area value={b.def} onChange={v => set({ def: v })} /><SourcePick /></>;
@@ -509,7 +514,7 @@ function Builder({ classId, viewer, as }) {
                 <button type="button" className="ic" aria-label="Move up" disabled={i === 0} onClick={e => { e.stopPropagation(); moveBlock(i, -1); }}>{GLYPH.up}</button>
                 <button type="button" className="ic" aria-label="Move down" disabled={i === cur.blocks.length - 1} onClick={e => { e.stopPropagation(); moveBlock(i, 1); }}>{GLYPH.down}</button>
                 <button type="button" className="ic" aria-label="Remove" onClick={e => { e.stopPropagation(); dropBlock(i); }}>{GLYPH.x}</button></div>
-              {sel === b.id && <div className="bd"><BlockEditor b={b} set={p => blockPatch(cur.id, b.id, p)} sources={sources} classId={classId} as={as} />
+              {sel === b.id && <div className="bd"><BlockEditor b={b} set={p => blockPatch(cur.id, b.id, p)} sources={sources} classId={classId} as={as} onNewSource={() => { goStep("sources"); addSource(); }} />
                 <button type="button" className="addhere thin" style={{ marginTop: 12, marginBottom: 0 }} onClick={() => setAdding(adding === i + 1 ? null : i + 1)}>{GLYPH.plus} Add a block below</button></div>}
             </div>
           </div>)}

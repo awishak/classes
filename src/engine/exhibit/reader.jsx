@@ -190,6 +190,8 @@ export const CSS = `
 .xr .next:hover .ar{transform:translateX(10px)}
 .xr .next .ar{transition:transform .2s ease;flex:none}
 .xr .end{height:96px}
+.xr section.turn{animation:xr-turn .35s ease}
+@keyframes xr-turn{from{opacity:0;transform:translateY(14px)}}
 
 .xr .pop{position:absolute;z-index:30;width:min(400px, calc(100% - 32px));background:var(--ink);color:var(--paper);border-radius:6px;padding:18px 20px 20px;box-shadow:0 14px 40px rgba(0,0,0,.28);font-family:var(--f-label)}
 .xr .pop .lab{color:var(--popfg)}
@@ -217,7 +219,7 @@ export const CSS = `
 .xr.narrow .cover .cred{position:relative;right:auto;bottom:auto;max-width:none;text-align:left;margin:0 20px 14px;display:block}
 .xr.narrow .cover.pic .in{padding-block:90px 16px}
 .xr.narrow .cover.pic::after{background:linear-gradient(180deg,rgba(0,0,0,.2) 0%,rgba(0,0,0,.55) 35%,rgba(0,0,0,.9) 100%)}
-@media (prefers-reduced-motion:reduce){ .xr .next .ar{transition:none} }
+@media (prefers-reduced-motion:reduce){ .xr .next .ar{transition:none} .xr section.turn{animation:none} }
 `;
 
 const Icon = {
@@ -487,7 +489,7 @@ export default function Reader({ doc, page, onPage, around, narrow, scrollEl }) 
       const held = around ? around(b, node) : node;
       out.push(b.t === "quote" ? <div key={b.id}>{held}</div> : <div className="gut" key={b.id}>{held}</div>);
     });
-    return <section key={p.id} data-page={i}>
+    return <section key={p.id} data-page={i} className={scroll ? undefined : "turn"}>
       {head && <>{scroll && <div className="rule" />}<div className="phead gut"><div className="lab">{i + 1} of {pages.length}</div><h2 className="hd">{p.name}</h2></div></>}
       {out}
       {i === pages.length - 1 && <div className="gut"><Sources doc={doc} /></div>}
