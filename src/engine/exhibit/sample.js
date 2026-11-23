@@ -17,7 +17,7 @@ export const SAMPLE = {
   headline: "What a Timeout Is For",
   summary: "A timeout stops the clock, but its real work is communication. In about a minute, a coach has to get five players to see the game the same way again. This exhibit looks at how that happens.",
   cover: { url: P + "cover.jpg", alt: "A women's basketball team stands in a tight circle on the court during a timeout, in a dark arena.", credit: "Drake huddles during a timeout at Williams Arena in Minneapolis, December 2, 2023. Photo: John McClellan, CC BY-SA 2.0" },
-  interview: "", ai: "We used AI to check our citations and to suggest a first order for the pages. Every sentence is ours.", who: "",
+  interview: "", ai: "This sample was made with AI. Claude, an AI model, wrote every sentence, chose the photographs and laid out the pages, from a topic Dr. Ishak picked. The photographs are real and credited to the people who took them.", who: "",
   film: { url: "", captions: false }, html: { url: "", name: "" }, gone: {}, at: {}, pagesAt: at, sourcesAt: at,
   sources: [
     { id: "s1", at, kind: "academic", author: "Sample, A., & Author, B.", year: "2021", title: "Sample source: Talk in the huddle", outlet: "Sample Journal of Sport Communication, 14(2), 101-118", url: "", note: "This is where our definition of reorientation comes from." },
