@@ -19,7 +19,7 @@ import { rosterOf } from "./roster.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
-import { gradeText, scaleOf, SCALES, alive, bucketsFor, bucketOf } from "./grades.js";
+import { gradeText, scaleOf, SCALES, alive, bucketsFor, bucketOf, boardOf, cardLetter, regradePending } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import { PageEditor } from "./SubmissionPage.jsx";
 import { withFields } from "./submissionPages.js";
@@ -203,13 +203,24 @@ export const appreciatePatch = (data, aid, name, eid, actor) => {
   return { ...data, assignmentLog: al };
 };
 
+// A hand-in newer than the grade that he has already looked at and left where
+// it was: the card was saved again after the work came in, and it still says
+// what the student was sent. Andrew, 2026-11-24, on a story whose only change
+// was the Submit press, said to leave the grade. Without this the count never drops,
+// because a grade that does not change is not sent again. A card that was
+// moved still counts until the new grade is released.
+const lookedAt = (data, aid, name, log) => {
+  const card = boardOf(data, aid).cards?.[name], g = lastOf(log, "grade"), s = lastOf(log, "submission");
+  if (!card?.bucket || !g || !s || regradePending(log)) return false;
+  return (card.at || 0) > s.ts && cardLetter(card, bucketOf(card.bucket)) === g.letter;
+};
 export function waitingOn(data, assignments) {
   return (assignments || []).map(asg => {
     const byStudent = data?.assignmentLog?.[asg.id] || {};
     let toGrade = 0, messages = 0;
     Object.keys(byStudent).forEach(name => {
       const log = alive(byStudent[name]);
-      if (needsGrade(log)) toGrade++;
+      if (needsGrade(log) && !lookedAt(data, asg.id, name, log)) toGrade++;
       if (unanswered(log)) messages++;
     });
     return { id: asg.id, title: asg.title, toGrade, messages };
