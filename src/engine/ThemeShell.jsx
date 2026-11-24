@@ -53,8 +53,11 @@ export function ThemeStyle({ theme }) {
 
 // The switcher. Named, described, and always reachable: a student who picked
 // Crashing Out in week one has to be able to get back out of it in week two.
-export function ThemePicker({ theme, onPick, compact }) {
-  const on = known(theme);
+// `extra` is one more choice after the themes, { label, desc, on, onPick }:
+// Primary Bold, which is a look with its own pages and not a set of colours,
+// so it cannot be one of THEMES. While it is on, no theme reads as on.
+export function ThemePicker({ theme, onPick, compact, extra }) {
+  const on = extra?.on ? "" : known(theme);
   // Compact still names them. Four unlabelled swatches is a row of dots asking
   // you to guess, and Crashing Out and Snapchat are not colours somebody can
   // infer. Two columns, because four named pills do not fit across a menu.
@@ -79,6 +82,15 @@ export function ThemePicker({ theme, onPick, compact }) {
             </span>
           </button>
         ))}
+        {extra ? (
+          <button role="radio" aria-checked={!!extra.on} title={extra.desc} onClick={extra.onPick}
+            style={{ minHeight: 44, padding: "0 10px", borderRadius: 999, cursor: "pointer", background: "var(--surface-card)",
+              border: extra.on ? "2px solid var(--text-primary)" : "1px solid var(--line-strong)", display: "flex", alignItems: "center", gap: 8, minWidth: 0,
+              fontFamily: "var(--font-body)", fontSize: 13, fontWeight: extra.on ? 700 : 500, color: "var(--text-primary)" }}>
+            <span aria-hidden="true" style={{ width: 18, height: 18, flex: "none", borderRadius: 999, background: extra.swatch, border: "2px solid var(--text-primary)", display: "block" }} />
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{extra.label}</span>
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -100,6 +112,18 @@ export function ThemePicker({ theme, onPick, compact }) {
           {t === on ? <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>On</span> : null}
         </button>
       ))}
+      {extra ? (
+        <button role="radio" aria-checked={!!extra.on} onClick={extra.onPick}
+          style={{ minHeight: 44, padding: "12px 16px", textAlign: "left", cursor: "pointer", borderRadius: "var(--card-radius)", background: "var(--surface-card)",
+            border: extra.on ? "2px solid var(--text-primary)" : "var(--card-border)", display: "flex", alignItems: "center", gap: 14, fontFamily: "var(--font-body)" }}>
+          <span aria-hidden="true" style={{ width: 34, height: 34, flex: "none", borderRadius: 999, background: extra.swatch, border: "2px solid var(--text-primary)", display: "block" }} />
+          <span style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 17, fontWeight: 600, color: "var(--text-primary)" }}>{extra.label}</span>
+            <span style={{ fontSize: 15, color: "var(--text-muted)" }}>{extra.desc}</span>
+          </span>
+          {extra.on ? <span style={{ marginLeft: "auto", fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>On</span> : null}
+        </button>
+      ) : null}
     </div>
   );
 }

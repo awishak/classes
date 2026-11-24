@@ -54,9 +54,8 @@ import WelcomeDeck, { needsWelcome } from "./WelcomeDeck.jsx";
 import NoticeCard, { NoticeWriter } from "./NoticeCard.jsx";
 import PortalShell from "./portal/Shell.jsx";
 import PrimaryBoldShell from "./primarybold/Shell.jsx";
-import { previewOn } from "./primarybold/preview.js";
+import { previewOn, setPreview as keepBold } from "./primarybold/preview.js";
 import { Face as PortalFace, DrFace } from "./portal/bits.jsx";
-import { ToolsPanel } from "./portal/Tools.jsx";
 import { SaveWord, useOnline } from "./SaveWord.jsx";
 import { noticeFor, markNoticeRead } from "./notice.js";
 import { isTestStudent, realStudents, sectionFor, hasSections, HOUSE, isHouse, isLurker } from "./sections.js";
@@ -615,6 +614,11 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // and the rest of the site carries on as before. The instructor's email
   // makes the instructor; nobody has to press a role toggle to get in.
   const { session, email: sessionEmail, instructor: sessionInstructor, signOut: endSession } = useSession();
+  // Primary Bold (docs/primary-bold), his alone until he releases the pages:
+  // his session, and the look picked on More or with ?primarybold=1.
+  const [boldOn, setBoldOn] = useState(() => previewOn());
+  const bold = sessionInstructor && boldOn;
+  const pickBold = (yes) => { keepBold(yes); setBoldOn(yes); };
   // Looking at the demo class as a visitor: no door, no writes, and the lens
   // cannot be taken off, only pointed at another placeholder student.
   const demo = !!config.demo && !sessionInstructor;
@@ -1061,6 +1065,9 @@ export default function ClassApp({ config: classConfig, initialCard }) {
     );
   };
 
+  // Primary Bold as a choice beside the themes. Andrew, 2026-11-24: "add
+  // primarybold as a theme." His alone until he releases the pages.
+  const boldPick = sessionInstructor ? { label: "Primary Bold", desc: "Circles are people, blocks are challenges, pills are buttons.", swatch: "#2f8576", on: bold, onPick: () => pickBold(true) } : null;
   const MorePage = (
     <Panel title="More">
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1094,15 +1101,14 @@ export default function ClassApp({ config: classConfig, initialCard }) {
             <InstructorProfile config={config} shared={shared} updateShared={preview ? () => {} : updateShared} />
           </div>
         ) : null}
-        {/* Andrew, 2026-10-16: "having them in the menu is OK." The tools, links only; the counts are on the home. */}
-        {view === "instructor" ? <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}><ToolsPanel config={config} data={data} counts={false} /></div> : null}
+        {/* The tools were here. Andrew, 2026-11-24: "remove the tools stuff." They are still on the home. */}
         {view === "instructor" ? <div style={{ paddingTop: 12, borderTop: "1px solid " + BORDER }}><RequestInbox data={data} update={write} /></div> : null}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: view === "instructor" ? 12 : 0, borderTop: view === "instructor" ? "1px solid " + BORDER : "none" }}>
           <span style={{ ...label, color: TEXT_MUTED }}>Theme</span>
           <p style={{ margin: 0, fontSize: 15, color: TEXT_SECONDARY, lineHeight: 1.5 }}>
             Your choice, on your screen. Nobody else in the class sees it.
           </p>
-          <ThemePicker theme={theme} onPick={pickTheme} />
+          <ThemePicker theme={theme} onPick={(t) => { pickBold(false); pickTheme(t); }} extra={boldPick} />
           <DayNightPicker theme={theme} mode={mode} onPick={pickMode} />
         </div>
         {view === "instructor" ? null : (
@@ -1323,12 +1329,17 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // are gone; the shell draws the home, the pages, the bottom bar and the
   // laptop's two panes, and this component still owns everything above:
   // the session, the data, the decks in front of the site, the preview bar.
-  // The Primary Bold pages (docs/primary-bold), for him alone until he releases
-  // them: his session, and the preview turned on in this browser. Viewing as
-  // a student from his session shows the student's Primary Bold pages.
-  const Frame = sessionInstructor && previewOn() ? PrimaryBoldShell : PortalShell;
+  const Frame = bold ? PrimaryBoldShell : PortalShell;
+  // What Primary Bold's own More page needs from here. The live shell takes no notice.
+  const more = {
+    classes: ENGINE_LIST, roster, viewing: preview, viewAs: (name) => { setPreview(name); setSaving(isTestStudent(config, name)); go(null); },
+    role, pickRole: preview ? null : pickRole, sessionInstructor, ownCode, signOut: session && !preview ? signOut : null, signedIn,
+    theme, pickTheme: (t) => { pickBold(false); pickTheme(t); },
+    profile: view === "instructor" ? <InstructorProfile config={config} shared={shared} updateShared={preview ? () => {} : updateShared} /> : null,
+    requests: view === "instructor" ? <RequestInbox data={data} update={write} /> : <RequestForm update={write} name={preview || asStudent} />,
+  };
   return (
-    <Frame config={config} data={data} write={write} ctx={ctx} view={view} isDesktop={isDesktop}
+    <Frame more={more} config={config} data={data} write={write} ctx={ctx} view={view} isDesktop={isDesktop}
       theme={theme} mode={mode} accentCSS={accentCSS(a, config.accentDark)} baseCSS={CSS}
       go={go} openKey={openKey} openSub={openSub} me={me} seenAs={seenAs}
       PreviewBar={PreviewBar} GameLayer={GameLayer} tickerLines={tickerLines} myPoints={myPoints}

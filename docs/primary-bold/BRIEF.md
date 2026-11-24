@@ -32,16 +32,22 @@ How he sees the pages: `?primarybold=1` on any class address turns the preview o
 
 To release on November 30: make the one test in `ClassApp.jsx` (`sessionInstructor && previewOn()`) true for everyone.
 
+More was added the same day, with no mockup behind the page. Andrew, on the live More page: "fix this page. add primarybold as a theme. remove the tools stuff. make it prettier", and "same for comm 3" (More is one page for every class). So:
+
+- Primary Bold is a choice in the theme list on the live More page, for an instructor session only until release. Picking Primary Bold there turns the pages on with no reload, and `?primarybold=1` still works.
+- The tools panel is off More in both looks. The tools are still on the live home.
+- `more.jsx` is More in Primary Bold: the class as pills, View as a student as faces, the three grounds, the three looks from before (picking one leaves Primary Bold), the Student and Instructor switch, the sign-in code and Sign out. His card and the requests are the live forms inside a plain card. `ClassApp` hands the page what the page needs as `more`.
+
 What is not the mockup yet:
 
 - The Remind me buttons are left out. That question is still open below.
-- Inbox, Games, More, Class flow and the instructor's Challenges list are the live pages inside a plain card.
+- Inbox, Games, Class flow and the instructor's Challenges list are the live pages inside a plain card.
 - Editing a profile and See more on Dr. Ishak open the live site's sheets.
 - A check-in is the live check-in form inside the challenge.
 - A card's comment and private note are written on the live grading page. Comments and notes on Grade Flow opens that page.
 - Control reads the class data only. It does not ask the server for worksheet rows, so Started is never shown and a sheet resubmitted after a review is not flagged.
 - The class home's Write a note and Room screen buttons are left out, and so is Copy review link on Control.
-- The old top bar's sign out and view-as menu are not in the Primary Bold bar. The preview bar still shows while viewing as a student.
+- Sign out and View as a student are on More, not in the top bar. The preview bar still shows while viewing as a student.
 
 What was checked: `npm run build` passes, with a smoke section that renders eight of the pages. Every page but To Grade was seen as a picture on made-up data (`private/primary-bold/demo.html`, not in the repo): Home, My work at laptop and phone width, Schedule on Night, Class, Questions on Light, Class home, Grade Flow on Night, and Control. Not seen: To Grade with rows on the page (the demo found nothing to grade), a picked classmate on Class, and every page on a real class with a real sign-in. Nothing was clicked, so no write was tried: sending a message, placing a card, releasing grades, I'll be there, asking a question.
 

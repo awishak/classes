@@ -21,11 +21,12 @@ import { assignmentsOf } from "../profileTask.js";
 import { PRIMARY_BOLD_CSS, PRIMARY_BOLD_FONTS } from "./style.js";
 import { Face, Pill, GROUNDS, useGround } from "./bits.jsx";
 import { photoOf } from "./data.js";
-import { setPreview } from "./preview.js";
 import { Home, MyWork, Schedule, ClassPg, Questions } from "./student.jsx";
 import { Desk, ToGrade, GradeFlow, Control } from "./instructor.jsx";
+import { More } from "./more.jsx";
 
 const STUDENT_NAV = [["", "Home"], ["schedule", "Schedule"], ["assignments", "My work"], ["class", "Class"]];
+const STUDENT_MORE = [...STUDENT_NAV, ["more", "More"]];
 
 // His own pages have no address of their own on the live site's class route,
 // so the bar keeps them after the # of the address: #to-grade, #grade-flow=<id>, #control=<id>.
@@ -64,6 +65,7 @@ export default function PrimaryBoldShell(p) {
     if (his === "to-grade") return <ToGrade config={config} onOpen={(cls, id) => (cls === config.id ? toHis("grade-flow", id) : window.location.assign("/grades/" + cls + "/flow?a=" + encodeURIComponent(id)))} />;
     if (his === "grade-flow") return <GradeFlow config={config} data={d} update={write} id={hash.id} toHis={toHis} />;
     if (his === "control") return <Control config={config} data={d} id={hash.id} toHis={toHis} />;
+    if (key === "more") return <More config={config} data={d} more={p.more} instructor={instructor} ground={ground} setGround={setGround} />;
     if (key === "schedule") return <Schedule config={config} data={d} blockOf={ctx.blockOf} name={name} mark={mark} go={to} instructor={instructor} />;
     if (key === "questions") return <Questions config={config} data={d} name={instructor ? config.instructor?.name || "Instructor" : name} instructor={instructor} />;
     if (instructor) {
@@ -93,7 +95,7 @@ export default function PrimaryBoldShell(p) {
     <div className="bar"><div className="in">
       <span className="cls"><b>{config.code}</b>{config.title || config.name || ""}</span>
       <div className="navs"><nav aria-label="Main">
-        {STUDENT_NAV.map(([k, say]) => <Pill key={k} kind={"flat" + (lit === k && !his ? " on" : "")} onClick={() => to(k)}>{say}</Pill>)}
+        {(instructor ? STUDENT_NAV : STUDENT_MORE).map(([k, say]) => <Pill key={k} kind={"flat" + (lit === k && !his ? " on" : "")} onClick={() => to(k)}>{say}</Pill>)}
       </nav>
       {instructor ? <><span className="sep" /><nav aria-label="Instructor">
         <Pill kind="flat" href={config.path + "/dashboard"}>Dashboard</Pill>
@@ -104,10 +106,10 @@ export default function PrimaryBoldShell(p) {
       </nav></> : null}</div>
       <span className="grow" />
       <div className="menu">
-        <Face name={who} photo={instructor ? config.instructor?.photo || "" : photoOf(d, name)} size="sm" ring="c118" onClick={() => setMenu(v => !v)} label="Colors and the current site" />
+        <Face name={who} photo={instructor ? config.instructor?.photo || "" : photoOf(d, name)} size="sm" ring="c118" onClick={() => setMenu(v => !v)} label="Colors and More" />
         {menu ? <div className="drop">
           <div className="rowx" role="group" aria-label="Colors">{GROUNDS.map(([id, say]) => <Pill key={id} kind={ground === id ? "on" : ""} onClick={() => setGround(id)}>{say}</Pill>)}</div>
-          <Pill onClick={() => { setPreview(false); window.location.reload(); }}>The current site</Pill>
+          <Pill onClick={() => { setMenu(false); to("more"); }}>More</Pill>
         </div> : null}
       </div>
     </div></div>
