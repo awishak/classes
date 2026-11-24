@@ -205,7 +205,7 @@ const RULES = [
   ]],
   ["Pre-production", [
     "The first step of the builder: the topic, the way of making, a headline, a summary, and for an exhibit each page named with what goes on the page.",
-    "Pre-production lists every topic approved for the team, a pair's four at most. The team picks one and can write a modification under the list. A student with no approved topic gets the write-in box alone.",
+    "Pre-production lists every topic approved for the team, a pair's six at most. The team picks one and can write a modification under the list. A student with no approved topic gets the write-in box alone.",
     "Until Mark pre-production complete is pressed for a team on the review page, pre-production is the only step that team sees. Pressing the chip again closes the other steps.",
     "Due Thursday, December 3, at 11:59 PM. The review page says Done once a topic picked or written in, a headline, a summary and a plan on every page are there.",
     "Nothing locks on December 3. Pre-production is the skeleton the student keeps building on, in the same file.",

@@ -91,7 +91,7 @@ Three rules came out of that, all his picks:
   `released`, and a save is refused. The builder shows one line. He is never
   held back, and a practice class (no decisions file) is always open.
 - **The approved topics come with the project.** The route sends `topics`,
-  every topic approved for the team (a pair's four at most), read the way
+  every topic approved for the team (a pair's six at most), read the way
   `api/final-project.js` reads them. The outline lists them; the team picks
   one and can write under it: "show all and allow a 'modification' write in".
   The pick is `doc.topic = { key, text, change }`, kept out of the public file.

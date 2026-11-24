@@ -90,7 +90,7 @@ async function topicLines(cls, email) {
   Object.values(slot).sort((x, y) => (x.position || 0) - (y.position || 0)).forEach(r => { const k = r.field.split(":")[1]; out[k] = (out[k] || "") + r.value; });
   return out;
 }
-// Every topic he approved for the team: [{ key, by, topic }], a pair's four at most.
+// Every topic he approved for the team: [{ key, by, topic }], a pair's six at most.
 async function topicsFor(cls, file, makers, nameOf) {
   const keyOf = (m) => Object.keys(file.topics || {}).find(k => lower(k) === m) || m;
   const per = await Promise.all(makers.map(async m => {

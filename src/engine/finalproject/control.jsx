@@ -33,7 +33,7 @@ const RULES = [
     "Two students with no pick between them are never suggested.",
   ]],
   ["Approving topics", [
-    "Approve marks one topic. A student can have two approved at most, so a pair can have four between them.",
+    "Approve marks one topic. All three of a student's topics can be approved, so a pair can have six between them.",
     "Reasons are tags on a topic, approved or not. A reason typed on one topic becomes a tag for every other student.",
   ]],
   ["The release", [

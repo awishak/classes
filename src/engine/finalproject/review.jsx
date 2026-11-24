@@ -9,7 +9,7 @@
 // So the class is a board of faces, standing in groups (see Board below).
 // Each face is ringed in the colour of the student's work preference.
 // Pressing a face opens that student beside the board: their topics to
-// approve (two at most), their strengths, the sites they like, and who they
+// approve (all three if he likes), their strengths, the sites they like, and who they
 // picked. Dragging one face onto another pairs the two. The panel beside the
 // board, with nobody picked, is the pairs suggested by model.js, each with
 // its sentence of why.

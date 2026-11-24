@@ -313,7 +313,8 @@ export function suggest(people, { taken = new Set(), passed = new Set() } = {}) 
 //   topics: { [id]: { a: true } }, says: { [id]: { a: [reason] } } }.
 // An id is the student's email, lower case.
 
-export const MAX_TOPICS = 2;
+// All three of a student's topics can be approved: "i should be able to approve 3" (2026-11-24). It was two.
+export const MAX_TOPICS = 3;
 export const pairKey = (a, b) => [a, b].sort().join("+");
 export const emptyFile = () => ({ released: false, pairs: [], solo: [], passed: [], topics: {}, says: {} });
 export function tidyFile(file) {
@@ -348,7 +349,7 @@ export function setSolo(file, id, on) {
   return { ...file, pairs: on ? file.pairs.filter(p => !p.includes(id)) : file.pairs, solo: on ? [...file.solo.filter(x => x !== id), id] : file.solo.filter(x => x !== id) };
 }
 export const passOn = (file, a, b) => ({ ...file, passed: [...file.passed.filter(k => k !== pairKey(a, b)), pairKey(a, b)] });
-/** Press a topic: approve, or take the approval back. Returns null when two are already approved. */
+/** Press a topic: approve, or take the approval back. Returns null when every allowed topic is already approved. */
 export function toggleTopic(file, id, slot) {
   const mine = { ...(file.topics[id] || {}) };
   if (mine[slot]) delete mine[slot];
