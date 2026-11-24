@@ -53,6 +53,32 @@ Addresses:
 - `sample.js`: the sample exhibit. Its photos are in `public/exhibits/sample`.
 - `api/exhibit.js`: the only thing that reads or writes a project.
 
+## The look, second pass (2026-11-23, later the same day)
+
+Andrew: "make it look way better." What changed, and the rule behind each:
+
+- **The builder, the gallery, the review and the control page are the class
+  site's look now**, not a dark and yellow one of their own. The builder's
+  `CSS` reads the theme's variables (paper, cards, greys, state colours), Lora
+  for a title, Outfit for the rest, 16 of rounding on a card and 12 on anything
+  pressed. `--xa` is the class's own accent from its config. The review and
+  control pages are `Shell` with `Sec`, `Row`, `Btn` and `Chip` from
+  `portal/bits.jsx`; a project row is green when its checklist is done and
+  amber while the outline is not.
+- **No small caps and no type under 13px in the builder.** The checklist's two
+  big numbers became one sentence.
+- **The reader is larger.** Body 22px (news) or 20px, a 740px column, captions
+  15.5px with the credit on a line of its own. The number, the timeline and the
+  quiz each sit on a wash panel; the audio clip has a drawn wave that fills as
+  the clip plays; a heading opens on a rule. The first pass's rules are still
+  in the stylesheet and the second pass sits after them, before the phone rules.
+- **The gallery** puts a topic area's name beside its cards.
+
+Seen as pictures only, in headless Chrome: all four sample pages, a phone
+width, the builder's Outline, Build, Look and Checklist steps, the gallery,
+the review. Not seen: night mode, the film and own-HTML pages, the control
+page, the note box on a preview link.
+
 ## How it is stored
 
 No SQL was needed, and none should be added without a reason: files in
@@ -194,8 +220,11 @@ not known.
   so on a new machine the test has to be written again from the route's
   header comment.
 - To look at the builder without signing in, mount `mountExhibit` in a page
-  that answers `/api/exhibit` itself. `private/exhibit-builder/demo.html` did
-  this on the first machine.
+  that answers `/api/exhibit` itself. `private/exhibit-builder/demo.html` does
+  this on both machines (each wrote its own; `private/` is not in the repo).
+  On the second machine: `node_modules/.bin/vite --port 5199`, then
+  `private/exhibit-builder/shot.sh <name> "v=builder&click=Look"` takes a
+  picture. `v` is sample, builder, gallery, review, control or film.
 - Headless Chrome takes the pictures:
   `"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --screenshot=out.png --window-size=1440,1000 <address>`.
   It will not go narrower than about 500 px.

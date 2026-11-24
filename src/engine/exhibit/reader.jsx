@@ -44,7 +44,7 @@ export const CSS = `
 
 .xr .gut{padding-left:max(20px, env(safe-area-inset-left, 0px));padding-right:max(20px, env(safe-area-inset-right, 0px))}
 .xr .hd{font-family:var(--f-head);font-weight:var(--h-weight);font-style:var(--h-style);text-transform:var(--h-case);letter-spacing:var(--h-track);line-height:var(--h-lh);font-stretch:var(--h-stretch);text-wrap:balance;margin:0}
-.xr .lab{font-family:var(--f-label);font-size:12.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
+.xr .lab{font-family:var(--f-label);font-size:13.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
 .xr button{font-family:inherit}
 .xr button:focus-visible,.xr a:focus-visible,.xr .src:focus-visible{outline:3px solid var(--pop);outline-offset:2px}
 
@@ -67,7 +67,7 @@ export const CSS = `
 .xr .cover.pic .tick{background:var(--accent)}
 .xr .cover .sum{font-size:calc(var(--body-size) + 3px);line-height:1.4;max-width:40ch;margin:22px 0 0}
 .xr .cover .by{margin-top:22px;display:flex;flex-wrap:wrap;gap:6px 18px}
-.xr .cover .cred{position:absolute;right:max(20px, env(safe-area-inset-right, 0px));bottom:10px;z-index:1;font:11.5px var(--f-label);opacity:.75;max-width:44%;text-align:right}
+.xr .cover .cred{position:absolute;right:max(20px, env(safe-area-inset-right, 0px));bottom:10px;z-index:1;font:13px/1.35 var(--f-label);opacity:.85;max-width:44%;text-align:right}
 
 .xr .phead{max-width:1180px;margin:0 auto;padding-block:56px 6px}
 .xr .phead .hd{font-size:calc(clamp(40px,6.4cqi,84px)*var(--h-scale))}
@@ -159,7 +159,7 @@ export const CSS = `
 .xr .slider img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
 .xr .slider .bar2{position:absolute;top:0;bottom:0;width:4px;background:#fff;transform:translateX(-2px)}
 .xr .slider .knob{position:absolute;top:50%;width:48px;height:48px;border-radius:50%;background:#fff;color:#111;transform:translate(-50%,-50%);display:grid;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.3)}
-.xr .slider .tag{position:absolute;top:14px;font:600 12.5px var(--f-label);letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:99px;background:#fff;color:#111}
+.xr .slider .tag{position:absolute;top:14px;font:600 13px var(--f-label);letter-spacing:.09em;text-transform:uppercase;padding:5px 11px;border-radius:99px;background:#fff;color:#111}
 
 .xr .quiz{background:var(--wash);border-radius:4px;padding:28px 30px 30px}
 .xr .quiz .q{font-size:calc(clamp(24px,3cqi,34px)*var(--h-scale));margin:8px 0 18px}
@@ -178,7 +178,7 @@ export const CSS = `
 .xr .xpin.on{color:var(--ink)}
 
 .xr .srcs{display:grid;grid-template-columns:1fr 1fr;gap:10px 44px}
-.xr .srcs h3{font:600 12.5px var(--f-label);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);margin:0 0 4px;padding-bottom:8px;border-bottom:4px solid var(--ink)}
+.xr .srcs h3{font:600 13.5px var(--f-label);letter-spacing:.09em;text-transform:uppercase;color:var(--accent);margin:0 0 4px;padding-bottom:8px;border-bottom:4px solid var(--ink)}
 .xr .srcs p{font:15.5px/1.45 var(--f-label);margin:0;padding:12px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}
 .xr .srcs a{color:inherit}
 .xr .foot{margin-top:40px;border-top:6px solid var(--ink);padding-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:10px 44px;font:15.5px/1.45 var(--f-label)}
@@ -249,11 +249,89 @@ export const CSS = `
 .xr .pop .lab{color:var(--popfg)}
 .xr .pop .cite{font-size:15.5px;line-height:1.42;margin:8px 0 0;overflow-wrap:anywhere}
 .xr .pop .note{font-size:15px;line-height:1.45;margin:12px 0 0;padding-top:12px;border-top:1px solid color-mix(in srgb, var(--paper) 25%, transparent)}
-.xr .pop .note b{display:block;font-size:12px;letter-spacing:.09em;text-transform:uppercase;opacity:.7;margin-bottom:3px}
+.xr .pop .note b{display:block;font-size:13px;letter-spacing:.09em;text-transform:uppercase;opacity:.7;margin-bottom:3px}
 .xr .pop a{display:inline-block;margin-top:14px;font-weight:600;font-size:14.5px;color:var(--ink);background:var(--paper);border-radius:99px;padding:7px 15px;text-decoration:none}
 
 .xr .film{max-width:1180px;margin:0 auto;padding-top:34px}
 .xr .own{width:100%;height:calc(100vh - 52px);border:0;display:block;background:#fff}
+
+/* Second pass, 2026-11-23: larger reading type, and each block given a shape of its own. */
+.xr[data-type="news"]{--body-size:22px;--body-lh:1.58}
+.xr[data-type="museum"]{--body-size:20px;--body-lh:1.55}
+.xr[data-type="magazine"]{--body-size:20px;--body-lh:1.62}
+.xr .col{max-width:740px}
+.xr .blk{margin-top:44px}
+.xr .txt + .txt,.xr h2.sub + .txt{margin-top:22px}
+.xr .bar .in{min-height:60px}
+.xr .bar .ttl{font-size:22px}
+.xr .tabs button{font-size:15.5px;padding:10px 16px;min-height:44px}
+.xr .first p:first-child{font-size:1.18em;line-height:1.45}
+.xr h2.sub{font-size:calc(clamp(32px,4.2cqi,52px)*var(--h-scale));margin-top:64px;padding-top:22px;border-top:6px solid var(--ink)}
+.xr figcaption{font-size:15.5px;line-height:1.45;margin-top:12px;display:grid;gap:3px;max-width:740px}
+.xr figcaption b{font-size:13.5px;font-weight:600;color:var(--soft)}
+.xr .frame{border-radius:10px}
+.xr .slider,.xr .video,.xr .embed,.xr .map,.xr .empty{border-radius:10px}
+.xr .phead .lab{font-size:15px}
+.xr .cover .by{font-size:14.5px}
+.xr .cover .sum{font-size:calc(var(--body-size) + 4px);max-width:36ch}
+.xr .quote .in{padding-block:76px}
+.xr .quote .who{font-size:15px;margin-top:26px}
+.xr .num{grid-template-columns:auto minmax(0,1fr);gap:34px;border:0;border-left:10px solid var(--accent);background:var(--wash);border-radius:14px;padding:34px 36px 34px 30px}
+.xr .num .n{line-height:.86}
+.xr .num .w{font-size:calc(clamp(27px,3.4cqi,40px)*var(--h-scale))}
+.xr .num .s{font-size:15.5px;margin-top:12px}
+.xr .concept{border-radius:14px;padding:38px 42px 42px;gap:14px 44px}
+.xr .concept .def{font-size:calc(var(--body-size) + 3px)}
+.xr .concept .from{font-size:15.5px;margin-top:18px}
+.xr .audio{border-radius:18px;padding:16px 26px 16px 16px;gap:20px}
+.xr .audio .pb{width:72px;height:72px;transition:transform .15s ease}
+.xr .audio .pb:hover{transform:scale(1.06)}
+.xr .audio .tx{font-size:19px}
+.xr .audio .tx small{font-size:15px;margin-top:3px;font-variant-numeric:tabular-nums}
+.xr .audio .track{position:relative;width:38%;height:48px;border-radius:0;background:none;overflow:hidden}
+.xr .audio .track i{display:block;position:absolute;inset:0;height:100%;-webkit-mask:repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 9px);mask:repeating-linear-gradient(90deg,#000 0 4px,transparent 4px 9px);clip-path:polygon(0 42%,6% 30%,11% 46%,17% 12%,23% 38%,29% 22%,35% 44%,41% 6%,47% 34%,53% 18%,59% 42%,65% 26%,71% 10%,77% 40%,83% 24%,89% 44%,95% 32%,100% 42%,100% 58%,95% 68%,89% 56%,83% 76%,77% 60%,71% 90%,65% 74%,59% 58%,53% 82%,47% 66%,41% 94%,35% 56%,29% 78%,23% 62%,17% 88%,11% 54%,6% 70%,0 58%);background:linear-gradient(90deg,var(--accent) var(--at,0%),var(--line) 0)}
+.xr .tr{font-size:16.5px;line-height:1.55;margin-top:16px;padding-left:20px;border-left-width:4px}
+.xr .card{border-radius:14px;padding:20px 24px;transition:transform .15s ease, background .15s ease}
+.xr .card:hover{transform:translateY(-2px)}
+.xr .card .dot{width:54px;height:54px}
+.xr .card b{font-size:20px}
+.xr .card .sub{font-size:15.5px}
+.xr .tl{background:var(--wash);border-radius:14px;padding:34px 36px 12px}
+.xr .tl .row{grid-template-columns:132px 26px minmax(0,1fr)}
+.xr .tl .t{font-size:calc(40px*var(--h-scale))}
+.xr .tl .d{padding:4px 0 30px}
+.xr .tl .d b{font-size:21px}
+.xr .tl .d span{display:block;margin-top:3px}
+.xr .thumbs{gap:10px;margin-top:12px}
+.xr .thumbs button{width:132px;border-radius:8px}
+.xr .gal .ctl{margin-top:14px;gap:14px;align-items:flex-start}
+.xr .gal .ctl button{width:48px;height:48px}
+.xr .gal .ct{font-size:15px;line-height:48px}
+.xr .slider .knob{width:56px;height:56px}
+.xr .quiz{border-radius:14px;padding:36px 40px 40px}
+.xr .quiz .lab{font-size:15px}
+.xr .quiz .q{font-size:calc(clamp(28px,3.6cqi,42px)*var(--h-scale));margin:10px 0 24px}
+.xr .quiz .os{counter-reset:o}
+.xr .quiz .os button{display:flex;align-items:center;gap:16px;font-size:19px;border-radius:12px;padding:14px 18px;min-height:64px;counter-increment:o}
+.xr .quiz .os button::before{content:counter(o, upper-alpha);flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--paper);font-size:15px;font-weight:700}
+.xr .quiz .os button.right::before{background:var(--on);color:var(--accent)}
+.xr .quiz .ans{font-size:1em;margin-top:22px;padding-top:18px;border-top:2px solid var(--line)}
+.xr .mapnote{font-size:17px;margin-top:14px}
+.xr .srcs{margin-top:76px;gap:14px 56px}
+.xr .srcs h3{font-size:15px;padding-bottom:12px;border-bottom-width:6px}
+.xr .srcs p{font-size:17px;line-height:1.5;padding:16px 0}
+.xr .foot{font-size:17px;line-height:1.5;gap:14px 56px;padding-top:22px}
+.xr .samp{margin:0;padding:12px 20px;background:#fdf1e6;color:#7c3a05;font:600 16px/1.4 var(--f-label);text-align:center}
+.xr .foot .lab{font-size:15px;margin-bottom:6px}
+.xr .next .lab,.xr .fin .lab{font-size:15px}
+.xr .next .in{padding-block:48px}
+.xr .next.pic .in{padding-block:96px}
+.xr .fin button{font-size:16px;min-height:48px;padding:12px 24px}
+.xr .pop{border-radius:14px;padding:22px 24px 24px;width:min(440px, calc(100% - 32px))}
+.xr .pop .cite{font-size:17px}
+.xr .pop .note{font-size:16.5px}
+.xr .pop a{font-size:15.5px;padding:10px 18px}
+.xr .lb p{font-size:16.5px}
 
 .xr.narrow .cover h1{font-size:calc(clamp(40px,12cqi,64px)*var(--h-scale))}
 .xr.narrow .room .phead{padding-block:40px 30px}
@@ -272,6 +350,20 @@ export const CSS = `
 .xr.narrow .cover .cred{position:relative;right:auto;bottom:auto;max-width:none;text-align:left;margin:0 20px 14px;display:block}
 .xr.narrow .cover.pic .in{padding-block:90px 16px}
 .xr.narrow .cover.pic::after{background:linear-gradient(180deg,rgba(0,0,0,.2) 0%,rgba(0,0,0,.55) 35%,rgba(0,0,0,.9) 100%)}
+.xr.narrow{--body-size:19px}
+.xr.narrow .blk{margin-top:32px}
+.xr.narrow .num{padding:24px 22px 26px 30px}
+.xr.narrow .tl{padding:24px 18px 4px}
+.xr.narrow .tl .t{font-size:calc(26px*var(--h-scale))}
+.xr.narrow .quiz{padding:26px 20px 28px}
+.xr.narrow .audio{padding:12px 18px 12px 12px;gap:14px}
+.xr.narrow .audio .pb{width:60px;height:60px}
+.xr.narrow .audio .tx{font-size:17px}
+.xr.narrow .thumbs button{width:92px}
+.xr.narrow .concept{padding:28px 24px 30px}
+.xr.narrow .gal .ctl{flex-wrap:wrap}
+.xr.narrow .gal .ctl figcaption{flex:1 1 100%}
+.xr.narrow .tabs button{padding:10px 13px}
 @media (prefers-reduced-motion:reduce){ .xr *{animation:none!important;transition:none!important} .xr .rv{opacity:1;transform:none} }
 `;
 
@@ -340,15 +432,16 @@ function CountUp({ value, still }) {
   const m = /^(\D*)(\d[\d,]*)(\.\d+)?(\D*)$/.exec(text);
   const [ref, seen] = useSeen(still);
   const [shown, setShown] = useState(text);
+  const calm = typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   useEffect(() => {
-    if (!m || still || !seen) { setShown(text); return; }
+    if (!m || still || calm || !seen) { setShown(text); return; }
     const end = parseFloat((m[2] + (m[3] || "")).replace(/,/g, "")), dec = m[3] ? m[3].length - 1 : 0, t0 = performance.now();
     let raf;
     const tick = (t) => { const k = Math.min(1, (t - t0) / 1100), e = 1 - Math.pow(1 - k, 3); setShown(m[1] + (end * e).toLocaleString("en-US", { minimumFractionDigits: dec, maximumFractionDigits: dec }) + m[4]); if (k < 1) raf = requestAnimationFrame(tick); else setShown(text); };
     raf = requestAnimationFrame(tick); return () => cancelAnimationFrame(raf);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seen, text, still]);
-  return <span ref={ref}>{m && !still && !seen ? m[1] + "0" + m[4] : shown}</span>;
+  return <span ref={ref}>{m && !still && !calm && !seen ? m[1] + "0" + m[4] : shown}</span>;
 }
 
 function AudioClip({ b }) {
@@ -361,7 +454,7 @@ function AudioClip({ b }) {
     <div className="audio">
       <button type="button" className="pb" aria-label={on ? "Pause" : "Play"} onClick={toggle} disabled={!url}>{on ? Icon.pause() : Icon.play()}</button>
       <div className="tx">{b.title || "Audio clip"}<small>{len ? `${mmss(at)} of ${mmss(len)}` : "Audio"}</small></div>
-      <div className="track" onClick={e => { const a = ref.current; if (a && len) { const r = e.currentTarget.getBoundingClientRect(); a.currentTime = ((e.clientX - r.left) / r.width) * len; } }}><i style={{ width: (len ? (at / len) * 100 : 0) + "%" }} /></div>
+      <div className="track" onClick={e => { const a = ref.current; if (a && len) { const r = e.currentTarget.getBoundingClientRect(); a.currentTime = ((e.clientX - r.left) / r.width) * len; } }}><i style={{ "--at": (len ? (at / len) * 100 : 0) + "%" }} /></div>
       {url && <audio ref={ref} src={url} preload="metadata" onPlay={() => setOn(true)} onPause={() => setOn(false)} onTimeUpdate={e => setAt(e.currentTarget.currentTime)} onLoadedMetadata={e => setLen(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)} />}
     </div>
     {b.transcript && <p className="tr"><b>Transcript. </b>{b.transcript}</p>}
@@ -612,6 +705,7 @@ export default function Reader({ doc, page, onPage, around, narrow, scrollEl, st
 
   return <Zoom.Provider value={still ? null : setBig}><div className={"xr" + (narrow || small ? " narrow" : "")} data-pal={doc.pal} data-type={doc.type} ref={root}>
     <style>{CSS}</style>
+    {doc.sample && <p className="samp" role="note">This is a sample structure, but the text was written by AI.</p>}
     {!exhibit ? <>
       <Cover doc={doc} />
       {doc.way === "film" ? <div className="gut"><div className="film">{videoOf(doc.film?.url) ? <div className="video"><iframe src={videoOf(doc.film.url).src} title={doc.headline || "The film"} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen /></div> : <Frame kind="Your film" />}</div><Sources doc={doc} /></div>

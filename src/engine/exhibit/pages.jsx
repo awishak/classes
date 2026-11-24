@@ -19,16 +19,20 @@ import { SAMPLE } from "./sample.js";
 import { exhibitHref, FINAL_DUE, OUTLINE_DUE, idOfSlug } from "./model.js";
 import { loadOne, loadGallery, sendNote, setState } from "./client.js";
 import { getSession } from "../session.js";
+import { Shell } from "../audiostory/control.jsx";
+import { Sec, Row, Btn, Chip } from "../portal/bits.jsx";
 
 const NOTE_CSS = `
 .xn{position:relative}
-.xn .nb{position:absolute;right:8px;top:8px;z-index:5;font:700 12.5px "Libre Franklin",system-ui,sans-serif;background:#101216;color:#fff;border:0;border-radius:99px;padding:7px 12px;cursor:pointer;opacity:0;transition:opacity .12s}
+.xn .nb{position:absolute;right:8px;top:8px;z-index:5;font:600 15px 'Outfit',system-ui,sans-serif;background:#1c1917;color:#fff;border:0;border-radius:12px;min-height:40px;padding:0 14px;cursor:pointer;opacity:0;transition:opacity .12s}
 .xn:hover .nb,.xn .nb:focus-visible,.xn.open .nb{opacity:1}
-.xn .box{max-width:680px;margin:12px auto 0;background:#101216;color:#fff;border-radius:10px;padding:14px;font:15px/1.4 "Libre Franklin",system-ui,sans-serif}
-.xn .box textarea,.xn .box input{width:100%;box-sizing:border-box;font:15px/1.4 "Libre Franklin",system-ui,sans-serif;color:#fff;background:#1b1e24;border:1.5px solid #343944;border-radius:8px;padding:9px 11px;margin-bottom:8px}
-.xn .box button{font:700 13.5px "Libre Franklin",system-ui,sans-serif;color:#101216;background:#ffd166;border:0;border-radius:8px;padding:9px 14px;cursor:pointer;margin-right:8px}
-.xn .box .q{background:#262a32;color:#fff}
-.xdraft{position:sticky;top:0;z-index:40;background:#ffd166;color:#101216;font:700 13.5px "Libre Franklin",system-ui,sans-serif;padding:8px 20px;display:flex;gap:14px;flex-wrap:wrap}
+.xn .box{max-width:740px;margin:12px auto 0;background:#fff;color:#1c1917;border-radius:16px;box-shadow:0 0 0 1px #e3ded8,0 12px 30px rgba(28,25,23,.12);padding:16px;font:16px/1.4 'Outfit',system-ui,sans-serif}
+.xn .box textarea,.xn .box input{width:100%;box-sizing:border-box;font:16px/1.4 'Outfit',system-ui,sans-serif;color:#1c1917;background:#fff;border:1.5px solid #e3ded8;border-radius:12px;padding:10px 13px;margin-bottom:8px}
+.xn .box textarea:focus,.xn .box input:focus{outline:0;border-color:#1c1917}
+.xn .box button{font:600 15px 'Outfit',system-ui,sans-serif;color:#fff;background:#1c1917;border:0;border-radius:12px;min-height:44px;padding:0 16px;cursor:pointer;margin-right:8px}
+.xn .box button:disabled{opacity:.5;cursor:default}
+.xn .box .q{background:#f6f4f1;color:#1c1917}
+.xdraft{position:sticky;top:0;z-index:40;background:#fdf1e6;color:#7c3a05;font:600 15px 'Outfit',system-ui,sans-serif;padding:10px 20px;display:flex;gap:6px 18px;flex-wrap:wrap}
 .xdraft a{color:inherit}
 @media (hover:none){ .xn .nb{opacity:1} }
 `;
@@ -78,22 +82,31 @@ export function ExhibitPage({ config, slug }) {
   </>;
 }
 
+// The gallery is a page of the class site, so the ground, the greys and the
+// title are the class site's own. A card keeps the colours and the type its
+// makers picked: that is what makes the wall read as many people's work.
 const GAL_CSS = `
-.xg{min-height:100vh;background:#101216;color:#eef0f3;font:16px/1.45 "Libre Franklin",system-ui,sans-serif;padding:48px max(20px, env(safe-area-inset-right, 0px)) 96px max(20px, env(safe-area-inset-left, 0px))}
+.xg{min-height:100vh;background:var(--surface-page,#fafaf9);color:var(--text-primary,#1c1917);font:17px/1.45 var(--font-body,'Outfit',-apple-system,BlinkMacSystemFont,sans-serif);padding:56px max(20px, env(safe-area-inset-right, 0px)) 96px max(20px, env(safe-area-inset-left, 0px));text-align:left}
 .xg *{box-sizing:border-box}
 .xg .in{max-width:1240px;margin:0 auto}
-.xg h1{font:600 clamp(44px,8vw,104px)/.95 "Newsreader",Georgia,serif;letter-spacing:-.02em;margin:0}
-.xg h1 em{font-style:italic;font-weight:400;color:#ffd166}
-.xg h2{font:700 13px "Libre Franklin",system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#ffd166;margin:56px 0 16px;padding-bottom:10px;border-bottom:3px solid #eef0f3}
-.xg .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:18px}
-.xg .card{display:flex;flex-direction:column;min-height:380px;border-radius:6px;overflow:hidden;text-decoration:none;position:relative;transition:transform .15s ease}
-.xg .card:hover{transform:translateY(-4px)}
-.xg .card .pic{aspect-ratio:16/10;background-size:cover;background-position:center}
-.xg .card .tx{flex:1;padding:18px 18px 20px;display:flex;flex-direction:column;gap:10px}
-.xg .card h3{margin:0;font-size:30px;line-height:1.02;text-wrap:balance}
-.xg .card p{margin:0;font-size:15px;line-height:1.4;opacity:.92}
-.xg .card .by{margin-top:auto;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.xg .card .way{position:absolute;left:12px;top:12px;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:#101216;color:#fff;border-radius:99px;padding:5px 10px}
+.xg h1{font:500 clamp(36px,5vw,56px)/1.05 'Lora',Georgia,serif;letter-spacing:-.01em;margin:0}
+.xg .lede{margin:14px 0 0;font-size:20px;color:var(--text-secondary,#57534e)}
+.xg section{display:grid;grid-template-columns:190px minmax(0,1fr);gap:16px 28px;align-items:start;margin-top:40px;padding-top:28px;border-top:1px solid var(--line-strong,#e3ded8)}
+.xg section.solo{display:block;border-top:0;padding-top:0}
+.xg h2{font:600 22px/1.15 'Lora',Georgia,serif;margin:0;position:sticky;top:20px;text-wrap:balance}
+.xg .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+@media (max-width:860px){ .xg section{grid-template-columns:minmax(0,1fr)} .xg h2{position:static} }
+.xg .card{display:flex;flex-direction:column;min-height:250px;border-radius:16px;overflow:hidden;text-decoration:none;position:relative;transition:transform .18s ease, box-shadow .18s ease}
+.xg .card:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(28,25,23,.18)}
+.xg .card:focus-visible{outline:2px solid var(--text-primary,#1c1917);outline-offset:2px}
+.xg .card .pic{aspect-ratio:3/2;background-size:cover;background-position:center}
+.xg .card .tx{flex:1;padding:16px 16px 16px;display:flex;flex-direction:column;gap:8px}
+.xg .card h3{margin:0;font-size:22px;line-height:1.08;text-wrap:balance}
+.xg .card:not(:has(.pic)) h3{font-size:28px;margin-top:auto}
+.xg .card p{margin:0;font-size:15px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.xg .card .by{margin-top:auto;padding-top:6px;font-size:14px;font-weight:600}
+.xg .card:not(:has(.pic)) .by{margin-top:0}
+.xg .card .way{position:absolute;left:10px;top:10px;font-size:13px;font-weight:600;background:#fff;color:#1c1917;border-radius:999px;padding:4px 10px}
 .xg .card[data-pal="orange"]{background:#d9541e;color:#fff8ef}
 .xg .card[data-pal="green"]{background:#1c7a41;color:#f6fff3}
 .xg .card[data-pal="blue"]{background:#1560c8;color:#f4f9ff}
@@ -101,7 +114,8 @@ const GAL_CSS = `
 .xg .card[data-pal="violet"]{background:#5a3ed2;color:#f8f6ff}
 .xg .card[data-type="news"] h3{font-family:"Newsreader",Georgia,serif;font-weight:600}
 .xg .card[data-type="museum"] h3{font-family:"Archivo",sans-serif;font-weight:850;font-stretch:72%;text-transform:uppercase}
-.xg .card[data-type="magazine"] h3{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-weight:400;font-size:36px}
+.xg .card[data-type="magazine"] h3{font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-weight:400;font-size:27px}
+@media (prefers-reduced-motion:reduce){ .xg .card{transition:none} }
 `;
 // The same order for one visit, a new one the next.
 function shuffled(list) { const a = [...list]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -126,42 +140,22 @@ export function GalleryPage({ config }) {
     return [...by.entries()].sort((a, b) => (a[0] === "" ? 1 : b[0] === "" ? -1 : a[0].localeCompare(b[0])));
   }, [got]);
   return <div className="xg"><style>{GAL_CSS}</style><div className="in">
-    <h1>{config.code} <em>final projects</em></h1>
-    {groups.map(([area, cards]) => <section key={area}>{(area || groups.length > 1) && <h2>{area || "More"}</h2>}<div className="grid" style={!area && groups.length === 1 ? { marginTop: 40 } : null}>{cards.map(c => <Card key={c.id} c={c} />)}</div></section>)}
+    <h1>{config.code} final projects</h1>
+    {groups.map(([area, cards]) => <section key={area} className={!area && groups.length === 1 ? "solo" : undefined}>{(area || groups.length > 1) && <h2>{area || "More"}</h2>}<div className="grid">{cards.map(c => <Card key={c.id} c={c} />)}</div></section>)}
   </div></div>;
 }
 
 // ─── the instructor's pages ───
 
-const REV_CSS = `
-.xv{min-height:100vh;background:#f6f5f1;color:#1c1d20;font:15px/1.45 "Libre Franklin",system-ui,sans-serif;padding:32px 24px 80px;text-align:left}
-.xv *{box-sizing:border-box}
-.xv .in{max-width:1240px;margin:0 auto}
-.xv h1{font:600 44px/1 "Newsreader",Georgia,serif;margin:0 0 6px}
-.xv .meta{color:#5d6068;margin:0 0 18px}
-.xv .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:22px}
-.xv button,.xv a.b{font:700 13.5px "Libre Franklin",system-ui,sans-serif;background:#1c1d20;color:#fff;border:0;border-radius:8px;padding:9px 14px;cursor:pointer;text-decoration:none;display:inline-block}
-.xv button.q,.xv a.q{background:#e4e2db;color:#1c1d20}
-.xv button.go{background:#1c7a41}
-.xv table{width:100%;border-collapse:collapse}
-.xv th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;text-align:left;color:#5d6068;padding:8px 10px;border-bottom:3px solid #1c1d20}
-.xv td{padding:12px 10px;border-bottom:1px solid #d9d6cd;vertical-align:top}
-.xv td b{font:600 19px/1.15 "Newsreader",Georgia,serif;display:block}
-.xv .ok{color:#1c7a41;font-weight:700}
-.xv .no{color:#b01f2d;font-weight:700}
-.xv .miss{color:#5d6068;font-size:13px}
-.xv .acts{display:flex;flex-wrap:wrap;gap:6px}
-.xv .acts a,.xv .acts button{padding:6px 10px;font-size:12.5px}
-.xv .who{background:#fff;border-radius:8px;padding:8px 10px;margin-top:6px;font-size:13.5px}
-`;
-const stamp = (t) => (t ? new Date(t).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
+const stamp = (t) => (t ? new Date(t).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "");
+const wayOf = (c) => (c.way === "film" ? "Film" : c.way === "html" ? "Own HTML" : `Exhibit, ${(c.pages || []).length} ${(c.pages || []).length === 1 ? "page" : "pages"}`);
 
 /** Every project in the class: where each stands, the outline, the checklist, Release and reopen. */
 export function ExhibitReview({ config, roster = [] }) {
   const [got, setGot] = useState(null), [err, setErr] = useState(""), [showWho, setShowWho] = useState(false);
   const load = () => loadGallery(config.id, true).then(setGot).catch(e => setErr(e.message));
   useEffect(() => { load(); }, [config.id]);   // eslint-disable-line react-hooks/exhaustive-deps
-  if (err) return <div className="xv"><style>{REV_CSS}</style><div className="in"><p>{err}</p></div></div>;
+  if (err) return <Shell config={config}><p className="pt-sub">{err}</p></Shell>;
   if (!got) return null;
   const cards = [...got.cards].sort((a, b) => String(a.names?.[0] || "").localeCompare(String(b.names?.[0] || "")));
   const started = new Set(cards.flatMap(c => c.makers || []));
@@ -169,26 +163,33 @@ export function ExhibitReview({ config, roster = [] }) {
   const release = (on) => setState(config.id, { released: on }).then(load).catch(e => setErr(e.message));
   const reopen = (c) => { const until = new Date(Date.now() + 24 * 3600 * 1000).toISOString(); setState(config.id, { unlock: { id: c.id, until: got.unlocks?.[c.id] ? "" : until } }).then(load).catch(e => setErr(e.message)); };
   const past = Date.now() > Date.parse(FINAL_DUE);
-  return <div className="xv"><style>{REV_CSS}</style><div className="in">
-    <h1>{config.code} final projects</h1>
-    <p className="meta">Outline due {stamp(OUTLINE_DUE)}. Locks {stamp(FINAL_DUE)}. {cards.length} started{notStarted.length ? `, ${notStarted.length} not started` : ""}. {got.released ? "Released." : "Not released."}</p>
-    <div className="bar">
-      {got.released ? <button type="button" className="q" onClick={() => release(false)}>Take back the release</button> : <button type="button" className="go" onClick={() => release(true)}>Release to the public gallery</button>}
-      <a className="b q" href={`/${config.id}/exhibits`}>The gallery</a><a className="b q" href={`/${config.id}/exhibits/sample`}>The sample</a><a className="b q" href={`/${config.id}/worksheets/final-project?control`}>How the builder works</a>
-      <button type="button" className="q" onClick={() => setShowWho(s => !s)}>{showWho ? "Hide who did what" : "Show who did what"}</button>
+  const base = `/${config.id}/worksheets/final-project`;
+  return <Shell config={config}>
+    <div className="pt-stack">
+      <h1 className="pt-h1">{config.code} final projects</h1>
+      <p className="pt-sub">Outline due {stamp(OUTLINE_DUE)}. Locks {stamp(FINAL_DUE)}. {cards.length} started{notStarted.length ? `, ${notStarted.length} not started` : ""}. {got.released ? "Released to the gallery." : "Not released."}</p>
     </div>
-    <table><thead><tr><th>Project</th><th>Outline</th><th>Checklist</th><th>Words</th><th>Last change</th><th /></tr></thead><tbody>
-      {cards.map(c => { const miss = (c.list || []).filter(l => !l.ok); return <tr key={c.id}>
-        <td><b>{c.headline || "No headline yet"}</b>{(c.names || []).join(" and ")} · {c.way === "film" ? "Film" : c.way === "html" ? "Own HTML" : `Exhibit, ${(c.pages || []).length} pages`}
-          {showWho && c.who && <div className="who">{c.who}</div>}</td>
-        <td className={c.outline ? "ok" : "no"}>{c.outline ? "Done" : "Not yet"}<div className="miss">{(c.pages || []).map(p => p.name).filter(Boolean).join(", ")}</div></td>
-        <td><span className={miss.length ? "no" : "ok"}>{(c.list || []).length - miss.length} of {(c.list || []).length}</span><div className="miss">{miss.map(l => l.say + (l.need > 1 ? ` ${l.have} of ${l.need}` : "")).join(" · ")}</div></td>
-        <td>{c.words}</td><td>{stamp(c.updated)}</td>
-        <td><div className="acts"><a className="b" href={`${exhibitHref(c)}?preview=${c.preview}`}>Read</a><a className="b q" href={`/${config.id}/worksheets/final-project?s=${encodeURIComponent((c.makers || [])[0] || "")}`}>Their file</a>{past && <button type="button" className="q" onClick={() => reopen(c)}>{got.unlocks?.[c.id] ? "Close again" : "Reopen for a day"}</button>}</div></td>
-      </tr>; })}
-    </tbody></table>
-    {notStarted.length > 0 && <p className="meta" style={{ marginTop: 22 }}>Not started: {notStarted.join(", ")}</p>}
-  </div></div>;
+    <div className="pt-acts">
+      {got.released ? <Btn kind="plain" onClick={() => release(false)}>Take back the release</Btn> : <Btn onClick={() => release(true)}>Release to the public gallery</Btn>}
+      <Chip href={`/${config.id}/exhibits`}>The gallery</Chip><Chip href={`/${config.id}/exhibits/sample`}>The sample</Chip><Chip href={base + "?control"}>How the builder works</Chip>
+      <Chip on={showWho} onClick={() => setShowWho(x => !x)}>Who did what</Chip>
+    </div>
+    <Sec name="Projects" />
+    <div className="pt-stack">
+      {cards.length === 0 && <div className="pt-row off"><div className="pt-main"><span className="pt-title say">Nobody has started a project yet.</span></div></div>}
+      {cards.map(c => { const list = c.list || [], miss = list.filter(l => !l.ok), all = list.length > 0 && miss.length === 0;
+        return <Row key={c.id} tint={all ? "done" : c.outline ? "" : "due"}>
+          <span className="pt-title">{c.headline || "No headline yet"}</span>
+          <span className="pt-meta">{(c.names || []).join(" and ")} · {wayOf(c)} · {(c.words || 0).toLocaleString("en-US")} words · Last change {stamp(c.updated)}</span>
+          <span className="pt-text">Outline {c.outline ? "done" : "not done yet"}{(c.pages || []).some(p => p.name) ? ": " + (c.pages || []).map(p => p.name).filter(Boolean).join(", ") : ""}.</span>
+          <span className="pt-text">Checklist {list.length - miss.length} of {list.length}{miss.length ? ". Still missing: " + miss.map(l => l.say + (l.need > 1 ? ` (${l.have} of ${l.need})` : "")).join("; ") : ""}.</span>
+          {showWho && c.who && <span className="pt-text"><b>Who did what.</b> {c.who}</span>}
+          <span className="pt-acts"><Btn href={`${exhibitHref(c)}?preview=${c.preview}`}>Read</Btn><Chip href={`${base}?s=${encodeURIComponent((c.makers || [])[0] || "")}`}>Their file</Chip>{past && <Chip on={!!got.unlocks?.[c.id]} onClick={() => reopen(c)}>{got.unlocks?.[c.id] ? "Reopened, close again" : "Reopen for a day"}</Chip>}</span>
+        </Row>; })}
+    </div>
+    {notStarted.length > 0 && <><Sec name="Not started" />
+      <div className="pt-row off"><div className="pt-main"><span className="pt-text">{notStarted.join(", ")}</span></div></div></>}
+  </Shell>;
 }
 
 const RULES = [
@@ -236,20 +237,13 @@ const RULES = [
     "Poll and quiz answers are not saved anywhere.",
   ]],
 ];
-const CTL_CSS = `
-.xc{min-height:100vh;background:#f6f5f1;color:#1c1d20;font:17px/1.5 "Newsreader",Georgia,serif;padding:40px 24px 90px;text-align:left}
-.xc .in{max-width:760px;margin:0 auto}
-.xc h1{font-size:46px;line-height:1;margin:0 0 14px}
-.xc h2{font:700 13px "Libre Franklin",system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;margin:34px 0 8px;padding-bottom:8px;border-bottom:3px solid #1c1d20}
-.xc li{margin-bottom:8px}
-.xc a{color:inherit;margin-right:16px;font:700 14px "Libre Franklin",system-ui,sans-serif}
-`;
 /** How every rule of the builder works, for the instructor. */
 export function ExhibitControl({ config }) {
   const base = `/${config.id}/worksheets/final-project`;
-  return <div className="xc"><style>{CTL_CSS}</style><div className="in">
-    <h1>Final project, how the builder works</h1>
-    <p><a href={base}>The builder</a><a href={base + "?review"}>Review</a><a href={`/${config.id}/exhibits/sample`}>The sample</a><a href={`/${config.id}/exhibits`}>The gallery</a></p>
-    {RULES.map(([head, lines]) => <section key={head}><h2>{head}</h2><ul>{lines.map(l => <li key={l}>{l}</li>)}</ul></section>)}
-  </div></div>;
+  return <Shell config={config}>
+    <h1 className="pt-h1">Final project, how the builder works</h1>
+    <div className="pt-acts"><Chip href={base}>The builder</Chip><Chip href={base + "?review"}>Review</Chip><Chip href={`/${config.id}/exhibits/sample`}>The sample</Chip><Chip href={`/${config.id}/exhibits`}>The gallery</Chip></div>
+    {RULES.map(([head, lines]) => <section key={head} className="pt-stack"><Sec name={head} />
+      <div className="pt-row"><div className="pt-main"><ul className="aic-list" style={{ fontSize: 17, display: "grid", gap: 8 }}>{lines.map(l => <li key={l}>{l}</li>)}</ul></div></div></section>)}
+  </Shell>;
 }

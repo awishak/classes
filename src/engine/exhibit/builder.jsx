@@ -22,186 +22,185 @@ import { createRoot } from "react-dom/client";
 import Reader, { useExhibitFonts } from "./reader.jsx";
 import { BLOCKS, blockName, newBlock, newPage, newSource, WAYS, TYPES, PALETTES, LAYOUTS, MAX_PAGES, SUMMARY_WORDS, FINAL_DUE, OUTLINE_DUE, words, wordCount, checklist, outlineDone, mergeDocs, videoOf, embedOf, safeUrl, exhibitHref } from "./model.js";
 import { loadMine, saveDoc, upload, loadNotes, dropNote } from "./client.js";
+import { ENGINE } from "../../config/registry.js";
 
 const CSS = `
-.xb{position:fixed;inset:0;z-index:60;display:grid;grid-template-columns:minmax(380px,460px) minmax(0,1fr);background:#101216;color:#eef0f3;font:15px/1.45 "Libre Franklin",system-ui,sans-serif;text-align:left}
+/* The builder in the class site's own look: the theme's paper, cards and
+   greys, Lora for a title and Outfit for the rest, sixteen of rounding on a
+   card and twelve on anything pressed. --xa is the class colour, and means
+   one thing: this can be pressed, or this is the one picked. */
+.xb{--xa:#4c1d95;--serif:'Lora',Georgia,serif;--ink:var(--text-primary,#1c1917);--ink2:var(--text-secondary,#57534e);--ink3:var(--text-muted,#6b655f);
+  --page:var(--surface-page,#fafaf9);--card:var(--surface-card,#fff);--sunk:var(--surface-sunk,#f6f4f1);--ls:var(--line-soft,#f0edea);--lst:var(--line-strong,#e3ded8);--lg:var(--line-ghost,#c9c2ba);
+  --ok:var(--state-ok,#0f766e);--late:var(--state-late,#c81e1e);--warn:var(--state-warn,#b45309);
+  position:fixed;inset:0;z-index:60;display:grid;grid-template-columns:minmax(400px,480px) minmax(0,1fr);background:var(--page);color:var(--ink);font:16px/1.45 var(--font-body,'Outfit',-apple-system,BlinkMacSystemFont,sans-serif);text-align:left}
 .xb *{box-sizing:border-box}
-.xb .side{display:flex;flex-direction:column;min-height:0;border-right:1px solid #2a2e36}
-.xb .top{padding:14px 18px 0;flex:none}
-.xb .top .row{display:flex;align-items:center;gap:10px;justify-content:space-between}
-.xb .back{color:#aeb4bf;text-decoration:none;font-weight:600;font-size:13px}
-.xb .back:hover{color:#fff}
-.xb .saved{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7ee0a1}
-.xb .saved.bad{color:#ff9d8a}
-.xb .name{font:600 24px/1.1 "Newsreader",Georgia,serif;margin:10px 0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.xb .due{font-size:13px;color:#aeb4bf}
-.xb .due b{color:#ffd166;font-weight:700}
-.xb .steps{display:flex;gap:2px;margin-top:14px;overflow-x:auto;scrollbar-width:none}
-.xb .steps button{font:700 13.5px "Libre Franklin",system-ui,sans-serif;color:#aeb4bf;background:none;border:0;border-bottom:3px solid transparent;padding:9px 10px 10px;cursor:pointer;white-space:nowrap}
-.xb .steps button:hover{color:#fff}
-.xb .steps button[aria-current="true"]{color:#fff;border-bottom-color:#ffd166}
-.xb .steps .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#7ee0a1;margin-left:6px;vertical-align:1px}
-.xb .pane{flex:1;min-height:0;overflow-y:auto;padding:18px 18px 90px;border-top:1px solid #2a2e36}
-.xb h3{font:700 12px "Libre Franklin",system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#ffd166;margin:26px 0 10px}
-.xb h3:first-child{margin-top:0}
-.xb p.say{margin:0 0 12px;color:#c9ced6}
-.xb label.f{display:block;margin-bottom:12px}
-.xb label.f > span{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:600;color:#aeb4bf;margin-bottom:5px}
-.xb label.f > span em{font-style:normal;color:#7b828e}
-.xb label.f > span em.over{color:#ff9d8a}
-.xb input[type=text],.xb input[type=url],.xb textarea,.xb select{width:100%;font:15px/1.4 "Libre Franklin",system-ui,sans-serif;color:#fff;background:#1b1e24;border:1.5px solid #343944;border-radius:8px;padding:9px 11px}
-.xb textarea{resize:vertical;min-height:74px}
-.xb input:focus,.xb textarea:focus,.xb select:focus{outline:0;border-color:#ffd166}
-.xb button:focus-visible,.xb a:focus-visible{outline:2px solid #ffd166;outline-offset:2px}
-.xb .btn{font:700 13.5px "Libre Franklin",system-ui,sans-serif;color:#101216;background:#ffd166;border:0;border-radius:8px;padding:9px 14px;cursor:pointer}
-.xb .btn.ghost{background:#262a32;color:#eef0f3}
-.xb .btn.ghost:hover{background:#343944}
-.xb .btn.sm{padding:6px 10px;font-size:12.5px}
-.xb .btn:disabled{opacity:.45;cursor:default}
-.xb .rowb{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.xb .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.xb .tile{font:700 14px/1.2 "Libre Franklin",system-ui,sans-serif;color:#eef0f3;background:#1b1e24;border:1.5px solid #343944;border-radius:10px;padding:12px 10px;cursor:pointer;text-align:left}
-.xb .tile small{display:block;font-weight:500;color:#aeb4bf;margin-top:4px;font-size:12px}
-.xb .tile[aria-pressed="true"]{background:#ffd166;border-color:#ffd166;color:#101216}
-.xb .tile[aria-pressed="true"] small{color:#3b3320}
-.xb .tile .aa{display:block;font-size:30px;line-height:1;margin-bottom:8px}
-.xb .sws{display:flex;gap:10px;margin-bottom:14px}
-.xb .sw{width:52px;height:52px;border-radius:50%;border:3px solid #101216;outline:2px solid #343944;cursor:pointer;padding:0;position:relative;overflow:hidden}
-.xb .sw i{position:absolute;right:0;top:0;bottom:0;width:38%}
-.xb .sw[aria-pressed="true"]{outline:3px solid #ffd166}
-.xb .item{background:#1b1e24;border:1.5px solid #2a2e36;border-radius:10px;margin-bottom:8px}
-.xb .item.on{border-color:#ffd166}
-.xb .item > .hd{display:flex;align-items:center;gap:8px;padding:9px 10px 9px 12px;cursor:pointer}
-.xb .item > .hd b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#ffd166;flex:none}
-.xb .item > .hd span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c9ced6}
-.xb .item > .bd{padding:4px 12px 12px}
-.xb .ic{flex:none;width:28px;height:28px;border-radius:6px;border:0;background:#262a32;color:#c9ced6;cursor:pointer;display:grid;place-items:center;font:700 14px system-ui}
-.xb .ic:hover{background:#343944;color:#fff}
-.xb .ic:disabled{opacity:.3;cursor:default}
-.xb .ptabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-.xb .ptabs button{font:700 13px "Libre Franklin",system-ui,sans-serif;color:#c9ced6;background:#1b1e24;border:1.5px solid #343944;border-radius:99px;padding:6px 12px;cursor:pointer}
-.xb .ptabs button[aria-current="true"]{background:#eef0f3;color:#101216;border-color:#eef0f3}
-.xb .add{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.xb .add button{font:600 12.5px/1.2 "Libre Franklin",system-ui,sans-serif;color:#eef0f3;background:#262a32;border:0;border-radius:8px;padding:10px 8px;cursor:pointer;text-align:left}
-.xb .add button:hover{background:#ffd166;color:#101216}
-.xb .grp{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7b828e;margin:12px 0 6px}
-.xb .tb{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
-.xb .tb select{width:auto;padding:5px 8px;font-size:12.5px}
-.xb .tip{font-size:12.5px;color:#7b828e;margin:6px 0 0}
-.xb .thumb{width:100%;max-height:150px;object-fit:cover;border-radius:8px;display:block;margin-bottom:8px;background:#262a32}
-.xb .drop{display:block;border:1.5px dashed #4a5060;border-radius:8px;padding:14px;text-align:center;color:#c9ced6;font-weight:600;cursor:pointer;margin-bottom:10px}
-.xb .drop:hover{border-color:#ffd166;color:#fff}
-.xb .drop input{display:none}
-.xb .err{color:#ff9d8a;font-size:13px;margin:0 0 10px}
-.xb .chk{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #2a2e36}
-.xb .chk .m{width:22px;height:22px;border-radius:50%;border:2px solid #4a5060}
-.xb .chk.ok .m{background:#7ee0a1;border-color:#7ee0a1}
-.xb .chk .c{font-variant-numeric:tabular-nums;color:#aeb4bf;font-weight:600}
-.xb .chk.ok .c{color:#7ee0a1}
-.xb .big{font:600 34px/1 "Newsreader",Georgia,serif}
-.xb .link{display:flex;gap:8px;margin-bottom:10px}
-.xb .link input{flex:1}
-.xb .note{background:#1b1e24;border-radius:10px;padding:12px;margin-bottom:8px}
-.xb .note b{color:#ffd166}
-.xb .note small{color:#7b828e;display:block;margin-top:6px}
-.xb .undo{position:absolute;left:18px;bottom:16px;z-index:2;display:flex;gap:10px;align-items:center;background:#eef0f3;color:#101216;border-radius:10px;padding:8px 8px 8px 14px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.4)}
-.xb .view{min-width:0;min-height:0;overflow-y:auto;background:#fff;position:relative}
-.xb .pick{cursor:pointer;position:relative}
-.xb .pick.on{outline:3px solid #ffd166;outline-offset:6px;border-radius:4px}
-.xb .pick:hover{outline:2px dashed #ffd166;outline-offset:6px;border-radius:4px}
-.xb .ghostb{margin:20px auto 0;max-width:680px;border:2px dashed #c9ced6;border-radius:4px;padding:14px;color:#6b7280;font:600 14px "Libre Franklin",system-ui,sans-serif;text-align:center}
-.xb .lock{background:#ffd166;color:#101216;font-weight:700;padding:10px 18px}
-.xb .flip{display:none}
-.xb .load{grid-column:1/-1;display:grid;place-items:center;font-weight:600;color:#aeb4bf}
-.xb .saved{display:inline-flex;align-items:center;gap:7px}
+.xb button,.xb input,.xb textarea,.xb select{font-family:inherit}
+.xb .side{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--lst);position:relative}
+.xb .top{padding:16px 20px 0;flex:none}
+.xb .top .row{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.xb .back{color:var(--ink2);text-decoration:none;font-weight:600;font-size:15px}
+.xb .back:hover{color:var(--ink)}
+.xb .saved{display:inline-flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--ok)}
 .xb .saved::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.xb .saved.busy{color:var(--ink3)}
 .xb .saved.busy::before{animation:xb-pulse .9s ease-in-out infinite}
+.xb .saved.bad{color:var(--late)}
 @keyframes xb-pulse{50%{opacity:.25;transform:scale(.7)}}
-.xb .left{font-weight:700;color:#ffd166}
-.xb .meterbar{height:4px;background:#2a2e36;border-radius:2px;overflow:hidden;margin-top:12px}
-.xb .meterbar i{display:block;height:100%;background:#7ee0a1;transition:width .4s ease}
-.xb .item > .hd .gl{flex:none;color:#ffd166;display:grid;place-items:center}
-.xb .item > .hd .grab{flex:none;color:#5a6170;cursor:grab;display:grid;place-items:center;margin-left:-4px}
+.xb .name{font:500 30px/1.08 var(--serif);margin:12px 0 6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xb .due{font-size:15px;color:var(--ink2)}
+.xb .left{font-weight:600;color:var(--warn)}
+.xb .meterbar{height:8px;background:var(--sunk);border-radius:999px;overflow:hidden;margin-top:14px;box-shadow:inset 0 0 0 1px var(--ls)}
+.xb .meterbar i{display:block;height:100%;border-radius:999px;background:var(--ok);transition:width .4s ease}
+.xb .steps{display:flex;gap:2px;margin-top:14px;padding:3px;background:var(--sunk);border-radius:12px;overflow-x:auto;scrollbar-width:none}
+.xb .steps button{flex:1 0 auto;font-size:15px;font-weight:600;color:var(--ink2);background:none;border:0;border-radius:10px;min-height:40px;padding:0 10px;cursor:pointer;white-space:nowrap}
+.xb .steps button:hover{color:var(--ink)}
+.xb .steps button[aria-current="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(28,25,23,.14)}
+.xb .steps .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-left:6px;vertical-align:1px}
+.xb .pane{flex:1;min-height:0;overflow-y:auto;padding:20px 20px 96px;margin-top:14px;border-top:1px solid var(--ls)}
+.xb h3{font:600 20px/1.2 var(--serif);color:var(--ink);margin:30px 0 12px}
+.xb h3:first-child{margin-top:0}
+.xb p.say{margin:0 0 14px;color:var(--ink2);font-size:16px}
+.xb label.f{display:block;margin-bottom:14px}
+.xb label.f > span{display:flex;justify-content:space-between;gap:10px;font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.xb label.f > span em{font-style:normal;font-weight:500;color:var(--ink3)}
+.xb label.f > span em.over{color:var(--late)}
+.xb input[type=text],.xb input[type=url],.xb textarea,.xb select{width:100%;font-size:16px;line-height:1.4;color:var(--ink);background:var(--card);border:1.5px solid var(--lst);border-radius:12px;padding:10px 13px;min-height:44px}
+.xb textarea{resize:vertical;min-height:84px}
+.xb input::placeholder,.xb textarea::placeholder{color:var(--ink3)}
+.xb input:focus,.xb textarea:focus,.xb select:focus{outline:0;border-color:var(--xa);box-shadow:0 0 0 3px color-mix(in srgb,var(--xa) 18%,transparent)}
+.xb input[type=checkbox],.xb input[type=radio]{accent-color:var(--xa);width:18px;height:18px}
+.xb button:focus-visible,.xb a:focus-visible{outline:2px solid var(--xa);outline-offset:2px}
+.xb .btn{font-size:15px;font-weight:600;color:#fff;background:var(--xa);border:0;border-radius:12px;min-height:44px;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap}
+.xb .btn.ghost{background:var(--card);color:var(--ink);box-shadow:inset 0 0 0 1px var(--lst)}
+.xb .btn.ghost:hover{background:var(--sunk)}
+.xb .btn.sm{min-height:36px;padding:0 12px;font-size:15px;border-radius:10px}
+.xb .btn:disabled{opacity:.5;cursor:default}
+.xb .rowb{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.xb .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.xb .tile{font-size:17px;font-weight:600;line-height:1.2;color:var(--ink);background:var(--card);border:0;box-shadow:inset 0 0 0 1px var(--lst);border-radius:16px;padding:14px 14px 15px;cursor:pointer;text-align:left;transition:transform .12s ease}
+.xb .tile:hover{transform:translateY(-2px)}
+.xb .tile small{display:block;font-weight:400;color:var(--ink2);margin-top:5px;font-size:14px;line-height:1.3}
+.xb .tile[aria-pressed="true"]{background:var(--xa);box-shadow:none;color:#fff}
+.xb .tile[aria-pressed="true"] small{color:#fff}
+.xb .item{background:var(--card);border-radius:16px;box-shadow:0 0 0 1px var(--ls);margin-bottom:8px;transition:box-shadow .15s ease}
+.xb .item.on{box-shadow:0 0 0 2px var(--xa)}
+.xb .item > .hd{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 12px;min-height:56px;cursor:pointer}
+.xb .item > .hd b{font-size:16px;font-weight:600;color:var(--ink);flex:none}
+.xb .item > .hd span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2);font-size:15px}
+.xb .item > .hd .gl{flex:none;width:36px;height:36px;border-radius:10px;background:color-mix(in srgb,var(--xa) 10%,var(--card));color:var(--xa);display:grid;place-items:center}
+.xb .item > .hd .grab{flex:none;color:var(--lg);cursor:grab;display:grid;place-items:center;margin:0 -4px 0 -4px}
+.xb .item > .bd{padding:6px 14px 14px}
+.xb .item .item{background:var(--sunk);box-shadow:none}
 .xb .item.drag{opacity:.4}
-.xb .item.over{box-shadow:0 -3px 0 #ffd166}
-.xb .item{transition:border-color .15s ease, box-shadow .15s ease}
+.xb .item.over{box-shadow:0 -3px 0 var(--xa),0 0 0 1px var(--ls)}
 .xb .item.new{animation:xb-in .35s ease}
 @keyframes xb-in{from{opacity:0;transform:translateY(8px)}}
+.xb .ic{flex:none;width:34px;height:34px;border-radius:10px;border:0;background:none;color:var(--ink2);cursor:pointer;display:grid;place-items:center}
 .xb .ic svg{width:16px;height:16px}
-.xb .picker{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.xb .picker button{display:grid;grid-template-columns:36px minmax(0,1fr);gap:2px 10px;align-items:center;text-align:left;background:#1b1e24;border:1.5px solid #2a2e36;border-radius:10px;padding:10px;cursor:pointer;color:#eef0f3;font:inherit;transition:transform .1s ease, border-color .1s ease, background .1s ease}
-.xb .picker button:hover{border-color:#ffd166;background:#22262e;transform:translateY(-1px)}
-.xb .picker button:active{transform:scale(.98)}
-.xb .picker .g{grid-row:1/3;width:36px;height:36px;border-radius:9px;background:#2a2e36;color:#ffd166;display:grid;place-items:center}
-.xb .picker b{font-size:14px;font-weight:700;line-height:1.2}
-.xb .picker small{font-size:12px;color:#aeb4bf;line-height:1.25}
-.xb .addhere{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;font:700 13.5px "Libre Franklin",system-ui,sans-serif;color:#101216;background:#ffd166;border:0;border-radius:10px;padding:12px;cursor:pointer;margin-top:4px}
-.xb .addhere:hover{filter:brightness(1.06)}
-.xb .addhere.thin{background:none;color:#aeb4bf;border:1.5px dashed #4a5060;padding:8px;margin:0 0 8px}
-.xb .addhere.thin:hover{color:#fff;border-color:#ffd166}
-.xb .drop{display:flex;flex-direction:column;gap:4px;align-items:center;transition:border-color .12s ease, background .12s ease}
-.xb .drop small{font-weight:500;color:#7b828e;font-size:12px}
-.xb .drop.over{border-color:#ffd166;background:#22262e;color:#fff}
+.xb .ic:hover{background:var(--sunk);color:var(--ink)}
+.xb .ic:disabled{opacity:.3;cursor:default}
+.xb .ptabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.xb .ptabs button{font-size:15px;font-weight:600;color:var(--ink);background:var(--card);border:0;box-shadow:inset 0 0 0 1px var(--lst);border-radius:999px;min-height:40px;padding:0 16px;cursor:pointer}
+.xb .ptabs button[aria-current="true"]{background:var(--ink);color:var(--page);box-shadow:none}
+.xb .grp{font-size:16px;font-weight:600;color:var(--ink2);margin:18px 0 8px}
+.xb .tb{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.xb .tb select{width:auto;min-height:36px;padding:4px 10px;font-size:15px;border-radius:10px}
+.xb .tip{font-size:14px;color:var(--ink3);margin:8px 0 0}
+.xb .thumb{width:100%;max-height:170px;object-fit:cover;border-radius:12px;display:block;margin-bottom:8px;background:var(--sunk)}
+.xb .drop{display:flex;flex-direction:column;gap:4px;align-items:center;border:1.5px dashed var(--lg);border-radius:12px;padding:16px;text-align:center;color:var(--ink);font-weight:600;cursor:pointer;margin-bottom:12px;background:var(--card);transition:border-color .12s ease, background .12s ease}
+.xb .drop:hover,.xb .drop.over{border-color:var(--xa);background:color-mix(in srgb,var(--xa) 6%,var(--card))}
+.xb .drop input{display:none}
+.xb .drop small{font-weight:400;color:var(--ink3);font-size:14px}
 .xb .drop.busy{cursor:default;border-style:solid}
-.xb .drop .meter{display:block;width:100%;height:6px;border-radius:3px;background:#2a2e36;overflow:hidden;margin-top:4px}
-.xb .drop .meter i{display:block;height:100%;background:#ffd166;transition:width .15s linear}
-.xb .chk{width:100%;background:none;border:0;border-bottom:1px solid #2a2e36;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.xb .drop .meter{display:block;width:100%;height:8px;border-radius:999px;background:var(--sunk);overflow:hidden;margin-top:4px}
+.xb .drop .meter i{display:block;height:100%;background:var(--xa);transition:width .15s linear}
+.xb .err{color:var(--late);font-size:15px;font-weight:500;margin:0 0 12px}
+.xb .chk{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;min-height:52px;padding:8px 0;background:none;border:0;border-bottom:1px solid var(--ls);color:inherit;font-size:16px;text-align:left;cursor:pointer}
 .xb .chk:hover span:nth-child(2){text-decoration:underline}
-.xb .chk .m{display:grid;place-items:center;color:#101216}
-.xb .chk .m svg{width:14px;height:14px;opacity:0}
+.xb .chk .m{width:26px;height:26px;border-radius:50%;border:2px solid var(--lg);display:grid;place-items:center;color:#fff}
+.xb .chk .m svg{width:15px;height:15px;opacity:0}
+.xb .chk.ok .m{background:var(--ok);border-color:var(--ok)}
 .xb .chk.ok .m svg{opacity:1}
-.xb .toasts{position:absolute;left:18px;right:18px;bottom:16px;z-index:3;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none}
-.xb .toast{pointer-events:auto;display:flex;gap:10px;align-items:center;background:#eef0f3;color:#101216;border-radius:10px;padding:9px 14px;font-weight:700;box-shadow:0 8px 30px rgba(0,0,0,.45);animation:xb-in .25s ease}
-.xb .toast .tk{width:20px;height:20px;border-radius:50%;background:#1c7a41;color:#fff;display:grid;place-items:center}
+.xb .chk .c{font-variant-numeric:tabular-nums;color:var(--ink2);font-weight:600;font-size:15px}
+.xb .chk.ok .c{color:var(--ok)}
+.xb .tally{margin:0 0 10px;font-size:17px;color:var(--ink2)}
+.xb .tally b{color:var(--ink);font-weight:600}
+.xb .link{display:flex;gap:8px;margin-bottom:12px}
+.xb .link input{flex:1}
+.xb .note{background:var(--card);box-shadow:0 0 0 1px var(--ls);border-radius:16px;padding:14px 16px;margin-bottom:8px}
+.xb .note b{font-weight:600}
+.xb .note small{color:var(--ink3);display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:14px}
+.xb .lock{background:#fdf1e6;color:#7c3a05;font-weight:600;padding:12px 20px}
+.xb .flip{display:none}
+.xb .load{grid-column:1/-1;display:grid;place-items:center;font:500 26px var(--serif);color:var(--ink2)}
+.xb .picker{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.xb .picker button{display:grid;grid-template-columns:40px minmax(0,1fr);gap:2px 12px;align-items:center;text-align:left;background:var(--card);border:0;box-shadow:inset 0 0 0 1px var(--ls);border-radius:16px;padding:12px;cursor:pointer;color:var(--ink);transition:transform .1s ease, box-shadow .1s ease}
+.xb .picker button:hover{box-shadow:inset 0 0 0 2px var(--xa);transform:translateY(-1px)}
+.xb .picker button:active{transform:scale(.98)}
+.xb .picker .g{grid-row:1/3;width:40px;height:40px;border-radius:12px;background:color-mix(in srgb,var(--xa) 10%,var(--card));color:var(--xa);display:grid;place-items:center}
+.xb .picker b{font-size:16px;font-weight:600;line-height:1.2}
+.xb .picker small{font-size:14px;color:var(--ink2);line-height:1.3}
+.xb .addhere{display:flex;align-items:center;gap:8px;width:100%;justify-content:center;font-size:16px;font-weight:600;color:#fff;background:var(--xa);border:0;border-radius:12px;min-height:48px;padding:0 16px;cursor:pointer;margin-top:4px}
+.xb .addhere:hover{filter:brightness(1.08)}
+.xb .addhere.thin{background:none;color:var(--ink2);border:1.5px dashed var(--lg);min-height:44px;margin:0 0 8px}
+.xb .addhere.thin:hover{color:var(--ink);border-color:var(--xa);filter:none}
+.xb .addhere:disabled{opacity:.5;cursor:default}
+.xb .toasts{position:absolute;left:20px;right:20px;bottom:16px;z-index:3;display:flex;flex-direction:column;gap:8px;align-items:flex-start;pointer-events:none}
+.xb .toast{pointer-events:auto;display:flex;gap:10px;align-items:center;background:var(--ink);color:var(--page);border-radius:12px;padding:10px 16px;font-weight:600;box-shadow:0 8px 30px rgba(28,25,23,.28);animation:xb-in .25s ease}
+.xb .toast .tk{width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center}
 .xb .toast .tk svg{width:13px;height:13px}
-.xb .toast.undo{padding:7px 7px 7px 14px}
-.xb .viewbar{position:sticky;top:0;z-index:50;display:flex;gap:8px;align-items:center;justify-content:space-between;background:#101216;color:#eef0f3;padding:8px 14px;border-bottom:1px solid #2a2e36}
-.xb .viewbar .seg{display:flex;background:#1b1e24;border-radius:9px;padding:3px}
-.xb .viewbar .seg button{display:flex;gap:6px;align-items:center;font:700 12.5px "Libre Franklin",system-ui,sans-serif;color:#aeb4bf;background:none;border:0;border-radius:7px;padding:6px 10px;cursor:pointer}
-.xb .viewbar .seg button[aria-pressed="true"]{background:#eef0f3;color:#101216}
+.xb .toast.undo{padding:6px 6px 6px 16px}
+.xb .toast.undo .btn{background:var(--page);color:var(--ink)}
+.xb .view{min-width:0;min-height:0;overflow-y:auto;background:var(--sunk);position:relative}
+.xb .viewbar{position:sticky;top:0;z-index:50;display:flex;gap:8px;align-items:center;justify-content:space-between;background:var(--card);color:var(--ink);padding:8px 16px;border-bottom:1px solid var(--lst)}
+.xb .viewbar .seg{display:flex;gap:2px;background:var(--sunk);border-radius:12px;padding:3px}
+.xb .viewbar .seg button{display:flex;gap:8px;align-items:center;font-size:15px;font-weight:600;color:var(--ink2);background:none;border:0;border-radius:10px;min-height:38px;padding:0 14px;cursor:pointer}
+.xb .viewbar .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(28,25,23,.14)}
 .xb .viewbar .seg svg{width:16px;height:16px}
-.xb .viewbar a{display:inline-flex;gap:6px;align-items:center;font:700 12.5px "Libre Franklin",system-ui,sans-serif;color:#eef0f3;text-decoration:none;background:#262a32;border-radius:8px;padding:7px 11px;margin-left:6px}
-.xb .viewbar a:hover{background:#343944}
+.xb .viewbar a{display:inline-flex;gap:8px;align-items:center;font-size:15px;font-weight:600;color:var(--ink);text-decoration:none;background:var(--card);box-shadow:inset 0 0 0 1px var(--lst);border-radius:12px;min-height:40px;padding:0 14px;margin-left:8px}
+.xb .viewbar a:hover{background:var(--sunk)}
 .xb .viewbar a svg{width:15px;height:15px}
-.xb .view{background:#0a0b0d}
 .xb .stage{margin:0 auto;transition:max-width .3s ease;background:#fff;min-height:100%}
-.xb .stage.phone{max-width:402px;margin:18px auto 40px;border-radius:26px;overflow:hidden;box-shadow:0 0 0 8px #1b1e24, 0 20px 60px rgba(0,0,0,.6);min-height:0}
-.xb .stage .xr .bar{top:45px}
-.xb .pick{transition:outline-color .15s ease}
+.xb .stage.phone{max-width:402px;margin:20px auto 40px;border-radius:28px;overflow:hidden;box-shadow:0 0 0 8px var(--card),0 0 0 9px var(--lst),0 20px 50px rgba(28,25,23,.18);min-height:0}
+.xb .stage .xr .bar{top:57px}
+.xb .pick{cursor:pointer;position:relative;transition:outline-color .15s ease}
+.xb .pick.on{outline:3px solid var(--xa);outline-offset:6px;border-radius:6px}
+.xb .pick:hover{outline:2px dashed var(--xa);outline-offset:6px;border-radius:6px}
 .xb .pick.flash{animation:xb-flash 1s ease}
-@keyframes xb-flash{0%,60%{outline:3px solid #ffd166;outline-offset:6px;border-radius:4px}100%{outline:3px solid transparent;outline-offset:6px}}
-.xb .hello{background:linear-gradient(135deg,#ffd166,#ff9f5a);color:#101216;border-radius:12px;padding:16px 16px 14px;margin-bottom:18px}
-.xb .hello b{font:600 22px/1.1 "Newsreader",Georgia,serif;display:block;margin-bottom:6px}
-.xb .hello a{display:inline-block;margin-top:10px;font-weight:700;color:#101216}
-.xb .stepfoot{display:flex;justify-content:space-between;gap:10px;margin-top:26px;padding-top:16px;border-top:1px solid #2a2e36}
-.xb .looks{display:grid;gap:8px;margin-bottom:14px}
-.xb .lookt{display:block;width:100%;text-align:left;border:2px solid #2a2e36;border-radius:12px;padding:14px 16px 12px;cursor:pointer;background:#f6f3ec;color:#17181b;transition:transform .12s ease, border-color .12s ease}
+@keyframes xb-flash{0%,60%{outline:3px solid var(--xa);outline-offset:6px;border-radius:6px}100%{outline:3px solid transparent;outline-offset:6px}}
+.xb .ghostb{margin:20px auto 0;max-width:740px;border:2px dashed var(--lg);border-radius:10px;padding:14px;color:var(--ink2);font-size:15px;font-weight:600;text-align:center}
+.xb .hello{background:var(--xa);color:#fff;border-radius:16px;padding:20px 20px 18px;margin-bottom:22px;font-size:16px;line-height:1.5}
+.xb .hello b{font:500 26px/1.1 var(--serif);display:block;margin-bottom:8px}
+.xb .hello a{display:inline-flex;align-items:center;min-height:44px;margin-top:14px;padding:0 16px;border-radius:12px;background:#fff;color:var(--xa);font-weight:600;text-decoration:none}
+.xb .stepfoot{display:flex;justify-content:space-between;gap:10px;margin-top:28px;padding-top:18px;border-top:1px solid var(--ls)}
+.xb .looks{display:grid;gap:8px;margin-bottom:16px}
+.xb .lookt{display:block;width:100%;text-align:left;border:0;box-shadow:inset 0 0 0 1px var(--lst);border-radius:16px;padding:18px 18px 14px;cursor:pointer;background:#faf6ee;color:#1d1a16;transition:transform .12s ease}
 .xb .lookt:hover{transform:translateY(-2px)}
-.xb .lookt[aria-pressed="true"]{border-color:#ffd166;box-shadow:0 0 0 3px #ffd166}
-.xb .lookt .h{display:block;font-size:30px;line-height:1;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.xb .lookt .n{font:700 11.5px "Libre Franklin",system-ui,sans-serif;letter-spacing:.09em;text-transform:uppercase;opacity:.6}
-.xb .pals{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
-.xb .palt{aspect-ratio:3/4;border-radius:10px;border:2px solid #2a2e36;cursor:pointer;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:transform .12s ease}
+.xb .lookt[aria-pressed="true"]{box-shadow:inset 0 0 0 3px var(--xa)}
+.xb .lookt .h{display:block;font-size:34px;line-height:1.05;margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xb .lookt .n{font-size:15px;font-weight:600;color:#57534e}
+.xb .pals{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px}
+.xb .palt{aspect-ratio:3/4;border-radius:14px;border:0;box-shadow:0 0 0 1px var(--lst);cursor:pointer;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:transform .12s ease}
 .xb .palt:hover{transform:translateY(-3px)}
-.xb .palt[aria-pressed="true"]{border-color:#ffd166;box-shadow:0 0 0 3px #ffd166}
-.xb .palt .a{flex:1.3;display:flex;align-items:flex-end;padding:7px}
-.xb .palt .a i{display:block;width:60%;height:5px;border-radius:2px}
-.xb .palt .p{flex:1;padding:7px;display:flex;flex-direction:column;gap:4px}
+.xb .palt[aria-pressed="true"]{box-shadow:0 0 0 3px var(--xa)}
+.xb .palt .a{flex:1.3;display:flex;align-items:flex-end;padding:8px}
+.xb .palt .a i{display:block;width:60%;height:6px;border-radius:2px}
+.xb .palt .p{flex:1;padding:8px;display:flex;flex-direction:column;gap:5px}
 .xb .palt .p i{display:block;height:3px;border-radius:2px;opacity:.55}
 .xb .starts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
-.xb .starts button{text-align:left;background:linear-gradient(135deg,#262a32,#1b1e24);border:1.5px solid #343944;border-radius:12px;padding:12px;cursor:pointer;color:#eef0f3;font:inherit;transition:transform .12s ease, border-color .12s ease}
-.xb .starts button:hover{border-color:#ffd166;transform:translateY(-2px)}
-.xb .starts b{display:block;font:600 19px/1.1 "Newsreader",Georgia,serif;margin-bottom:8px}
-.xb .starts .mini{display:flex;flex-direction:column;gap:4px}
-.xb .starts .mini i{display:block;height:7px;border-radius:2px;background:#4a5060}
-.xb .starts .mini i.t{width:86%}.xb .starts .mini i.h{width:48%;height:10px;background:#eef0f3}.xb .starts .mini i.p{height:26px;background:#ffd166;opacity:.85}.xb .starts .mini i.q{height:16px;background:#ff9f5a}.xb .starts .mini i.n{width:30%;height:18px;background:#7ee0a1}.xb .starts .mini i.a{width:70%;height:12px;border-radius:6px;background:#8ab4ff}
+.xb .starts button{text-align:left;background:var(--card);border:0;box-shadow:inset 0 0 0 1px var(--ls);border-radius:16px;padding:14px;cursor:pointer;color:var(--ink);transition:transform .12s ease, box-shadow .12s ease}
+.xb .starts button:hover{box-shadow:inset 0 0 0 2px var(--xa);transform:translateY(-2px)}
+.xb .starts b{display:block;font:500 20px/1.1 var(--serif);margin-bottom:10px}
+.xb .starts .mini{display:flex;flex-direction:column;gap:4px;background:var(--sunk);border-radius:10px;padding:10px}
+.xb .starts .mini i{display:block;height:7px;border-radius:2px;background:var(--lg)}
+.xb .starts .mini i.t{width:86%}.xb .starts .mini i.h{width:48%;height:10px;background:var(--ink)}.xb .starts .mini i.p{height:26px;background:color-mix(in srgb,var(--xa) 55%,var(--card))}.xb .starts .mini i.q{height:16px;background:var(--xa)}.xb .starts .mini i.n{width:30%;height:18px;background:var(--warn)}.xb .starts .mini i.a{width:70%;height:12px;border-radius:6px;background:var(--ok)}
 .xb .confetti{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:4}
 .xb .confetti i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:xb-fall linear forwards}
 @keyframes xb-fall{to{transform:translateY(110vh) rotate(720deg);opacity:.9}}
 @media (prefers-reduced-motion:reduce){ .xb *{animation:none!important;transition:none!important} .xb .confetti{display:none} }
 @media (max-width:980px){
   .xb{grid-template-columns:minmax(0,1fr)}
-  .xb .flip{display:inline-block}
+  .xb .flip{display:inline-flex}
   .xb.show-view .side{display:none}
   .xb:not(.show-view) .view{display:none}
   .xb .flipback{position:fixed;right:14px;bottom:14px;z-index:70}
@@ -328,7 +327,7 @@ function BlockEditor({ b, set, sources, classId, as, onNewSource }) {
   if (b.t === "photo") return <>
     <label className="f"><span>Size</span><select value={b.size} onChange={e => set({ size: e.target.value })}><option value="col">Column width</option><option value="full">Full width</option><option value="pair">Two side by side</option><option value="wrap">Beside the text below</option></select></label>
     <ImageFields classId={classId} as={as} url={b.url} alt={b.alt} credit={b.credit} cap={b.cap} set={set} />
-    <label className="f" style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={!!b.mine} onChange={e => set({ mine: e.target.checked, credit: e.target.checked && !b.credit ? "Photo by the makers" : b.credit })} /> I made this image</label>
+    <label className="f" style={{ display: "flex", gap: 10, alignItems: "center", minHeight: 44 }}><input type="checkbox" checked={!!b.mine} onChange={e => set({ mine: e.target.checked, credit: e.target.checked && !b.credit ? "Photo by the makers" : b.credit })} /> I made this image</label>
     {b.size === "pair" && <><h3>The second image</h3><ImageFields classId={classId} as={as} url={b.url2} alt={b.alt2} credit={b.credit2} cap={b.cap2} set={set} keys={["url2", "alt2", "credit2", "cap2"]} /></>}
   </>;
   if (b.t === "gallery") { const items = b.items || []; const it = (i, patch) => set({ items: items.map((x, k) => (k === i ? { ...x, ...patch } : x)) });
@@ -371,7 +370,7 @@ const STARTS = [
   { name: "Listen and look", blocks: ["audio", "text", "gallery", "quote"] },
 ];
 const MINI = { text: "t", heading: "h", photo: "p", gallery: "p", quote: "q", number: "n", timeline: "t", audio: "a" };
-const BITS = ["#ffd166", "#ff9f5a", "#7ee0a1", "#8ab4ff", "#ff7b93", "#eef0f3"];
+const BITS = ["#f0b45c", "#d9541e", "#0f766e", "#1560c8", "#be123c", "#5a3ed2"];
 function Confetti({ run }) {
   if (!run) return null;
   return <div className="confetti" key={run} aria-hidden="true">{Array.from({ length: 46 }, (_, i) => <i key={i} style={{ left: ((i * 37) % 100) + "%", background: BITS[i % BITS.length], animationDuration: 1.6 + ((i * 13) % 10) / 6 + "s", animationDelay: ((i * 7) % 10) / 22 + "s", transform: `rotate(${(i * 47) % 360}deg)` }} />)}</div>;
@@ -481,6 +480,7 @@ function Builder({ classId, viewer, as }) {
     else if (nowState.all && !was.current.all) setTimeout(() => { setParty(Date.now()); toast("Everything on the checklist is done"); }, 0);
   }
   was.current = nowState;
+  const skin = { "--xa": ENGINE[classId]?.accent || "#4c1d95" };
   const blank = !doc.headline && !doc.summary && pages.every(p => !p.blocks.length && !p.plan);
 
   const addBlock = (t, at) => {
@@ -511,9 +511,9 @@ function Builder({ classId, viewer, as }) {
   const around = (b, node) => <div data-b={b.id} className={"pick" + (sel === b.id ? " on" : "")} onClick={() => { setFresh(""); setSel(b.id); setStep("build"); setShowView(false); }}>{node || <div className="ghostb">{blockName(b.t)}, beside the text below</div>}</div>;
   const fix = (l) => goStep(FIX[l.id] || (exhibit ? "build" : "outline"));
 
-  return <Toast.Provider value={toast}><div className={"xb" + (showView ? " show-view" : "")}>
+  return <Toast.Provider value={toast}><div className={"xb" + (showView ? " show-view" : "")} style={skin}>
     <style>{CSS}</style>
-    <div className="side" style={{ position: "relative" }}>
+    <div className="side">
       {locked && <div className="lock">The final project closed on {dateSay(FINAL_DUE)}. Here is what you turned in.</div>}
       <div className="top">
         <div className="row"><a className="back" href={`/${classId}`}>Back to class</a><span className={"saved" + (saved === "Not saved" ? " bad" : "") + (saved === "Saving" ? " busy" : "")} role="status">{saved}</span></div>
@@ -605,7 +605,7 @@ function Builder({ classId, viewer, as }) {
         </>}
 
         {step === "check" && <>
-          <div className="rowb" style={{ justifyContent: "space-between", marginBottom: 6 }}><div><div className="big">{wordCount(doc)}</div><div className="due">words</div></div><div style={{ textAlign: "right" }}><div className="big">{done} of {list.length}</div><div className="due">checked</div></div></div>
+          <p className="tally"><b>{done} of {list.length}</b> on the checklist are done. <b>{wordCount(doc).toLocaleString("en-US")}</b> words so far.</p>
           {list.map(l => <button type="button" className={"chk" + (l.ok ? " ok" : "")} key={l.id} onClick={() => fix(l)}><span className="m">{GLYPH.check}</span><span>{l.say}</span><span className="c">{l.need > 1 ? `${Math.min(l.have, 999)} of ${l.need}` : ""}</span></button>)}
           <h3>For the public page</h3>
           {classId !== "comm118" && <F label="Who you interviewed" value={doc.interview} onChange={v => top({ interview: v })} />}
@@ -620,7 +620,7 @@ function Builder({ classId, viewer, as }) {
           <div className="link"><input type="text" readOnly value={previewUrl} onFocus={e => e.target.select()} /><button type="button" className="btn" onClick={() => { navigator.clipboard?.writeText(previewUrl).then(() => toast("Link copied")).catch(() => toast("Select the link and copy")); }}>Copy</button></div>
           <h3>Notes from readers</h3>
           {notes.length === 0 && <p className="say">No notes yet.</p>}
-          {notes.slice().reverse().map(n => <div className="note" key={n.id}><b>{n.name}</b>{n.classmate ? " (classmate)" : ""}<div>{n.text}</div><small>{new Date(n.at).toLocaleString()} <button type="button" className="btn ghost sm" style={{ marginLeft: 8 }} onClick={() => dropNote(classId, n.id, as).then(() => { setNotes(x => x.filter(y => y.id !== n.id)); toast("Note cleared"); }).catch(() => {})}>Done with this note</button></small></div>)}
+          {notes.slice().reverse().map(n => <div className="note" key={n.id}><b>{n.name}</b>{n.classmate ? " (classmate)" : ""}<div>{n.text}</div><small>{new Date(n.at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} <button type="button" className="btn ghost sm" onClick={() => dropNote(classId, n.id, as).then(() => { setNotes(x => x.filter(y => y.id !== n.id)); toast("Note cleared"); }).catch(() => {})}>Done with this note</button></small></div>)}
         </>}
 
         <div className="stepfoot">
