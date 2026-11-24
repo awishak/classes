@@ -19,7 +19,8 @@ Every one of them carries a headline, a summary and sources.
 
 ## Where it stands
 
-Live on main since 2026-11-23. Open to COMM 999 only. A Claude session can
+Live on main since 2026-11-23. Open to COMM 999, and to COMM 118 since
+2026-11-24 (see Opening it, below). COMM 3 is closed. A Claude session can
 push once Andrew says to (he said so on 2026-11-24, and `git push origin
 HEAD:main` went through). If a push is ever blocked, hand him:
 
@@ -224,11 +225,19 @@ not known.
   hidden in COMM 3. He has not said yes or no.
 - **A COMM 3 sample.** He wants a second sample for COMM 3; "leave comm 3
   sample topic out for now".
-- **Opening it.** Still COMM 999 only. To open: set
-  `worksheetsOpen["final-project"]` on each plan row to a time (Monday,
-  November 30), and set `instructionsUrl` on the `final-pre` and `final`
-  challenges to `/<class>/worksheets/final-project`. Write a plan-row script
-  the way `scripts/final-due-dec10.mjs` does.
+- **Opening it.** COMM 118 was opened on 2026-11-24, the day he released its
+  teams and topics ("probably now", then "yeah let's do all"):
+  `scripts/final-project-open.mjs comm118 --title "Sports Comm Exhibit"
+  --write` set `worksheetsOpen["final-project"]` to true, opened `final-pre`
+  with the builder as its link, and renamed the `final` challenge from The
+  Field Guide to Sports Comm Exhibit, his name, leaving the challenge marked
+  not open. His syllabus files still say Field Guide. COMM 3 is next: release
+  on the preferences review first, then the same script with `comm3`.
+  `scripts/final-project-state.mjs <class>` prints where a class stands, and
+  `scripts/final-project-topics-check.mjs <class>` names who has no approved
+  topic. On 2026-11-24 all 40 of COMM 118's approved topics read back with
+  their words, and one student on the roster was in no pair and not set to
+  individual, so the builder gives that student a project alone.
 - **Not built:** his "Edit the words" on the builder's labels; a shelf for
   past terms in the gallery; a set list of topic areas (the student types
   one); a video in the sample.
