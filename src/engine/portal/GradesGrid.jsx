@@ -26,7 +26,7 @@ import { inDueOrder, statusOf } from "../AssignmentCards.jsx";
 import { computeGrade } from "../AssignmentsCard.jsx";
 import { rosterOf, nameShown } from "../roster.js";
 import { realStudents, isHouse, sectionOf, sectionsOf } from "../sections.js";
-import { boardOf, bucketOf, letterOf } from "../grades.js";
+import { boardOf, bucketOf, letterOf, cardLetter } from "../grades.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { ThemeStyle } from "../ThemeShell.jsx";
 import { PORTAL_CSS } from "./style.js";
@@ -47,10 +47,34 @@ export function cellOf(config, data, asg, name) {
   if (st.letter) { const b = bucketOf(st.grade?.bucket); return { say: short(st.letter) + own(st.grade?.score, b), kind: "done", tone: TONE[st.letter] || TONE[String(st.letter)[0]] || "", title: st.letter + (st.grade?.score != null ? ", " + st.grade.score : ""), letter: st.letter }; }
   const card = boardOf(data, asg.id).cards?.[name] || {};
   const b = card.bucket ? bucketOf(card.bucket) : null;
-  if (b) return { say: short(b.letter) + own(card.score, b), kind: "pending", tone: TONE[b.letter] || "", title: b.letter + (card.score != null ? ", " + card.score : "") + ", not released", letter: b.letter };
+  if (b) return { say: short(cardLetter(card, b)).replace("-", "−") + own(card.score, b), kind: "pending", tone: TONE[b.letter] || "", title: cardLetter(card, b) +(card.score != null ? ", " + card.score : "") + ", not released", letter: b.letter };
   if (st.state === "turnedIn") return { say: "•", kind: "in", tone: "", title: "Turned in, not graded", letter: null };
   if (st.state === "missed") return { say: "–", kind: "missed", tone: "", title: "Nothing in", letter: null };
   return { say: "", kind: "", tone: "", title: "", letter: null };
+}
+
+/**
+ * The class as it would read if every sorted card had gone out: each card
+ * that differs from the student's last grade is laid on their log as a grade.
+ * Only this page reads it, so his standing counts what he is holding back and
+ * no student's does. Nothing is written.
+ */
+export function withHeld(data) {
+  const boards = data?.gradeBoard || {};
+  let al = null;
+  Object.keys(boards).forEach(aid => {
+    Object.entries(boards[aid]?.cards || {}).forEach(([name, card]) => {
+      const b = card?.bucket ? bucketOf(card.bucket) : null;
+      if (!b) return;
+      const log = (al || data.assignmentLog || {})[aid]?.[name] || [];
+      const g = log.filter(e => e.type === "grade" && !e.deleted).pop();
+      const score = card.score != null ? card.score : b.score;
+      if (g && g.bucket === b.id && (g.score ?? null) === (score ?? null)) return;
+      al = al || { ...(data.assignmentLog || {}) };
+      al[aid] = { ...(al[aid] || {}), [name]: [...log, { id: "held-" + aid, ts: Math.max(card.at || 0, (g?.ts || 0) + 1), type: "grade", board: true, held: true, score, letter: cardLetter(card, b), bucket: b.id }] };
+    });
+  });
+  return al ? { ...data, assignmentLog: al } : data;
 }
 
 // The status, worst first so a sort puts the worry at the top. Andrew,
@@ -76,10 +100,15 @@ const statusById = (id) => STATUSES.find(s => s.id === id) || null;
  */
 export function studentStatus(config, data, assignments, name) {
   const cells = assignments.filter(asg => boardOf(data, asg.id).released).map(asg => cellOf(config, data, asg, name));
-  const letters = cells.map(c => c.letter).filter(Boolean);
+  // A grade he has sorted and not released counts here too, on a board that
+  // is out or not. Andrew, 2026-11-24, on in-class grades he is holding back:
+  // "summary should count these. status should count these." A miss still
+  // only counts on a board that has gone out.
+  const held = assignments.filter(asg => !boardOf(data, asg.id).released).map(asg => cellOf(config, data, asg, name)).filter(c => c.kind === "pending");
+  const letters = [...cells, ...held].map(c => c.letter).filter(Boolean);
   const misses = cells.filter(c => c.kind === "missed").length + letters.filter(l => l === "Not submitted").length;
   const waiting = assignments.some(asg => cellOf(config, data, asg, name).kind === "in") ? 1 : 0;
-  const pct = computeGrade(config, data, name).pct;
+  const pct = computeGrade(config, withHeld(data), name).pct;
   const has = (...ls) => letters.some(l => ls.includes(l));
   if (!letters.length && !misses) return waiting ? null : statusById("drop");
   if (has("F") || misses >= 3 || (pct != null && pct < 60)) return statusById("drop");
@@ -104,14 +133,17 @@ export default function GradesGrid({ config, embedded = false }) {
   const assignments = useMemo(() => inDueOrder(assignmentsOf(config, data)), [config, data]);
   const a = config.accent;
 
-  // Every row's cells, standing and status, read once.
+  // Every row's cells, standing and status, read once. The standing counts
+  // the grades he has sorted and not released (withHeld).
+  const held = useMemo(() => withHeld(data), [data]);
+  const anyHeld = held !== data;
   const rows = useMemo(() => roster.map(s => {
     const cells = assignments.map(asg => cellOf(config, data, asg, s.name));
-    const g = computeGrade(config, data, s.name);
+    const g = computeGrade(config, held, s.name);
     const status = studentStatus(config, data, assignments, s.name);
     const missing = cells.filter(c => c.kind === "missed").length + cells.filter(c => c.letter === "Not submitted").length;
     return { student: s, name: nameShown(data, s.name), section: sectionOf(s), cells, pct: g.pct, status, missing };
-  }), [roster, assignments, config, data]);
+  }), [roster, assignments, config, data, held]);
 
   const byName = (x, y) => x.name.localeCompare(y.name);
   const order = {
@@ -150,7 +182,7 @@ export default function GradesGrid({ config, embedded = false }) {
                     </a>
                   </th>
                 ))}
-                <th className="gg-sofar">So far</th>
+                <th className="gg-sofar" title={anyHeld ? "Counts the faded grades, which students have not been sent" : ""}>So far{anyHeld ? <span style={{ display: "block", fontSize: 13, fontWeight: 400 }}>with unreleased</span> : null}</th>
                 <th className="gg-status">Status</th>
               </tr>
             </thead>

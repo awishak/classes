@@ -39,7 +39,7 @@ for (const m of moves) {
   const card = boardOf(next, aid).cards?.[m.name] || {};
   if ((card.bucket || null) !== (m.was || null)) throw new Error(m.name + " is in " + (card.bucket || "the pile") + ", not " + (m.was || "the pile"));
   if (!bucketOf(m.bucket)) throw new Error("no column " + m.bucket);
-  next = writeCard(next, aid, m.name, { sign: m.sign || "", ...(m.comment !== undefined ? { comment: m.comment } : {}) }, now++);
+  next = writeCard(next, aid, m.name, { sign: m.sign || "", ...(m.comment !== undefined ? { comment: m.comment } : {}), ...(m.score !== undefined ? { score: m.score } : {}), ...(m.note !== undefined ? { note: m.note } : {}) }, now++);
   next = placeCard(next, aid, m.name, m.bucket, now++);
   const c = boardOf(next, aid).cards[m.name];
   console.log(m.name + ": " + (m.was ? bucketOf(m.was).label : "not sorted") + " -> " + cardLetter(c, bucketOf(c.bucket)) + ", comment " + JSON.stringify(c.comment || ""));
