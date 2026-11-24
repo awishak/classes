@@ -179,7 +179,26 @@ const eid = (now) => "gb-" + now.toString(36) + "-" + (seq++).toString(36);
 // their log, or the one Hide put aside.
 // The score a card sends: its own when it has one (Andrew, 2026-11-03: "give
 // him like 25% credit"), else the grade's.
-export const scoreOf = (card, b) => card?.score != null ? card.score : (b ? b.score : null);
+export const scoreOf = (card, b) => card?.score != null ? card.score : signedScore(b, signOf(card));
+
+// A plus or a minus is a different grade. Andrew, 2026-11-24: "you need to
+// count the + and - as diff grades", after a B+, a B and a B- all counted 85
+// in a student's standing. Three points either way on a letter from A to D:
+// B+ 88, B 85, B- 82. Columns that are not letters have no sign.
+export const SIGN_POINTS = 3;
+export const signedScore = (b, sign) => {
+  if (!b || b.score == null) return b ? b.score : null;
+  if (!/^[A-D]$/.test(b.letter)) return b.score;
+  return b.score + (sign === "+" ? SIGN_POINTS : sign === "-" ? -SIGN_POINTS : 0);
+};
+// What a grade in a log counts for. A grade released before signs counted
+// holds the bare letter's score with the sign only in its letter, so the sign
+// is read off the letter here. A score of the grade's own is left alone.
+export const gradeScore = (g) => {
+  if (!g || g.score == null || g.score === "") return null;
+  const b = bucketOf(g.bucket), m = String(g.letter || "").match(/^[A-D]([+-])$/);
+  return b && m && Number(g.score) === b.score ? signedScore(b, m[1]) : Number(g.score);
+};
 
 const sentTo = (board, log, name) => {
   const inLog = (log || []).filter(e => e.board);
@@ -196,7 +215,7 @@ export const releaseStateOf = (board, log, name) => {
   const sent = sentTo(board, log, name);
   if (!b) return sent && (log || []).some(e => e.board) ? "withdrawn" : null;
   if (!sent) return "new";
-  const same = sent.bucket === b.id && (sent.letter || b.letter) === cardLetter(card, b) && (sent.html || null) === (toHtml(card.comment) || null) && (sent.score ?? null) === scoreOf(card, b);
+  const same = sent.bucket === b.id && (sent.letter || b.letter) === cardLetter(card, b) && (sent.html || null) === (toHtml(card.comment) || null) && gradeScore(sent) === scoreOf(card, b);
   return same ? "same" : "changed";
 };
 
@@ -377,7 +396,7 @@ export const standingOf = (data, assignments, name, skipAid) => {
   (assignments || []).forEach(asg => {
     if (asg.id === skipAid) return;
     const g = alive(data?.assignmentLog?.[asg.id]?.[name]).filter(e => e.type === "grade").pop();
-    const s = g && g.score != null && g.score !== "" ? Number(g.score) : null;
+    const s = gradeScore(g);
     if (s == null || !Number.isFinite(s)) return;
     const wt = Number(asg.weight) || 0;
     sum += s * wt; w += wt; flat += s; n++;

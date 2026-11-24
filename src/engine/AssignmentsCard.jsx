@@ -19,7 +19,7 @@ import { rosterOf } from "./roster.js";
 import { Avatar, profileOf } from "./Face.jsx";
 import { genId } from "../utils.jsx";
 import { draftFeedback, textToHtml } from "./feedback.js";
-import { gradeText, scaleOf, SCALES, alive, bucketsFor, bucketOf, boardOf, cardLetter, regradePending } from "./grades.js";
+import { gradeText, scaleOf, SCALES, alive, bucketsFor, bucketOf, boardOf, cardLetter, regradePending, gradeScore } from "./grades.js";
 import { RichComment } from "./RichComment.jsx";
 import { PageEditor } from "./SubmissionPage.jsx";
 import { withFields } from "./submissionPages.js";
@@ -86,8 +86,10 @@ export function computeGrade(config, data, name) {
   const rows = assignments.map(asg => {
     const g = currentGrade(logOf(data, asg.id, name));
     // A grade with no score is skipped rather than read as zero.
-    if (g && g.score != null) { earned += g.score * (asg.weight || 0); weight += (asg.weight || 0); }
-    return { id: asg.id, title: asg.title, weight: asg.weight || 0, score: g ? g.score : null, letter: g?.letter || null };
+    // A plus or a minus counts (gradeScore): B+ 88, B 85, B- 82.
+    const s = gradeScore(g);
+    if (s != null) { earned += s * (asg.weight || 0); weight += (asg.weight || 0); }
+    return { id: asg.id, title: asg.title, weight: asg.weight || 0, score: s, letter: g?.letter || null };
   });
   return { pct: weight > 0 ? Math.round(earned / weight) : null, rows };
 }

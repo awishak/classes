@@ -26,7 +26,7 @@ import { inDueOrder, statusOf } from "../AssignmentCards.jsx";
 import { computeGrade } from "../AssignmentsCard.jsx";
 import { rosterOf, nameShown } from "../roster.js";
 import { realStudents, isHouse, sectionOf, sectionsOf } from "../sections.js";
-import { boardOf, bucketOf, letterOf, cardLetter } from "../grades.js";
+import { boardOf, bucketOf, letterOf, cardLetter, scoreOf, gradeScore, signedScore } from "../grades.js";
 import { StudentLink } from "../StudentPage.jsx";
 import { ThemeStyle } from "../ThemeShell.jsx";
 import { PORTAL_CSS } from "./style.js";
@@ -43,7 +43,9 @@ const TONE = { A: "great", Exceptional: "great", Complete: "great", B: "good", "
 /** One cell: { say, kind, tone, title } for a student on an assignment. kind is done, pending, in, missed or "". */
 export function cellOf(config, data, asg, name) {
   const st = statusOf(config, data, asg, name, new Set());
-  const own = (score, b) => score != null && b && score !== b.score ? " " + score : "";
+  // A score shows beside the letter only when it is the card's own, not the
+  // letter's with or without its sign.
+  const own = (score, b) => score != null && b && ![b.score, signedScore(b, "+"), signedScore(b, "-")].includes(score) ? " " + score : "";
   if (st.letter) { const b = bucketOf(st.grade?.bucket); return { say: short(st.letter) + own(st.grade?.score, b), kind: "done", tone: TONE[st.letter] || TONE[String(st.letter)[0]] || "", title: st.letter + (st.grade?.score != null ? ", " + st.grade.score : ""), letter: st.letter }; }
   const card = boardOf(data, asg.id).cards?.[name] || {};
   const b = card.bucket ? bucketOf(card.bucket) : null;
@@ -68,8 +70,8 @@ export function withHeld(data) {
       if (!b) return;
       const log = (al || data.assignmentLog || {})[aid]?.[name] || [];
       const g = log.filter(e => e.type === "grade" && !e.deleted).pop();
-      const score = card.score != null ? card.score : b.score;
-      if (g && g.bucket === b.id && (g.score ?? null) === (score ?? null)) return;
+      const score = scoreOf(card, b);
+      if (g && g.bucket === b.id && gradeScore(g) === (score ?? null)) return;
       al = al || { ...(data.assignmentLog || {}) };
       al[aid] = { ...(al[aid] || {}), [name]: [...log, { id: "held-" + aid, ts: Math.max(card.at || 0, (g?.ts || 0) + 1), type: "grade", board: true, held: true, score, letter: cardLetter(card, b), bucket: b.id }] };
     });
