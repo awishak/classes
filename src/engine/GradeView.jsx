@@ -126,6 +126,16 @@ const workOf = (data, aid, name, asg) => {
     regrade: regradePending(log) ? regrade : null, lateness: latenessOf(asg, log) };
 };
 
+// Work that came in after the card was sorted: a hand-in newer than the last
+// time the card was placed or written. Andrew, 2026-11-24: "it's unclear to me
+// how to grade old stuff." To Grade counted these, and the board showed 61
+// sorted cards with nothing to say which four. Sorting or saving the card
+// again stamps it, which takes the mark off.
+const newerOf = (work, card) => card?.bucket && work.last && work.last.ts > (card.at || 0) ? work.last : null;
+const NewerPill = ({ sub, accent }) => (
+  <span style={{ flex: "none", fontSize: 13, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 9px" }}>{"Handed in " + fmtDay(sub.ts) + ", after this grade"}</span>
+);
+
 // `embedded`: inside the Grades portal (GradesPortal.jsx), which draws the bar
 // and the tabs; the header then sticks `stickyTop` down, under that bar.
 export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
@@ -253,6 +263,11 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
   const rank = (s) => (standings[s.name] ? standings[s.name].score : -1);
   const inBucket = (id) => roster.filter(s => board.cards?.[s.name]?.bucket === id)
     .map((s, i) => ({ s, i })).sort((x, y) => (rank(y.s) - rank(x.s)) || (x.i - y.i)).map(x => x.s);
+  // Sorted cards whose work came in after the grade, or who asked for a
+  // regrade, oldest hand-in first. They get a row of their own above the pile.
+  const since = roster.filter(s => inScale.has(board.cards?.[s.name]?.bucket))
+    .map(s => { const w = workOf(data, aid, s.name, asg); return { s, at: (newerOf(w, board.cards[s.name]) || w.regrade || {}).ts || 0 }; })
+    .filter(x => x.at).sort((x, y) => x.at - y.at).map(x => x.s);
   const sorted = sortedCount(board);
   const released = !!board.released;
   const stale = changedSinceRelease(board, data, aid);
@@ -362,6 +377,36 @@ export default function GradeView({ config, embedded = false, stickyTop = 0 }) {
             </div>
           ) : null}
 
+          {/* in since their grade */}
+          {since.length && !isCheckin(asg) ? (
+            <section aria-label="In since their grade"
+              style={{ border: "2px solid " + a, borderRadius: 12, padding: 12, marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 10 }}>
+                <span style={{ fontSize: 17, fontWeight: 700 }}>In since their grade</span>
+                <span style={{ fontSize: 15, color: TEXT_SECONDARY }}>Each card is still in the column it was sorted into. Grade it again and it leaves this row.</span>
+                <button className="gv-focus" style={{ ...btn(true), marginLeft: "auto" }} onClick={() => setWalk(since.map(s => s.name))}>
+                  {since.length === 1 ? "Open " + first(since[0].name) + "'s work" : "Walk through these " + since.length}
+                </button>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {since.map(s => {
+                  const w = workOf(data, aid, s.name, asg), c = board.cards[s.name];
+                  const was = bucketOf(c.bucket);
+                  return (
+                    <button key={s.name} type="button" className="gv-focus" onClick={() => setWalk([s.name, ...since.filter(o => o !== s).map(o => o.name)])}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 8, minHeight: HIT, padding: "4px 12px 4px 6px", borderRadius: 999, border: "1px solid " + LINE_STRONG, background: WHITE, color: TEXT_PRIMARY, fontFamily: F, fontSize: 15, cursor: "pointer" }}>
+                      <Avatar profile={profileOf(data, s.name)} name={s.name} accent={a} size={30} />
+                      <span style={{ fontWeight: 600 }}>{s.name}</span>
+                      <span style={{ color: TEXT_SECONDARY }}>
+                        {(w.regrade && !newerOf(w, c) ? "asked for a regrade " : "handed in ") + fmtDay((newerOf(w, c) || w.regrade).ts) + ", graded " + (was ? was.label + signOf(c).replace("-", "−") : "")}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
           {/* the pile */}
           <section {...zoneProps(null)} aria-label="Not sorted yet"
             style={{ border: "1px solid " + LINE, borderRadius: 12, padding: 12, marginBottom: 16, minHeight: 72 }}>
@@ -468,6 +513,7 @@ function Walk({ names, roster, data, aid, asg, board, columns, accent, onPlace, 
         <span style={{ fontSize: 15, color: late ? LATE : TEXT_MUTED, fontWeight: late ? 700 : 400 }}>
           {work.last ? fmtDay(work.last.ts) + (late ? " · " + lateness.text : "") : "Nothing turned in"}
         </span>
+        {newerOf(work, card) ? <NewerPill sub={newerOf(work, card)} accent={accent} /> : null}
         {grade ? <span style={{ fontSize: 15, fontWeight: 700, color: accent }}>{grade.label}</span> : null}
         {work.link ? (
           <a className="gv-focus" href={work.link} target="_blank" rel="noreferrer" style={{ color: accent, fontWeight: 600, fontSize: 15, textDecoration: "none", minHeight: HIT, display: "inline-flex", alignItems: "center" }}>
@@ -548,7 +594,7 @@ function Card({ config, student, shown, standing, open, onOpen, onClose, profile
   const soFar = standing ? "so far " + standing.letter + ", " + standing.score : "no grades yet";
   // The small box: a face, a first name, the colour. A press opens the card.
   if (!open && !editing) {
-    const flag = work.regrade || work.waiting;
+    const flag = work.regrade || work.waiting || newerOf(work, card);
     return (
       <button type="button" className="gv-card gv-focus" draggable data-dragging={dragging ? "1" : "0"}
         onDragStart={onDragStart} onDragEnd={onDragEnd} onClick={onOpen}
@@ -592,6 +638,7 @@ function Card({ config, student, shown, standing, open, onOpen, onClose, profile
             background: SUNK, borderRadius: 999, padding: "2px 9px" }}>{student.section}</span>
         ) : null}
         {/* The student wrote and nobody has answered: say so where the card is. */}
+        {newerOf(work, card) ? <NewerPill sub={newerOf(work, card)} accent={accent} /> : null}
         {work.regrade ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>Regrade requested</span>
           : work.waiting ? <span style={{ flex: "none", fontSize: 12, fontWeight: 700, color: "#fff", background: accent, borderRadius: 999, padding: "2px 8px" }}>New message</span> : null}
         {/* A plus or a minus on a lettered card, in the column it is already

@@ -104,7 +104,7 @@ export function ToGrade({ classes, onOpen }) {
               <div className="pt-main">
                 <p className="pt-title"><span className="gq-code" style={{ color: r.accent }}>{r.code}</span>{r.title}</p>
                 <p className="pt-when due"><span>Due {whenDue(r)}</span></p>
-                <p className="pt-meta"><span>{r.in + " of " + r.of + " in"}</span><span>·</span><span>{r.sorted + " sorted"}</span><span>·</span><span>{r.released ? "Released" : "Not released"}</span>{r.messages ? <><span>·</span><span>{r.messages + (r.messages === 1 ? " message" : " messages")}</span></> : null}</p>
+                <p className="pt-meta"><span>{r.in + " of " + r.of + " in"}</span><span>·</span><span>{r.sorted + " sorted"}</span><span>·</span><span>{r.released ? "Released, " + r.toGrade + " came in after" : "Not released"}</span>{r.messages ? <><span>·</span><span>{r.messages + (r.messages === 1 ? " message" : " messages")}</span></> : null}</p>
               </div>
               <div className="pt-side"><span className="pt-io go" style={{ background: r.accent }}>Grade</span></div>
             </a>
