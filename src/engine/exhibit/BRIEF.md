@@ -19,8 +19,9 @@ Every one of them carries a headline, a summary and sources.
 
 ## Where it stands
 
-Live on main since 2026-11-23. Open to COMM 999 only. Andrew pushes; a Claude
-session cannot (the push is blocked), so end every round by handing him:
+Live on main since 2026-11-23. Open to COMM 999 only. A Claude session can
+push once Andrew says to (he said so on 2026-11-24, and `git push origin
+HEAD:main` went through). If a push is ever blocked, hand him:
 
     git -C ~/Projects/classes push ssh://git@ssh.github.com:443/awishak/classes.git HEAD:main
 
@@ -78,6 +79,39 @@ Seen as pictures only, in headless Chrome: all four sample pages, a phone
 width, the builder's Outline, Build, Look and Checklist steps, the gallery,
 the review. Not seen: night mode, the film and own-HTML pages, the control
 page, the note box on a preview link.
+
+## The order things open in (2026-11-24)
+
+Andrew: "i don't want students to see the full builder yet. i haven't even
+given them teams or topics approved. so the first step is for me to do that."
+Three rules came out of that, all his picks:
+
+- **No project until the decisions are released.** `?mine=1` answers
+  `{ waiting: true }` to a student while `<class>-final-prefs.json` is not
+  `released`, and a save is refused. The builder shows one line. He is never
+  held back, and a practice class (no decisions file) is always open.
+- **The approved topics come with the project.** The route sends `topics`,
+  every topic approved for the team (a pair's four at most), read the way
+  `api/final-project.js` reads them. The outline lists them; the team picks
+  one and can write under it: "show all and allow a 'modification' write in".
+  The pick is `doc.topic = { key, text, change }`, kept out of the public file.
+  A student with none approved gets the write-in box alone.
+- **The outline is the whole builder until he marks it complete**, "for each
+  team once complete". Mark outline complete is a chip on each row of
+  `?review`; the marks are `outlines` in `_state.json`; the route sends `full`.
+  The builder asks again every 20 seconds while it is outline-only, so the
+  other steps appear without a reload. The steps are hidden in the browser
+  only: the server does not refuse a save that carries blocks.
+
+Two more from the same day. The step is called **Pre-production** wherever a
+person reads it, the word on the plan; the code still says `outline`. And
+pre-production counts as done only with a topic picked or written in, beside
+the headline, the summary and a plan on every page.
+
+Not done: the mark does not write a grade on the plan row. Nothing here was
+run against the live store; it was seen on the demo page (`&waiting=1`,
+`&stage=outline`, `&topics=0`, and `v=review&marked=1`). Existing COMM 999
+practice projects are outline-only until marked.
 
 ## How it is stored
 

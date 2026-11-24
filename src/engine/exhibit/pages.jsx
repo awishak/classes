@@ -162,12 +162,13 @@ export function ExhibitReview({ config, roster = [] }) {
   const notStarted = roster.filter(s => s.email && !started.has(String(s.email).toLowerCase())).map(s => s.name);
   const release = (on) => setState(config.id, { released: on }).then(load).catch(e => setErr(e.message));
   const reopen = (c) => { const until = new Date(Date.now() + 24 * 3600 * 1000).toISOString(); setState(config.id, { unlock: { id: c.id, until: got.unlocks?.[c.id] ? "" : until } }).then(load).catch(e => setErr(e.message)); };
+  const mark = (c) => setState(config.id, { outline: { id: c.id, ok: !got.outlines?.[c.id] } }).then(load).catch(e => setErr(e.message));
   const past = Date.now() > Date.parse(FINAL_DUE);
   const base = `/${config.id}/worksheets/final-project`;
   return <Shell config={config}>
     <div className="pt-stack">
       <h1 className="pt-h1">{config.code} final projects</h1>
-      <p className="pt-sub">Outline due {stamp(OUTLINE_DUE)}. Locks {stamp(FINAL_DUE)}. {cards.length} started{notStarted.length ? `, ${notStarted.length} not started` : ""}. {got.released ? "Released to the gallery." : "Not released."}</p>
+      <p className="pt-sub">Pre-production due {stamp(OUTLINE_DUE)}. Locks {stamp(FINAL_DUE)}. {cards.length} started{notStarted.length ? `, ${notStarted.length} not started` : ""}. {got.released ? "Released to the gallery." : "Not released."}</p>
     </div>
     <div className="pt-acts">
       {got.released ? <Btn kind="plain" onClick={() => release(false)}>Take back the release</Btn> : <Btn onClick={() => release(true)}>Release to the public gallery</Btn>}
@@ -181,10 +182,12 @@ export function ExhibitReview({ config, roster = [] }) {
         return <Row key={c.id} tint={all ? "done" : c.outline ? "" : "due"}>
           <span className="pt-title">{c.headline || "No headline yet"}</span>
           <span className="pt-meta">{(c.names || []).join(" and ")} · {wayOf(c)} · {(c.words || 0).toLocaleString("en-US")} words · Last change {stamp(c.updated)}</span>
-          <span className="pt-text">Outline {c.outline ? "done" : "not done yet"}{(c.pages || []).some(p => p.name) ? ": " + (c.pages || []).map(p => p.name).filter(Boolean).join(", ") : ""}.</span>
+          {c.topic?.text && <span className="pt-text"><b>Topic.</b> {c.topic.text}</span>}
+          {c.topic?.change && <span className="pt-text"><b>{c.topic.text ? "Modification." : "Topic, written in."}</b> {c.topic.change}</span>}
+          <span className="pt-text">Pre-production {c.outline ? "done" : "not done yet"}{(c.pages || []).some(p => p.name) ? ": " + (c.pages || []).map(p => p.name).filter(Boolean).join(", ") : ""}.</span>
           <span className="pt-text">Checklist {list.length - miss.length} of {list.length}{miss.length ? ". Still missing: " + miss.map(l => l.say + (l.need > 1 ? ` (${l.have} of ${l.need})` : "")).join("; ") : ""}.</span>
           {showWho && c.who && <span className="pt-text"><b>Who did what.</b> {c.who}</span>}
-          <span className="pt-acts"><Btn href={`${exhibitHref(c)}?preview=${c.preview}`}>Read</Btn><Chip href={`${base}?s=${encodeURIComponent((c.makers || [])[0] || "")}`}>Their file</Chip>{past && <Chip on={!!got.unlocks?.[c.id]} onClick={() => reopen(c)}>{got.unlocks?.[c.id] ? "Reopened, close again" : "Reopen for a day"}</Chip>}</span>
+          <span className="pt-acts"><Btn href={`${exhibitHref(c)}?preview=${c.preview}`}>Read</Btn><Chip href={`${base}?s=${encodeURIComponent((c.makers || [])[0] || "")}`}>Their file</Chip><Chip on={!!got.outlines?.[c.id]} onClick={() => mark(c)}>{got.outlines?.[c.id] ? "Pre-production complete, builder open" : "Mark pre-production complete"}</Chip>{past && <Chip on={!!got.unlocks?.[c.id]} onClick={() => reopen(c)}>{got.unlocks?.[c.id] ? "Reopened, close again" : "Reopen for a day"}</Chip>}</span>
         </Row>; })}
     </div>
     {notStarted.length > 0 && <><Sec name="Not started" />
@@ -197,12 +200,15 @@ const RULES = [
     "One of three things: an exhibit built on the page, a film linked from YouTube, Vimeo or Google Drive, or one .html file the student made.",
     "Every project carries a headline, a summary of up to 50 words, sources, and a line on how AI was used.",
     "A pair shares one project. Who is a pair comes from the pairs on the preferences review. Everyone else works alone.",
+    "A student gets no project until Release is pressed on the preferences review. Before that the builder's address shows one line saying the final project is not open yet. A practice class has no preferences and is always open.",
     "If two students are paired after one of them started, the pair's project begins as the fuller of their two files.",
   ]],
-  ["The outline", [
-    "The first step of the builder: the way of making, a headline, a summary, and for an exhibit each page named with what goes on the page.",
-    "Due Thursday, December 3, at 11:59 PM. The review page says Done once a headline, a summary and a plan on every page are there.",
-    "Nothing locks on December 3. The outline is the skeleton the student keeps building on.",
+  ["Pre-production", [
+    "The first step of the builder: the topic, the way of making, a headline, a summary, and for an exhibit each page named with what goes on the page.",
+    "Pre-production lists every topic approved for the team, a pair's four at most. The team picks one and can write a modification under the list. A student with no approved topic gets the write-in box alone.",
+    "Until Mark pre-production complete is pressed for a team on the review page, pre-production is the only step that team sees. Pressing the chip again closes the other steps.",
+    "Due Thursday, December 3, at 11:59 PM. The review page says Done once a topic picked or written in, a headline, a summary and a plan on every page are there.",
+    "Nothing locks on December 3. Pre-production is the skeleton the student keeps building on, in the same file.",
   ]],
   ["Saving and the deadline", [
     "There is no hand-in button. The builder saves about a second after each change.",

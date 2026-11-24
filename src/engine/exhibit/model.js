@@ -229,9 +229,10 @@ export function checklist(doc, classId) {
   return out;
 }
 
-/** Whether the outline, the builder's first step, is there: a headline, a summary, and a plan on every page. */
+/** Whether the outline, the builder's first step, is there: a topic picked or written in, a headline, a summary, and a plan on every page. */
 export function outlineDone(doc) {
   const d = doc || {};
+  if (!String(d.topic?.text || "").trim() && !String(d.topic?.change || "").trim()) return false;
   if (!String(d.headline || "").trim() || !String(d.summary || "").trim()) return false;
   if (d.way !== "exhibit") return true;
   const pages = d.pages || [];
@@ -291,7 +292,7 @@ export function mergeDocs(server, incoming) {
 
 /** What a reader gets: the file without the makers' private parts. */
 export function publicDoc(doc) {
-  const { who, preview, makers, gone, at, ...rest } = doc || {};
+  const { who, preview, makers, gone, at, topic, ...rest } = doc || {};
   return rest;
 }
 

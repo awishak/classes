@@ -51,8 +51,8 @@ const CSS = `
 .xb .left{font-weight:600;color:var(--warn)}
 .xb .meterbar{height:8px;background:var(--sunk);border-radius:999px;overflow:hidden;margin-top:14px;box-shadow:inset 0 0 0 1px var(--ls)}
 .xb .meterbar i{display:block;height:100%;border-radius:999px;background:var(--ok);transition:width .4s ease}
-.xb .steps{display:flex;gap:2px;margin-top:14px;padding:3px;background:var(--sunk);border-radius:12px;overflow-x:auto;scrollbar-width:none}
-.xb .steps button{flex:1 0 auto;font-size:15px;font-weight:600;color:var(--ink2);background:none;border:0;border-radius:10px;min-height:40px;padding:0 10px;cursor:pointer;white-space:nowrap}
+.xb .steps{display:flex;gap:2px;margin-top:14px;padding:3px;background:var(--sunk);border-radius:12px;flex-wrap:wrap}
+.xb .steps button{flex:1 0 30%;font-size:15px;font-weight:600;color:var(--ink2);background:none;border:0;border-radius:10px;min-height:40px;padding:0 10px;cursor:pointer;white-space:nowrap}
 .xb .steps button:hover{color:var(--ink)}
 .xb .steps button[aria-current="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(28,25,23,.14)}
 .xb .steps .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--ok);margin-left:6px;vertical-align:1px}
@@ -79,6 +79,8 @@ const CSS = `
 .xb .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
 .xb .tile{font-size:17px;font-weight:600;line-height:1.2;color:var(--ink);background:var(--card);border:0;box-shadow:inset 0 0 0 1px var(--lst);border-radius:16px;padding:14px 14px 15px;cursor:pointer;text-align:left;transition:transform .12s ease}
 .xb .tile:hover{transform:translateY(-2px)}
+.xb .topics{display:grid;gap:8px;margin-bottom:16px}
+.xb .topics .tile{font-weight:500;line-height:1.35;width:100%}
 .xb .tile small{display:block;font-weight:400;color:var(--ink2);margin-top:5px;font-size:14px;line-height:1.3}
 .xb .tile[aria-pressed="true"]{background:var(--xa);box-shadow:none;color:#fff}
 .xb .tile[aria-pressed="true"] small{color:#fff}
@@ -387,6 +389,9 @@ function Builder({ classId, viewer, as }) {
   const [doc, setDoc] = useState(null);
   const [err, setErr] = useState("");
   const [locked, setLocked] = useState(false);
+  const [waiting, setWaiting] = useState(false);   // the teams and topics are not released yet
+  const [topics, setTopics] = useState([]);        // the topics approved for this team
+  const [full, setFull] = useState(true);          // false until he marks this team's outline complete
   const [saved, setSaved] = useState("Saved");
   const [step, setStep] = useState("outline");
   const [page, setPage] = useState(0);
@@ -411,7 +416,7 @@ function Builder({ classId, viewer, as }) {
 
   useEffect(() => {
     let on = true;
-    loadMine(classId, as).then(out => { if (!on) return; setDoc(out.doc); setLocked(out.locked); setStep(outlineDone(out.doc) && out.doc.way === "exhibit" ? "build" : "outline"); })
+    loadMine(classId, as).then(out => { if (!on) return; if (out.waiting) { setWaiting(true); return; } const all = out.full !== false; setTopics(out.topics || []); setFull(all); setDoc(out.doc); setLocked(out.locked); setStep(all && outlineDone(out.doc) && out.doc.way === "exhibit" ? "build" : "outline"); })
       .catch(e => on && setErr(e.message));
     return () => { on = false; };
   }, [classId, as]);
@@ -443,10 +448,10 @@ function Builder({ classId, viewer, as }) {
   }, [flush]);
   // A partner's work comes in while this side is idle.
   useEffect(() => {
-    if (!doc || (doc.makers || []).length < 2 || locked) return;
-    const t = setInterval(() => { if (document.hidden || dirty.current || busy.current) return; loadMine(classId, as).then(out => { if (!dirty.current && out.doc.rev !== docRef.current?.rev) { setDoc(d => ({ ...mergeDocs(out.doc, d), rev: out.doc.rev })); toast("Your partner's changes came in"); } setLocked(out.locked); }).catch(() => {}); }, 20000);
+    if (!doc || ((doc.makers || []).length < 2 && full) || locked) return;
+    const t = setInterval(() => { if (document.hidden || dirty.current || busy.current) return; loadMine(classId, as).then(out => { if (out.waiting) return; if (out.full !== false && !full) { setFull(true); toast("The rest of the builder is open"); } if (!dirty.current && out.doc.rev !== docRef.current?.rev) { setDoc(d => ({ ...mergeDocs(out.doc, d), rev: out.doc.rev })); toast("Your partner's changes came in"); } setLocked(out.locked); }).catch(() => {}); }, 20000);
     return () => clearInterval(t);
-  }, [classId, as, doc?.id, locked]);   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [classId, as, doc?.id, locked, full]);   // eslint-disable-line react-hooks/exhaustive-deps
 
   // The picked block comes into view on both sides, and its first box takes the cursor.
   useEffect(() => {
@@ -466,6 +471,7 @@ function Builder({ classId, viewer, as }) {
   const srcPatch = (id, patch) => change(d => ({ ...d, sources: d.sources.map(s => (s.id === id ? { ...s, ...patch, at: now() } : s)) }));
 
   if (err) return <div className="xb"><style>{CSS}</style><div className="load">{err}</div></div>;
+  if (waiting) return <div className="xb"><style>{CSS}</style><div className="load">The final project opens once your team and topics are released.</div></div>;
   if (!doc) return <div className="xb"><style>{CSS}</style><div className="load">Opening your project</div></div>;
 
   const pages = doc.pages || [], cur = pages[Math.min(page, pages.length - 1)] || null;
@@ -476,7 +482,7 @@ function Builder({ classId, viewer, as }) {
   // Finishing the outline, or the whole checklist, gets a moment.
   const nowState = { outline: outlineDone(doc), all: list.length > 0 && done === list.length };
   if (was.current && !locked) {
-    if (nowState.outline && !was.current.outline) setTimeout(() => { setParty(Date.now()); toast("Your outline is done"); }, 0);
+    if (nowState.outline && !was.current.outline) setTimeout(() => { setParty(Date.now()); toast("Your pre-production is done"); }, 0);
     else if (nowState.all && !was.current.all) setTimeout(() => { setParty(Date.now()); toast("Everything on the checklist is done"); }, 0);
   }
   was.current = nowState;
@@ -504,11 +510,14 @@ function Builder({ classId, viewer, as }) {
   const addSource = () => { const s = newSource(); change(d => ({ ...d, sourcesAt: now(), sources: [...d.sources, s] })); setFresh(s.id); setSel(s.id); toast("Source added"); };
   const dropSource = (s, i) => { change(d => ({ ...d, sourcesAt: now(), gone: { ...(d.gone || {}), [s.id]: now() }, sources: d.sources.filter(x => x.id !== s.id) })); toast("Source removed", () => change(d => ({ ...d, sourcesAt: now() + 1, sources: [...d.sources.slice(0, i), { ...s, at: now() + 1 }, ...d.sources.slice(i)] }))); };
 
-  const STEPS = [["outline", "Outline"], ...(exhibit ? [["build", "Build"]] : []), ["sources", "Sources"], ["look", "Look"], ["check", "Checklist"], ["share", "Share"]];
+  // Until he marks the outline complete, the outline is the whole builder.
+  const STEPS = !full ? [["outline", "Pre-production"]] : [["outline", "Pre-production"], ...(exhibit ? [["build", "Build"]] : []), ["sources", "Sources"], ["look", "Look"], ["check", "Checklist"], ["share", "Share"]];
+  const topic = doc.topic || {};
+  const setTopic = (patch) => top({ topic: { ...topic, ...patch } });
   const at = STEPS.findIndex(s => s[0] === step);
   const goStep = (id) => { setStep(id); setAdding(null); if (pane.current) pane.current.scrollTo({ top: 0 }); };
   const previewUrl = `${window.location.origin}${exhibitHref(doc)}?preview=${doc.preview}`;
-  const around = (b, node) => <div data-b={b.id} className={"pick" + (sel === b.id ? " on" : "")} onClick={() => { setFresh(""); setSel(b.id); setStep("build"); setShowView(false); }}>{node || <div className="ghostb">{blockName(b.t)}, beside the text below</div>}</div>;
+  const around = (b, node) => <div data-b={b.id} className={"pick" + (sel === b.id ? " on" : "")} onClick={() => { if (!full) return; setFresh(""); setSel(b.id); setStep("build"); setShowView(false); }}>{node || <div className="ghostb">{blockName(b.t)}, beside the text below</div>}</div>;
   const fix = (l) => goStep(FIX[l.id] || (exhibit ? "build" : "outline"));
 
   return <Toast.Provider value={toast}><div className={"xb" + (showView ? " show-view" : "")} style={skin}>
@@ -525,7 +534,11 @@ function Builder({ classId, viewer, as }) {
       </div>
       <div className="pane" ref={pane}>
         {step === "outline" && <>
-          {blank && <div className="hello"><b>Start with the outline.</b>Pick how you are making your project, give the project a headline and a summary, then name your pages. The outline is due {dateSay(OUTLINE_DUE)}.<br /><a href={`/${classId}/exhibits/sample`} target="_blank" rel="noopener">See a finished sample</a></div>}
+          {blank && <div className="hello"><b>Start with pre-production.</b>Pick how you are making your project, give the project a headline and a summary, then name your pages. Pre-production is due {dateSay(OUTLINE_DUE)}.<br /><a href={`/${classId}/exhibits/sample`} target="_blank" rel="noopener">See a finished sample</a></div>}
+          {!full && <p className="say">The rest of the builder opens once Dr. Ishak marks your pre-production complete.</p>}
+          <h3>Your topic</h3>
+          {topics.length > 0 && <div className="topics">{topics.map(t => <button type="button" className="tile" key={t.key} aria-pressed={topic.key === t.key} onClick={() => setTopic({ key: t.key, text: t.topic })}>{t.topic}{(doc.makers || []).length > 1 && t.by && <small>From {t.by}</small>}</button>)}</div>}
+          <F label={topics.length ? "Modification" : "Topic"} area value={topic.change} onChange={v => setTopic({ change: v })} />
           <h3>How you are making your project</h3>
           <div className="tiles">{WAYS.map(w => <button type="button" className="tile" key={w.id} aria-pressed={doc.way === w.id} onClick={() => { top({ way: w.id }); toast(w.name + " chosen"); }}>{w.name}<small>{w.id === "exhibit" ? "Built here, page by page" : w.id === "film" ? "One video, linked" : "A file you made"}</small></button>)}</div>
           <F label="Headline" value={doc.headline} onChange={v => top({ headline: v })} />

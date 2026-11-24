@@ -13,11 +13,20 @@
 //   - Anyone with the preview link can leave a note on a block; only the
 //     makers and he read the notes.
 //
+// Andrew, 2026-11-24, on the order things open in:
+//   - "i don't want students to see the full builder yet. i haven't even
+//     given them teams or topics approved." A student gets no project until
+//     the decisions file says released. A practice class has no decisions.
+//   - The team's approved topics come with the project, every one of them,
+//     so the outline can "show all and allow a 'modification' write in".
+//   - The rest of the builder opens "for each team once complete": `full`
+//     is true once he has marked that team's outline complete on the review.
+//
 // The files sit in the private `instructor` bucket beside the decisions
 // file. Pictures, audio and HTML files go to the public `notes` bucket on a
 // link signed here, the way /api/upload does for him.
 //
-// GET  ?class=&mine=1                   a maker: { ok, doc, locked, due, released }
+// GET  ?class=&mine=1                   a maker: { ok, doc, locked, due, released, topics, full }, or { ok, waiting } before the decisions are released
 // GET  ?class=&id=[&preview=]           a reader: { ok, doc, can }
 // GET  ?class=&id=&notes=1              makers and instructor: { ok, notes }
 // GET  ?class=&gallery=1                { ok, released, cards } (instructor: every project)
@@ -25,7 +34,7 @@
 // POST ?class=  { op: "upload", name, type, size }  a maker: { ok, uploadUrl, publicUrl }
 // POST ?class=  { op: "note", id, preview, block, text, name }  a reader with the link
 // POST ?class=  { op: "noteGone", id, note }       a maker or the instructor
-// POST ?class=  { op: "state", released, unlock: { id, until } }   the instructor
+// POST ?class=  { op: "state", released, unlock: { id, until }, outline: { id, ok } }   the instructor
 
 import { createHash, randomBytes } from "node:crypto";
 import { callerAllowed, callerEmail, readBody } from "./_auth.js";
@@ -60,10 +69,38 @@ async function rosterOf(cls) {
     .filter(s => s && s.email).map(s => ({ name: s.name || "", email: lower(s.email), section: String(s.section || "").trim() }));
 }
 // Who this student makes the project with: their pair off the decisions file, or themselves.
-async function makersOf(cls, email) {
-  const file = await readJson(`${cls}-final-prefs.json`);
-  const pair = (Array.isArray(file?.pairs) ? file.pairs : []).find(p => Array.isArray(p) && p.map(lower).includes(email));
-  return (pair ? pair.map(lower) : [email]).sort();
+// `out` is whether he has released the decisions; `file` is the decisions.
+async function teamOf(cls, email) {
+  const got = await readJson(`${cls}-final-prefs.json`);
+  const file = got && !got.__error ? got : {};
+  const pair = (Array.isArray(file.pairs) ? file.pairs : []).find(p => Array.isArray(p) && p.map(lower).includes(email));
+  return { makers: (pair ? pair.map(lower) : [email]).sort(), out: file.released === true, file };
+}
+// One student's topic lines off the preferences sheet, { a: "..." }. The same read final-project.js makes.
+const SLOTS = ["a", "b", "c"];
+async function topicLines(cls, email) {
+  const s = await fetch(SUPABASE_URL + `/rest/v1/worksheet_sheets?select=id&worksheet_key=eq.final-prefs&group_key=eq.${cls}&viewer_id=eq.${encodeURIComponent(email)}`, { headers: serviceHeaders() });
+  const [sheet] = s.ok ? await s.json().catch(() => []) : [];
+  if (!sheet) return {};
+  const a = await fetch(SUPABASE_URL + `/rest/v1/worksheet_answers?select=field,value,position,created_at&sheet_id=eq.${sheet.id}&field=like.topic:*&order=position,created_at`, { headers: serviceHeaders() });
+  const rows = a.ok ? await a.json().catch(() => []) : [];
+  const slot = {};
+  for (const r of rows) slot[r.field + "\u0000" + (r.position || 0)] = r;
+  const out = {};
+  Object.values(slot).sort((x, y) => (x.position || 0) - (y.position || 0)).forEach(r => { const k = r.field.split(":")[1]; out[k] = (out[k] || "") + r.value; });
+  return out;
+}
+// Every topic he approved for the team: [{ key, by, topic }], a pair's four at most.
+async function topicsFor(cls, file, makers, nameOf) {
+  const keyOf = (m) => Object.keys(file.topics || {}).find(k => lower(k) === m) || m;
+  const per = await Promise.all(makers.map(async m => {
+    const marks = file.topics?.[keyOf(m)] || {};
+    const slots = SLOTS.filter(x => marks[x]);
+    if (!slots.length) return [];
+    const text = await topicLines(cls, m);
+    return slots.map(x => ({ key: m + ":" + x, by: nameOf.get(m) || "", topic: String(text[x] || "").trim() })).filter(t => t.topic);
+  }));
+  return per.flat();
 }
 const idFor = (cls, makers) => createHash("sha256").update(cls + "\n" + makers.join("\n")).digest("hex").slice(0, 10);
 const stateOf = async (cls) => { const s = await readJson(stateFor(cls)); return s && !s.__error ? s : {}; };
@@ -73,7 +110,7 @@ const lockOf = (state, id, now = Date.now()) => lockedAt(now, { due: FINAL_DUE, 
 const cardOf = (doc, cls, full) => ({
   id: doc.id, cls, headline: doc.headline || "", summary: doc.summary || "", names: doc.names || [], way: doc.way, area: doc.area || "",
   cover: doc.cover || {}, pal: doc.pal, type: doc.type, updated: doc.updated,
-  ...(full ? { makers: doc.makers, preview: doc.preview, outline: outlineDone(doc), words: wordCount(doc), list: checklist(doc, cls), pages: (doc.pages || []).map(p => ({ name: p.name, plan: p.plan, blocks: (p.blocks || []).length })), who: doc.who || "" } : {}),
+  ...(full ? { makers: doc.makers, preview: doc.preview, outline: outlineDone(doc), words: wordCount(doc), list: checklist(doc, cls), pages: (doc.pages || []).map(p => ({ name: p.name, plan: p.plan, blocks: (p.blocks || []).length })), who: doc.who || "", topic: doc.topic || null } : {}),
 });
 
 async function listDocs(cls) {
@@ -103,7 +140,7 @@ export default async function handler(req, res) {
       if (!released && !instructor) return res.status(200).json({ ok: true, released: false, cards: [] });
       const docs = await listDocs(cls);
       const shown = instructor && q.all ? docs : docs.filter(d => d.headline && !d.staff);
-      return res.status(200).json({ ok: true, released, unlocks: instructor ? state.unlocks || {} : undefined, due: FINAL_DUE, cards: shown.map(d => cardOf(d, cls, instructor && !!q.all)) });
+      return res.status(200).json({ ok: true, released, unlocks: instructor ? state.unlocks || {} : undefined, outlines: instructor ? state.outlines || {} : undefined, due: FINAL_DUE, cards: shown.map(d => cardOf(d, cls, instructor && !!q.all)) });
     }
     if (q.mine) {
       if (!email) return res.status(401).json({ ok: false, error: "Sign in to open your project." });
@@ -112,7 +149,10 @@ export default async function handler(req, res) {
       // The instructor can build a project of his own to try the builder; the file is marked and never reaches the gallery.
       const staff = instructor && as === email && !roster.some(s => s.email === as);
       if (!staff && !roster.some(s => s.email === as)) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
-      const makers = staff ? [as] : await makersOf(cls, as);
+      const team = staff ? { makers: [as], out: true, file: {} } : await teamOf(cls, as);
+      // Nothing for a student until the teams and topics are released. He can always look.
+      if (!team.out && !instructor && !PRACTICE.includes(cls)) return res.status(200).json({ ok: true, waiting: true });
+      const makers = team.makers;
       const id = idFor(cls, makers);
       let doc = await readJson(fileFor(cls, id));
       if (doc?.__error) return res.status(502).json({ ok: false, error: `The store said ${doc.__error}.` });
@@ -127,7 +167,8 @@ export default async function handler(req, res) {
         }
         if (!lockOf(state, id)) await writeJson(fileFor(cls, id), doc);
       }
-      return res.status(200).json({ ok: true, doc, locked: lockOf(state, id), due: FINAL_DUE, released, me: as });
+      const topics = staff ? [] : await topicsFor(cls, team.file, makers, nameOf);
+      return res.status(200).json({ ok: true, doc, locked: lockOf(state, id), due: FINAL_DUE, released, me: as, topics, full: staff || state.outlines?.[id] === true });
     }
     const id = idOfSlug(q.id);
     if (!id) return res.status(400).json({ ok: false, error: "Which project?" });
@@ -150,6 +191,7 @@ export default async function handler(req, res) {
     if (!instructor) return res.status(401).json({ ok: false, error: "Releasing is the instructor's." });
     const next = { ...state };
     if (typeof body.released === "boolean") next.released = body.released;
+    if (body.outline?.id) { const oid = idOfSlug(body.outline.id); next.outlines = { ...(next.outlines || {}) }; if (body.outline.ok) next.outlines[oid] = true; else delete next.outlines[oid]; }
     if (body.unlock?.id) { next.unlocks = { ...(next.unlocks || {}) }; if (body.unlock.until) next.unlocks[idOfSlug(body.unlock.id)] = String(body.unlock.until); else delete next.unlocks[idOfSlug(body.unlock.id)]; }
     if (!(await writeJson(stateFor(cls), next))) return res.status(502).json({ ok: false, error: "The store did not take the change." });
     return res.status(200).json({ ok: true, state: next });
@@ -180,7 +222,9 @@ export default async function handler(req, res) {
   const as = instructor && body.as ? lower(body.as) : email;
   const staff = instructor && as === email && !roster.some(s => s.email === as);
   if (!staff && !roster.some(s => s.email === as)) return res.status(403).json({ ok: false, error: "Not on the roster for this class." });
-  const makers = staff ? [as] : await makersOf(cls, as);
+  const team = staff ? { makers: [as], out: true } : await teamOf(cls, as);
+  if (!team.out && !instructor && !PRACTICE.includes(cls)) return res.status(403).json({ ok: false, error: "The final project is not open yet." });
+  const makers = team.makers;
   const id = idFor(cls, makers);
 
   if (op === "noteGone") {
