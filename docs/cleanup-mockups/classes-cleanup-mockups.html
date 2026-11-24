@@ -1,0 +1,492 @@
+<title>Classes Cleanup Mockups</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=Outfit:wght@400;500;600;700&display=swap">
+<style>
+/* Seven of his live pages redrawn by the rules of his final project review board:
+   one ground, colour only for state, circles for people, blocks for challenges,
+   pills for actions, and a motion for every click. Three text styles in all. */
+:root{ --page:#f7f6f3; --pcard:#ffffff; --pink:#1c1917; --pdim:#57534e; --pmute:#78716c; --pline:#d9d4cb;
+  --sans:'Outfit',-apple-system,BlinkMacSystemFont,sans-serif }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page:#0d0c0b; --pcard:#1c1917; --pink:#f6f2ec; --pdim:#b9afa5; --pmute:#978d83; --pline:#3a342f; color-scheme:dark } }
+:root[data-theme="dark"]{ --page:#0d0c0b; --pcard:#1c1917; --pink:#f6f2ec; --pdim:#b9afa5; --pmute:#978d83; --pline:#3a342f; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--page);color:var(--pink);font-family:var(--sans);font-size:16px;line-height:1.35;-webkit-font-smoothing:antialiased}
+p,h1,h2,h3{margin:0}
+button,textarea,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding-block:10px 28px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:8px}
+
+/* this page's own chrome */
+.pages{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center}
+.pages div{display:flex;flex-wrap:wrap;align-items:center;gap:2px}
+.pages span{font-size:14px;color:var(--pmute);margin-right:4px}
+.pages a,.pages button{display:inline-flex;align-items:center;min-height:30px;padding:0 10px;border-radius:999px;border:0;background:none;color:var(--pink);font-weight:500;text-decoration:none}
+.pages a.on,.pages button.on{background:var(--pink);color:var(--page)}
+.pages .gr{margin-left:auto}.pages .gr + .gr{margin-left:0}
+.lede{display:flex;flex-wrap:wrap;gap:2px 14px;align-items:baseline}
+.lede h1{font-size:20px;font-weight:600}
+.lede p{font-size:14px;color:var(--pdim);flex:1 1 420px}
+.ask{background:var(--pcard);border:1px solid var(--pline);border-radius:14px;padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ask button{min-height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--pline);background:none;font-weight:600;font-size:14px}
+.ask button[aria-pressed="true"]{background:var(--pink);color:var(--page);border-color:var(--pink)}
+.ask textarea{flex:1 1 260px;min-height:32px;height:32px;border:1px solid var(--pline);border-radius:10px;background:var(--pcard);padding:5px 10px;resize:vertical}
+.ask .saved{font-size:14px;color:var(--pmute);min-width:44px}
+
+/* ── the site ── */
+.site{--bg:#0a0f1f;--bg2:#141c3a;--card:#1a2346;--card2:#222d58;--line:#2c3866;--ink:#f5f7ff;--dim:#b4bee0;--mute:#8793bd;
+  --go:#34d399;--due:#fbbf24;--warn:#fb923c;--bad:#fb7185;--none:#56618c;--c118:#60a5fa;--c3:#c4b5fd;--on:#0a0f1f;--shade:rgba(0,0,0,.45);
+  color:var(--ink);background:radial-gradient(1100px 720px at 28% 18%,var(--bg2) 0%,var(--bg) 62%);border-radius:18px;overflow:hidden;border:1px solid var(--line)}
+.site.lite{--bg:#f4f2ee;--bg2:#ffffff;--card:#ffffff;--card2:#ebe8e2;--line:#d9d4cb;--ink:#1c1917;--dim:#57534e;--mute:#78716c;
+  --go:#1f9d63;--due:#e0a019;--warn:#e2702a;--bad:#d94a5a;--none:#bdb7ac;--c118:#2f5fd0;--c3:#7c4ddb;--on:#ffffff;--shade:rgba(60,50,40,.18)}
+.site.sky{--bg:#f9faf8;--bg2:#ffffff;--card:#ffffff;--card2:#e8efeb;--line:#d5ddd8;--ink:#22302f;--dim:#4c5d5b;--mute:#71827f;
+  --go:#2f8576;--due:#d9a927;--warn:#d9574b;--bad:#d9574b;--none:#b9c4c0;--c118:#3d7fb3;--c3:#7a68b8;--on:#ffffff;--ondue:#22302f;--shade:rgba(34,48,47,.16)}
+.site.sky .t1{font-family:'Fraunces',Georgia,serif}
+.site.sky .hero{background:linear-gradient(135deg,#22302f,#2f8576)}.site.sky .hero .t3{color:#cfe6df}
+.site{container-type:inline-size;margin:0 auto;width:100%;transition:max-width .35s cubic-bezier(.2,.8,.2,1)}
+.site.phone{max-width:390px}
+.pill.due,.pill em,.s-todo.tile,.s-todo.blk{color:var(--ondue,var(--on))}
+.navs{display:flex;align-items:center;gap:10px;min-width:0}
+.tip{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);max-width:min(92vw,560px);background:var(--pink);color:var(--page);border-radius:14px;padding:9px 14px;font-weight:500;box-shadow:0 14px 40px rgba(0,0,0,.35);z-index:20;animation:tip .25s ease both}
+@keyframes tip{from{opacity:0;transform:translate(-50%,8px)}}
+.site :focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.t1{font-size:22px;font-weight:600;letter-spacing:-.01em;line-height:1.15}
+.t3{font-size:14px;font-weight:500;color:var(--mute)}
+.bar{display:flex;align-items:center;gap:4px 10px;flex-wrap:wrap;padding:6px 14px;border-bottom:1px solid var(--line)}
+.bar .cls{display:flex;align-items:center;gap:8px;margin-right:6px;font-weight:600;white-space:nowrap}
+.bar .sq{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:var(--c118);color:var(--on);font-size:11px;font-weight:700}
+.bar nav{display:flex;flex-wrap:wrap;gap:2px}
+.bar .sep{width:1px;height:18px;background:var(--line)}
+.bar .grow{flex:1}
+.pill{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap;transition:transform .12s,background .15s,border-color .15s,filter .15s}
+.pill:hover{border-color:var(--dim)}
+.pill:active{transform:scale(.96)}
+.pill.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pill.go{background:var(--go);border-color:var(--go);color:var(--on)}
+.pill.due{background:var(--due);border-color:var(--due);color:var(--on)}
+.pill.flat{background:none;border-color:transparent;color:var(--dim);padding:0 9px}
+.pill.flat.on{background:var(--card2);color:var(--ink)}
+.pill em{font-style:normal;font-size:14px;font-weight:700;background:var(--due);color:var(--on);border-radius:999px;padding:1px 7px}
+.pill.done{border-color:var(--go);color:var(--go);background:none}
+.body{padding:12px 14px 16px;display:flex;flex-direction:column;gap:12px}
+.rowx{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.rowx .sp{flex:1}
+.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:14px;align-items:start}
+.panel{background:color-mix(in srgb,var(--card) 88%,transparent);border:1px solid var(--line);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0;animation:rise .3s ease both}
+.panel .hd{display:flex;gap:12px;align-items:center}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+@keyframes pop{from{transform:scale(1)}}
+@keyframes grow{from{transform:scaleX(0)}}
+@keyframes burst{0%{transform:scale(1)}25%{transform:scale(1.4)}100%{transform:scale(1)}}
+@keyframes stamp{from{opacity:0;transform:rotate(-18deg) scale(2.4)}}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@keyframes pulse{50%{box-shadow:0 0 0 3px color-mix(in srgb,var(--due) 45%,transparent)}}
+
+/* people are circles */
+.face{position:relative;flex:none;border-radius:50%;padding:3px;border:0;background:var(--w,var(--none));display:grid;place-items:center;transition:transform .18s,opacity .3s}
+button.face:hover{transform:scale(1.1);z-index:3}
+.face .disc{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:600;color:#fff;background:hsl(var(--h,260) 38% 44%);pointer-events:none}
+.face.sm{padding:2px}.face.sm .disc{width:24px;height:24px;font-size:10px}
+.face.lg .disc{width:58px;height:58px;font-size:20px}
+.face.hollow{background:transparent;box-shadow:inset 0 0 0 2px var(--none)}
+.face.hollow .disc{filter:grayscale(1) brightness(.7)}
+.face.sel{outline:3px solid var(--ink);outline-offset:2px;z-index:4}
+.face.glow{outline:3px solid var(--w);outline-offset:2px}
+.face.burst{animation:burst 1s cubic-bezier(.2,.9,.2,1)}
+.face .tick{position:absolute;right:-10px;bottom:-7px;min-width:24px;height:22px;padding:0 5px;border-radius:999px;background:var(--go);color:var(--on);font-size:14px;font-weight:700;display:grid;place-items:center;box-shadow:0 0 0 2px var(--bg)}
+.cell{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:58px;transition:opacity .3s}
+.cell.dim{opacity:.25}
+.cell .t3{white-space:nowrap}
+.cell.on .t3{color:var(--ink);font-weight:600}
+.faces{display:flex;align-items:center}
+.faces .face{margin-left:-8px}.faces .face:first-child{margin-left:0}
+
+/* challenges are blocks */
+.s-done{--w:var(--go)}.s-todo{--w:var(--due)}.s-in{--w:color-mix(in srgb,var(--go) 45%,var(--none))}.s-off{--w:var(--none)}.s-on{--w:var(--go)}
+.tile{flex:none;width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font-size:14px;font-weight:700;background:var(--w);color:var(--on)}
+.tile.lg{width:60px;height:60px;border-radius:16px;font-size:26px}
+.s-on.tile,.s-on.blk{background:repeating-linear-gradient(135deg,var(--go) 0 8px,color-mix(in srgb,var(--go) 60%,var(--bg)) 8px 16px)}
+.strip{display:flex;gap:3px;height:54px;align-items:stretch}
+.blk{flex:var(--x) 1 0;min-width:12px;padding:0;border:0;border-radius:9px;background:var(--w);color:var(--on);font-size:18px;font-weight:700;overflow:hidden;transition:transform .18s,opacity .3s,box-shadow .25s}
+.blk:hover{filter:brightness(1.08)}
+.blk.sel{outline:3px solid var(--ink);outline-offset:2px;z-index:2}
+.blk.dim{opacity:.4}
+.key{display:flex;flex-wrap:wrap;gap:3px 14px}
+.key span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--w);flex:none}
+.dot.sq{border-radius:3px}
+
+.hero{background:linear-gradient(135deg,#4c1d95,#2a1466);color:#fff;border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
+.hero .t3{color:#d9c8ff}
+.hero hr{border:0;border-top:1px solid rgba(255,255,255,.16);margin:6px 0 4px;width:100%}
+.say{display:flex;gap:10px;align-items:center;background:color-mix(in srgb,var(--c118) 14%,transparent);border-radius:16px;padding:10px 12px}
+.say p{font-size:17px;font-weight:500;line-height:1.3}
+
+/* list rows */
+.list{display:flex;flex-direction:column;gap:2px}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:5px 8px;border:0;border-radius:12px;background:none;text-align:left;font-weight:500;transition:background .15s,opacity .3s,transform .15s}
+.row:hover{background:var(--card)}
+.row.sel{outline:2px solid var(--ink);outline-offset:-2px}
+.row.s-todo{background:color-mix(in srgb,var(--due) 14%,transparent)}
+.row.s-off{color:var(--mute)}
+.wbar{display:flex;align-items:center;gap:6px}
+.wbar i{display:block;height:8px;border-radius:999px;background:var(--w);transform-origin:left;min-width:3px}
+.grow{animation:grow .6s cubic-bezier(.2,.8,.2,1) both}
+.mo{padding:8px 8px 2px}
+.row .dt{color:var(--dim);white-space:nowrap}
+.still .grow,.still .tl::before{animation:none}
+.main.work{grid-template-columns:minmax(240px,330px) minmax(0,1fr)}
+.main.work .panel{padding:18px;gap:14px}
+.sk{display:flex;flex-direction:column;gap:9px}
+.sk i{display:block;height:12px;border-radius:6px;background:var(--card2)}
+.blk.now{--w:var(--c118)}
+.day{display:grid;grid-template-columns:104px minmax(0,1fr) auto;gap:6px 12px;align-items:start;padding:8px;border-radius:12px;border:2px solid transparent}
+.day.next{border-color:var(--c118)}
+.dm{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sunk{background:var(--card2);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.sunk .sk i{background:var(--line)}
+.dueit{color:var(--ink);display:flex;align-items:center;gap:8px;border:0;background:none;padding:0;text-align:left;font-weight:500}
+.th{display:flex;flex-direction:column;gap:14px;max-width:760px;width:100%;margin:0 auto}
+.qa{display:flex;flex-direction:column;gap:5px}
+.bub{display:flex;gap:8px;align-items:flex-end}
+.bub .b{background:var(--card);border:1px solid var(--line);border-radius:18px 18px 18px 4px;padding:8px 14px;max-width:540px;font-size:17px;font-weight:500;text-align:left;color:var(--ink)}
+button.b{transition:transform .12s,border-color .15s}button.b:hover{border-color:var(--dim)}button.b:active{transform:scale(.98)}
+.bub.his{flex-direction:row-reverse;animation:rise .25s ease both}
+.bub.his .b{background:color-mix(in srgb,var(--c118) 14%,var(--card));border-color:transparent;border-radius:18px 18px 4px 18px;flex:0 1 420px}
+.bub.ask .b{flex:1;max-width:none;padding:4px;border-radius:999px;display:flex;gap:6px}
+.bub.ask .write{border:0;background:none}
+.meta{display:flex;gap:6px;align-items:center;margin-left:40px}
+.blk.wd{font-size:14px}
+.me{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.back{display:none;align-self:flex-start;padding-left:4px;color:var(--ink)}
+
+/* a graded challenge */
+.tl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 6px;position:relative;max-width:560px}
+.tl::after{content:"";position:absolute;left:6px;width:66.6%;top:5px;height:2px;background:var(--line)}
+.tl::before{content:"";position:absolute;left:6px;width:var(--p,66.6%);z-index:1;top:5px;height:2px;background:var(--go);transform-origin:left;animation:grow .7s ease both}
+.tl span{display:flex;flex-direction:column;gap:1px;padding-top:16px;position:relative;font-weight:500}
+.tl span::before{content:"";position:absolute;z-index:2;left:0;top:0;width:12px;height:12px;border-radius:50%;background:var(--go);box-shadow:0 0 0 3px var(--card)}
+.tl span.no::before{background:var(--card);box-shadow:inset 0 0 0 2px var(--none),0 0 0 3px var(--card)}
+.tl span.no{color:var(--mute)}
+.write{flex:1;min-width:200px;min-height:32px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--ink);padding:5px 14px}
+.write::placeholder{color:var(--mute)}
+.shake{animation:shake .4s}
+.stamp{font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--go);border:2px solid var(--go);border-radius:8px;padding:2px 8px;transform:rotate(-6deg);animation:stamp .45s cubic-bezier(.2,1.6,.4,1) both}
+
+/* instructor */
+.flow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:7px 8px;border-radius:14px;transition:background .15s}
+.flow:hover,.flow.open{background:var(--card)}
+.flow .spread{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 6px;padding:4px 0 2px;animation:rise .25s ease both}
+.flow b{font-weight:600}
+.pilerow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 52px auto;gap:4px 14px;align-items:center;padding:6px 8px;border-radius:14px;transition:background .15s,opacity .3s}
+.pilerow:hover{background:var(--card)}
+.pilerow.sel{outline:2px solid var(--ink);outline-offset:-2px}
+.pilerow.dim{opacity:.3}
+.pilerow b{font-weight:600}
+.stack{display:flex;height:16px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--none) 45%,var(--card))}
+.stack i{display:block;min-width:5px;background:var(--w);transform-origin:left}
+.stack i.p{background:var(--due)}
+.stack i.n{background:none}
+.num{font-size:22px;font-weight:600;color:var(--due);text-align:right;font-variant-numeric:tabular-nums;line-height:1}
+.old{color:var(--bad)}
+.total{display:flex;height:16px;border-radius:999px;overflow:hidden;background:color-mix(in srgb,var(--none) 45%,var(--card))}
+.total i{display:block;min-width:4px;transform-origin:left}
+.zone{display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:20px;border:2px dashed var(--c,var(--line));background:color-mix(in srgb,var(--c,var(--line)) 8%,transparent);transition:background .2s,box-shadow .2s}
+.zone.solid{border-style:solid}
+.zone.lit{background:color-mix(in srgb,var(--c,var(--ink)) 22%,transparent);cursor:pointer}
+.zone .zb{display:flex;flex-wrap:wrap;gap:8px 6px;min-height:20px}
+.zone .zh{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.scale{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.scale .zone{min-height:118px}
+.others{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.others .zone{padding:6px 10px}
+.zones{display:flex;flex-direction:column;gap:8px}
+
+@container (min-width:1000px){.bar{flex-wrap:nowrap}.bar nav{flex-wrap:nowrap}}
+@container (max-width:860px){
+  .main{grid-template-columns:1fr!important}
+  .navs{order:3;width:100%;overflow-x:auto;scrollbar-width:none}.navs nav{flex-wrap:nowrap}.bar .grow{display:none}.bar .cls{flex:1}
+  .hero + .panel{order:-1}
+  .day{grid-template-columns:minmax(0,1fr) auto}.day .dm{grid-column:1/-1;grid-row:2}
+  .strip.weeks{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));height:auto!important;gap:5px}.strip.weeks .blk{height:46px;min-width:0}
+  .main.work .side{display:none}.main.work.opened .side{display:block}.main.work.opened .list{display:none}.isopen .back{display:inline-flex}.isopen .whead{display:none}
+  .pilerow{grid-template-columns:minmax(0,1fr) 52px auto}.pilerow .stack{grid-column:1/-1;grid-row:2}
+  .scale{grid-template-columns:1fr 1fr}.others{grid-template-columns:1fr 1fr}
+}
+@container (max-width:520px){.strip{gap:2px;height:46px}.blk{min-width:8px;border-radius:6px}.blk.mid{font-size:0}}
+@media (prefers-reduced-motion:reduce){.site *{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+  <nav class="pages" aria-label="Mockups">
+    <div><span>Students</span><a href="#home">Home</a><a href="#my-work">My work</a><a href="#schedule">Schedule</a><a href="#class">Class</a><a href="#questions">Questions</a></div>
+    <div><span>Instructor</span><a href="#desk">Class home</a><a href="#to-grade">To Grade</a><a href="#grade-flow">Grade Flow</a><a href="#control">Control</a></div>
+    <div class="gr" id="ground" role="group" aria-label="Colors"><button type="button" data-g="sky">Skylight</button><button type="button" data-g="night">Night</button><button type="button" data-g="lite">Light</button></div>
+    <div class="gr" id="size" role="group" aria-label="Screen"><button type="button" data-z="">Desktop</button><button type="button" data-z="phone">Phone</button></div>
+  </nav>
+  <div class="lede"><h1 id="ledeH"></h1><p id="ledeL"></p></div>
+  <div class="site" id="frame"></div>
+  <div class="tip" id="tip" role="status" hidden></div>
+  <div class="ask">
+    <span id="askOpts" role="group" aria-label="Your call" style="display:contents"></span>
+    <textarea id="askNote" aria-label="What to change"></textarea>
+    <span class="saved" id="askSaved" role="status"></span>
+  </div>
+</div>
+
+<script>
+(function(){
+  var esc = function(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); };
+  var hue = function(n){ var h=0; for(var i=0;i<n.length;i++) h=(h*31+n.charCodeAt(i))%360; return h; };
+  var first = function(n){ return n.split(" ")[0]; };
+  // A person. o: {c: size class, w: ring colour, a: click action, k: extra classes, tick: badge}
+  function face(n,o){ o=o||{}; var tag=o.a?"button":"span";
+    return '<'+tag+' class="face '+(o.c||"")+' '+(o.k||"")+'"'+(o.a?' type="button" data-a="'+o.a+'" aria-label="'+esc(n)+'"':'')+' style="--h:'+hue(n)+(o.w?';--w:var(--'+o.w+')':'')+'" title="'+esc(n)+'"><span class="disc">'+n.split(" ").map(function(w){return w[0];}).slice(0,2).join("")+'</span>'+(o.tick?'<span class="tick">'+o.tick+'</span>':'')+'</'+tag+'>'; }
+  function cell(n,o,k){ return '<span class="cell '+(k||"")+'">'+face(n,o)+'<span class="t3">'+esc(first(n))+'</span></span>'; }
+  var pill = function(t,k,a){ return '<button type="button" class="pill '+(k||"")+'" data-a="'+(a||"go:"+t.replace(/<em>.*/,""))+'">'+t+'</button>'; };
+  // What each button that does nothing in the mockup would do on the real site.
+  var GO = { "Open":"Opens that challenge: the instructions, the work and the grade.", "Reopen":"Reopens the sheet so the student can edit it and turn it in again.", "Reopen your worksheet":"Reopens the sheet so the student can edit it and turn it in again.",
+    "Grade":"Opens Grade Flow on that challenge with the students who are waiting.", "Grade 13":"Opens Grade Flow on that challenge with the 13 students who are waiting.", "Reply":"Opens that message in the Inbox.",
+    "Write a note":"Opens the note to students box.", "Room screen":"Opens the projector view.", "Copy student link":"Copies the address students open.", "Copy review link":"Copies the address of the review page.",
+    "Your sheet":"Opens the worksheet the student turned in.", "Instructions":"Opens the challenge instructions.", "Request a regrade":"Opens a message to Dr. Ishak marked as a regrade request.",
+    "Write a card":"Opens a card to that student.", "Student view":"Shows the page as that student sees it.", "Review":"Opens the review page for this challenge.", "Sheet control":"Opens the worksheet's own control page.", "Summary":"Switches to the Summary table, unchanged.", "Questions":"Opens the Questions page.", "Edit profile":"Opens the profile form.", "Message":"Opens a message to Dr. Ishak.", "Make a meeting":"Opens his meeting times.", "See more":"Opens his card: photo, title, motto, office hours and the ways to reach him." };
+
+  function bar(on, mine){
+    var s = ["Home","Schedule","My work","Class"], t = [["Dashboard"],["Grades","91"],["Inbox","20"],["Games"],["More"]];
+    return '<div class="bar"><span class="cls"><span style="color:var(--c118)">COMM 118</span>Communication and Sport</span><div class="navs"><nav>'
+      + s.map(function(x){ return pill(x,"flat"+(x===on?" on":"")); }).join("")
+      + (mine ? '</nav><span class="sep"></span><nav>'+t.map(function(x){ return pill(x[0]+(x[1]?'<em>'+x[1]+'</em>':''),"flat"+(x[0]===on?" on":"")); }).join("") : "")
+      + '</nav></div><span class="grow"></span>'+face(mine?"Andrew Ishak":"Marty McFly",{c:"sm",w:"c118"})+'</div>';
+  }
+
+  // The quarter in due order: [title, date, weight, state, mark, his comment]
+  var D = [["Weekly Challenge 1: Aussie rules football","Mon, Sep 28",2.5,"done","ok"],["Weekly Challenge 2: Worktopia","Wed, Oct 7",2.5,"done","ok"],["Week 4 check-in","Sun, Oct 18",0,"done","ok"],["Scouting Report","Mon, Oct 19",5,"done","A"],["Sit-Down 1","Fri, Oct 23",15,"done","A"],["Concepts in Team Communication","Tue, Oct 27",0,"done","ok"],["Weekly Challenge 3: Locker Room","Tue, Nov 3",2.5,"done","ok"],["Culture Guide","Wed, Nov 11",5,"done","A-","You did the challenge, and you did it well."],["Sit-Down 2","Fri, Nov 13",15,"done","A-"],["Weekly Challenge 4: Turkey Bowl","Fri, Nov 20",2.5,"todo",""],["Final project preferences","Fri, Nov 20",0,"in",""],["The Field Guide","Fri, Dec 11",30,"off",""],["In-Class","All quarter",20,"on",""]];
+  var CHK = '<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-label="Complete"><path d="M3 8.5l3.2 3.2L13 4.5"/></svg>';
+  var mk = function(m){ return m==="ok" ? CHK : m; };
+  var WORD = {done:"Graded", todo:"Due", "in":"Turned in", off:"Not open yet", on:"Ongoing"};
+  function strip(sel, user){
+    return '<div class="strip">'+D.map(function(d,i){ return '<button type="button" class="blk s-'+d[3]+(d[2]<15?" mid":"")+(i===sel?" sel":user?" dim":"")+'" data-a="pick:'+i+'" style="--x:'+d[2]+'" title="'+esc(d[0])+'" aria-label="'+esc(d[0])+'">'+(d[2]>=5?mk(d[4]):"")+'</button>'; }).join("")+'</div>';
+  }
+  var KEY = '<div class="key t3"><span><i class="dot sq s-done"></i>Graded</span><span><i class="dot sq s-todo"></i>To do</span><span><i class="dot sq s-in"></i>Turned in</span><span><i class="dot sq s-off"></i>Not open yet</span></div>';
+  function detail(i){ var d = D[i], s = d[3];
+    return '<div class="panel s-'+s+'"><div class="hd"><span class="tile lg s-'+s+'">'+mk(d[4])+'</span><div><p class="t1">'+esc(d[0])+'</p><p class="t3">'+WORD[s]+(s==="off"||s==="on"?"":" "+d[1])+(d[2]?" · "+d[2]+"%":"")+'</p></div></div>'
+      + (d[5] ? '<div class="say">'+face("Andrew Ishak",{w:"c118"})+'<p>'+esc(d[5])+'</p></div>' : '')
+      + (s==="off" ? '' : '<div class="rowx">'+pill(s==="in"?"Reopen":"Open", s==="todo"?"due":"")+'</div>')+'</div>'; }
+  // The whole challenge: status, his comment if there is one, then the instructions. The grey lines stand in for his instructions text.
+  // When each thing happened: [turned in, graded], by index into D. Mock dates except Culture Guide.
+  var WHEN = { 0:["Mon, Sep 28","Wed, Sep 30"], 1:["Wed, Oct 7","Fri, Oct 9"], 2:["Sun, Oct 18","Mon, Oct 19"], 3:["Mon, Oct 19","Thu, Oct 22"], 4:["Fri, Oct 23","Mon, Oct 26"], 5:["Wed, Oct 28","Fri, Oct 30"], 6:["Tue, Nov 3","Thu, Nov 5"], 7:["Wed, Nov 11|10:47 PM","Fri, Nov 13|6:10 PM"], 8:["Fri, Nov 13","Mon, Nov 16"], 10:["Tue, Nov 17",""] };
+  function line(i){ var d = D[i], w = WHEN[i] || ["",""], n = w[1] ? 2 : w[0] ? 1 : 0;
+    var pt = function(t,v,on){ v = (v||"").split("|"); return '<span class="'+(on?"":"no")+'">'+t+'<small class="t3">'+(v[0]||"")+'</small>'+(v[1]?'<small class="t3">'+v[1]+'</small>':'')+'</span>'; };
+    return '<div class="tl" style="--p:'+(n===2?66.6:n===1?33.3:0)+'%">'+pt("Turned in",w[0],n>=1)+pt("Due",d[1]+(i===7?"|11:59 PM":""),n>=1)+pt("Graded",w[1],n===2)+'</div>'; }
+  // The whole challenge on the large side: grade, his comment, the dates, the actions, then the instructions.
+  function full(i, o){ var d = D[i], s = d[3], sk = [96,88,92,60,0,94,82,90,48,0,86,70], has = s==="done"||s==="in";
+    return '<div class="panel s-'+s+'"><div class="hd"><span class="tile lg s-'+s+'">'+mk(d[4])+'</span><div><p class="t1">'+esc(d[0])+'</p><p class="t3">'+(d[2]?d[2]+"%":WORD[s])+'</p></div></div>'
+      + (d[5] ? '<div class="say">'+face("Andrew Ishak",{w:"c118"})+'<p>'+esc(d[5])+'</p></div>' : '')
+      + (s==="off"||s==="on" ? '' : line(i))
+      + (i===7 ? '<div class="rowx"><span class="t3">Team</span><span>Santa Clara women\'s rowing</span></div>' : '')
+      + (s==="off" ? '' : '<div class="rowx">'+(has?pill("Your sheet")+pill("Reopen"):pill("Open","due"))+(s==="done"?pill("Request a regrade"):"")+'</div>'
+        + '<div class="rowx'+(o.shake?" shake":"")+'"><input class="write" placeholder="Write to Dr. Ishak about this" aria-label="Write to Dr. Ishak about this">'+(o.sent?'<span class="stamp">Sent</span>':pill("Send","go","send"))+'</div>')
+      + (s==="todo" ? '<div class="rowx"><span class="t3">Remind me</span>'+["Tonight","Tomorrow morning","The day before it is due"].map(function(r){ return pill(r, o.rem===r?"on":"", "rem:"+r); }).join("")+(o.rem?'<span class="stamp">Set</span>':'')+'</div>' : '')
+      + '<p style="font-weight:600">Instructions</p><div class="sk" aria-label="The instructions for this challenge">'+sk.map(function(w){ return w ? '<i style="width:'+w+'%"></i>' : '<span style="height:4px"></span>'; }).join("")+'</div></div>'; }
+  var HERO = '<div class="hero"><p class="t1">Friday, November 20</p><p>No class. Have a happy Thanksgiving.</p><hr><p class="t3">Monday, November 30: Wrap-up: media, participation, power</p></div>';
+
+  var V = {}, st = {};
+
+  V.home = { name:"Home, as a student sees it",
+    why:"The quarter is one strip, each challenge as wide as its weight. Click a block and the panel under it changes. It replaces the popup with the three number boxes, the due card and the notice card.",
+    init:function(){ st = { sel:9, user:false }; },
+    on:function(a,x){ if(a==="pick"){ st.sel = +x; st.user = true; } },
+    html:function(){ return bar("Home") + '<div class="body">'
+      + '<div class="rowx"><p class="t1">Marty McFly</p><span class="t3">Week 9, Nov 16 to Nov 20</span></div>'
+      + '<div class="main" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch">'+HERO+detail(st.sel)+'</div>'
+      + strip(st.sel, st.user) + KEY
+      + '<div class="main" style="grid-template-columns:1fr 1fr;align-items:stretch"><div class="panel" style="animation:none"><p style="font-weight:600">Note to the class</p><div class="say">'+face("Andrew Ishak",{w:"c118"})+'<div class="sk" style="flex:1"><i style="width:92%"></i><i style="width:78%"></i><i style="width:44%"></i></div></div></div>'
+      + '<div class="panel" style="animation:none"><div class="rowx">'+pill("Questions")+'</div><div class="bub">'+face(QS[0][0],{c:"sm",w:"c118"})+'<span class="b">'+esc(QS[0][3])+'</span></div><div class="bub his">'+face("Andrew Ishak",{c:"sm",w:"c118"})+'<span class="b"><span class="sk"><i style="width:90%"></i><i style="width:60%"></i></span></span></div></div></div>'
+      + '</div>'; } };
+
+  V["my-work"] = { name:"My work, as a student sees it",
+    why:"The list is the narrow side. Click a challenge and the large side is that whole challenge on the same page: the grade, your comment, the dates on a line, the buttons, then the full instructions. The grey lines stand in for your instructions. A graded challenge is no longer its own page.",
+    init:function(){ st = { sel:9, f:"All", open:false, sent:false, shake:false, rem:{} }; },
+    on:function(a,x){ if(a==="pick"){ st.sel = +x; st.open = true; st.sent = false; } if(a==="f") st.f = x; if(a==="back") st.open = false; if(a==="rem") st.rem[st.sel] = st.rem[st.sel]===x ? "" : x;
+      if(a==="send"){ var t = document.querySelector("#frame .write"); if(t && t.value.trim()) st.sent = true; else st.shake = true; } },
+    html:function(){ var mo = "", sh = st.shake;
+ st.shake = false;
+      var rows = D.map(function(d,i){ if(st.f==="To do" && d[3]!=="todo") return ""; if(st.f==="Done" && d[3]!=="done") return "";
+        var m = d[1]==="All quarter" ? "All quarter" : ({Sep:"September",Oct:"October",Nov:"November",Dec:"December"})[d[1].split(" ")[1]], head = m!==mo ? '<p class="t3 mo">'+m+'</p>' : ''; mo = m;
+        return head+'<button type="button" class="row s-'+d[3]+(i===st.sel?" sel":"")+'" data-a="pick:'+i+'"><span class="tile s-'+d[3]+'">'+mk(d[4])+'</span><span>'+esc(d[0])+'</span>'
+          + '<span class="dt">'+d[1]+'</span></button>'; }).join("");
+      return bar("My work") + '<div class="body'+(st.open?" isopen":"")+'">'
+      + '<button type="button" class="pill flat back" data-a="back"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3L5 8l5 5"/></svg>Back to My work</button>'
+      + '<div class="rowx whead"><p class="t1">My work</p><span class="sp"></span>'+["All","To do","Done"].map(function(f){ return pill(f, st.f===f?"on":"", "f:"+f); }).join("")+'</div>'
+      + '<div class="main work'+(st.open?" opened":"")+'"><div class="list">'+rows+'</div><div class="side">'+full(st.sel,{sent:st.sent,shake:sh,rem:st.rem[st.sel]})+'</div></div></div>'; } };
+
+  // The quarter's weeks. Week 9 is Nov 16 to Nov 20; class days are taken as Mon, Wed, Fri.
+  var MO = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], DW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var dayOf = function(k,j){ return new Date(2026,8,21+k*7+j); }, fmt = function(d){ return DW[d.getDay()]+", "+MO[d.getMonth()]+" "+d.getDate(); };
+  var WKN = ["1","2","3","4","5","6","7","8","9","","10",""];
+  var SAID = { "Fri, Nov 20":"No class. Have a happy Thanksgiving.", "Mon, Nov 30":"Wrap-up: media, participation, power" }, OFF = { "Fri, Nov 20":1 };
+  V.schedule = { name:"Schedule, as a student sees it",
+    why:"The quarter is a row of weeks. Click a week and its days show under it, with what is due on each day as the same blocks as My work. The next class has the blue outline. Grey lines stand in for your words and the readings.",
+    init:function(){ st = { wk:8, no:{} }; },
+    on:function(a,x){ if(a==="wk") st.wk = +x; if(a==="come") st.no[x] = !st.no[x]; },
+    html:function(){ var k = st.wk, cls = k!==9 && k!==11, a = dayOf(k,0), b = dayOf(k,4), rows = "";
+      for(var j=0;j<7;j++){ var f = fmt(dayOf(k,j)), meets = cls && (j===0||j===2||j===4), due = []; D.forEach(function(d,i){ if(d[1]===f) due.push(i); });
+        if(!meets && !due.length) continue;
+        rows += '<div class="day'+(f==="Mon, Nov 30"?" next":"")+'"><span class="dt" style="color:var(--dim)">'+f+'</span><div class="dm">'
+          + (meets ? (SAID[f] ? '<span>'+SAID[f]+'</span>' : '<div class="sk"><i style="width:52%"></i></div>') : '')
+          + (meets && !OFF[f] ? '<div class="sunk"><span class="t3">Readings</span><div class="sk"><i style="width:70%"></i><i style="width:46%"></i></div></div>' : '')
+          + due.map(function(i){ return '<button type="button" class="dueit" data-a="go:Open"><span class="tile s-'+D[i][3]+'">'+mk(D[i][4])+'</span>'+esc(D[i][0])+'</button>'; }).join("")
+          + '</div>'+(meets && !OFF[f] ? (st.no[f] ? pill("I will not be there","","come:"+f) : pill(CHK+"I'll be there","go","come:"+f)) : '<span></span>')+'</div>'; }
+      return bar("Schedule") + '<div class="body">'
+      + '<div class="strip weeks" style="height:44px">'+WKN.map(function(n,i){ return '<button type="button" class="blk '+(n?"":"wd ")+(i<8?"s-done":i===8?"now":"s-off")+(i===k?" sel":"")+'" data-a="wk:'+i+'" style="--x:1" aria-label="'+(i===9?"Thanksgiving":i===11?"Finals":"Week "+n)+'">'+(n||(i===9?"Break":"Finals"))+'</button>'; }).join("")+'</div>'
+      + '<div class="rowx"><p class="t1">'+(k===9?"Thanksgiving":k===11?"Finals":"Week "+WKN[k])+'</p><span class="t3">'+MO[a.getMonth()]+" "+a.getDate()+" to "+MO[b.getMonth()]+" "+b.getDate()+'</span></div>'
+      + (cls ? '<div class="sk"><i style="width:64%"></i><i style="width:38%"></i></div>' : '')
+      + '<div class="list">'+rows+'</div></div>'; } };
+
+  V["class"] = { name:"Class, as a student sees it",
+    why:"The student's own card is first, then you, then the classmates in their section as big faces. Click a face and that classmate's profile rises beside the class. Grey lines stand in for profile words.",
+    init:function(){ st = { sel:"" }; },
+    on:function(a,x){ if(a==="who") st.sel = st.sel===x ? "" : x; },
+    html:function(){ var n = st.sel, mates = ALL.filter(function(x){ return x!=="Marty McFly"; });
+      var side = !n ? '' : '<div class="panel"><div class="hd">'+face(n,{c:"lg",w:"c118"})+'<p class="t1">'+esc(n)+'</p></div><div class="sk"><i style="width:90%"></i><i style="width:76%"></i><i style="width:84%"></i><i style="width:40%"></i></div></div>';
+      return bar("Class") + '<div class="body">'
+      + '<div class="main" style="grid-template-columns:1fr 1fr"><div class="panel" style="animation:none"><div class="me">'+face("Marty McFly",{c:"lg",w:"go"})+'<p class="t1">Marty McFly</p><span class="sp"></span>'+pill("Edit profile")+'</div></div>'
+      + '<div class="panel" style="animation:none"><div class="me">'+face("Andrew Ishak",{c:"lg",w:"c118"})+'<div><p class="t1">Dr. Ishak</p><p class="t3">Your instructor</p></div></div><div class="rowx">'+pill("Message")+pill("Make a meeting")+pill("See more")+'</div></div></div>'
+      + '<div class="main"'+(n?'':' style="grid-template-columns:1fr"')+'><div class="zone solid" style="--c:var(--line)"><div class="zb" style="gap:14px 10px">'+mates.map(function(m){ return cell(m,{ a:"who:"+m, c:"lg", w:"c118", k:st.sel===m?"sel":"" }, st.sel===m?"on":st.sel?"dim":""); }).join("")+'</div></div>'+side+'</div>'
+      + '</div>'; } };
+
+  var UP = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10l5-5 5 5"/></svg>';
+  // Placeholder questions from placeholder students: [who, appreciated, answered, words]
+  var QS = [["Hana Sato",6,1,"Can our Field Guide team be one we already wrote about?"],["Ben Okafor",4,1,"Do our Sit-Down 2 notes count toward the Culture Guide?"],["Fay Wong",2,1,"Is the Turkey Bowl game timed?"],["Cy Tran",1,0,"When do final project groups come out?"],["Eli Stone",0,0,"Can we see the Field Guide rubric early?"]];
+  V.questions = { name:"Questions, as a student sees it",
+    why:"Redone as a conversation. A question is a bubble from the student, your answer is a bubble back from you. Click a question to open or close your answer. The up arrow is Appreciate. The questions are placeholders and the grey lines stand in for your answers.",
+    init:function(){ st = { how:"Recently answered", open:{0:1}, shake:false, qs:QS.map(function(q){ return q.slice(); }), mine:{} }; },
+    on:function(a,x){ if(a==="how") st.how = x; if(a==="see") st.open[x] = !st.open[x];
+      if(a==="up"){ var q = st.qs[+x]; if(st.mine[q[3]]){ q[1]--; st.mine[q[3]] = 0; } else { q[1]++; st.mine[q[3]] = 1; } }
+      if(a==="ask"){ var t = document.querySelector("#frame .write"); if(t && t.value.trim()){ st.qs.unshift(["Marty McFly",0,0,t.value.trim()]); var o = {}; Object.keys(st.open).forEach(function(k){ o[+k+1] = st.open[k]; }); st.open = o; st.how = "Recently asked"; t.value = ""; } else st.shake = true; } },
+    html:function(){ var sh = st.shake; st.shake = false;
+      var order = st.qs.map(function(q,i){ return i; });
+      if(st.how==="Most appreciated") order.sort(function(a,b){ return st.qs[b][1]-st.qs[a][1]; });
+      if(st.how==="Recently answered") order.sort(function(a,b){ return st.qs[b][2]-st.qs[a][2]; });
+      return bar("") + '<div class="body"><div class="th">'
+      + '<div class="rowx"><p class="t1">Questions</p><span class="sp"></span>'+["Recently answered","Recently asked","Most appreciated"].map(function(h){ return pill(h, st.how===h?"on":"", "how:"+h); }).join("")+'</div>'
+      + '<div class="bub ask'+(sh?" shake":"")+'">'+face("Marty McFly",{w:"go"})+'<span class="b"><input class="write" placeholder="Ask a question" aria-label="Ask a question">'+pill("Ask","go","ask")+'</span></div>'
+      + order.map(function(i){ var q = st.qs[i], open = q[2] && st.open[i];
+          return '<div class="qa"><div class="bub">'+face(q[0],{w:"c118"})+(q[2]?'<button type="button" class="b" data-a="see:'+i+'" aria-expanded="'+!!open+'">'+esc(q[3])+'</button>':'<span class="b">'+esc(q[3])+'</span>')
+            + (q[2] && !open ? face("Andrew Ishak",{c:"sm",w:"c118",a:"see:"+i}) : '')+'</div>'
+            + '<div class="meta"><span class="t3">'+esc(first(q[0]))+'</span>'+pill(UP+q[1], st.mine[q[3]]?"on":"", "up:"+i)+'</div>'
+            + (open ? '<div class="bub his">'+face("Andrew Ishak",{w:"c118"})+'<span class="b"><span class="sk"><i style="width:92%"></i><i style="width:80%"></i><i style="width:40%"></i></span></span></div>' : '')+'</div>'; }).join("")
+      + '</div></div>'; } };
+
+  var FLOW = [["Final project preferences","13 turned in",["Ada Park","Ben Okafor","Cy Tran","Dee Alvarez","Eli Stone","Jan Itor","Marty McFly","Pepe LeFritz"],5,"Grade 13","due"],["Concepts in Team Communication","1 turned in",["Fay Wong"],0,"Grade","due"],["Culture Guide","1 resubmitted",["Gus Petrov"],0,"Grade","warn"],["Scouting Report","1 message",["Hana Sato"],0,"Reply","c118"]];
+  V.desk = { name:"Class home, as you see it",
+    why:"One top bar on every page. Class flow is one row per challenge with the faces of who is in it. Click a row and the faces spread out with names.",
+    init:function(){ st = { open:-1 }; },
+    on:function(a,x){ if(a==="open") st.open = st.open===+x ? -1 : +x; },
+    html:function(){
+      return bar("Home",true) + '<div class="body">'
+      + '<div class="rowx"><p class="t1">Week 9</p><span class="t3">Nov 16 to Nov 20</span><span class="sp"></span>'+pill("Write a note")+pill("Room screen")+'</div>'
+      + '<div class="main" style="grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr)">'+HERO+'<div class="list">'
+      + FLOW.map(function(f,i){ var open = st.open===i;
+          return '<div class="flow'+(open?" open":"")+'" data-a="open:'+i+'">'
+            + (open ? '<span></span>' : '<span class="faces">'+f[2].slice(0,5).map(function(n){ return face(n,{c:"sm",w:f[5]}); }).join("")+'</span>')
+            + '<span><b>'+esc(f[0])+'</b> <span class="t3">'+f[1]+'</span></span>'+pill(f[4], f[5]==="c118"?"":"due")
+            + (open ? '<div class="spread">'+f[2].map(function(n){ return cell(n,{w:f[5]}); }).join("")+(f[3]?'<span class="cell"><span class="t3">and '+f[3]+' more</span></span>':'')+'</div>' : '')+'</div>'; }).join("")
+      + '</div></div></div>'; } };
+
+  var PILE = [["c3","Visual story","Sun, Oct 25",60,55,2,1],["c118","Concepts in Team Communication","Tue, Oct 27",26,22,1,1],["c3","Audio exercise","Tue, Nov 3",60,53,1,1],["c118","Culture Guide","Wed, Nov 11",25,23,1,0],["c3","Audio story pre-production","Wed, Nov 11",60,51,1,0],["c3","Audio story","Sun, Nov 15",60,56,56,0],["c118","Final project preferences","Fri, Nov 20",26,13,13,0],["c3","Final project preferences","Thu, Nov 19",60,16,16,0]];
+  V["to-grade"] = { name:"To Grade",
+    why:"One bar per challenge: the class color is graded, gold is waiting on you, grey is not in. The only number on a row is how many to grade.",
+    init:function(){ st = { f:"All", sel:-1 }; },
+    on:function(a,x){ if(a==="f"){ st.f = x; st.sel = -1; } if(a==="pick") st.sel = st.sel===+x ? -1 : +x; },
+    html:function(){ var rows = PILE.map(function(p,i){ return [p,i]; }).filter(function(r){ return st.f==="All" || (st.f==="COMM 3") === (r[0][0]==="c3"); });
+      var tg = 0, tp = 0, tn = 0; rows.forEach(function(r){ var p = r[0]; tg += p[4]-p[5]; tp += p[5]; tn += p[3]-p[4]; });
+      return bar("Grades",true) + '<div class="body">'
+      + '<div class="rowx"><p class="t1">Grades</p>'+pill("To Grade","on")+pill("Grade Flow")+pill("Summary")+'<span class="sp"></span>'+["All","COMM 118","COMM 3"].map(function(f){ return pill(f, st.f===f?"on":"", "f:"+f); }).join("")+'</div>'
+      + '<div class="rowx"><span class="num" style="font-size:30px">'+tp+'</span><div style="flex:1;min-width:200px;display:flex;flex-direction:column;gap:4px"><div class="total"><i class="grow" style="flex:'+tg+';background:var(--mute)"></i><i class="grow" style="flex:'+tp+';background:var(--due)"></i><i style="flex:'+tn+'"></i></div>'
+      + '<div class="key t3"><span><i class="dot sq" style="--w:var(--c118)"></i>COMM 118 graded</span><span><i class="dot sq" style="--w:var(--c3)"></i>COMM 3 graded</span><span><i class="dot sq" style="--w:var(--due)"></i>To grade</span><span><i class="dot sq" style="--w:color-mix(in srgb,var(--none) 45%,var(--card))"></i>Not in</span></div></div></div>'
+      + '<div class="list">'+rows.map(function(r){ var p = r[0], i = r[1], g = p[4]-p[5], n = p[3]-p[4];
+          var k = (g?'<i class="grow" style="flex:'+g+'"></i>':'')+'<i class="p grow" style="flex:'+p[5]+'"></i>'+(n?'<i class="n" style="flex:'+n+'"></i>':'');
+          return '<div class="pilerow'+(st.sel===i?" sel":st.sel>=0?" dim":"")+'" data-a="pick:'+i+'" style="--w:var(--'+p[0]+')"><span><b>'+esc(p[1])+'</b> <span class="t3'+(p[6]?" old":"")+'">'+p[2]+'</span></span><span class="stack">'+k+'</span><span class="num">'+p[5]+'</span>'+pill("Grade","due")+'</div>'; }).join("")+'</div>'
+      + '</div>'; } };
+
+  var ALL = ["Ada Park","Ben Okafor","Cy Tran","Dee Alvarez","Eli Stone","Fay Wong","Gus Petrov","Hana Sato","Jan Itor","Marty McFly","Pepe LeFritz"];
+  var LATE = { "Cy Tran":1, "Jan Itor":1 }, RE = { "Dee Alvarez":1 };
+  var SC = [["Exceptional","above an A","go"],["A","did the work, did it well","go"],["B","did the work","c118"],["C","missed some of the requirements","due"],["D","bad work","warn"]];
+  var OT = [["Completed with Revisions","warn"],["Incomplete","bad"],["F","bad"],["Not submitted","none"]];
+  V["grade-flow"] = { name:"Grade Flow",
+    why:"This one works. Click a face, then click a letter, and the face lands there. Click it again to move it. Late and resubmitted stay hidden until you ask.",
+    init:function(){ st = { at:{ "Hana Sato":"A", "Ben Okafor":"A", "Eli Stone":"B" }, sel:"", burst:"", show:false, rel:false }; },
+    on:function(a,x){
+      if(a==="who") st.sel = st.sel===x ? "" : x;
+      if(a==="drop" && st.sel){ if(x==="tray") delete st.at[st.sel]; else { st.at[st.sel] = x; st.burst = st.sel; } st.sel = ""; }
+      if(a==="show") st.show = !st.show;
+      if(a==="rel") st.rel = true; },
+    html:function(){ var b = st.burst; st.burst = "";
+      var f = function(n){ var w = st.show && RE[n] ? "c118" : st.show && LATE[n] ? "warn" : st.at[n] ? "go" : "";
+        return cell(n,{ a:"who:"+n, w:w, k:(st.sel===n?"sel ":"")+(b===n?"burst ":"")+(w&&!st.at[n]?"glow":"") }, st.sel===n?"on":st.sel?"dim":""); };
+      var inb = function(k){ return ALL.filter(function(n){ return st.at[n]===k; }); }, loose = ALL.filter(function(n){ return !st.at[n]; }), done = ALL.length-loose.length;
+      var zone = function(k,sub,c,big){ var m = inb(k);
+        return '<div class="zone'+(m.length?" solid":"")+(st.sel?" lit":"")+'" data-a="drop:'+k+'" style="--c:var(--'+c+')"><div class="zh"><span class="'+(big?"t1":"")+'" style="font-weight:600">'+k+'</span><span class="t3">'+(m.length||"")+'</span></div>'+(sub?'<span class="t3">'+sub+'</span>':'')+'<div class="zb">'+m.map(f).join("")+'</div></div>'; };
+      return bar("Grades",true) + '<div class="body">'
+      + '<div class="rowx"><p class="t1">Final project preferences</p>'+pill("To Grade")+pill("Grade Flow","on")+pill("Summary")+'<span class="sp"></span>'+pill(st.show?"Hide late and resubmitted":"Show late and resubmitted","","show")+(st.rel?'<span class="stamp">Released</span>':pill("Release grades","go","rel"))+'</div>'
+      + '<div class="rowx"><div class="total" style="flex:1"><i class="grow" style="flex:'+done+';background:var(--go)"></i><i style="flex:'+loose.length+'"></i></div><span class="t3">'+done+' of '+ALL.length+'</span></div>'
+      + (st.show ? '<div class="key t3"><span><i class="dot" style="--w:var(--warn)"></i>Late</span><span><i class="dot" style="--w:var(--c118)"></i>Resubmitted</span></div>' : '')
+      + '<div class="zone'+(st.sel&&st.at[st.sel]?" lit":"")+'" data-a="drop:tray"><div class="zb">'+loose.map(f).join("")+'</div></div>'
+      + '<div class="scale">'+SC.map(function(s){ return zone(s[0],s[1],s[2],true); }).join("")+'</div>'
+      + '<div class="others">'+OT.map(function(o){ return zone(o[0],"",o[1]); }).join("")+'</div>'
+      + '</div>'; } };
+
+  var GR = { "Ben Okafor":"A-", "Eli Stone":"B+", "Hana Sato":"A", "Ada Park":"A", "Cy Tran":"B-", "Fay Wong":"A-", "Jan Itor":"C", "Marty McFly":"B", "Pepe LeFritz":"A-" };
+  var RANK = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","D-","F"];
+  V.control = { name:"Control, for one challenge",
+    why:"The class is on the page as faces, grouped by where they stand, with the grade on each face. Graded students run from the highest grade to the lowest. Click a face for that student. The two long addresses are two Copy buttons.",
+    init:function(){ st = { sel:"", show:false, touched:false }; },
+    on:function(a,x){ st.touched = true; if(a==="who") st.sel = st.sel===x ? "" : x; if(a==="show") st.show = !st.show; },
+    html:function(){ var g = st.touched ? "" : " grow";
+      var f = function(n){ var w = RE[n] ? "due" : !GR[n] ? "" : st.show && LATE[n] ? "warn" : "go";
+        return cell(n,{ a:"who:"+n, w:w, tick:GR[n], k:(st.sel===n?"sel ":"")+(RE[n]?"glow ":"")+(!GR[n]&&!RE[n]?"hollow":"") }, st.sel===n?"on":st.sel?"dim":""); };
+      var z = function(t,c,list,solid){ return '<div class="zone'+(solid?" solid":"")+'" style="--c:var(--'+c+')"><div class="zh"><span style="font-weight:600">'+t+'</span><span class="t3">'+list.length+'</span></div><div class="zb">'+list.map(f).join("")+'</div></div>'; };
+      var n = st.sel, side = !n ? '' : '<div class="panel"><div class="hd">'+face(n,{c:"lg",w:RE[n]?"due":GR[n]?"go":""})+'<div><p class="t1">'+esc(n)+'</p><p class="t3">'+(RE[n]?"Resubmitted":GR[n]?"Graded"+(st.show&&LATE[n]?" · late":""):"Not submitted")+'</p></div>'+(GR[n]?'<span class="tile lg s-done" style="margin-left:auto">'+GR[n]+'</span>':'')+'</div><div class="rowx">'+(RE[n]?pill("Grade","due"):GR[n]?pill("Open")+pill("Reopen"):pill("Write a card"))+pill("Student view")+'</div></div>';
+      return bar("",true) + '<div class="body">'
+      + '<div class="rowx"><p class="t1">Culture Guide</p><span class="t3">Wed, Nov 11 · 5%</span><span class="sp"></span>'+pill("Control","on")+pill("Grade")+pill("Review")+pill("Sheet control")+'</div>'
+      + '<div class="rowx"><div class="total" style="flex:1"><i class="'+g+'" style="flex:1;background:var(--due)"></i><i class="'+g+'" style="flex:9;background:var(--go)"></i><i style="flex:1"></i></div>'+pill(st.show?"Hide late":"Show late","","show")+pill("Copy student link")+pill("Copy review link")+'</div>'
+      + '<div class="main"'+(n?'':' style="grid-template-columns:1fr"')+'><div class="zones"><div class="main" style="grid-template-columns:1fr 1fr">'+z("To grade","due",ALL.filter(function(x){return RE[x];}))+z("Not in","none",ALL.filter(function(x){return !RE[x]&&!GR[x];}))+'</div>'
+      + z("Graded","go",ALL.filter(function(x){return GR[x];}).sort(function(a,b){ return RANK.indexOf(GR[a])-RANK.indexOf(GR[b]) || a.localeCompare(b); }),true)+'</div>'+side+'</div>'
+      + '</div>'; } };
+
+  var VIEWS = Object.keys(V), OPTS = ["Build it","Build it with my changes","Leave this page alone"];
+  var state = {}, view = "home", db = null, timer = null, ground = "sky", phone = "", tip = document.getElementById("tip"), tipT = null;
+  var frame = document.getElementById("frame"), askOpts = document.getElementById("askOpts"), note = document.getElementById("askNote"), saved = document.getElementById("askSaved");
+  function mine(){ return state[view] || (state[view] = { choice:"", note:"" }); }
+  function drawAsk(){
+    askOpts.innerHTML = OPTS.map(function(o){ return '<button type="button" aria-pressed="'+(mine().choice===o)+'">'+o+'</button>'; }).join("");
+    if(document.activeElement !== note) note.value = mine().note || "";
+  }
+  function save(v){ if(!db) return; saved.textContent = "Saving";
+    db.doc("answers3/"+v).set(Object.assign({}, state[v], { ground:ground, at:new Date().toISOString() })).then(function(){ saved.textContent = "Saved"; }, function(){ saved.textContent = "Not saved"; }); }
+  askOpts.onclick = function(e){ var b = e.target.closest("button"); if(!b) return; mine().choice = mine().choice===b.textContent ? "" : b.textContent; drawAsk(); save(view); };
+  note.oninput = function(){ mine().note = note.value; var v = view; clearTimeout(timer); timer = setTimeout(function(){ save(v); }, 700); };
+  function draw(){ var w = frame.querySelector(".write"), keep = w ? w.value : ""; frame.innerHTML = V[view].html(); w = frame.querySelector(".write"); if(w && !st.sent && view!=="questions") w.value = keep; }
+  frame.addEventListener("click", function(e){ var t = e.target.closest("[data-a]"); if(!t) return;
+    var a = t.getAttribute("data-a"), i = a.indexOf(":"); var k = i<0?a:a.slice(0,i), x = i<0?"":a.slice(i+1);
+    if(k==="go"){ tip.hidden = true; void tip.offsetWidth; tip.textContent = GO[x] || ("Goes to "+x+", the same page as today."); tip.hidden = false; clearTimeout(tipT); tipT = setTimeout(function(){ tip.hidden = true; }, 3200); return; }
+    tip.hidden = true; V[view].on(k, x); frame.classList.add("still"); draw(); });
+  function paintGround(){ frame.classList.toggle("lite", ground==="lite"); frame.classList.toggle("sky", ground==="sky"); frame.classList.toggle("phone", phone==="phone");
+    Array.prototype.forEach.call(document.querySelectorAll("#size button"), function(b){ b.classList.toggle("on", b.getAttribute("data-z")===phone); });
+    Array.prototype.forEach.call(document.querySelectorAll("#ground button"), function(b){ b.classList.toggle("on", b.getAttribute("data-g")===ground); }); }
+  document.getElementById("ground").onclick = function(e){ var b = e.target.closest("button"); if(!b) return; ground = b.getAttribute("data-g"); paintGround(); };
+  function route(){
+    var h = (location.hash || "").slice(1); view = VIEWS.indexOf(h) >= 0 ? h : "home";
+    Array.prototype.forEach.call(document.querySelectorAll(".pages a"), function(a){ a.classList.toggle("on", a.getAttribute("href") === "#"+view); });
+    document.getElementById("ledeH").textContent = V[view].name;
+    document.getElementById("ledeL").textContent = V[view].why;
+    V[view].init(); frame.classList.remove("still"); draw(); saved.textContent = ""; drawAsk();
+  }
+  document.getElementById("size").onclick = function(e){ var b = e.target.closest("button"); if(!b) return; phone = b.getAttribute("data-z"); paintGround(); };
+  window.addEventListener("hashchange", route); paintGround(); route();
+  if(window.claude && window.claude.use) window.claude.use("db").then(function(d){ if(!d) return; db = d;
+    return d.collection("answers3").get().then(function(snap){ snap.docs.forEach(function(doc){ if(VIEWS.indexOf(doc.id) >= 0 && !(state[doc.id] && (state[doc.id].choice || state[doc.id].note))) state[doc.id] = Object.assign({ choice:"", note:"" }, doc.data() || {}); }); drawAsk(); });
+  }).catch(function(){});
+})();
+</script>
