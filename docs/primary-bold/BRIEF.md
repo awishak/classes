@@ -1,4 +1,4 @@
-# Classes cleanup mockups
+# Primary Bold: the mockups and the build
 
 This is the brief for the redesign mockups of classes.andrewishak.com, worked through 2026-11-19 and 2026-11-20. Read it before touching the mockups or building from them. Nothing in the site is changed, and Andrew has not approved a build.
 
@@ -7,9 +7,43 @@ This is the brief for the redesign mockups of classes.andrewishak.com, worked th
 The mockups are one page, published as a private artifact on Andrew's Claude account.
 
 - Live page: https://claude.ai/artifact/FMbkvKf3KXo4F3GsdBkaUh. It opens on any machine signed in to his Claude account.
-- Source: `classes-cleanup-mockups.html` in this folder, copied from the live page on 2026-11-24. A second copy sits in `private/cleanup-mockups/`, which git ignores.
+- Source: `primary-bold-mockups.html` in this folder, copied from the live page on 2026-11-24. A second copy sits in `private/cleanup-mockups/`, which git ignores.
 - To change the live page from a new conversation, read the artifact first, then publish to the same address. Copy the result back into this folder.
 - His page-by-page picks save to the artifact database, collection `answers3/<view>`, with the fields `choice`, `note` and `ground`. Read them there before asking him again.
+
+## The name
+
+Andrew, 2026-11-24: "let's call it Primary Bold". Primary Bold is the name of this look: the rules below, on any of the three grounds. Skylight is one of its grounds, not another name for the look. "Cleanup" was only the mockup page's title, and the published page still carries that title.
+
+## The build (started 2026-11-24)
+
+Andrew, 2026-11-24: "i want to work on it this week. so please build out the mockups and let me work on it more to release on nov 30." The first line of this brief is out of date on that point: a build is approved, and a release is not.
+
+All nine pages are built in `src/engine/primarybold/`, on the site's own data.
+
+- `mockup.css.js` is written by `scripts/primary-bold-style-from-mockup.mjs` from the mockup's stylesheet, with every rule put under `.pbold`. Do not edit the file. `style.js` adds what a real page needs after the mockup's rules.
+- `bits.jsx` holds the pieces: `Face`, `Cell`, `Pill`, `Tile`, `Strip`, `Total`, `Timeline`, `Stamp`, and the three grounds.
+- `data.js` turns the live site's states into the mockup's five, plus late. Every fact comes from the function the live page uses.
+- `student.jsx` is Home, My work, Schedule, Class and Questions. `instructor.jsx` is Class home, To Grade, Grade Flow and Control.
+- `Shell.jsx` stands where `portal/Shell.jsx` stands and takes the same props from `ClassApp`.
+- `preview.js` is the switch. `ClassApp` draws the Primary Bold shell only for an instructor session with the preview on.
+
+How he sees the pages: `?primarybold=1` on any class address turns the preview on in that browser, `?primarybold=0` turns the preview off, and The current site in the face menu does the same. View as a student shows the student pages. His three pages with no address on the class route sit after the `#`: `#to-grade`, `#grade-flow=<challenge id>`, `#control=<challenge id>`. A student who types `?primarybold=1` gets the site as it is.
+
+To release on November 30: make the one test in `ClassApp.jsx` (`sessionInstructor && previewOn()`) true for everyone.
+
+What is not the mockup yet:
+
+- The Remind me buttons are left out. That question is still open below.
+- Inbox, Games, More, Class flow and the instructor's Challenges list are the live pages inside a plain card.
+- Editing a profile and See more on Dr. Ishak open the live site's sheets.
+- A check-in is the live check-in form inside the challenge.
+- A card's comment and private note are written on the live grading page. Comments and notes on Grade Flow opens that page.
+- Control reads the class data only. It does not ask the server for worksheet rows, so Started is never shown and a sheet resubmitted after a review is not flagged.
+- The class home's Write a note and Room screen buttons are left out, and so is Copy review link on Control.
+- The old top bar's sign out and view-as menu are not in the Primary Bold bar. The preview bar still shows while viewing as a student.
+
+What was checked: `npm run build` passes, with a smoke section that renders eight of the pages. Every page but To Grade was seen as a picture on made-up data (`private/primary-bold/demo.html`, not in the repo): Home, My work at laptop and phone width, Schedule on Night, Class, Questions on Light, Class home, Grade Flow on Night, and Control. Not seen: To Grade with rows on the page (the demo found nothing to grade), a picked classmate on Class, and every page on a real class with a real sign-in. Nothing was clicked, so no write was tried: sending a message, placing a card, releasing grades, I'll be there, asking a question.
 
 ## Pages drawn
 

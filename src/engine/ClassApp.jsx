@@ -53,6 +53,8 @@ import { daySlug } from "./days.js";
 import WelcomeDeck, { needsWelcome } from "./WelcomeDeck.jsx";
 import NoticeCard, { NoticeWriter } from "./NoticeCard.jsx";
 import PortalShell from "./portal/Shell.jsx";
+import PrimaryBoldShell from "./primarybold/Shell.jsx";
+import { previewOn } from "./primarybold/preview.js";
 import { Face as PortalFace, DrFace } from "./portal/bits.jsx";
 import { ToolsPanel } from "./portal/Tools.jsx";
 import { SaveWord, useOnline } from "./SaveWord.jsx";
@@ -1321,8 +1323,12 @@ export default function ClassApp({ config: classConfig, initialCard }) {
   // are gone; the shell draws the home, the pages, the bottom bar and the
   // laptop's two panes, and this component still owns everything above:
   // the session, the data, the decks in front of the site, the preview bar.
+  // The Primary Bold pages (docs/primary-bold), for him alone until he releases
+  // them: his session, and the preview turned on in this browser. Viewing as
+  // a student from his session shows the student's Primary Bold pages.
+  const Frame = sessionInstructor && previewOn() ? PrimaryBoldShell : PortalShell;
   return (
-    <PortalShell config={config} data={data} write={write} ctx={ctx} view={view} isDesktop={isDesktop}
+    <Frame config={config} data={data} write={write} ctx={ctx} view={view} isDesktop={isDesktop}
       theme={theme} mode={mode} accentCSS={accentCSS(a, config.accentDark)} baseCSS={CSS}
       go={go} openKey={openKey} openSub={openSub} me={me} seenAs={seenAs}
       PreviewBar={PreviewBar} GameLayer={GameLayer} tickerLines={tickerLines} myPoints={myPoints}

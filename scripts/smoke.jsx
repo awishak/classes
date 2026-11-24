@@ -6560,6 +6560,45 @@ cases.push(["Team topics, loading", <TopicsSheet store={{ load: () => new Promis
   if (T.judge(T.decisionOf("power"), ["coercive", "coercive"]) || T.judge(T.decisionOf("power"), ["expert"])) say("the power question took something other than two different picks");
   if (T.shortName("Sophia Marie Taylor") !== "Sophia T." || T.shortName("Cher") !== "Cher") say("the leaderboard name is not first name and last initial");
 }
+// The Primary Bold pages (docs/primary-bold), each on a small class: a graded
+// challenge, one waiting on a grade, one not open yet and one all quarter.
+// What is held: every page renders, the quarter's strip puts what runs all
+// quarter last, a grade longer than two letters stays off a block, and the
+// stylesheet made from the mockup keeps every rule under .pbold.
+{
+  const say = (m) => { console.error("  FAIL  Primary Bold pages: " + m); failedEarly++; };
+  const S = await import("../src/engine/primarybold/student.jsx");
+  const H = await import("../src/engine/primarybold/instructor.jsx");
+  const D = await import("../src/engine/primarybold/data.js");
+  const { PRIMARY_BOLD_CSS } = await import("../src/engine/primarybold/style.js");
+  const N = "Ada Lovelace", M = "Grace Hopper";
+  const c = { ...cfg0, id: "smokeclean", path: "/smokeclean", storageKey: "smoke-primarybold", profileTask: null, checkins: [], students: [{ name: N, email: "ada@x" }, { name: M, email: "grace@x" }],
+    assignments: [{ id: "g1", title: "Graded piece", due: "Sep 1", weight: 10 }, { id: "g2", title: "Waiting piece", due: "Sep 8", weight: 10 },
+      { id: "g3", title: "Closed piece", due: "Dec 1", weight: 30, opens: "never" }, { id: "g4", title: "All quarter piece", due: "Ongoing", weight: 20 }] };
+  const sub = (ts) => ({ id: "s" + ts, ts, type: "submission", link: "https://example.com", text: "" });
+  const data = { students: c.students, assignments: c.assignments, schedule: [{ id: "w1", topic: "First week", dates: ["Sep 14", "Sep 16"], items: [] }],
+    assignmentLog: { g1: { [N]: [sub(1), { id: "gr", ts: 2, type: "grade", board: true, letter: "Completed with Revisions", bucket: "revisions", html: "" }] }, g2: { [N]: [sub(3)], [M]: [sub(4)] } },
+    gradeBoard: { g1: { cards: { [N]: { bucket: "revisions" } }, released: { at: 2 } } } };
+  const rows = D.rowsFor(c, data, N);
+  if (rows.map(r => r.id).join() !== "g1,g2,g3,g4") say("the quarter is not in due order with what runs all quarter last: " + rows.map(r => r.id).join());
+  if (rows[0].state !== "done" || rows[0].mark !== "") say("a grade of three words is on a block: " + JSON.stringify([rows[0].state, rows[0].mark]));
+  if (rows[1].state !== "in" || rows[2].state !== "off" || rows[3].state !== "on") say("turned in, not open and ongoing are not three states: " + rows.map(r => r.state).join());
+  if (D.dueDay(c.assignments[3]) !== "All quarter") say("an ongoing challenge has a weekday for a due date");
+  const bad = PRIMARY_BOLD_CSS.split("\n").filter(l => /^[^@\s}][^{]*\{/.test(l) && !/^\.pbold[ .:{,]/.test(l));
+  if (bad.length) say("a rule is not under .pbold: " + bad[0].slice(0, 60));
+  const noop = () => {};
+  const pages = [
+    ["Home", <S.Home config={c} data={data} blockOf={() => null} section="" name={N} go={noop} notice="" />, "Graded piece"],
+    ["My work", <S.MyWork config={c} data={data} update={noop} name={N} go={noop} id="g1" />, "Completed with Revisions"],
+    ["Schedule", <S.Schedule config={c} data={data} blockOf={() => null} name={N} mark={noop} go={noop} />, "First week"],
+    ["Class", <S.ClassPg config={c} data={data} update={noop} setPhoto={noop} name={N} go={noop} />, "Grace"],
+    ["Questions", <S.Questions config={c} data={data} name={N} />, "Ask"],
+    ["Class home", <H.Desk config={c} data={data} go={noop} toHis={noop} />, "Waiting piece"],
+    ["Grade Flow", <H.GradeFlow config={c} data={data} update={noop} id="g2" toHis={noop} />, "Release grades"],
+    ["Control", <H.Control config={c} data={data} id="g2" toHis={noop} />, "To grade"],
+  ];
+  pages.forEach(([name, el, must]) => cases.push(["Primary Bold " + name, el, must]));
+}
 cases.push(["Visual story portal", <VisualStoryPortal config={{ id: "comm3", code: "COMM 3", name: "Digital Storytelling", path: "/comm3", students: [] }} />, "Visual story portal"]);
 
 let failed = failedEarly;
